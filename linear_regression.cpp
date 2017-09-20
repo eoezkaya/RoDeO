@@ -16,6 +16,7 @@ using namespace arma;
 
 int train_linear_regression(mat &X, vec &ys, vec &w, double lambda=0){
 
+
 	unsigned int dim = X.n_cols;
 
 	mat augmented_X(X.n_rows, dim + 1);

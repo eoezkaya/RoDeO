@@ -21,8 +21,8 @@ int main(void){
 
 //	su2_try_NACA0012_classic_solution();
 
-	initial_data_acquisition(200);
-//	su2_optimize();
+//	initial_data_acquisition(200);
+	su2_optimize();
 
 	exit(1);
 

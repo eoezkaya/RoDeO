@@ -115,7 +115,7 @@ void su2_optimize(void){
 
 
 
-	int number_of_initial_samples   = 201;
+	int number_of_initial_samples   = 261;
 	int number_of_design_variables  = 38;
 
 	/* max number of function evaluations for the EA algorithm in Kriging */
@@ -131,6 +131,11 @@ void su2_optimize(void){
 
 	/* standart deviation for the perturbations */
 	const double gaussian_noise_level = 0.0001;
+
+
+	/* constraints for CL and area*/
+	double CL_constraint = 0.723;
+	double Area_constraint = 0.0778;
 
 
 	/* step size for the adjoint assisted sampling */
@@ -157,7 +162,7 @@ void su2_optimize(void){
 	vec lin_reg_param_area(number_of_design_variables);
 
 
-	std::string su2_cfd_config_file = "naca0012_simulation.cfg";
+	std::string su2_cfd_config_file = "turb_SA_RAE2822.cfg";
 
 	/* filenames for the Kriging input data */
 	std::string cl_kriging_input_file = "CL_Kriging.csv";
@@ -170,7 +175,7 @@ void su2_optimize(void){
 	std::string area_kriging_hyperparameters_file = "Area_Kriging_Hyperparameters.csv";
 
 	/* file name for the optimization history */
-	std::string all_data_file = "naca0012_optimization_history.csv";
+	std::string all_data_file = "rae2822_optimization_history.csv";
 
 
 
@@ -185,9 +190,7 @@ void su2_optimize(void){
 	double CL=0.0,CD=0.0,area=0.0;
 
 
-	/* constraints for CL and area*/
-	double CL_constraint = 0.326;
-	double Area_constraint = 0.081;
+
 
 	int cholesky_return;
 
@@ -208,18 +211,15 @@ void su2_optimize(void){
 
 
 
-	system("cp ./Samples_200/naca0012_optimization_history.csv ./");
-	system("cp ./Samples_200/CL_Kriging.csv ./");
-	system("cp ./Samples_200/CD_Kriging.csv ./");
-	system("cp ./Samples_200/Area_Kriging.csv ./");
+	/* copy training data from the samples folder */
+	system("cp ./samples/rae2822_optimization_history.csv ./");
+	system("cp ./samples/CL_Kriging.csv ./");
+	system("cp ./samples/CD_Kriging.csv ./");
+	system("cp ./samples/Area_Kriging.csv ./");
 
 
 
 	std::vector<int> indices_of_ls_designs;
-
-	//	optimization_data.print();
-
-	//   exit(1);
 
 
 
@@ -235,11 +235,6 @@ void su2_optimize(void){
 
 
 	while(1){
-
-
-
-
-
 
 
 		/* load samples from file*/
@@ -371,7 +366,7 @@ void su2_optimize(void){
 
 
 
-
+		/* correlation matrices for cd,cl and area */
 
 		mat R_CL(dimension_of_R,dimension_of_R);
 		mat R_CD(dimension_of_R,dimension_of_R);
@@ -392,6 +387,7 @@ void su2_optimize(void){
 		vec ys_CD =   optimization_data.col(number_of_design_variables+1);
 		vec ys_area = optimization_data.col(number_of_design_variables+2);
 
+		/* vector of ones */
 		vec I = ones(dimension_of_R);
 
 		/* train surrogate models for CL, CD and area*/
@@ -1533,12 +1529,6 @@ void su2_optimize(void){
 
 
 
-		//		exit(1);
-
-
-
-
-
 
 	} /* end of while(1) */
 
@@ -1929,7 +1919,7 @@ int call_SU2_CFD_Solver(vec &dv,
 
 	system("cp mesh_out.su2  mesh_airfoil.su2");
 
-	system("SU2_GEO inv_NACA0012_basic.cfg > su2geo_output");
+	system("SU2_GEO turb_SA_RAE2822.cfg > su2geo_output");
 
 
 
@@ -1966,7 +1956,7 @@ int call_SU2_CFD_Solver(vec &dv,
 
 
 
-	std::string solver_command = "parallel_computation.py -f inv_NACA0012_basic.cfg -n 1 > su2cfd_output";
+	std::string solver_command = "parallel_computation.py -f turb_SA_RAE2822.cfg -n 2 > su2cfd_output";
 	system(solver_command.c_str());
 
 
@@ -2085,8 +2075,8 @@ int call_SU2_Adjoint_Solver(vec &dv,
 
 	system("cp mesh_out.su2  mesh_airfoil.su2");
 
-	system("SU2_GEO inv_NACA0012_basic.cfg > su2geo_output");
 
+	system("SU2_GEO turb_SA_RAE2822.cfg > su2geo_output");
 
 
 	double *geo_data = new double[10];
@@ -2122,7 +2112,7 @@ int call_SU2_Adjoint_Solver(vec &dv,
 
 
 
-	std::string solver_command = "discrete_adjoint.py -f inv_NACA0012_basic.cfg -n 1 > discrete_adjoint_output";
+	std::string solver_command = "discrete_adjoint.py -f turb_SA_RAE2822.cfg -n 2 > discrete_adjoint_output";
 	system(solver_command.c_str());
 
 
