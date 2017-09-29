@@ -69,17 +69,6 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 
 
 
-
-
-//void perform_GEK_test1D_withCV(double (*test_function)(double *),
-//		double (*test_function_adj)(double *, double *),
-//		double *bounds, std::string function_name ,
-//		int  number_of_samples_with_only_f_eval,
-//		int number_of_samples_with_g_eval,
-//		int sampling_method );
-
-
-
 void perform_GEK_test1D(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		double *bounds, std::string function_name ,
@@ -120,9 +109,14 @@ void generate_test_function_data(double (*test_function)(double *),
 		int problem_dimension);
 
 
-//void test_two_point_correlation(void);
-//void test_two_point_one_grad_correlation(void);
-//void test_two_point_one_grad_with_function_eval_correlation(void);
+void perform_rbf_test(double (*test_function)(double *),
+        double *bounds,
+        std::string function_name ,
+        int  number_of_samples,
+        int sampling_method,
+        int problem_dimension,
+        int rbf_type,
+        int method_for_solving_lin_eq_for_training);
 
 
 

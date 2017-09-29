@@ -51,13 +51,6 @@ int train_GEK_response_surface(std::string input_file_name,
 		int dim,
 		int eqn_sol_method);
 
-int train_kriging_by_cross_validation(std::string input_file_name,
-		int linear_regression,
-		vec &regression_weights,
-		vec &kriging_params,
-		double &reg_param,
-		int &max_number_of_function_calculations,
-		int dim);
 
 double calculate_f_tilde(rowvec x,
 		                 mat &X,

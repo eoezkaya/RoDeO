@@ -388,23 +388,10 @@ double calculate_f_tilde(rowvec x,
 		vec R_inv_ys_min_beta,
 		vec kriging_weights){
 
-	//	R_inv_ys_min_beta.print();
 
-//	printf("calculate_f_tilde...\n");
 	int dim = x.size();
 
-//	printf("dim = %d\n",dim);
 	vec r(X.n_rows);
-
-
-//	printf("kriging weights =\n");
-//	kriging_weights.print();
-//	printf("\n");
-//
-//
-//	printf("regression_weights =\n");
-//	regression_weights.print();
-//	printf("\n");
 
 	vec theta = kriging_weights.head(dim);
 	vec gamma = kriging_weights.tail(dim);
@@ -425,21 +412,14 @@ double calculate_f_tilde(rowvec x,
 	}
 
 
-
-//	printf("here...\n");
 	for(unsigned int i=0;i<X.n_rows;i++){
 
 		r(i) = compute_R(x, X.row(i), theta, gamma);
 
 	}
-//			printf("r =\n");
-//			r.print();
-//			printf("\n");
+
 
 	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
-
-	//	printf("f_regression = %10.7f\n",f_regression);
-	//	printf("f_kriging = %10.7f\n",   f_kriging);
 
 
 	return f_regression+f_kriging;
@@ -447,23 +427,19 @@ double calculate_f_tilde(rowvec x,
 }
 
 
-
-// IMPORTANT : vector x should be normalized!!!
-
-/* IN : X : normalized data matrix
- * IN : beta0 = [I^T*R^-1*I]^-1 [I^T*R^-1*ys]
- * IN : sigma_sqr
- * IN : identity vector I
- * IN : R_inv_ys_min_beta = R^-1*(ys-beta0*I)
- * IN : R_inv_I = R^-1* I
- * IN : U (Cloesky decomposition of R)
- * IN : L (Cloesky decomposition of R)
- * OUT: f_tilde : surrogate prediction
- * OUT: ssqr: kriging variance
+/** compute the f_tilde and ssqr for the Kriging model
  *
+ * @param[in] X : normalized data matrix
+ * @param[in] beta0 = [I^T*R^-1*I]^-1 [I^T*R^-1*ys]
+ * @param[in] sigma_sqr
+ * @param[in] I : identity vector
+ * @param[in] R_inv_ys_min_beta = R^-1*(ys-beta0*I)
+ * @param[in] R_inv_I = R^-1* I
+ * @param[in] U (Cloesky decomposition of R)
+ * @param[in] L (Cloesky decomposition of R)
+ * @param[out] f_tilde : surrogate prediction
+ * @param[out] ssqr: kriging variance
  */
-
-
 void calculate_f_tilde_and_ssqr(
 		rowvec x,
 		mat &X,
@@ -479,16 +455,14 @@ void calculate_f_tilde_and_ssqr(
 		double *f_tilde,
 		double *ssqr){
 
-	//	printf("calculate_f_tilde...\n");
+
 	int dim = x.size();
 	vec r(X.n_rows);
 
 	vec theta = kriging_weights.head(dim);
 	vec gamma = kriging_weights.tail(dim);
 
-	//	theta.print();
-	//	gamma.print();
-	//	regression_weights.print();
+
 
 	double f_regression = 0.0;
 	double f_kriging = 0.0;
@@ -504,14 +478,12 @@ void calculate_f_tilde_and_ssqr(
 
 	}
 
-	//	printf("here...\n");
+
 	for(unsigned int i=0;i<X.n_rows;i++){
 
 		r(i) = compute_R(x, X.row(i), theta, gamma);
 
 	}
-
-	//	r.print();
 
 	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
 
@@ -532,12 +504,6 @@ void calculate_f_tilde_and_ssqr(
 
 
 }
-
-
-
-
-
-
 
 
 // IMPORTANT : vector x should be normalized!!!
@@ -610,23 +576,9 @@ double calculate_f_tilde_GEK(rowvec &x,
 	}
 
 
-
-
-	//				printf("r = \n");
-	//				r.print();
-	//				printf("\n");
-	//			exit(1);
-
-
-
-
 	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
 
-	//	printf("f_kriging = %10.7f\n",f_kriging);
-	//	printf("f_regression = %10.7f\n",f_regression);
 
-
-	//	exit(1);
 	return f_regression+f_kriging;
 
 }
@@ -924,336 +876,6 @@ int calculate_fitness_GEK(member &new_born,
 
 }
 
-
-void generate_validation_set(int *indices, int size, int N){
-
-	int number_of_indices_generated=0;
-	int random_int;
-	int flag;
-	while(number_of_indices_generated < N){
-
-		while(1){
-			/* generate a random index */
-			random_int = rand() % size;
-			/* check if it is already in the list */
-			flag= is_in_the_list(random_int, indices, N);
-
-			if(flag == -1){
-				indices[number_of_indices_generated]= random_int;
-				number_of_indices_generated++;
-				break;
-
-			}
-
-
-		}
-
-	}
-
-	//	printf("indices generated :\n");
-	//	for(int i=0;i<N; i++) printf("%d ", indices[i]);
-	//	printf("\n");
-
-
-
-
-}
-
-/* calculate the fitness of a new design with the given theta and gamma using cross validation  */
-int calculate_fitness_cross_validation(member & new_design,
-		double &reg_param,
-		mat & R,  // R matrix
-		mat & U,  // U matrix
-		mat & L,  // L matrix
-		mat & X,  // data matrix
-		vec & ys, // functional values vector
-		vec & I,       // identity vector
-		mat & grad    // gradient matrix
-){
-
-
-
-
-	int number_of_iterations_kfold_validation=20;
-
-	//	printf("calculate_fitness_cross_validation...\n");
-
-	//	new_design.print();
-
-
-
-	//	printf("R :\n");
-	//	R.print();
-	//	printf("\n");
-
-	//	printf("ys :\n");
-	//	ys.print();
-	//	printf("\n");
-
-
-	int number_of_validation_points_func = ys.size()-R.n_rows;
-	int problem_dim = new_design.theta.size();
-
-	int dimension_of_R = R.n_rows;
-
-	//	printf("dimension of R = %d\n", dimension_of_R);
-
-
-	/* modified data matrix = data matrix-validation points */
-	mat Xmod(dimension_of_R, problem_dim);
-
-	/* modified vector of functional values */
-
-	vec ysmod(dimension_of_R);
-
-	/* list of indices for the validation points */
-	int* validation_point_indices = new int[number_of_validation_points_func];
-
-	//	printf("number_of_validation_points_func = %d\n",number_of_validation_points_func);
-	//
-	//
-	//	printf("Data matrix :\n");
-	//	X.print();
-	//	printf("\n");
-	//
-	//	if( grad.n_rows > 0){
-	//		printf("Gradient Data matrix :\n");
-	//		grad.print();
-	//		printf("\n");
-	//	}
-
-
-
-	double validation_error = 0.0;
-
-	/* Kfold validation iterations */
-	for(int iter=0;iter<number_of_iterations_kfold_validation;iter++){
-
-
-		/* segment the data set into two with random selections */
-
-		generate_validation_set(validation_point_indices, ys.size(), number_of_validation_points_func);
-
-
-		/* fill the modified data matrix */
-
-		int added_rows=0;
-		for(unsigned int j=0; j<X.n_rows; j++){ /* for each row in the data matrix */
-
-			/* if j is not a validation point */
-			if ( is_in_the_list(j, validation_point_indices, number_of_validation_points_func) == -1){
-				//				printf("%dth point is not a validation point\n",j);
-				Xmod.row(added_rows)=X.row(j);
-				//				printf("adding an element to ysmod\n");
-				ysmod(added_rows)   =ys(j);
-				added_rows++;
-
-			}
-
-
-		}
-
-		//
-		//		printf("Xmod :\n");
-		//		Xmod.print();
-		//
-		//		printf("ysmod :\n");
-		//		ysmod.print();
-
-		//		double reg_param = pow(10.0,-1.0*new_design.log_regularization_parameter);
-
-		/* calculate the correlation matrix for the data set */
-		compute_R_matrix(new_design.theta,
-				new_design.gamma,
-				reg_param,
-				R,
-				Xmod);
-
-		//				R.print();
-
-		/* compute the Cholesky decomposition of the correlation matrix R */
-		int chol_flag = chol(U, R);
-
-		if (chol_flag == 0) {
-			printf("Ill conditioned correlation matrix\n");
-			new_design.objective_val = -LARGE;
-			return 0;
-		}
-
-		L = trans(U);
-
-		vec R_inv_ys(dimension_of_R);
-		vec R_inv_I(dimension_of_R);
-
-
-
-		solve_linear_system_by_Cholesky(U, L, R_inv_ys, ysmod);
-		solve_linear_system_by_Cholesky(U, L, R_inv_I, I);
-
-
-
-
-		double beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
-		//		printf("beta0= %10.7f\n",beta0);
-
-		vec ys_min_betaI = ysmod-beta0*I;
-
-		vec R_inv_ys_min_beta(dimension_of_R);
-
-
-
-		solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaI);
-
-
-
-		//		R_inv_ys_min_beta.print();
-
-
-		/* first validate functional values */
-
-
-
-
-		for(int i=0; i<number_of_validation_points_func;i++){
-
-			int validation_point_indx = validation_point_indices[i];
-
-			rowvec x = X.row(validation_point_indx);
-
-			double fapprox = calculate_f_tildeCV(x, Xmod, beta0,
-					R_inv_ys_min_beta, new_design.theta, new_design.gamma);
-
-			double fexact  = ys(validation_point_indx);
-
-			double error;
-
-			error = (fapprox-fexact);
-
-			validation_error+= sqrt((error)*(error));
-
-
-			//			printf("fapprox = %10.7f\n", fapprox);
-			//			printf("fexact  = %10.7f\n", fexact);
-
-		}
-
-
-
-		double fd_eps = 0.0001;
-		/* validate gradient sensitivities */
-		int row_index = 0;
-		for(int i=0; i<grad.n_rows;i++){
-
-			for(int j=0; j<problem_dim;j++){
-
-				rowvec x = grad( row_index, span(0, problem_dim-1) );
-
-				//				printf("x = \n");
-				//				x.print();
-				//				printf("\n");
-
-				double error=0.0;
-				double sens_exact  = grad(row_index,problem_dim+1+j);
-				double func_val_exact = grad(row_index,problem_dim);
-
-
-				double fapprox = calculate_f_tildeCV(x, Xmod, beta0,
-						R_inv_ys_min_beta, new_design.theta, new_design.gamma);
-
-				error = (func_val_exact-fapprox);
-
-				//				printf("func_val_exact = %10.7f\n",func_val_exact);
-				//				printf("fapprox = %10.7f\n",fapprox);
-
-				validation_error+= sqrt((error)*(error));
-
-
-
-
-
-
-				x(j)+= fd_eps;
-				double fapprox_plus = calculate_f_tildeCV(x, Xmod, beta0,
-						R_inv_ys_min_beta, new_design.theta, new_design.gamma);
-
-				double fexact_plus  = sens_exact*fd_eps + func_val_exact;
-
-				//				printf("fexact_plus = %10.7f\n",fexact_plus);
-				//				printf("fapprox_plus = %10.7f\n",fapprox_plus);
-
-
-				error = (fexact_plus-fapprox_plus);
-
-				validation_error+= sqrt((error)*(error));
-
-				//				printf("fapprox_plus = %10.7f\n", fapprox_plus);
-
-				x(j)-= 2*fd_eps;
-				double fapprox_min = calculate_f_tildeCV(x, Xmod, beta0,
-						R_inv_ys_min_beta, new_design.theta, new_design.gamma);
-
-				double fexact_min  = -sens_exact*fd_eps + func_val_exact;
-
-				//				printf("fexact_min = %10.7f\n",fexact_min);
-				//				printf("fapprox_min = %10.7f\n",fapprox_min);
-
-
-				error = (fexact_min-fapprox_min);
-
-				validation_error+= sqrt((error)*(error));
-
-				//				printf("fapprox_min = %10.7f\n", fapprox_min);
-
-
-
-
-
-				x(j)+=fd_eps;
-
-
-
-
-			}
-
-			row_index++;
-
-
-		}
-
-
-		//		printf("validation error = %10.7f\n", validation_error);
-
-
-
-
-
-	}
-
-
-
-	new_design.objective_val=-validation_error/number_of_iterations_kfold_validation;
-	//	printf("avg validation error = %10.7f\n", validation_error/number_of_iterations_kfold_validation);
-
-
-
-
-
-
-
-
-
-
-	delete[] validation_point_indices;
-
-	total_number_of_function_evals++;
-
-	//	exit(1);
-	return 1;
-
-
-}
-
-
 /* calculate the fitness of a member with the given theta and gamma  */
 int calculate_fitness(member &new_born,
 		double &reg_param,
@@ -1508,8 +1130,6 @@ void update_population_properties(std::vector<member> &population) {
 
 	}
 
-	//std::cout<<"min= "<<min<<std::endl;
-	//std::cout<<"max= "<<max<<std::endl;
 
 	for (it = population.begin(); it != population.end(); ++it) {
 
@@ -1522,7 +1142,7 @@ void update_population_properties(std::vector<member> &population) {
 
 	for (it = population.begin(); it != population.end(); ++it) {
 
-		//	it->objective_val = -it->objective_val ;
+
 		it->crossover_probability = it->fitness / sum_fitness;
 	}
 
@@ -1531,457 +1151,7 @@ void update_population_properties(std::vector<member> &population) {
 
 
 
-int train_kriging_by_cross_validation(std::string input_file_name,
-		int linear_regression,
-		vec &regression_weights,
-		vec &kriging_params,
-		double &reg_param,
-		int &max_number_of_function_calculations,
-		int dim) {
 
-
-
-
-
-	printf("training Kriging response surface for the data : %s\n",
-			input_file_name.c_str());
-
-	/* initialize random seed*/
-	srand (time(NULL));
-
-
-	int number_of_treads = 1;
-#pragma omp parallel
-	{
-
-		int tid = omp_get_thread_num();
-		number_of_treads = omp_get_num_threads();
-
-
-		if (tid == 0){
-			printf("number of threads used : %d\n", number_of_treads);
-			printf("number of function evaluations per thread : %d\n", max_number_of_function_calculations = max_number_of_function_calculations/number_of_treads);
-		}
-
-	}
-
-
-	mat data_functional_values; // data matrix for only functional values
-	mat data_gradients;         // data matrix for only functional values + gradient sensitivities
-
-
-	std::ifstream in(input_file_name);
-
-	if(!in) {
-		cout << "Cannot open input file...\n";
-		return 1;
-	}
-
-
-	std::vector<double> temp;
-
-
-
-	std::string str;
-	int count_f=0;
-	int count_g=0;
-
-	while (std::getline(in, str)) {
-		// output the line
-		//				std::cout << "line = "<<str << std::endl;
-
-
-		std::string delimiter = ",";
-
-		size_t pos = 0;
-		std::string token;
-		while ((pos = str.find(delimiter)) != std::string::npos) {
-			token = str.substr(0, pos);
-			//			std::cout << "token = "<<token << std::endl;
-
-
-			temp.push_back(atof(token.c_str()));
-
-
-			str.erase(0, pos + delimiter.length());
-		}
-		//				std::cout << "str = "<<str << std::endl;
-		temp.push_back(atof(str.c_str()));
-
-		//		std::cout<<"temp= \n";
-		for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
-
-			//			std::cout<<*it<<std::endl;
-
-
-		}
-
-
-		if(temp.size() == dim+1){ // function values
-
-			rowvec newrow(dim+1);
-			int count=0;
-			for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
-
-				//				std::cout<<*it<<std::endl;
-				newrow(count)=*it;
-				count++;
-
-			}
-			//			newrow.print();
-			count_f++;
-			data_functional_values.resize(count_f, dim+1);
-
-			data_functional_values.row(count_f-1)=newrow;
-
-
-
-		}
-		else{ // function+gradient information
-
-			rowvec newrow(2*dim+1);
-			int count=0;
-			for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
-
-				//				std::cout<<*it<<std::endl;
-				newrow(count)=*it;
-				count++;
-
-			}
-			//			newrow.print();
-			count_g++;
-			data_gradients.resize(count_g, 2*dim+1);
-
-			data_gradients.row(count_g-1)=newrow;
-
-
-		}
-
-
-
-
-		temp.clear();
-
-		// now we loop back and get the next line in 'str'
-	}
-
-
-	data_functional_values.print();
-
-
-
-
-
-
-
-	int n_f_evals = data_functional_values.n_rows;
-	int n_g_evals = data_gradients.n_rows;
-
-
-	mat X = data_functional_values.submat(0, 0, n_f_evals - 1, data_functional_values.n_cols - 2);
-
-	//		X.print();
-
-	vec ys_func = data_functional_values.col(dim);
-
-	//	ys.print();
-
-
-
-
-	printf("functional values :\n");
-
-	ys_func.print();
-
-	vec x_max(dim);
-	x_max.fill(0.0);
-
-	vec x_min(dim);
-	x_min.fill(0.0);
-
-	for (int i = 0; i < dim; i++) {
-		x_max(i) = X.col(i).max();
-		x_min(i) = X.col(i).min();
-
-	}
-
-	printf("maximum = \n");
-	x_max.print();
-
-	printf("minimum = \n");
-	x_min.print();
-
-
-
-	for (int i = 0; i < X.n_rows; i++) {
-		for (int j = 0; j < dim; j++) {
-			X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-		}
-	}
-
-	printf("Normalized data = \n");
-	X.print();
-
-
-	if (linear_regression == LINEAR_REGRESSION_ON) { // if linear regression is on
-
-		mat augmented_X(X.n_rows, dim + 1);
-
-		for (int i = 0; i < X.n_rows; i++) {
-			for (int j = 0; j <= dim; j++) {
-				if (j == 0)
-					augmented_X(i, j) = 1.0;
-				else
-					augmented_X(i, j) = X(i, j - 1);
-
-			}
-		}
-
-		//		printf("Augmented data matrix = \n");
-		//		augmented_X.print();
-
-		/* add a small regularization term if there are too few samples */
-		//		if (nrows < dim * 10) {
-		//
-		//		}
-
-		printf("Taking pseudo-inverse of augmented data matrix...\n");
-		mat psuedo_inverse_X_augmented = pinv(augmented_X);
-
-		//		psuedo_inverse_X_augmented.print();
-
-		regression_weights = psuedo_inverse_X_augmented * ys_func;
-
-		printf("Linear regression coefficients = \n");
-		regression_weights.print();
-
-		/* now update the ys vector */
-
-		ys_func = ys_func - augmented_X * regression_weights;
-
-		//		printf("Updated ys vector = \n");
-
-		//		ys.print();
-
-	} /* end of linear regression */
-
-
-
-	/* matrix that holds the gradient sensitivities */
-	//	printf("Data matrix for gradients:\n");
-	//		data_gradients.print();
-	// remove functional values from the gradient data
-
-	if(data_gradients.n_rows !=0){
-
-
-		for (int i = 0; i < data_gradients.n_rows; i++) {
-			for (int j = 0; j < dim; j++) {
-				data_gradients(i, j) = (data_gradients(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-			}
-		}
-
-	}
-
-	//		printf("Data matrix for gradients:\n");
-	//		data_gradients.print();
-
-
-
-	int dimension_of_R = (4*ys_func.size())/5;
-
-	printf("dimension of R = %d\n", dimension_of_R);
-
-
-	int number_of_initial_population = dim * 16 / number_of_treads;
-
-	if(number_of_initial_population < 100) number_of_initial_population = 100;
-
-	printf("number_of_initial_population = %d\n",number_of_initial_population);
-
-
-	/* main training loop */
-
-#pragma omp parallel shared(ys_func,data_gradients, X, kriging_params,number_of_initial_population,dimension_of_R,dim,total_number_of_function_evals)
-	{
-
-		int tid;
-
-		std::vector<member>::iterator it;
-		std::vector < member > population;
-		int population_size = 0;
-
-		double population_max = -LARGE;
-		int population_max_index;
-
-
-		/* allocate the correlation matrix */
-		mat Rmatrix = eye(dimension_of_R, dimension_of_R);
-
-		/* allocate the matrices for Cholesky decomposition */
-		mat Umatrix=zeros(dimension_of_R, dimension_of_R);
-
-		mat Lmatrix= zeros(dimension_of_R, dimension_of_R);
-
-		/* allocate the identity vector */
-		vec I = ones(dimension_of_R);
-
-
-
-		//		Rmatrix.print();
-
-
-
-
-		for (int i = 0; i < max_number_of_function_calculations; i++) {
-
-
-
-
-
-
-
-			/* update population properties after initital iterations */
-			if (i >= number_of_initial_population) {
-				update_population_properties (population);
-
-			}
-
-			if (total_number_of_function_evals % 50 == 0)
-				printf("# of function calculations =  %d\n",
-						total_number_of_function_evals);
-
-			//			int tid = omp_get_thread_num();
-			//			printf("Thread %d i= %d\n",tid,i);
-
-
-			member new_born;
-			new_born.theta.set_size(dim);
-			new_born.gamma.set_size(dim);
-			new_born.theta.zeros(dim);
-			new_born.gamma.zeros(dim);
-
-
-
-			if (i < number_of_initial_population) {
-
-				for (int j = 0; j < dim; j++) {
-					new_born.theta(j) = RandomDouble(0, 10); /*theta */
-					new_born.gamma(j) = RandomDouble(0, 2);  /*gamma */
-
-
-				}
-				//				new_born.log_regularization_parameter =  RandomDouble(0, 14);
-			} else {
-
-				int father_id, mother_id;
-				pickup_random_pair(population, mother_id, father_id);
-				//		printf("cross-over\n");
-				crossover_kriging(population[mother_id], population[father_id],
-						new_born);
-			}
-
-
-			//		new_born.theta.print();
-			//		new_born.gamma.print();
-
-			//			printf("calculate_fitness\n");
-			calculate_fitness_cross_validation(new_born,
-					reg_param,
-					Rmatrix,
-					Umatrix,
-					Lmatrix,
-					X,
-					ys_func,
-					I,
-					data_gradients);
-
-
-			if (new_born.objective_val != -LARGE) {
-				new_born.id = population_size;
-#pragma omp critical
-				{
-					population.push_back(new_born);
-					population_size++;
-				}
-
-			}
-
-			if (population_size % 10 == 0 && i > number_of_initial_population) { //in each 10 iteration find population max
-				population_max = -LARGE;
-				for (it = population.begin(); it != population.end(); ++it) {
-
-					if (it->objective_val > population_max) {
-						population_max = it->objective_val;
-						population_max_index = it->id;
-					}
-
-				}
-
-
-			}
-
-		} // end of for loop
-
-
-		population_max= -LARGE;
-		for (it = population.begin() ; it != population.end(); ++it){
-
-			if ( it->objective_val >  population_max){
-				population_max = it->objective_val;
-				population_max_index = it->id;
-			}
-
-
-		}
-
-
-#pragma omp barrier
-
-
-		printf("kriging model training is over...\n");
-		printf("tread %d best design with the validation error = %10.7f\n",omp_get_thread_num(),population_max );
-
-
-
-
-#pragma omp critical
-		{
-			if (population_max > population_overall_max){
-				printf("tread %d, population_overall_max = %10.7f\n",omp_get_thread_num(),population_overall_max);
-				population_overall_max = population_max;
-				population_overall_max_tread_id = omp_get_thread_num();
-			}
-		}
-
-
-#pragma omp barrier
-
-
-
-
-
-
-		tid = omp_get_thread_num();
-		if(tid == population_overall_max_tread_id){
-
-			printf("tread %d has the best design with the validation error = %10.7f\n",population_overall_max_tread_id,population_overall_max );
-
-			population.at(population_max_index).print();
-
-			kriging_params.set_size(2*dim);
-
-			for(int i=0;i<dim;i++) kriging_params(i)     = population.at(population_max_index).theta(i);
-			for(int i=0;i<dim;i++) kriging_params(i+dim) = population.at(population_max_index).gamma(i);
-			//			reg_param = population.at(population_max_index).log_regularization_parameter;
-
-		}
-
-	} // end of parallel section
-
-
-
-}
 
 
 /*
@@ -1994,10 +1164,6 @@ int train_kriging_by_cross_validation(std::string input_file_name,
  *  IN max_number_of_function_calculations: maximum number of function evaluations for the EA
  *  IN data_file_format
  */
-
-
-
-
 int train_kriging_response_surface(std::string input_file_name,
 		std::string file_name_hyperparameters,
 		int linear_regression,

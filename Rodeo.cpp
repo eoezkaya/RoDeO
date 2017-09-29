@@ -19,15 +19,6 @@ int main(void){
 	printf("\n**************************************************************\n");
 
 
-//	su2_try_NACA0012_classic_solution();
-
-//	initial_data_acquisition(200);
-	su2_optimize();
-
-	exit(1);
-
-
-
 	double parameter_bounds[4];
 	parameter_bounds[0]=0.0;
 	parameter_bounds[1]=100.0;
@@ -35,7 +26,14 @@ int main(void){
 	parameter_bounds[3]=100.0;
 
 
-
+	perform_rbf_test(Eggholder,
+	        parameter_bounds,
+	        "Eggholder" ,
+	        10,
+	        RANDOM_SAMPLING,
+	        2,
+	        GAUSSIAN,
+	        CHOLESKY);
 
 
 
@@ -91,16 +89,16 @@ int main(void){
 //	exit(1);
 
 
-	perform_trust_region_GEK_test(Eggholder,
-				Eggholder_adj,
-				parameter_bounds,
-				"Eggholder" ,
-				0,
-				50,
-				EXISTING_FILE,
-				CHOLESKY,
-				2,
-				LINEAR_REGRESSION_OFF);
+//	perform_trust_region_GEK_test(Eggholder,
+//				Eggholder_adj,
+//				parameter_bounds,
+//				"Eggholder" ,
+//				0,
+//				50,
+//				EXISTING_FILE,
+//				CHOLESKY,
+//				2,
+//				LINEAR_REGRESSION_OFF);
 
 
 
