@@ -2412,7 +2412,123 @@ void perform_rbf_test(double (*test_function)(double *),
 #if 0
     printf("Training rbf...\n");
 #endif
-    train_rbf(X, ys, w, rbf_type);
+
+    double sigma=0.0;
+    train_rbf(X, ys, w, sigma,rbf_type);
+
+#if 1
+    printf("Rbf weights =\n");
+    w.print();
+#endif
+
+
+
+    double in_sample_error = 0.0;
+
+    for(unsigned int i=0;i<X.n_rows;i++){
+
+        rowvec xp = X.row(i);
+
+
+
+
+        double func_val = calc_ftilde_rbf(X, xp, w, rbf_type, sigma);
+
+        /* convert to original input vector */
+        for(int j=0; j<problem_dimension;j++) {
+
+            xp(j) = xp(j)* (x_max(j) - x_min(j))+x_min(j);
+        }
+
+        double func_val_exact = test_function(xp.memptr());
+
+#if 1
+        printf("xp = \n");
+        xp.print();
+        printf("\n");
+        printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
+#endif
+
+        in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
+
+
+    }
+
+    in_sample_error = in_sample_error/X.n_rows;
+
+    printf("in sample error = %10.7f\n",in_sample_error);
+
+
+    /* visualize with contour plot if the problem is 2D */
+    if (problem_dimension == 2){
+        int resolution =100;
+
+        std::string rbf_response_surface_file_name = function_name+"_"+"rbf_response_surface_"+ std::to_string(number_of_samples )+".dat";
+
+        FILE *rbf_response_surface_file = fopen(rbf_response_surface_file_name.c_str(),"w");
+
+        double dx,dy; /* step sizes in x and y directions */
+        rowvec x(2);
+        rowvec xnorm(2);
+
+        double func_val;
+        dx = (bounds[1]-bounds[0])/(resolution-1);
+        dy = (bounds[3]-bounds[2])/(resolution-1);
+
+        double out_sample_error=0.0;
+
+        x[0] = bounds[0];
+        for(int i=0;i<resolution;i++){
+
+            x[1] = bounds[2];
+            for(int j=0;j<resolution;j++){
+
+                /* normalize x */
+                xnorm(0)= (x(0)- x_min(0)) / (x_max(0) - x_min(0));
+                xnorm(1)= (x(1)- x_min(1)) / (x_max(1) - x_min(1));
+
+
+                func_val = calc_ftilde_rbf(X, xnorm, w, rbf_type, sigma);
+
+                fprintf(rbf_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
+
+                double func_val_exact = test_function(x.memptr());
+
+                out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
+
+
+
+                x[1]+=dy;
+            }
+            x[0]+= dx;
+
+        }
+        fclose(rbf_response_surface_file);
+
+        out_sample_error = out_sample_error/(resolution*resolution);
+
+        printf("out of sample error = %10.7f\n",out_sample_error);
+
+
+
+        /* plot the kriging response surface */
+
+        std::string file_name_for_plot = function_name+"_"+"rbf_response_surface_";
+        file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+        std::string python_command = "python -W ignore plot_2d_surface.py "+ rbf_response_surface_file_name+ " "+ file_name_for_plot ;
+
+
+
+        FILE* in = popen(python_command.c_str(), "r");
+
+
+        fprintf(in, "\n");
+
+
+    }
+
+
 
 
 }
