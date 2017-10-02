@@ -1,5 +1,40 @@
 #ifndef TEST_FUNCTIONS_HPP
 #define TEST_FUNCTIONS_HPP
+#include "Rodeo_macros.hpp"
+#include <string>
+
+class Function_param {
+public:
+    int number_of_independents;
+
+    std::string func_name;
+    std::string adjoint_name;
+    double (*func_ptr)(double *);
+    double (*adj_ptr)(double *, double *);
+
+    double *bounds;
+
+    Function_param (){
+
+        number_of_independents = 0;
+        name = "Empty";
+        adjoint_name = "Empty";
+        ptr = NULL;
+        bounds=NULL;
+        adj_ptr=NULL;
+
+    }
+
+    void print(void){
+        printf("function name = %s\n",name.c_str());
+        printf("Number of independent variables = %d\n",number_of_independents);
+
+
+    }
+} ;
+
+
+
 
 double test_function1D(double *x);
 double test_function1D_adj(double *x, double *xb);
@@ -115,7 +150,7 @@ void perform_rbf_test(double (*test_function)(double *),
         int  number_of_samples,
         int sampling_method,
         int problem_dimension,
-        int rbf_type);
+        RBF_TYPE rbf_type);
 
 
 

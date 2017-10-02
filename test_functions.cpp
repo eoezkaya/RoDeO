@@ -2306,7 +2306,7 @@ void perform_rbf_test(double (*test_function)(double *),
         int  number_of_samples,
         int sampling_method,
         int problem_dimension,
-        int rbf_type)
+        RBF_TYPE rbf_type)
 {
 
     /* file name for data points in csv (comma separated values) format */
@@ -2413,9 +2413,17 @@ void perform_rbf_test(double (*test_function)(double *),
 #endif
 
     double sigma=0.0;
-    train_rbf(X, ys, w, sigma,rbf_type);
 
-#if 1
+    RBF_param model_parameters;
+    model_parameters.type = rbf_type;
+
+#if 0
+    model_parameters.print();
+#endif
+
+    train_rbf(X, ys, w, sigma,model_parameters);
+
+#if 0
     printf("Rbf weights =\n");
     w.print();
 #endif
