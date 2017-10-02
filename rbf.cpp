@@ -17,12 +17,32 @@ double rbf_psi_cubic(double r) {
 }
 double rbf_psi_tps(double r) {
 
-    return r*r*log(r);
+
+    if (r == 0.0){
+
+        return 0;
+    }
+
+    else{
+
+        return r*r*log(r);
+
+    }
 }
 
 double rbf_psi_gaussian(double r, double sigma) {
 
     return exp(-(r*r)/(2*sigma*sigma));
+}
+
+double rbf_psi_inverse_multiquadratic(double r, double sigma) {
+
+    return pow((r*r+sigma*sigma),-0.5);
+}
+
+double rbf_psi_multiquadratic(double r, double sigma) {
+
+    return pow((r*r+sigma*sigma),0.5);
 }
 
 
@@ -32,7 +52,7 @@ double rbf_psi_gaussian(double r, double sigma) {
  * @param[in] X
  * @param[in] sigma
  */
-void compute_PSI_gauss(mat &PSI, mat &X, double sigma, double lambda){
+void compute_PSI(mat &PSI, mat &X, double lambda, double sigma, int type){
 
     int dim = PSI.n_rows;
 
@@ -58,7 +78,38 @@ void compute_PSI_gauss(mat &PSI, mat &X, double sigma, double lambda){
 #endif
 
             rowvec xdiff = x1 -x2;
-            PSI(i,j) = rbf_psi_gaussian(L2norm(xdiff),sigma);
+
+            if(type == GAUSSIAN){
+
+                PSI(i,j) = rbf_psi_gaussian(L2norm(xdiff),sigma);
+            }
+
+
+            if(type == LINEAR){
+
+                PSI(i,j) = rbf_psi_linear(L2norm(xdiff));
+            }
+
+
+            if(type == THIN_PLATE_SPLINE){
+
+                PSI(i,j) = rbf_psi_tps(L2norm(xdiff));
+            }
+
+            if(type == CUBIC){
+
+                PSI(i,j) = rbf_psi_cubic(L2norm(xdiff));
+            }
+
+            if(type == MULTIQUADRATIC){
+
+                PSI(i,j) = rbf_psi_multiquadratic(L2norm(xdiff),sigma);
+            }
+
+            if(type == INV_MULTIQUADRATIC){
+
+                PSI(i,j) = rbf_psi_inverse_multiquadratic(L2norm(xdiff),sigma);
+            }
 
             /* add regularization term */
             if(i == j) {
@@ -117,6 +168,17 @@ double calc_ftilde_rbf(mat &X, rowvec &xp, vec &w, int type, double sigma=1.0){
             ftilde += w(i)*rbf_psi_tps(L2norm(xdiff));
         }
 
+        if(type == MULTIQUADRATIC){
+
+            ftilde += w(i)*rbf_psi_multiquadratic(L2norm(xdiff),sigma);
+        }
+        if(type == INV_MULTIQUADRATIC){
+
+            ftilde += w(i)*rbf_psi_inverse_multiquadratic(L2norm(xdiff),sigma);
+        }
+
+
+
     }
 
     return ftilde;
@@ -145,11 +207,11 @@ int train_rbf(mat &X, vec &ys, vec &w, double &sigma, int type){
     unsigned int max_number_of_iter_for_cv = 100;
     unsigned int number_of_cv_inner_iter = 20;
 
-    const double upper_bound_sigma = 5.0;
+    const double upper_bound_sigma = 1.0;
     const double lower_bound_sigma = 0.0;
 
     const double upper_bound_lambda = 6.0;
-    const double lower_bound_lambda = 10.0;
+    const double lower_bound_lambda = 12.0;
 
     int number_of_data_points_for_cross_val = dim/5;
 
@@ -229,7 +291,7 @@ int train_rbf(mat &X, vec &ys, vec &w, double &sigma, int type){
 
 
             /* evaluate the Gram matrix */
-            compute_PSI_gauss(PSI,Xmod,sigma,lambda);
+            compute_PSI(PSI,Xmod,lambda,sigma,type);
 
 #if 0
             printf("PSI matrix = \n");
@@ -238,7 +300,12 @@ int train_rbf(mat &X, vec &ys, vec &w, double &sigma, int type){
 
 
             /* evaluate rbf weights */
-            wmod = solve(PSI, ysmod);
+            bool status = solve(wmod, PSI, ysmod);
+
+            if(status ==0){
+
+                continue;
+            }
 
 
 #if 0
@@ -262,7 +329,7 @@ int train_rbf(mat &X, vec &ys, vec &w, double &sigma, int type){
                 xp.print();
 #endif
 
-                calc_ftilde_rbf(Xmod,xp,wmod,type,sigma);
+                ftilde = calc_ftilde_rbf(Xmod,xp,wmod,type,sigma);
 
                 double fexact = ys(cv_indices(point));
 # if 0
@@ -270,19 +337,28 @@ int train_rbf(mat &X, vec &ys, vec &w, double &sigma, int type){
                 printf("fexact = %10.7f\n",fexact);
 #endif
 
-                squared_error = pow((fexact-ftilde),2.0);
+                squared_error += pow((fexact-ftilde),2.0);
 
+#if 0
+                printf("pow((fexact-ftilde),2.0) = %10.7f\n",pow((fexact-ftilde),2.0));
+                printf("squared_error = %10.7f\n",squared_error);
+#endif
             }
 
         } /* inner cv iterations loop */
 
 
-        squared_error = squared_error/number_of_cv_inner_iter;
+        squared_error = squared_error/(number_of_cv_inner_iter*number_of_data_points_for_cross_val);
 #if 0
 
-        printf("squared_error = %10.7f\n",squared_error);
+        printf("squared_error = %10.7f at lambda = %12.10f and sigma = %12.10f\n",squared_error, lambda, sigma);
 #endif
         if (squared_error < min_squared_error){
+
+#if 0
+
+            printf("a better squared_error = %10.7f at lambda = %12.10f and sigma = %12.10f\n",squared_error, lambda, sigma);
+#endif
 
             min_squared_error = squared_error;
             best_sigma  = sigma;
@@ -303,14 +379,14 @@ int train_rbf(mat &X, vec &ys, vec &w, double &sigma, int type){
 
 #if 1
     printf("best squared error = %10.7f\n",min_squared_error);
-    printf("best lambda = %10.7f\n",best_lambda);
-    printf("best sigma = %10.7f\n",best_sigma);
+    printf("best lambda = %15.12f\n",best_lambda);
+    printf("best sigma = %15.12f\n",best_sigma);
 #endif
 
     /* evaluate the Gram matrix */
-    compute_PSI_gauss(PSIfull,X,best_sigma,best_lambda);
+    compute_PSI(PSIfull,X,best_lambda,best_sigma,type);
 
-#if 1
+#if 0
     printf("PSIfull = \n");
     PSIfull.print();
 #endif

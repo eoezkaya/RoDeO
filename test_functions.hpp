@@ -115,8 +115,7 @@ void perform_rbf_test(double (*test_function)(double *),
         int  number_of_samples,
         int sampling_method,
         int problem_dimension,
-        int rbf_type,
-        int method_for_solving_lin_eq_for_training);
+        int rbf_type);
 
 
 

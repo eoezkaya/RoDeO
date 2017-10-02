@@ -2306,8 +2306,7 @@ void perform_rbf_test(double (*test_function)(double *),
         int  number_of_samples,
         int sampling_method,
         int problem_dimension,
-        int rbf_type,
-        int method_for_solving_lin_eq_for_training)
+        int rbf_type)
 {
 
     /* file name for data points in csv (comma separated values) format */
@@ -2442,7 +2441,7 @@ void perform_rbf_test(double (*test_function)(double *),
 
         double func_val_exact = test_function(xp.memptr());
 
-#if 1
+#if 0
         printf("xp = \n");
         xp.print();
         printf("\n");

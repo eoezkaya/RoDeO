@@ -42,8 +42,11 @@ void print_population(std::vector<member> population){
  * Correlation function R(x^i,x^j)
  *
  * R(x^i,x^j)=exp(-sum_{k=1}^p (  theta_k* ( abs(x^i_k-x^j_k)**gamma_k  ) )  )
- *
- *
+ * @param[in] x_i
+ * @param[in] X_j
+ * @param[in] theta
+ * @param[in] gamma
+ * @return R
  *
  * */
 double compute_R(rowvec x_i, rowvec x_j, vec theta, vec gamma) {
@@ -66,7 +69,10 @@ double compute_R(rowvec x_i, rowvec x_j, vec theta, vec gamma) {
  * Correlation function R(x^i,x^j) with gamma = 2.0
  *
  * R(x^i,x^j)=exp(-sum_{k=1}^p (  theta_k* ( abs(x^i_k-x^j_k)**2.0  ) )  )
- *
+ * @param[in] x_i
+ * @param[in] X_j
+ * @param[in] theta
+ * @return R
  *
  * */
 double compute_R_Gauss(rowvec x_i,
@@ -327,7 +333,7 @@ void compute_R_matrix_GEK(vec theta,
 
 
 
-} // end of compute_R_matrix_GEK
+} /* end of compute_R_matrix_GEK */
 
 
 
@@ -338,7 +344,7 @@ void compute_R_matrix_GEK(vec theta,
 
 double calculate_f_tildeCV(rowvec x, mat &X, double beta0, vec R_inv_ys_min_beta, vec theta, vec gamma){
 
-    //	printf("calculate_f_tilde...\n");
+
     int dim = x.size();
     vec r(X.n_rows);
 

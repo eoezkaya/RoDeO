@@ -2,7 +2,7 @@
 #include <chrono>
 #include <random>
 #include <string>
-#include<math.h>
+#include <math.h>
 #include <vector>
 
 /** Returns the pdf of x, given the distribution described by mu and sigma..
@@ -191,68 +191,7 @@ double random_number(double xs, double xe, double sigma_factor){
     return distribution(generator);
 }
 
-void compute_max_min_distance_data(mat &x, double &max_distance, double &min_distance){
 
-
-    min_distance = LARGE;
-    max_distance = -LARGE;
-
-    int min_index[2]={0,0};
-    int max_index[2]={0,0};
-
-    for(unsigned int i=0; i< x.n_rows; i++){
-
-        for(unsigned int j=i+1; j< x.n_rows; j++){
-
-            double dist = 0.0;
-
-            for(unsigned int k=0; k< x.n_cols;k++) {
-
-                dist+= (x(i,k)-x(j,k))*(x(i,k)-x(j,k));
-            }
-
-            dist  = sqrt(dist);
-
-            if(dist > max_distance) {
-
-                max_distance = dist;
-                max_index[0]=i;
-                max_index[1]=j;
-            }
-
-            if(dist < min_distance) {
-
-                min_distance = dist;
-                min_index[0]=i;
-                min_index[1]=j;
-
-
-            }
-
-        }
-
-
-
-    }
-
-    printf("maximum distance = %10.7f\n",max_distance);
-    printf("between point %d = \n", max_index[0]);
-    x.row(max_index[0]).print();
-    printf("and point %d = \n", max_index[1]);
-    x.row(max_index[1]).print();
-
-
-    printf("minimum distance = %10.7f\n",min_distance);
-    printf("between point %d = \n", min_index[0]);
-    x.row(min_index[0]).print();
-    printf("and point %d = \n", min_index[1]);
-    x.row(min_index[1]).print();
-
-    printf("the ratio is = %10.7f\n",max_distance/min_distance );
-
-
-
-}
 /** randomly generates the indices of a validation set
  *
  * @param[in] size   dimension of the validation set
@@ -362,7 +301,7 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 }
 
-
+/* distance functions */
 
 double L1norm(vec & x){
 

@@ -29,11 +29,10 @@ int main(void){
 	perform_rbf_test(Eggholder,
 	        parameter_bounds,
 	        "Eggholder" ,
-	        50,
-	        RANDOM_SAMPLING,
+	        200,
+	        LHS_CENTER,
 	        2,
-	        GAUSSIAN,
-	        CHOLESKY);
+	        MULTIQUADRATIC);
 
 
 
