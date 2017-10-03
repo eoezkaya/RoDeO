@@ -51,6 +51,11 @@ enum RBF_TYPE {
     INV_MULTIQUADRATIC};
 
 
+enum SVM_KERNEL_TYPE {
+    SVM_LINEAR,
+    SVM_RBF,
+    SVM_POLYNOMIAL};
+
 
 #define LARGE 10E14
 #define EPSILON 10-14

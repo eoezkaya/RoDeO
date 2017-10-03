@@ -4,6 +4,7 @@
 
 #include "su2_optim.hpp"
 #include "test_functions.hpp"
+#include "rbf.hpp"
 #include "Rodeo_macros.hpp"
 
 
@@ -26,13 +27,15 @@ int main(void){
 	parameter_bounds[3]=100.0;
 
 
+
+
 	perform_rbf_test(Eggholder,
 	        parameter_bounds,
 	        "Eggholder" ,
-	        200,
+	        20,
 	        LHS_CENTER,
 	        2,
-	        MULTIQUADRATIC);
+	        GAUSSIAN);
 
 
 

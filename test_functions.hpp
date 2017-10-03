@@ -17,16 +17,16 @@ public:
     Function_param (){
 
         number_of_independents = 0;
-        name = "Empty";
-        adjoint_name = "Empty";
-        ptr = NULL;
+        func_name = "None";
+        adjoint_name = "None";
+        func_ptr = NULL;
         bounds=NULL;
         adj_ptr=NULL;
 
     }
 
     void print(void){
-        printf("function name = %s\n",name.c_str());
+        printf("function name = %s\n",func_name.c_str());
         printf("Number of independent variables = %d\n",number_of_independents);
 
 

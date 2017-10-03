@@ -39,8 +39,9 @@ int train_linear_regression(mat &X, vec &ys, vec &w, double lambda=0){
 	}
 
 	if(fabs(lambda) < EPSILON ){
-
+#if 0
 		printf("Taking pseudo-inverse of augmented data matrix...\n");
+#endif
 		mat psuedo_inverse_X_augmented = pinv(augmented_X);
 
 		//		psuedo_inverse_X_augmented.print();
@@ -50,13 +51,12 @@ int train_linear_regression(mat &X, vec &ys, vec &w, double lambda=0){
 	}
 
 	else{
-
+#if 0
 		printf("Regularization...\n");
-
+#endif
 		mat XtX = trans(augmented_X)*augmented_X;
 
 		XtX = XtX + lambda*eye(XtX.n_rows,XtX.n_rows);
-
 
 		w = inv(XtX)*trans(augmented_X)*ys;
 

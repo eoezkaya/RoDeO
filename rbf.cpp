@@ -54,7 +54,7 @@ double rbf_psi_multiquadratic(double r, double sigma) {
  */
 void compute_PSI(mat &PSI, mat &X, double lambda, double sigma, int type){
 
-    int dim = PSI.n_rows;
+    unsigned int dim = PSI.n_rows;
 
 #if 0
     printf("dimension the PSI matrix = %d\n",dim);
@@ -144,7 +144,7 @@ double calc_ftilde_rbf(mat &X, rowvec &xp, vec &w, int type, double sigma=1.0){
 
     double ftilde=0.0;
 
-    for(int i=0; i<dim; i++){ /* loop through all basis functions */
+    for(unsigned int i=0; i<dim; i++){ /* loop through all basis functions */
 
         rowvec xi = X.row(i);
         rowvec xdiff = xp-xi;
@@ -197,21 +197,23 @@ double calc_ftilde_rbf(mat &X, rowvec &xp, vec &w, int type, double sigma=1.0){
  * @return 0 if successful
  */
 
-int train_rbf(mat &X, vec &ys, vec &w, double &sigma, int type){
+int train_rbf(mat &X, vec &ys, vec &w, double &sigma,  RBF_param model_parameters){
 
     /* get the number of data points */
     unsigned int dim = X.n_rows;
     unsigned int d = X.n_cols;
 
     /* number of iterations for cross validation */
-    unsigned int max_number_of_iter_for_cv = 100;
-    unsigned int number_of_cv_inner_iter = 20;
+    unsigned int max_number_of_iter_for_cv = model_parameters.max_number_of_iter_for_cv;
+    unsigned int number_of_cv_inner_iter = model_parameters.number_of_cv_inner_iter;
 
-    const double upper_bound_sigma = 1.0;
-    const double lower_bound_sigma = 0.0;
+    const double upper_bound_sigma = model_parameters.upper_bound_sigma;
+    const double lower_bound_sigma = model_parameters.lower_bound_sigma;
 
-    const double upper_bound_lambda = 6.0;
-    const double lower_bound_lambda = 12.0;
+    const double upper_bound_lambda = model_parameters.upper_bound_lambda;
+    const double lower_bound_lambda = model_parameters.lower_bound_lambda;
+
+    int type = model_parameters.type;
 
     int number_of_data_points_for_cross_val = dim/5;
 
@@ -243,7 +245,7 @@ int train_rbf(mat &X, vec &ys, vec &w, double &sigma, int type){
     double best_sigma = 0.0;
     double best_lambda = 0.0;
     /* outer iterations for the cross validation */
-    for(int iter=0; iter<max_number_of_iter_for_cv; iter++){
+    for(unsigned int iter=0; iter<max_number_of_iter_for_cv; iter++){
 
 
 
@@ -261,7 +263,7 @@ int train_rbf(mat &X, vec &ys, vec &w, double &sigma, int type){
         double squared_error = 0.0;
 
         /* inner iterations of the cross validation */
-        for(int inner_iter =0; inner_iter<number_of_cv_inner_iter; inner_iter++){
+        for(unsigned int inner_iter =0; inner_iter<number_of_cv_inner_iter; inner_iter++){
 
 
 #if 0
