@@ -14,10 +14,30 @@
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
-
-
-
 using namespace arma;
+
+
+
+
+
+void classification_test1(double *x, double *label, double *y){
+    /* y = sin(x)+x-1+sin(2x) * (separating curve) */
+
+    *y = sin(x[0])+x[0]-1+sin(2.0*x[0]);
+
+    if (*y > x[1]) {
+
+        *label=1.0;
+    }
+    else{
+
+        *label=-1.0;
+    }
+
+
+}
+
+
 
 
 
@@ -755,16 +775,14 @@ void perform_kriging_test(double (*test_function)(double *),
 
     reg_param = pow(10.0, -1.0*reg_param);
 
+    /* evaluate the correlation matrix for the given theta and gamma */
     compute_R_matrix(theta,gamma, reg_param, R, X);
 
-    //	printf("R = \n");
-    //	R.print();
-    //	printf("\n");
 
     vec I = ones(dimension_of_R);
-    vec R_inv_ys(dimension_of_R);
-    vec R_inv_I (dimension_of_R);
-    vec R_inv_ys_min_beta(dimension_of_R);
+    vec R_inv_ys(dimension_of_R); /* R^-1 * ys */
+    vec R_inv_I (dimension_of_R); /* R^-1 * I */
+    vec R_inv_ys_min_beta(dimension_of_R); /* R^-1 * (ys-beta*I) */
 
 
 
@@ -846,6 +864,7 @@ void perform_kriging_test(double (*test_function)(double *),
 
 
 
+    /* check in-sample error */
 
     double in_sample_error = 0.0;
     for(unsigned int i=0;i<X.n_rows;i++){
@@ -2540,4 +2559,112 @@ void perform_rbf_test(double (*test_function)(double *),
 
 }
 
+void perform_svn_test(Classifier_Function_param &test_function,
+        int  number_of_samples,
+        int number_of_outliers,
+        SVM_KERNEL_TYPE kernel_type)
+{
+
+#if 1
+    test_function.print();
+#endif
+
+
+    /* allocate data matrix */
+    mat data(number_of_samples,test_function.number_of_independents+1);
+    data.fill(0.0);
+
+    /* file name for data points in csv (comma separated values) format */
+    std::string input_file_name = test_function.function_name+"_"
+            + std::to_string(number_of_samples )
+    +".csv";
+
+    printf("input file name : %s\n",input_file_name.c_str());
+
+    /* generate random sample points and identify labels */
+    for(unsigned int i=0; i<number_of_samples; i++){
+
+        for(unsigned int j=0; j<test_function.number_of_independents; j++){
+
+            double lowerbound = test_function.bounds[j*2];
+            double upperbound  = test_function.bounds[j*2+1];
+#if 0
+            printf("lower bound = %10.7f\n",lowerbound);
+            printf("upper bound = %10.7f\n",upperbound);
+#endif
+            double random_number = RandomDouble(lowerbound , upperbound );
+#if 0
+            printf("random number = %10.7f\n",random_number);
+#endif
+            data(i,j) = random_number;
+
+
+        }
+
+        rowvec x = data.row(i);
+        double label=0.0;
+        double func_val=0.0;
+        test_function.func_ptr(x.memptr(), &label, &func_val);
+        data(i,test_function.number_of_independents) = label;
+
+    }
+
+#if 0
+    data.print();
+#endif
+
+
+    data.save(input_file_name.c_str(), csv_ascii ) ;
+
+
+    /* visualization only for the 2d data */
+    if(test_function.number_of_independents == 2){
+
+        int resolution = 10000;
+
+        std::string filename_for_curve= test_function.function_name;
+        filename_for_curve += "_curve"+std::to_string(resolution)+".dat";
+
+
+        std::string file_name_for_plot = test_function.function_name;
+        file_name_for_plot += "_"+std::to_string(resolution)+".png";
+
+
+
+        printf("opening file %s for output...\n",filename_for_curve.c_str());
+        FILE *test_function_data=fopen(filename_for_curve.c_str(),"w");
+
+
+
+        double dx; /* step size in x*/
+        double x;
+        double func_val=0.0;
+        double label=0.0;
+
+        dx = (test_function.bounds[1]-test_function.bounds[0])/(resolution-1);
+        x= test_function.bounds[0];
+
+        for(int i=0; i<resolution; i++){
+
+            test_function.func_ptr(&x, &label, &func_val);
+            fprintf(test_function_data,"%10.7f %10.7f\n",x,func_val);
+            x+= dx;
+
+        }
+
+        fclose(test_function_data);
+
+
+        /* call python script to visualize */
+
+        std::string python_command = "python -W ignore plot_2d_classification.py "+
+                                      filename_for_curve+ " "+ input_file_name+ " "+file_name_for_plot ;
+        FILE* in = popen(python_command.c_str(), "r");
+        fprintf(in, "\n");
+
+
+
+    } /* end of visualization part */
+
+}
 

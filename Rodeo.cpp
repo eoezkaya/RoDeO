@@ -20,22 +20,33 @@ int main(void){
 	printf("\n**************************************************************\n");
 
 
-	double parameter_bounds[4];
-	parameter_bounds[0]=0.0;
-	parameter_bounds[1]=100.0;
-	parameter_bounds[2]=0.0;
-	parameter_bounds[3]=100.0;
+
+
+	Classifier_Function_param test_function(2);
+
+	test_function.function_name="classification_test1";
+	test_function.func_ptr = classification_test1;
+	test_function.bounds[0]=-4.0;
+	test_function.bounds[1]= 4.0;
+	test_function.bounds[2]=-6.0;
+	test_function.bounds[3]= 6.0;
+	test_function.noise_level = 0.1;
 
 
 
+	perform_svn_test(test_function,
+	        100,
+	        0,
+	        SVM_LINEAR);
 
-	perform_rbf_test(Eggholder,
-	        parameter_bounds,
-	        "Eggholder" ,
-	        20,
-	        LHS_CENTER,
-	        2,
-	        GAUSSIAN);
+
+//	perform_rbf_test(Eggholder,
+//	        parameter_bounds,
+//	        "Eggholder" ,
+//	        20,
+//	        LHS_CENTER,
+//	        2,
+//	        GAUSSIAN);
 
 
 

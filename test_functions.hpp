@@ -5,28 +5,48 @@
 
 class Function_param {
 public:
-    int number_of_independents;
+    unsigned int number_of_independents;
 
-    std::string func_name;
-    std::string adjoint_name;
+    std::string function_name;
+    std::string adjoint_function_name;
     double (*func_ptr)(double *);
     double (*adj_ptr)(double *, double *);
+    double noise_level;
 
+    /* x is between bounds[0] and bounds[1]; y is between bounds[2] and bounds[3] and so on  */
     double *bounds;
 
     Function_param (){
 
         number_of_independents = 0;
-        func_name = "None";
-        adjoint_name = "None";
+        function_name = "None";
+        adjoint_function_name = "None";
         func_ptr = NULL;
         bounds=NULL;
         adj_ptr=NULL;
+        noise_level = 0.0;
 
     }
 
+
+    Function_param (int num){
+
+            number_of_independents = num;
+            function_name = "None";
+            adjoint_function_name = "None";
+            func_ptr = NULL;
+            printf("allocating array for bound\n");
+            bounds= (double *) malloc(sizeof(double)*2*num);
+            adj_ptr=NULL;
+            noise_level = 0.0;
+
+    }
+
+
+
     void print(void){
-        printf("function name = %s\n",func_name.c_str());
+        printf("printing function information...\n");
+        printf("function name = %s\n",function_name.c_str());
         printf("Number of independent variables = %d\n",number_of_independents);
 
 
@@ -34,8 +54,54 @@ public:
 } ;
 
 
+class Classifier_Function_param {
+public:
+    unsigned int number_of_independents;
+    std::string function_name;
+    void (*func_ptr)(double *, double *, double *);
+    double noise_level;
+
+    /* x is between bounds[0] and bounds[1]; y is between bounds[2] and bounds[3] and so on  */
+    double *bounds;
+
+    Classifier_Function_param (){
+
+        number_of_independents = 0;
+        function_name = "None";
+        func_ptr = NULL;
+        bounds=NULL;
+        noise_level = 0.0;
+
+    }
 
 
+    Classifier_Function_param (int num){
+
+            number_of_independents = num;
+            function_name = "None";
+            func_ptr = NULL;
+            bounds= (double *) malloc(sizeof(double)*2*num);
+            noise_level = 0.0;
+
+    }
+
+
+
+    void print(void){
+        printf("printing function information...\n");
+        printf("function name = %s\n",function_name.c_str());
+        printf("Number of independent variables = %d\n",number_of_independents);
+
+
+    }
+} ;
+
+
+void classification_test1(double *, double *, double *);
+
+
+
+/* regression test functions */
 double test_function1D(double *x);
 double test_function1D_adj(double *x, double *xb);
 
@@ -63,6 +129,8 @@ double Himmelblau_adj(double *x, double *xb);
 double Borehole(double *x);
 double Borehole_adj(double *x, double *xb);
 
+
+/* regression test functions */
 
 
 void perform_kriging_test(double (*test_function)(double *),
@@ -152,7 +220,10 @@ void perform_rbf_test(double (*test_function)(double *),
         int problem_dimension,
         RBF_TYPE rbf_type);
 
-
+void perform_svn_test(Classifier_Function_param &test_function,
+        int  number_of_samples,
+        int number_of_outliers,
+        SVM_KERNEL_TYPE kernel_type);
 
 
 #endif
