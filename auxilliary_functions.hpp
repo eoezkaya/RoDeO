@@ -44,4 +44,5 @@ double Lpnorm(vec & x, int p);
 double Lpnorm(rowvec & x, int p);
 
 
+
 #endif

@@ -20,4 +20,6 @@ public:
 } ;
 
 
+void train_svm(mat &X, vec &y,SVM_param model_parameters);
+
 #endif

@@ -9,6 +9,7 @@
 #include "test_functions.hpp"
 #include "kriging_training.hpp"
 #include "rbf.hpp"
+#include "svm.hpp"
 #include "trust_region_gek.hpp"
 
 
@@ -37,7 +38,24 @@ void classification_test1(double *x, double *label, double *y){
 
 }
 
+/* lineary seperable simple test problem */
 
+void classification_test2(double *x, double *label, double *y){
+    /* y = sin(x)+x-1+sin(2x) * (separating curve) */
+
+    *y = 0.5*x[0]+0.2;
+
+    if (*y > x[1]) {
+
+        *label=1.0;
+    }
+    else{
+
+        *label=-1.0;
+    }
+
+
+}
 
 
 
@@ -2415,6 +2433,7 @@ void perform_rbf_test(double (*test_function)(double *),
 
     /* normalize data */
     for (int i = 0; i < nrows; i++) {
+
         for (int j = 0; j < dim; j++) {
             X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
         }
@@ -2658,13 +2677,64 @@ void perform_svn_test(Classifier_Function_param &test_function,
         /* call python script to visualize */
 
         std::string python_command = "python -W ignore plot_2d_classification.py "+
-                                      filename_for_curve+ " "+ input_file_name+ " "+file_name_for_plot ;
+                filename_for_curve+ " "+ input_file_name+ " "+file_name_for_plot ;
         FILE* in = popen(python_command.c_str(), "r");
         fprintf(in, "\n");
 
 
 
     } /* end of visualization part */
+
+
+
+
+    mat X = data.submat( 0, 0, number_of_samples-1, test_function.number_of_independents-1 );
+    vec y = data.col(test_function.number_of_independents);
+
+#if 1
+    X.print();
+    y.print();
+#endif
+
+
+    vec x_max(test_function.number_of_independents);
+    x_max.fill(0.0);
+
+    vec x_min(test_function.number_of_independents);
+    x_min.fill(0.0);
+
+    for (int i = 0; i < test_function.number_of_independents; i++) {
+        x_max(i) = data.col(i).max();
+        x_min(i) = data.col(i).min();
+
+    }
+
+#if 0
+printf("maximum = \n");
+x_max.print();
+
+printf("minimum = \n");
+x_min.print();
+
+#endif
+
+/* normalize data */
+for (int i = 0; i < number_of_samples; i++) {
+
+    for (int j = 0; j < test_function.number_of_independents; j++) {
+        X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+    }
+}
+
+#if 0
+    X.print();
+#endif
+
+
+SVM_param model_parameters;
+
+train_svm(X, y, model_parameters);
+
 
 }
 

@@ -96,8 +96,11 @@ public:
     }
 } ;
 
-
+/* classification test functions */
 void classification_test1(double *, double *, double *);
+void classification_test2(double *x, double *label, double *y);
+/* classification test functions */
+
 
 
 

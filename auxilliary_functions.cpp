@@ -371,6 +371,8 @@ double Lpnorm(rowvec & x, int p){
 }
 
 
+
+
 bool file_exist(const char *fileName)
 {
     std::ifstream infile(fileName);
