@@ -2636,54 +2636,7 @@ void perform_svn_test(Classifier_Function_param &test_function,
     data.save(input_file_name.c_str(), csv_ascii ) ;
 
 
-    /* visualization only for the 2d data */
-    if(test_function.number_of_independents == 2){
 
-        int resolution = 10000;
-
-        std::string filename_for_curve= test_function.function_name;
-        filename_for_curve += "_curve"+std::to_string(resolution)+".dat";
-
-
-        std::string file_name_for_plot = test_function.function_name;
-        file_name_for_plot += "_"+std::to_string(resolution)+".png";
-
-
-
-        printf("opening file %s for output...\n",filename_for_curve.c_str());
-        FILE *test_function_data=fopen(filename_for_curve.c_str(),"w");
-
-
-
-        double dx; /* step size in x*/
-        double x;
-        double func_val=0.0;
-        double label=0.0;
-
-        dx = (test_function.bounds[1]-test_function.bounds[0])/(resolution-1);
-        x= test_function.bounds[0];
-
-        for(int i=0; i<resolution; i++){
-
-            test_function.func_ptr(&x, &label, &func_val);
-            fprintf(test_function_data,"%10.7f %10.7f\n",x,func_val);
-            x+= dx;
-
-        }
-
-        fclose(test_function_data);
-
-
-        /* call python script to visualize */
-
-        std::string python_command = "python -W ignore plot_2d_classification.py "+
-                filename_for_curve+ " "+ input_file_name+ " "+file_name_for_plot ;
-        FILE* in = popen(python_command.c_str(), "r");
-        fprintf(in, "\n");
-
-
-
-    } /* end of visualization part */
 
 
 
@@ -2710,30 +2663,132 @@ void perform_svn_test(Classifier_Function_param &test_function,
     }
 
 #if 0
-printf("maximum = \n");
-x_max.print();
+    printf("maximum = \n");
+    x_max.print();
 
-printf("minimum = \n");
-x_min.print();
+    printf("minimum = \n");
+    x_min.print();
 
 #endif
 
-/* normalize data */
-for (int i = 0; i < number_of_samples; i++) {
+    /* normalize data */
+    for (int i = 0; i < number_of_samples; i++) {
 
-    for (int j = 0; j < test_function.number_of_independents; j++) {
-        X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+        for (int j = 0; j < test_function.number_of_independents; j++) {
+            X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+        }
     }
-}
 
 #if 0
     X.print();
 #endif
 
 
-SVM_param model_parameters;
+    SVM_param model_parameters;
 
-train_svm(X, y, model_parameters);
+    double b=0.0; /* intercept */
+    vec alpha(number_of_samples);  /* vector of Lagrange multipliers */
+    alpha.fill(-1.0); /* initialization with inadmissable values */
+
+    train_svm(X, y, alpha, b, model_parameters);
+
+#if 1
+    printf("b = %10.7f\n",b);
+    printf("alpha = \n",b);
+    alpha.print();
+#endif
+
+    if(model_parameters.kernel_type == SVM_LINEAR){
+
+        /* weight vector for the linear kernel */
+        vec w(test_function.number_of_independents);
+        w.fill(0.0);
+
+
+        for(unsigned int i=0; i<test_function.number_of_independents; i++){
+
+            for(unsigned int j=0; j<number_of_samples; j++){
+
+                /* if it is a support vector */
+                if(alpha(j) > 0){
+
+                    w(i)+= alpha(j)*y(j)*X(j,i);
+                }
+
+            }
+
+        }
+
+
+#if 1
+        printf("w = \n");
+        printf("%10.7fx +%10.7fy + %10.7f = 0\n",w(0),w(1),b);
+#endif
+
+        /* visualization only for the 2d data */
+        if(test_function.number_of_independents == 2){
+
+            int resolution = 10000;
+
+            std::string filename_for_curve= test_function.function_name;
+            filename_for_curve += "_curve"+std::to_string(resolution)+".dat";
+
+
+            std::string file_name_for_plot = test_function.function_name;
+            file_name_for_plot += "_"+std::to_string(resolution)+".png";
+
+
+            std::string filename_for_svm= test_function.function_name;
+            filename_for_svm += "_svm"+std::to_string(resolution)+".dat";
+
+            printf("opening file %s for output...\n",filename_for_curve.c_str());
+            FILE *test_function_data=fopen(filename_for_curve.c_str(),"w");
+            FILE *svm_function_data=fopen(filename_for_svm.c_str(),"w");
+
+
+            double dx; /* step size in x*/
+            double x;
+
+
+
+            dx = (test_function.bounds[1]-test_function.bounds[0])/(resolution-1);
+            x= test_function.bounds[0];
+
+            for(int i=0; i<resolution; i++){
+
+                double func_val=0.0;
+                double svm_val=0.0;
+                double label=0.0;
+                double xnorm = (x - x_min(0)) / (x_max(0) - x_min(0));
+
+                svm_val = (-b - w(0)*xnorm)/w(1);
+
+                svm_val = svm_val*(x_max(1) - x_min(1))+x_min(1);
+
+                test_function.func_ptr(&x, &label, &func_val);
+
+                fprintf(test_function_data,"%10.7f %10.7f\n",x,func_val);
+                fprintf(svm_function_data,"%10.7f %10.7f\n",x,svm_val);
+                x+= dx;
+
+            }
+
+            fclose(test_function_data);
+            fclose(svm_function_data);
+
+            /* call python script to visualize */
+
+            std::string python_command = "python -W ignore plot_2d_classification.py "+
+                    filename_for_curve+ " "+ input_file_name+ " "+file_name_for_plot + " " + filename_for_svm;
+            FILE* in = popen(python_command.c_str(), "r");
+            fprintf(in, "\n");
+
+
+
+        } /* end of visualization part */
+
+
+    }
 
 
 }

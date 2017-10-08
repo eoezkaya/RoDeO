@@ -20,15 +20,19 @@ p = matrix(-1.0,(n_samples,1))
 A = matrix(0.0,(1,n_samples))
 b = matrix(0.0)
 
+if(C < 10E10):
+	tmp1 = np.diag(np.ones(n_samples) * -1)
+	tmp2 = np.identity(n_samples)
+	G = matrix(np.vstack((tmp1, tmp2)))
+	tmp1 = np.zeros(n_samples)
+	tmp2 = np.ones(n_samples) * C
+	h = matrix(np.hstack((tmp1, tmp2)))
+else:
+	print 'here'
+	G = matrix(np.diag(np.ones(n_samples) * -1.0))
+	h = matrix(np.zeros(n_samples))
 
-tmp1 = np.diag(np.ones(n_samples) * -1)
-tmp2 = np.identity(n_samples)
-G = matrix(np.vstack((tmp1, tmp2)))
-tmp1 = np.zeros(n_samples)
-tmp2 = np.ones(n_samples) * C
-h = matrix(np.hstack((tmp1, tmp2)))
-
-
+	print G
 count=0
 for i in range(n_samples):
 	for j in range(n_samples):
@@ -40,14 +44,14 @@ for i in range(n_samples):
 	count= count+1
 
 #print G
-#print A
+print A
 
 #print K
 
 #print p
 
 sol=solvers.qp(K, p, G, h, A, b)
-
+print sol
 # Lagrange multipliers
 a = np.ravel(sol['x'])
 

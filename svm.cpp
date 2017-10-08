@@ -28,17 +28,17 @@ double svm_rbf_kernel(rowvec x1, rowvec x2, double sigma){
 }
 
 
-void train_svm(mat &X, vec &y,SVM_param model_parameters){
+void train_svm(mat &X, vec &y,vec &alpha, double &b, SVM_param model_parameters){
 
     unsigned int dim = y.size();
 
     double sigma=1.0; /* parameter for rbf kernel */
 
-    double C=10; /* soft margin parameter */
+    double C=10000; /* soft margin parameter */
 
     /* parameter for polynomial kernel */
     double p=2;
-    double c=1.0;
+    double c=100.0;
 
 #if 1
     printf("Start train_svm...\n");
@@ -119,33 +119,125 @@ void train_svm(mat &X, vec &y,SVM_param model_parameters){
 
     fclose(qp_input_file);
 
-    /* call python script to solve qp problem */
+    /* call the python script to solve qp problem */
 
     std::string python_command = "python solve_qp_for_svm.py "+ std::to_string(C) +" "+std::to_string(dim) + " qp_input.dat";
 
     system(python_command.c_str());
 
 
-
-    vec alpha;
     alpha.load("Lagrange_multipliers.txt", raw_ascii);
-
-
-
-//    FILE *alpha_input_file = fopen("Lagrange_multipliers.txt","r");
-//
-//    for(unsigned int i=0; i<dim; i++){
-//
-//
-//        fscanf("%lf\n",&alpha(i));
-//
-//    }
-//
-//    fclose(alpha_input_file);
 
 #if 1
     alpha.print();
 #endif
 
+
+    double largest_margin_alpha = -LARGE;
+    for(unsigned int i=0; i<alpha.size(); i++){
+
+        if(alpha(i) > 0  && fabs(alpha(i)- C) > 10E-6 ){
+
+            if(alpha(i)>largest_margin_alpha){
+
+                largest_margin_alpha = alpha(i);
+            }
+
+
+        }
+
+    }
+
+#if 0
+    printf("Largest margin Lagrange multipler = %10.7f\n",largest_margin_alpha);
+#endif
+
+    model_parameters.sv_tolerance = largest_margin_alpha/10E6;
+
+
+    /* identify support vectors for a given tolerance*/
+
+    for(unsigned int i=0; i<alpha.size(); i++){
+
+        if(alpha(i) < model_parameters.sv_tolerance) {
+
+            alpha(i) = 0.0;
+        }
+
+    }
+
+#if 0
+    printf("Lagrange multipliers = \n");
+    alpha.print();
+#endif
+
+    /* compute intercept b */
+
+    int sv_index=0;
+    for(unsigned int i=0; i<alpha.size(); i++){
+
+        if (alpha(i) > 0.0){
+
+            b = y(i);
+            sv_index = i;
+            break;
+        }
+    }
+
+
+    double sum=0.0;
+    for(unsigned int i=0; i<alpha.size(); i++){
+
+        double Kval=0.0;
+        if(model_parameters.kernel_type == SVM_LINEAR){
+
+            Kval = svm_linear_kernel(X.row(i),X.row(sv_index));
+        }
+
+        if(model_parameters.kernel_type == SVM_RBF){
+
+            Kval = svm_rbf_kernel(X.row(i),X.row(sv_index),sigma);
+        }
+
+        if(model_parameters.kernel_type == SVM_POLYNOMIAL){
+
+            Kval = svm_polynomial_kernel(X.row(i),X.row(sv_index),c,p);
+        }
+
+
+
+        sum+= y(i)*alpha(i)*Kval;
+
+    }
+
+    b=b-sum;
+#if 1
+    printf("b = %10.7f\n",b);
+
+    for(unsigned int i=0; i<alpha.size(); i++){
+        //        printf("alpha(i) = %d %10.7f\n",i,alpha(i));
+        if(alpha(i) > 0 ){
+
+            if( fabs(alpha(i)- C) < 10E-6){
+
+                printf("non-margin support vector %d:\n",i);
+                X.row(i).print();
+            }
+            else{
+
+                printf("margin support vector %d:\n",i);
+                X.row(i).print();
+
+            }
+
+
+        }
+
+    }
+
+
+
+
+#endif
 
 }
