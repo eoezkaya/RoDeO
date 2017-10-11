@@ -37,7 +37,7 @@ int main(void){
 	perform_svn_test(test_function,
 	        100,
 	        0,
-	        SVM_LINEAR);
+	        SVM_RBF);
 
 
 //	perform_rbf_test(Eggholder,

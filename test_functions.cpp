@@ -1495,10 +1495,6 @@ void perform_GEK_test(double (*test_function)(double *),
 
     }
 
-    //	D.print();
-
-    //	exit(1);
-
 
     if( method_for_solving_lin_eq == CHOLESKY){
 
@@ -1999,16 +1995,7 @@ void generate_test_function_data(double (*test_function)(double *),
 
     }
 
-
-
-
-
 }
-
-
-
-
-
 
 
 void generate_2D_test_function_data_GEK(double (*test_function)(double *),
@@ -2026,8 +2013,6 @@ void generate_2D_test_function_data_GEK(double (*test_function)(double *),
     if(sampling_method == EXISTING_FILE){
 
         /* do nothing */
-
-
 
     }
 
@@ -2685,17 +2670,47 @@ void perform_svn_test(Classifier_Function_param &test_function,
 
 
     SVM_param model_parameters;
+    model_parameters.kernel_type = kernel_type;
+    model_parameters.ppolykernel = 10.0;
+    model_parameters.cpolykernel = 0.0;
+    model_parameters.max_inner_iter = 100;
 
     double b=0.0; /* intercept */
+
     vec alpha(number_of_samples);  /* vector of Lagrange multipliers */
     alpha.fill(-1.0); /* initialization with inadmissable values */
 
     train_svm(X, y, alpha, b, model_parameters);
 
 #if 1
+
+    model_parameters.print();
+
     printf("b = %10.7f\n",b);
-    printf("alpha = \n",b);
+    printf("alpha = \n");
     alpha.print();
+
+    for(unsigned int i=0; i<alpha.size(); i++){
+
+        if(alpha(i) > 0 ){
+
+            if( fabs(alpha(i)- model_parameters.Csoftmargin) < 10E-5){
+
+                printf("non-margin support vector %d:\n",i);
+                X.row(i).print();
+
+            }
+            else{
+
+                printf("margin support vector %d:\n",i);
+                X.row(i).print();
+
+
+            }
+
+        }
+
+    }
 #endif
 
     if(model_parameters.kernel_type == SVM_LINEAR){
@@ -2720,7 +2735,7 @@ void perform_svn_test(Classifier_Function_param &test_function,
         }
 
 
-#if 1
+#if 0
         printf("w = \n");
         printf("%10.7fx +%10.7fy + %10.7f = 0\n",w(0),w(1),b);
 #endif
@@ -2789,6 +2804,185 @@ void perform_svn_test(Classifier_Function_param &test_function,
 
 
     }
+    /* we use a different visualization method for kernels other than linear kernel
+     *
+     * DOES NOT WORK ALL THE TIME!!
+     * */
+    else{
+
+        int resolution = 1000;
+        /* visualization only for the 2d data */
+        if(test_function.number_of_independents == 2){
+
+            std::string filename_for_curve= test_function.function_name;
+            filename_for_curve += "_curve"+std::to_string(resolution)+".dat";
+
+
+            std::string file_name_for_plot = test_function.function_name;
+            file_name_for_plot += "_"+std::to_string(resolution)+".png";
+
+
+            std::string filename_for_svm= test_function.function_name;
+            filename_for_svm += "_svm"+std::to_string(resolution)+".dat";
+
+            printf("opening file %s for output...\n",filename_for_curve.c_str());
+            FILE *test_function_data=fopen(filename_for_curve.c_str(),"w");
+            FILE *svm_function_data=fopen(filename_for_svm.c_str(),"w");
+
+
+
+            double dx,dy;
+            double xcor,ycor;
+
+
+
+
+            dx = (test_function.bounds[1]-test_function.bounds[0])/(resolution-1);
+            dy = (test_function.bounds[3]-test_function.bounds[2])/(resolution-1);
+
+            xcor = test_function.bounds[0];
+            /* sweep in x coordinate */
+
+            int svm_label=0;
+            int svm_label0=0;
+
+
+            for(int i=0; i<resolution; i++){
+
+                svm_label=0;
+                svm_label0=0;
+
+
+
+                ycor=test_function.bounds[2];
+
+#if 0
+
+                    printf("starting x sweep at x = %10.7f\n",xcor);
+#endif
+
+                for(int j=0; j<resolution; j++){ /* sweep in y-coordinate */
+
+#if 0
+
+                    printf("x = %10.7f y = %10.7f\n",xcor,ycor);
+#endif
+
+                    rowvec xinp(2);
+                    rowvec xnorm(2);
+                    xinp(0)=xcor;
+                    xinp(1)=ycor;
+
+                    /* normalized input vector */
+                    xnorm(0) = (xinp(0) - x_min(0)) / (x_max(0) - x_min(0));
+                    xnorm(1) = (xinp(1) - x_min(1)) / (x_max(1) - x_min(1));
+
+                    /* iterate through all sv */
+                    double svm_val=0;
+                    for(unsigned int itersv=0; itersv<alpha.size(); itersv++){
+
+                        if(alpha(itersv)>0){
+
+#if 0
+                            X.row(itersv).print();
+                            printf("alpha(%d) = %10.7f\n",itersv,alpha(itersv));
+                            printf("y(%d) = %10.7f\n",itersv,y(itersv));
+
+                            model_parameters.print();
+
+#endif
+
+                            if(model_parameters.kernel_type == SVM_RBF){
+
+                                double Kval=0.0;
+                                Kval = svm_rbf_kernel(X.row(itersv), xnorm, model_parameters.sigmaGausskernel);
+
+                                svm_val+= alpha(itersv)*y(itersv)*Kval;
+
+                            }
+
+                            if(model_parameters.kernel_type == SVM_POLYNOMIAL){
+
+                                double Kval=0.0;
+                                Kval = svm_polynomial_kernel(X.row(itersv), xnorm, model_parameters.cpolykernel,model_parameters.ppolykernel );
+                                svm_val+= alpha(itersv)*y(itersv)*Kval;
+
+                            }
+
+                        }
+
+                    }/* iterate through all sv */
+#if 0
+                    printf("svm_val = %10.7f\n",svm_val);
+#endif
+
+
+                    svm_val+=b;
+#if 0
+                    printf("svm_val = %10.7f\n",svm_val);
+#endif
+
+                    svm_label0 = svm_label;
+                    if(svm_val>=0){
+
+                        svm_label=1;
+                    }
+                    else{
+
+                        svm_label=-1;
+                    }
+#if 0
+
+                    printf("svm_label = %d\n",svm_label);
+                    printf("svm_label0 = %d\n",svm_label0);
+
+                    if(svm_label0 == -1) exit(1);
+
+#endif
+
+
+                    /* label change is found */
+                    if( (svm_label*svm_label0) < 0){
+#if 0
+                        printf("svm_label change\n");
+                        printf("svm_label = %d\n",svm_label);
+                        printf("svm_label0 = %d\n",svm_label0);
+                        printf("x = %10.7f y = %10.7f\n",xcor,ycor);
+#endif
+                        double func_val=0.0;
+                        double label=0.0;
+                        test_function.func_ptr(&xcor, &label, &func_val);
+                        fprintf(test_function_data,"%10.7f %10.7f\n",xcor,func_val);
+                        fprintf(svm_function_data,"%10.7f %10.7f\n",xcor,ycor);
+                        break;
+                    }
+
+
+                    ycor+=dy;
+
+                }/* sweep in y-coordinate */
+
+                xcor+=dx;
+            } /* sweep in x-coordinate */
+
+
+            fclose(test_function_data);
+            fclose(svm_function_data);
+
+            /* call python script to visualize */
+
+            std::string python_command = "python -W ignore plot_2d_classification.py "+
+                    filename_for_curve+ " "+ input_file_name+ " "+file_name_for_plot + " " + filename_for_svm;
+            FILE* in = popen(python_command.c_str(), "r");
+            fprintf(in, "\n");
+        }
+
+
+    } /* end of else */
+
+
+
+
 
 
 }
