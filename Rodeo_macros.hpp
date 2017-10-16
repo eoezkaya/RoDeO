@@ -59,6 +59,7 @@ enum SVM_KERNEL_TYPE {
 
 #define LARGE 10E14
 #define EPSILON 10-14
+#define EPSILON_SINGLE 10E-6
 #define TOL 1E-2
 
 
