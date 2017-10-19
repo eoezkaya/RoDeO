@@ -218,6 +218,8 @@ kdNode* make_tree(kdNode *root, int len, int indx){
 
 void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist, int dim){
 
+    /* default root is the best */
+
     double d = dist(root, p);
     *best_index = root->indx;
     *best_dist =d;
@@ -258,7 +260,7 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
 #endif
 
 
-        if (dbestleft<d){ /* better point is found on the left */
+        if (dbestleft<d){ /* a better point is found on the left */
 
             *best_dist = dbestleft;
             *best_index = indexbestleft;
@@ -268,6 +270,8 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
 
         return;
     }
+
+
     /* There is only right branch in the tree */
     if (root->left == NULL && root->right != NULL) {
 #if 1
@@ -283,7 +287,6 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
         nearest(right, p, i, &indexbestright, &dbestright,dim);
 
 #if 1
-
         printf("best_distance right= %10.7f\n",dbestright);
 #endif
 
@@ -301,6 +304,7 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
 
     /* both branches exist */
     if (root->left != NULL && root->right != NULL) {
+
 #if 1
         printf("tree has two branches\n");
 #endif
@@ -326,11 +330,6 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
                 *best_dist = dbestleft;
                 *best_index = indexbestleft;
             }
-            else{
-                *best_dist = d;
-
-
-            }
 
 
             if (*best_dist> (division-p->x(i)) ){ /* if it is possible that a closer point may exist in the right branch */
@@ -353,6 +352,8 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
 
             }
 
+            return;
+
         }
         else{ /* the point is on the right */
 #if 1
@@ -369,9 +370,7 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
 
             if(dbestright<d){
                 *best_dist = dbestright;
-            }
-            else{
-                *best_dist = d;
+                *best_index = indexbestright;
 
             }
 
@@ -388,28 +387,14 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
                 if (dbestleft<d){
 
                     *best_dist = dbestleft;
-                    *best_index = left->indx;
-                    return;
-
-                }
-                else{
-
-                    *best_dist = d;
-                    *best_index = root->indx;
+                    *best_index = indexbestleft;
                     return;
 
                 }
 
             }
-            else{ /* if there is no hope in the left branch */
 
-                *best_dist = dbestright;
-                *best_index = right->indx;
-                return;
-
-
-            }
-
+            return;
 
         }
 
