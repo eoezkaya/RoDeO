@@ -169,6 +169,21 @@ double RandomDouble(double a, double b) {
     return a + r;
 }
 
+/** generate a random number between a and b
+ *
+ * @param[in] a
+ * @param[in] b
+ * @return random number between a and b
+ *
+ */
+int RandomInt(int a, int b) {
+
+    int diff = b-a;
+    int random = rand() % diff;
+    return a + random;
+}
+
+
 
 /** generate a random number between xs and xe using the normal distribution
  *
@@ -378,3 +393,14 @@ bool file_exist(const char *fileName)
     std::ifstream infile(fileName);
     return infile.good();
 }
+
+
+void findKNeighbours(mat &data, rowvec &p, int K){
+
+
+
+
+
+}
+
+

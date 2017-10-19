@@ -14,8 +14,18 @@ using namespace arma;
 #include <time.h>
 
 
-/* print an element of the lookup table indexed by indx */
 
+
+
+
+
+
+
+
+
+
+
+/* print an element of the lookup table indexed by indx */
 void print_table_element(IntLookupTable* table, int indx, int how) {
     int i;
     double x;
@@ -66,6 +76,18 @@ void print_table_element(IntLookupTable* table, int indx, int how) {
 
 
 }
+
+void print_table(IntLookupTable* table, int how) {
+
+    for(int i=0; i<table->rowsize; i++){
+
+        print_table_element(table, i, how) ;
+
+    }
+
+
+}
+
 
 /** compute the distance of the point x w.r.t. to a cluster mean xmean .
  *
@@ -536,6 +558,48 @@ int intKmeansClustering(IntLookupTable *table,
     }
 
 
+
+    /* print each cluster to the screeen */
+
+
+
+    for(int k=0;k<number_of_clusters;k++) {
+        if(table->cluster_sizes[k] > 0){
+            printf("\ncluster %d = \n",k);
+
+            printf("mean = ");
+            for(int i=0;i<table->columnsize;i++){
+                printf("%10.7f ",table->cluster_means[k][i] );
+
+            }
+            printf("\n");
+
+
+
+
+            for(int j=0;j<table->cluster_sizes[k];j++) {
+                printf("%5d",table->cluster_indices[k][j]);
+                for(int i=0;i<table->columnsize;i++){
+                    printf("%10.7f ",table->data[i][table->cluster_indices[k][j]]);
+                }
+
+                printf("\n");
+            }
+
+
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
     for(int i=0;i<number_of_clusters;i++)
     {
         delete[] xmean0[i];
@@ -764,6 +828,11 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
         y2=table->data[1][indx3];
 
 
+        print_table_element(table,indx1,0);
+        print_table_element(table,indx2,0);
+        print_table_element(table,indx3,0);
+        print_table_element(table,indx4,0);
+
         for(int i=0;i<number_of_vars_to_interpolate;i++){
 
             f11=table->data[comp_index[i]][indx1];
@@ -800,10 +869,10 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
 
 
         /* restrict the extrapolations */
-//        if (var1 > 1.2)  var1 =1.2;
-//        if (var2 > 1.2)  var2 =1.2;
-//        if (var1 < -0.2) var1 =-0.2;
-//        if (var2 < -0.2)  var2 =-0.2;
+        //        if (var1 > 1.2)  var1 =1.2;
+        //        if (var2 > 1.2)  var2 =1.2;
+        //        if (var1 < -0.2) var1 =-0.2;
+        //        if (var2 < -0.2)  var2 =-0.2;
 
 
         /* if function comes here extrapolation */
@@ -1160,6 +1229,13 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
 
         }
 
+#if 1
+        print_table_element(table,indx1,0);
+        print_table_element(table,indx2,0);
+        print_table_element(table,indx3,0);
+        print_table_element(table,indx4,0);
+#endif
+
         for(int i=0;i<number_of_vars_to_interpolate;i++){
 
 
@@ -1424,49 +1500,50 @@ void interpolateTableScatterdata(IntLookupTable* table,
                 x_index,
                 number_of_indep_vars);
 
-//        fprintf(stdout,"nearest four points=\n");
-//                print_table_element(table,nearest_point_indices[0],0);
-//                print_table_element(table,nearest_point_indices[1],0);
-//                print_table_element(table,nearest_point_indices[2],0);
-//                print_table_element(table,nearest_point_indices[3],0);
+#if 1
+        fprintf(stdout,"nearest four points=\n");
+        print_table_element(table,nearest_point_indices[0],0);
+        print_table_element(table,nearest_point_indices[1],0);
+        print_table_element(table,nearest_point_indices[2],0);
+        print_table_element(table,nearest_point_indices[3],0);
+#endif
+
+for (int i=0; i<K; i++){
+
+    if(fabs(nearest_point_distances[i]) < EPSILON) {
+
+        nearest_point_distances[i]=EPSILON;
+    }
+
+}
+
+/* find inverse distance weights */
+
+for (int i=0; i<K; i++){
+
+    w[i]=1.0/(nearest_point_distances[i]*nearest_point_distances[i]);
+    wsum+=w[i];
+}
+
+/* interpolation step */
+
+for(int i=0;i<number_of_vars_to_interpolate;i++){
+
+    result[i]=0.0;
+    for(int j=0; j<K; j++){
+
+        f[j]= table->data[comp_index[i]][nearest_point_indices[j]];
+        result[i]+=w[j]*f[j];
+    }
 
 
-        for (int i=0; i<K; i++){
+    result[i]=result[i]/wsum;
+    result[i]=result[i]*(table->xmax[comp_index[i]]-table->xmin[comp_index[i]])+table->xmin[comp_index[i]];
+}
 
-            if(fabs(nearest_point_distances[i]) < EPSILON) {
-
-                nearest_point_distances[i]=EPSILON;
-            }
-
-        }
-
-        /* find inverse distance weights */
-
-        for (int i=0; i<K; i++){
-
-            w[i]=1.0/(nearest_point_distances[i]*nearest_point_distances[i]);
-            wsum+=w[i];
-        }
-
-        /* interpolation step */
-
-        for(int i=0;i<number_of_vars_to_interpolate;i++){
-
-            result[i]=0.0;
-            for(int j=0; j<K; j++){
-
-                f[j]= table->data[comp_index[i]][nearest_point_indices[j]];
-                result[i]+=w[j]*f[j];
-            }
-
-
-            result[i]=result[i]/wsum;
-            result[i]=result[i]*(table->xmax[comp_index[i]]-table->xmin[comp_index[i]])+table->xmin[comp_index[i]];
-        }
-
-        delete[] x;
-        delete[] nearest_point_distances;
-        delete[] nearest_point_indices;
+delete[] x;
+delete[] nearest_point_distances;
+delete[] nearest_point_indices;
 
     }
     else{
@@ -1488,10 +1565,393 @@ void interpolateTableScatterdata(IntLookupTable* table,
 
 void test_2d_table(void){
 
+    IntLookupTable table2D;
+
+    table2D.Ndim[0]=200;
+    table2D.Ndim[1]=10;
+    table2D.Ndim[2]=1;
+
+
+    table2D.rowsize    = table2D.Ndim[0]*table2D.Ndim[1];
+    table2D.columnsize = 5;
+
+    table2D.data = new double*[table2D.columnsize];
+
+    for(int i=0; i<table2D.columnsize; i++ ){
+
+        table2D.data[i] = new double[table2D.rowsize];
+
+    }
+
+
+
+    /* generate data */
+
+    double xs = -15.0;
+    double xe = 22.0;
+
+    double ys = 0.1;
+    double ye = 1.8;
+
+
+    double dx = (xe-xs)/(table2D.Ndim[0]-1);
+    double dy = (ye-ys)/(table2D.Ndim[1]-1);
+
+    double x,y;
+
+    double f1,f2,f3;
+
+
+    x=xs; y=ys;
+    int count=0;
+
+    for(int i=0; i<table2D.Ndim[1]; i++ ){
+
+        x=xs;
+        for(int j=0; j<table2D.Ndim[0]; j++){
+            f1 = x*x+sin(x*y)+y;
+            f2 = x+y+x*y;
+            f3 = (1-x)+ y*(1-x);
+
+            //            printf("%d %10.7f %10.7f %10.7f %10.7f %10.7f\n",count,x,y,f1,f2,f3);
+
+            table2D.data[0][count]=x;
+            table2D.data[1][count]=y;
+            table2D.data[2][count]=f1;
+            table2D.data[3][count]=f2;
+            table2D.data[4][count]=f3;
+            count++;
+            x+=dx;
+        }
+
+
+        y+=dy;
+    }
+
+    table2D.xmin = new double[table2D.columnsize];
+    table2D.xmax = new double[table2D.columnsize];
+
+    for(int i=0; i<table2D.columnsize; i++) { /* for each column of the table */
+
+        table2D.xmin[i]= LARGE;
+        table2D.xmax[i]=-LARGE;
+
+        for(int j=0;j<table2D.rowsize;j++){
+
+            if (table2D.data[i][j] < table2D.xmin[i]) table2D.xmin[i]=table2D.data[i][j];
+            if (table2D.data[i][j] > table2D.xmax[i]) table2D.xmax[i]=table2D.data[i][j];
+        }
+
+
+
+
+    }
+
+
+
+
+    /* normalize the T-p table data  xnew= (xold-xmin)/(xmax-xmin)  */
+
+
+    for(int i=0; i<table2D.columnsize; i++) {
+
+        for(int j=0; j<table2D.rowsize; j++){
+
+
+            table2D.data[i][j]= (table2D.data[i][j]-table2D.xmin[i])/(table2D.xmax[i]-table2D.xmin[i]);
+
+        }
+
+    }
+
+    /* initialize last interpolation point indices */
+    for(int i=0; i<4; i++) {
+
+        table2D.last_interpolation_points[i]=-1;
+    }
+
+
+    print_table(&table2D, 0);
+
+
+    /* try to interpolate in sample points */
+
+    double result[3];
+    int comp_index[3]={2,3,4};
+    for(int i=0; i<100; i++){
+
+        int indx = RandomInt(0,table2D.rowsize);
+
+        print_table_element(&table2D,indx, 0);
+        x = table2D.data[0][indx];
+        x = x*(table2D.xmax[0]-table2D.xmin[0])+table2D.xmin[0];
+        y = table2D.data[1][indx];
+        y = y*(table2D.xmax[1]-table2D.xmin[1])+table2D.xmin[1];
+
+
+        interpolateTable2DRectilinear(&table2D,
+                x, y,
+                result,
+                comp_index, 3);
+
+
+        printf("%d %10.7f %10.7f %10.7f  %10.7f  %10.7f \n", indx,x,y, result[0],result[1],result[2]);
+
+
+    }
+
+
+
+    /* try out of sample points */
+    for(int i=0; i<100; i++){
+
+        x = RandomDouble(0,1.0);
+        x = x*(table2D.xmax[0]-table2D.xmin[0])+table2D.xmin[0];
+        y = RandomDouble(0,1.0);
+        y = y*(table2D.xmax[1]-table2D.xmin[1])+table2D.xmin[1];
+
+        double f1,f2,f3;
+        f1 = x*x+sin(x*y)+y;
+        f2 = x+y+x*y;
+        f3 = (1-x)+ y*(1-x);
+
+        interpolateTable2DRectilinear(&table2D,
+                x, y,
+                result,
+                comp_index, 3);
+
+
+        printf("%d %10.7f %10.7f %10.7f  %10.7f  %10.7f \n", i,x,y, result[0],result[1],result[2]);
+        printf("%d %10.7f %10.7f %10.7f  %10.7f  %10.7f \n\n", i,x,y, f1,f2,f3);
+
+
+    }
+
+    /* try extrapolations*/
+
+    /* try out of sample points */
+    for(int i=0; i<100; i++){
+
+
+        double random1 = RandomDouble(0.0,1.0);
+        double random2 = RandomDouble(0.0,1.0);
+
+        if(random1 < 0.333){
+
+            x = RandomDouble(-0.1,0.0);
+        }
+
+        if(random1 > 0.333 && random1 < 0.666){
+
+            x = RandomDouble(0.0,1.0);
+        }
+
+        if(random1 > 0.666){
+
+            x = RandomDouble(1.0,1.1);
+        }
+
+        if(random2 < 0.333){
+
+            y = RandomDouble(-0.1,0.0);
+        }
+
+        if(random2 > 0.333 && random2 < 0.666){
+
+            y = RandomDouble(0.0,1.0);
+        }
+
+        if(random2 > 0.666){
+
+            y = RandomDouble(1.0,1.1);
+        }
+
+
+
+
+#if 1
+        printf("x = %10.7f, y = %10.7f\n",x,y);
+#endif
+
+        x = x*(table2D.xmax[0]-table2D.xmin[0])+table2D.xmin[0];
+        y = y*(table2D.xmax[1]-table2D.xmin[1])+table2D.xmin[1];
+#if 1
+        printf("x = %10.7f, y = %10.7f\n",x,y);
+#endif
+        double f1,f2,f3;
+        f1 = x*x+sin(x*y)+y;
+        f2 = x+y+x*y;
+        f3 = (1-x)+ y*(1-x);
+
+        interpolateTable2DRectilinear(&table2D,
+                x, y,
+                result,
+                comp_index, 3);
+
+
+        printf("%d %10.7f %10.7f %10.7f  %10.7f  %10.7f \n", i,x,y, result[0],result[1],result[2]);
+        printf("%d %10.7f %10.7f %10.7f  %10.7f  %10.7f \n\n", i,x,y, f1,f2,f3);
+
+
+    }
+
+
 
 
 
 }
 
+void test_scatter_table(void){
 
+    IntLookupTable tablescatter;
+
+    tablescatter.rowsize    = 1000;
+    tablescatter.columnsize = 5;
+
+    tablescatter.data = new double*[tablescatter.columnsize];
+
+    for(int i=0; i<tablescatter.columnsize; i++ ){
+
+        tablescatter.data[i] = new double[tablescatter.rowsize];
+
+    }
+
+    double xs = -15.0;
+    double xe = 22.0;
+
+    double ys = 0.1;
+    double ye = 1.8;
+
+
+
+
+    double x,y;
+
+    double f1,f2,f3;
+
+
+    x=xs; y=ys;
+    int count=0;
+
+    for(int i=0; i<tablescatter.rowsize; i++ ){
+
+        x = RandomDouble(xs,xe);
+        y = RandomDouble(ys,ye);
+        f1 = exp((-x*x)/100.0 -(y*y)/100.0);
+        f2 = x+y+x*y;
+        f3 = (1-x)+ y*(1-x);
+
+        //            printf("%d %10.7f %10.7f %10.7f %10.7f %10.7f\n",count,x,y,f1,f2,f3);
+
+        tablescatter.data[0][count]=x;
+        tablescatter.data[1][count]=y;
+        tablescatter.data[2][count]=f1;
+        tablescatter.data[3][count]=f2;
+        tablescatter.data[4][count]=f3;
+        count++;
+
+
+
+    }
+
+    tablescatter.xmin = new double[tablescatter.columnsize];
+    tablescatter.xmax = new double[tablescatter.columnsize];
+
+    for(int i=0; i<tablescatter.columnsize; i++) { /* for each column of the table */
+
+        tablescatter.xmin[i]= LARGE;
+        tablescatter.xmax[i]=-LARGE;
+
+        for(int j=0;j<tablescatter.rowsize;j++){
+
+            if (tablescatter.data[i][j] < tablescatter.xmin[i]) tablescatter.xmin[i]=tablescatter.data[i][j];
+            if (tablescatter.data[i][j] > tablescatter.xmax[i]) tablescatter.xmax[i]=tablescatter.data[i][j];
+        }
+
+
+
+
+    }
+
+
+
+
+    /* normalize the T-p table data  xnew= (xold-xmin)/(xmax-xmin)  */
+
+
+    for(int i=0; i<tablescatter.columnsize; i++) {
+
+        for(int j=0; j<tablescatter.rowsize; j++){
+
+
+            tablescatter.data[i][j]= (tablescatter.data[i][j]-tablescatter.xmin[i])/(tablescatter.xmax[i]-tablescatter.xmin[i]);
+
+        }
+
+    }
+
+    print_table(&tablescatter, 0);
+
+
+    int variable_index[2];
+
+    variable_index[0] = 0;
+    variable_index[1] = 1;
+
+
+    intKmeansClustering(&tablescatter,50,variable_index,1);
+
+
+    /* try out of sample points */
+    for(int i=0; i<1000; i++){
+
+
+        double x = RandomDouble(-0.1,1.1);
+        double y = RandomDouble(-0.1,1.1);
+
+
+
+#if 1
+        printf("x = %10.7f, y = %10.7f\n",x,y);
+#endif
+
+        x = x*(tablescatter.xmax[0]-tablescatter.xmin[0])+tablescatter.xmin[0];
+        y = y*(tablescatter.xmax[1]-tablescatter.xmin[1])+tablescatter.xmin[1];
+#if 1
+        printf("x = %10.7f, y = %10.7f\n",x,y);
+#endif
+        double f1,f2,f3;
+        f1 = exp((-x*x)/100.0 -(y*y)/100.0);
+        f2 = x+y+x*y;
+        f3 = (1-x)+ y*(1-x);
+
+        double xin[2];
+        xin[0]=x;
+        xin[1]=y;
+
+        int x_index[2] = {0,1};
+
+        double result[3];
+        int comp_index[3]={2,3,4};
+
+        interpolateTableScatterdata(&tablescatter,
+                xin,
+                x_index,
+                result,
+                comp_index,
+                2,
+                3 );
+
+        printf("%d %10.7f %10.7f %10.7f  %10.7f  %10.7f \n", i,x,y, result[0],result[1],result[2]);
+        printf("%d %10.7f %10.7f %10.7f  %10.7f  %10.7f \n\n", i,x,y, f1,f2,f3);
+
+
+    }
+
+
+
+
+
+
+}
 

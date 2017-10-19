@@ -13,185 +13,497 @@ using namespace arma;
 #include <math.h>
 #include <time.h>
 
-struct kd_node_t*
-find_median(struct kd_node_t *start, struct kd_node_t *end, int idx)
+
+
+inline double dist(kdNode *a, kdNode *b) {
+
+    int dim = a->x.size();
+    double t, d = 0;
+    while (dim--) {
+        t = a->x(dim) - b->x(dim);
+        d += t * t;
+    }
+    return d;
+}
+
+
+
+double find_median(kdNode *nodelist, int len, int idx)
 {
-    if (end <= start) {
+
+    if(len==2){
+
+        return nodelist[0].x(idx);
+    }
+
+    vec temp(len);
+
+    for(int i=0; i<len; i++){
+
+        temp(i) = nodelist[i].x(idx);
+    }
+
+    temp= sort(temp);
+
+    double median_value = temp(temp.size()/2);
+
+    return median_value;
+}
+
+
+
+kdNode* make_tree(kdNode *root, int len, int indx){
+
+#if 0
+    printf("make_tree with root = %d and length = %d\n", root->indx, len);
+#endif
+
+
+    int dim = root[0].x.size();
+#if 0
+    printf("dim= %d\n",dim);
+#endif
+    if (len==0) {
 
         return NULL;
     }
 
-    if (end == start + 1){
 
-        return start;
-    }
+    kdNode *start = &root[0];
+    kdNode *end   = &root[len-1];
+
+#if 0
+    printf("start node index= %d\n",start->indx);
+    printf("end node index  = %d\n",end->indx);
+    start->x.print();
+    end->x.print();
+#endif
 
 
-    struct kd_node_t *p, *store, *md = start + (end - start) / 2;
-    double pivot;
-    while (1) {
-        pivot = md->x[idx];
+    double median_value = find_median(start, len, indx);
 
-        swap(md, end - 1);
 
-        for (store = p = start; p < end; p++) {
 
-            if (p->x[idx] < pivot) {
+    std::vector<int> left_indices;
+    std::vector<int> right_indices;
 
-                if (p != store)
-                    swap(p, store);
-                store++;
-            }
+
+    int count=0;
+    int median_index =0;
+    for(int i=0; i<len; i++){
+
+        if(root[i].x(indx) < median_value) {
+
+            left_indices.push_back(i);
+
         }
-        swap(store, end - 1);
+        else if( root[i].x(indx) == median_value){
 
-        /* median has duplicate values */
-        if (store->x[idx] == md->x[idx])
-            return md;
-
-        if (store > md) {
-
-            end = store;
+            median_index=i;
         }
-        else        start = store;
-    }
-}
 
-struct kd_node_t*
-make_tree(struct kd_node_t *t, int len, int i, int dim)
-{
-    struct kd_node_t *n;
+        else{
 
-    if (len==0) {
+            right_indices.push_back(i);
+        }
 
-        return 0;
+
     }
 
-    if ((n = find_median(t, t + len, i))) {
+    int leftsize = left_indices.size();
+    int rightsize = right_indices.size();
 
-        i = (i + 1) % dim;
-        n->left  = make_tree(t, n - t, i, dim);
-        n->right = make_tree(n + 1, t + len - (n + 1), i, dim);
+#if 1
+    printf("left indices = \n");
+    for (std::vector<int>::iterator it = left_indices.begin() ; it != left_indices.end(); ++it)
+        std::cout << ' ' << *it;
+    std::cout << '\n';
+
+
+    printf("right indices = \n");
+    for (std::vector<int>::iterator it = right_indices.begin() ; it != right_indices.end(); ++it)
+        std::cout << ' ' << *it;
+    std::cout << '\n';
+
+    printf("median = %10.7f\n", median_value);
+    printf("median index = %d\n", median_index);
+    printf("leftsize = %d\n", leftsize);
+    printf("rightsize = %d\n", rightsize);
+#endif
+
+
+
+    kdNode *kdNodeVectemp = new kdNode[len];
+
+    count=0;
+    for (std::vector<int>::iterator it = left_indices.begin() ; it != left_indices.end(); ++it){
+        kdNodeVectemp[count].x = root[*it].x;
+        kdNodeVectemp[count].indx = root[*it].indx;
+        count++;
+
     }
+
+    kdNodeVectemp[count].x = root[median_index].x;
+    kdNodeVectemp[count].indx = root[median_index].indx;
+    median_index = count;
+
+    count++;
+
+    for (std::vector<int>::iterator it = right_indices.begin() ; it != right_indices.end(); ++it){
+        kdNodeVectemp[count].x = root[*it].x;
+        kdNodeVectemp[count].indx = root[*it].indx;
+
+        count++;
+
+    }
+
+    for(int i=0; i<len; i++){
+
+        root[i].x    = kdNodeVectemp[i].x;
+        root[i].indx = kdNodeVectemp[i].indx;
+#if 0
+        printf("Node index = %d\n",root[i].indx);
+        root[i].x.print();
+#endif
+    }
+
+    kdNode *n= &root[median_index];
+
+    indx = (indx + 1) % dim;
+
+    if (leftsize == 1){
+#if 0
+        printf("there is only one node in left = %d\n",root[0].indx);
+#endif
+        n->left = &root[0];
+
+
+    }
+    else if(leftsize == 0){
+
+        n->left = NULL;
+    }
+    else{
+#if 0
+        printf("calling left tree with root = %d and len = %d\n",leftsize);
+#endif
+        n->left  = make_tree(&root[0], leftsize, indx);
+
+    }
+
+    if (rightsize == 1){
+#if 0
+        printf("there is only one node in right = %d\n",root[leftsize+1].indx);
+#endif
+        n->right = &root[leftsize+1];
+
+
+    }
+    else if(rightsize == 0){
+
+        n->right = NULL;
+    }
+    else{
+#if 0
+        printf("calling right tree with root = %d and len = %d\n",leftsize+1,rightsize);
+#endif
+        n->right = make_tree(&root[leftsize+1], rightsize, indx );
+    }
+
+    delete[] kdNodeVectemp;
+
+
     return n;
 }
 
+void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist, int dim){
 
-void nearest(struct kd_node_t *root, struct kd_node_t *nd, int i, int dim,
-        struct kd_node_t **best, double *best_dist, int &visited)
-{
-    double d, dx, dx2;
+    double d = dist(root, p);
+    *best_index = root->indx;
+    *best_dist =d;
 
-    if (!root) {
+#if 1
+    printf("\n\nroot = %d\n",root->indx);
+    printf("distance to root = %10.7f\n",d);
+#endif
+
+
+    /* there is only one  node in the tree so the best point is the root */
+    if (root->left == NULL && root->right == NULL) {
+#if 1
+        printf("tree has no left and right branches\n");
+        printf("best_index = %d\n",*best_index);
+        printf("best_distance = %10.7f\n",*best_dist);
+#endif
+
+        return;
+
+    }
+
+    /* There is only left branch in the tree */
+    if (root->left != NULL && root->right == NULL) {
+#if 1
+        printf("tree has only left branch\n");
+#endif
+
+        kdNode *left = root->left;
+        double dbestleft;
+        int indexbestleft;
+
+        i = (i + 1) % dim;
+        nearest(left, p, i, &indexbestleft, &dbestleft,dim);
+
+#if 1
+        printf("best_distance left= %10.7f\n",dbestleft);
+#endif
+
+
+        if (dbestleft<d){ /* better point is found on the left */
+
+            *best_dist = dbestleft;
+            *best_index = indexbestleft;
+            return;
+
+        }
 
         return;
     }
+    /* There is only right branch in the tree */
+    if (root->left == NULL && root->right != NULL) {
+#if 1
+        printf("tree has only right branch\n");
+#endif
 
-    d = dist(root, nd, dim);
-    dx = root->x[i] - nd->x[i];
-    dx2 = dx * dx;
 
-    visited ++;
+        kdNode *right = root->right;
+        double dbestright;
+        int indexbestright;
 
-    if (!*best || d < *best_dist) {
+        i = (i + 1) % dim;
+        nearest(right, p, i, &indexbestright, &dbestright,dim);
 
-        *best_dist = d;
-        *best = root;
-    }
+#if 1
 
-    /* if chance of exact match is high */
-    if (!*best_dist) {
+        printf("best_distance right= %10.7f\n",dbestright);
+#endif
+
+        if (dbestright<d){
+
+            *best_dist = dbestright;
+            *best_index = indexbestright;
+            return;
+
+        }
 
         return;
+
     }
 
-    if (++i >= dim) {
+    /* both branches exist */
+    if (root->left != NULL && root->right != NULL) {
+#if 1
+        printf("tree has two branches\n");
+#endif
 
-        i = 0;
+        double division = root->x(i);
+
+        /* if the point is on the left region*/
+        if(p->x(i) < division){
+
+#if 1
+            printf("the point is on the left\n");
+#endif
+
+            /* first find the best in the left branch */
+            kdNode *left = root->left;
+            double dbestleft;
+            int indexbestleft;
+
+            i = (i + 1) % dim;
+            nearest(left, p, i, &indexbestleft, &dbestleft,dim);
+
+            if(dbestleft<d){
+                *best_dist = dbestleft;
+                *best_index = indexbestleft;
+            }
+            else{
+                *best_dist = d;
+
+
+            }
+
+
+            if (*best_dist> (division-p->x(i)) ){ /* if it is possible that a closer point may exist in the right branch */
+
+                kdNode *right = root->right;
+                double dbestright;
+                int indexbestright;
+
+                i = (i + 1) % dim;
+                nearest(right, p, i, &indexbestright, &dbestright,dim);
+
+                if (dbestright<*best_dist){
+
+                    *best_dist = dbestright;
+                    *best_index = indexbestright;
+                    return;
+
+                }
+
+
+            }
+
+        }
+        else{ /* the point is on the right */
+#if 1
+            printf("the point is on the right\n");
+#endif
+
+            /* first find the best in the right branch */
+            kdNode *right = root->right;
+            double dbestright;
+            int indexbestright;
+
+            i = (i + 1) % dim;
+            nearest(right, p, i, &indexbestright, &dbestright,dim);
+
+            if(dbestright<d){
+                *best_dist = dbestright;
+            }
+            else{
+                *best_dist = d;
+
+            }
+
+
+            if (*best_dist> (division-p->x(i)) ){ /* if it is possible that a closer point may exist in the left branch */
+
+                kdNode *left = root->left;
+                double dbestleft;
+                int indexbestleft;
+
+                i = (i + 1) % dim;
+                nearest(left, p, i, &indexbestleft, &dbestleft,dim);
+
+                if (dbestleft<d){
+
+                    *best_dist = dbestleft;
+                    *best_index = left->indx;
+                    return;
+
+                }
+                else{
+
+                    *best_dist = d;
+                    *best_index = root->indx;
+                    return;
+
+                }
+
+            }
+            else{ /* if there is no hope in the left branch */
+
+                *best_dist = dbestright;
+                *best_index = right->indx;
+                return;
+
+
+            }
+
+
+        }
+
+
     }
 
-    nearest(dx > 0 ? root->left : root->right, nd, i, dim, best, best_dist, visited);
-    if (dx2 >= *best_dist) {
-
-        return;
-    }
-    nearest(dx > 0 ? root->right : root->left, nd, i, dim, best, best_dist, visited);
 }
+
+
+
+
+
+void build_kdNodeList(mat data,kdNode *kdNodeVec ){
+
+    int dim = data.n_rows;
+
+    for(int i=0; i<dim; i++){
+
+        kdNodeVec[i].x = data.row(i);
+        kdNodeVec[i].indx = i;
+        kdNodeVec[i].left = NULL;
+        kdNodeVec[i].right = NULL;
+
+    }
+
+
+
+}
+
+
 
 void kd_tree_test(void){
 
-    struct kd_node_t wp[] = {
+    int number_of_points= 10;
+    mat X(number_of_points,2);
 
-            {{2, 3}},
-            {{5, 4}},
-            {{9, 6}},
-            {{4, 7}},
-            {{8, 1}},
-            {{7, 2}}
-    };
+    X.randu();
 
-    struct kd_node_t testNode = {{9, 2}};
-    struct kd_node_t *root, *found, *million;
-    double best_dist;
+    X.print();
 
-    root = make_tree(wp, sizeof(wp) / sizeof(wp[1]), 0, 2);
+    kdNode *kdNodeVec = new kdNode[number_of_points];
 
-    int visited = 0;
-    found = 0;
-    nearest(root, &testNode, 0, 2, &found, &best_dist, visited);
-
-    printf(">> WP tree\nsearching for (%g, %g)\n"
-            "found (%g, %g) dist %g\nseen %d nodes\n\n",
-            testNode.x[0], testNode.x[1],
-            found->x[0], found->x[1], sqrt(best_dist), visited);
+    build_kdNodeList(X,kdNodeVec );
 
 
-    million =(struct kd_node_t*) calloc(N, sizeof(struct kd_node_t));
+    kdNode * root = make_tree(kdNodeVec, number_of_points, 0);
 
-    srand(time(0));
+#if 1
 
-    for (int i = 0; i < N; i++) {
+    printf("Root Node = %d\n",root->indx);
 
-        rand_pt(million[i]);
+
+    for(int i=0; i<number_of_points;i++){
+        printf("Node = %d\n",kdNodeVec[i].indx);
+        kdNodeVec[i].x.print();
+        if(kdNodeVec[i].left !=NULL){
+
+            printf("Left = %d \n",kdNodeVec[i].left->indx);
+        }
+
+        if(kdNodeVec[i].right !=NULL){
+
+            printf("Right = %d \n",kdNodeVec[i].right->indx);
+        }
+        printf("\n");
+
     }
+#endif
 
-    root = make_tree(million, N, 0, 3);
-    rand_pt(testNode);
-
-    visited = 0;
-    found = 0;
-    nearest(root, &testNode, 0, 3, &found, &best_dist, visited);
-
-    printf(">> Million tree\nsearching for (%g, %g, %g)\n"
-            "found (%g, %g, %g) dist %g\nseen %d nodes\n",
-            testNode.x[0], testNode.x[1], testNode.x[2],
-            found->x[0], found->x[1], found->x[2],
-            sqrt(best_dist), visited);
-
-    /* search many random points in million tree to see average behavior.
-           tree size vs avg nodes visited:
-           10      ~  7
-           100     ~ 16.5
-           1000        ~ 25.5
-           10000       ~ 32.8
-           100000      ~ 38.3
-           1000000     ~ 42.6
-           10000000    ~ 46.7
+    kdNode * p = new kdNode;
+    rowvec xinp(2);
 
 
-    */
-    int sum = 0, test_runs = 100000;
+    xinp(0)=0.34;
+    xinp(1)=0.24;
 
-    for (int i = 0; i < test_runs; i++) {
+    xinp.print();
 
-        found = 0;
-        visited = 0;
-        rand_pt(testNode);
-        nearest(root, &testNode, 0, 3, &found, &best_dist,visited);
-        sum += visited;
-    }
-    printf("\n>> Million tree\n"
-            "visited %d nodes for %d random findings (%f per lookup)\n",
-            sum, test_runs, sum/(double)test_runs);
+    p->x = xinp;
+
+    printf("here\n");
+
+    int best_index=-1;
+    double best_dist = 0.0;
+
+    nearest(root, p, 0, &best_index, &best_dist, 2);
+
+    printf("nearest point = \n");
+    printf("index = %d\n",best_index);
+    X.row(best_index).print();
+
+
 }
+
+
+
 

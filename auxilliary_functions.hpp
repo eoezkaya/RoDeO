@@ -12,6 +12,7 @@ double pdf(double x, double mu, double sigma);
 double cdf(double x, double mu, double sigma);
 
 double RandomDouble(double a, double b);
+int RandomInt(int a, int b);
 
 double random_number(double xs, double xe, double sigma_factor);
 

@@ -25,5 +25,18 @@ typedef struct {
 
 
 void test_2d_table(void);
+void test_scatter_table(void);
+void interpolateTable2DRectilinear(IntLookupTable* table,
+        double x, double y,
+        double *result,
+        int* comp_index, int number_of_vars_to_interpolate);
+
+void interpolateTableScatterdata(IntLookupTable* table,
+        double *interpolation_variable,
+        int *x_index,
+        double *result,
+        int* comp_index,
+        int number_of_indep_vars,
+        int number_of_vars_to_interpolate );
 
 #endif
