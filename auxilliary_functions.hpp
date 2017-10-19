@@ -44,6 +44,6 @@ double Lpnorm(vec & x, int p);
 
 double Lpnorm(rowvec & x, int p);
 
-
+void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices);
 
 #endif

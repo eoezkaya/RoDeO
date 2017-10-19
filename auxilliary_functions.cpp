@@ -5,6 +5,8 @@
 #include <math.h>
 #include <vector>
 
+
+
 /** Returns the pdf of x, given the distribution described by mu and sigma..
  *
  * @param[in] x
@@ -302,7 +304,7 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
         if ( is_in_the_list(int(j), indices) == -1){
 
 #if 0
-                          printf("%dth point is not a validation point\n",j);
+            printf("%dth point is not a validation point\n",j);
 #endif
             Xmod.row(added_rows)=X.row(j);
             ymod(added_rows)    =y(j);
@@ -395,10 +397,57 @@ bool file_exist(const char *fileName)
 }
 
 
-void findKNeighbours(mat &data, rowvec &p, int K){
+/** brute force KNeighbours search
+ *
+ * @param[in] data
+ * @param[in] p
+ * @param[in] K
+ * @param[out] indices
+ */
+
+void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices){
+
+    int number_of_points= data.n_rows;
+    int dim= data.n_cols;
+    vec minimum_distances(K);
 
 
 
+    minimum_distances.fill(LARGE);
+
+    for(int i=0; i<number_of_points; i++){ /* for each data point */
+
+        rowvec x = data.row(i);
+        rowvec xdiff = x-p;
+
+        double distance = Lpnorm(xdiff, dim);
+
+        double worst_distance = -LARGE;
+        int worst_distance_index = -1;
+
+
+        for(unsigned int j=0; j<K; j++){
+
+            if(minimum_distances(j) > worst_distance ){
+
+                worst_distance =minimum_distances(j);
+                worst_distance_index = j;
+            }
+        }
+
+        /* a better point is found */
+        if(distance < worst_distance){
+
+            minimum_distances(worst_distance_index)= distance;
+            indices[worst_distance_index] = i;
+
+        }
+
+
+
+    }
+
+    *min_dist = min(minimum_distances);
 
 
 }

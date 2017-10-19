@@ -10,10 +10,6 @@ struct kdNode{
     struct kdNode *left, *right;
 };
 
-
-
-void nearest(kdNode *root, kdNode *nd, int i, int dim, kdNode **best, double *best_dist, int &visited);
-
 void kd_tree_test(void);
-
+void kd_tree_test2(void);
 #endif

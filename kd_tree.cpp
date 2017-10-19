@@ -1,5 +1,6 @@
 #include "kd_tree.hpp"
 #include "Rodeo_macros.hpp"
+#include "auxilliary_functions.hpp"
 
 #include <armadillo>
 
@@ -70,7 +71,7 @@ kdNode* make_tree(kdNode *root, int len, int indx){
 
 
     kdNode *start = &root[0];
-    kdNode *end   = &root[len-1];
+
 
 #if 0
     printf("start node index= %d\n",start->indx);
@@ -113,7 +114,7 @@ kdNode* make_tree(kdNode *root, int len, int indx){
     int leftsize = left_indices.size();
     int rightsize = right_indices.size();
 
-#if 1
+#if 0
     printf("left indices = \n");
     for (std::vector<int>::iterator it = left_indices.begin() ; it != left_indices.end(); ++it)
         std::cout << ' ' << *it;
@@ -218,24 +219,33 @@ kdNode* make_tree(kdNode *root, int len, int indx){
 
 void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist, int dim){
 
-    /* default root is the best */
+    /* default root is the best initially*/
 
-    double d = dist(root, p);
-    *best_index = root->indx;
-    *best_dist =d;
+    rowvec xdiff = root->x - p->x;
+    double d = Lpnorm(xdiff, dim);
 
-#if 1
+#if 0
     printf("\n\nroot = %d\n",root->indx);
+    root->x.print();
     printf("distance to root = %10.7f\n",d);
 #endif
 
 
+#if 0
+    printf("%10.7f is better than %10.7f\n",d,*best_dist);
+#endif
+        *best_index = root->indx;
+        *best_dist  = d;
+
+
     /* there is only one  node in the tree so the best point is the root */
     if (root->left == NULL && root->right == NULL) {
-#if 1
+#if 0
         printf("tree has no left and right branches\n");
         printf("best_index = %d\n",*best_index);
         printf("best_distance = %10.7f\n",*best_dist);
+        printf("root %d is terminating\n",root->indx );
+
 #endif
 
         return;
@@ -244,60 +254,68 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
 
     /* There is only left branch in the tree */
     if (root->left != NULL && root->right == NULL) {
-#if 1
+#if 0
         printf("tree has only left branch\n");
 #endif
 
         kdNode *left = root->left;
-        double dbestleft;
-        int indexbestleft;
+        double dbestleft= LARGE;
+        int indexbestleft=-1;
 
-        i = (i + 1) % dim;
-        nearest(left, p, i, &indexbestleft, &dbestleft,dim);
+        int inext = (i + 1) % dim;
+        nearest(left, p,inext, &indexbestleft, &dbestleft,dim);
 
-#if 1
+#if 0
         printf("best_distance left= %10.7f\n",dbestleft);
 #endif
 
 
         if (dbestleft<d){ /* a better point is found on the left */
-
+#if 0
+        printf("a better point is found on the left since %10.7f < %10.7f\n",dbestleft,d);
+#endif
             *best_dist = dbestleft;
             *best_index = indexbestleft;
-            return;
+
 
         }
-
+#if 0
+        printf("root %d is terminating\n",root->indx );
+#endif
         return;
     }
 
 
     /* There is only right branch in the tree */
     if (root->left == NULL && root->right != NULL) {
-#if 1
+#if 0
         printf("tree has only right branch\n");
 #endif
 
 
         kdNode *right = root->right;
-        double dbestright;
-        int indexbestright;
+        double dbestright=LARGE;
+        int indexbestright=-1;
 
-        i = (i + 1) % dim;
-        nearest(right, p, i, &indexbestright, &dbestright,dim);
+        int inext = (i + 1) % dim;
+        nearest(right, p, inext, &indexbestright, &dbestright,dim);
 
-#if 1
+#if 0
         printf("best_distance right= %10.7f\n",dbestright);
 #endif
 
         if (dbestright<d){
-
+#if 0
+        printf("a better point is found on the right since %10.7f < %10.7f\n",dbestright,d);
+#endif
             *best_dist = dbestright;
             *best_index = indexbestright;
-            return;
+
 
         }
-
+#if 0
+        printf("root %d is terminating\n",root->indx );
+#endif
         return;
 
     }
@@ -305,7 +323,7 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
     /* both branches exist */
     if (root->left != NULL && root->right != NULL) {
 
-#if 1
+#if 0
         printf("tree has two branches\n");
 #endif
 
@@ -314,87 +332,102 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
         /* if the point is on the left region*/
         if(p->x(i) < division){
 
-#if 1
-            printf("the point is on the left\n");
+#if 0
+            printf("the point is on the left : p->x(%d) = %10.7f < %10.7f\n",i,p->x(i),division);
 #endif
 
             /* first find the best in the left branch */
             kdNode *left = root->left;
-            double dbestleft;
-            int indexbestleft;
+            double dbestleft=LARGE;
+            int indexbestleft=-1;
 
-            i = (i + 1) % dim;
-            nearest(left, p, i, &indexbestleft, &dbestleft,dim);
+            int inext = (i + 1) % dim;
+            nearest(left, p, inext, &indexbestleft, &dbestleft,dim);
 
-            if(dbestleft<d){
+            if(dbestleft<*best_dist){
+#if 0
+        printf("a better point is found on the left since %10.7f < %10.7f\n",dbestleft,*best_dist);
+#endif
                 *best_dist = dbestleft;
                 *best_index = indexbestleft;
             }
 
 
-            if (*best_dist> (division-p->x(i)) ){ /* if it is possible that a closer point may exist in the right branch */
+            if (dbestleft > (division-p->x(i)) ){ /* if it is possible that a closer point may exist in the right branch */
 
                 kdNode *right = root->right;
-                double dbestright;
-                int indexbestright;
+                double dbestright=LARGE;
+                int indexbestright=-1;
 
-                i = (i + 1) % dim;
-                nearest(right, p, i, &indexbestright, &dbestright,dim);
+                int inext = (i + 1) % dim;
+                nearest(right, p, inext, &indexbestright, &dbestright,dim);
 
                 if (dbestright<*best_dist){
-
+#if 0
+        printf("a better point is found on the right since %10.7f < %10.7f\n",dbestright,*best_dist);
+#endif
                     *best_dist = dbestright;
                     *best_index = indexbestright;
-                    return;
+
 
                 }
 
 
             }
-
+#if 0
+            printf("root %d is terminating\n",root->indx );
+#endif
             return;
 
         }
         else{ /* the point is on the right */
-#if 1
-            printf("the point is on the right\n");
+#if 0
+            printf("the point is on the right : p->x(%d) = %10.7f > %10.7f\n",i,p->x(i),division);
 #endif
 
             /* first find the best in the right branch */
             kdNode *right = root->right;
-            double dbestright;
-            int indexbestright;
+            double dbestright = LARGE;
+            int indexbestright = -1;
 
-            i = (i + 1) % dim;
-            nearest(right, p, i, &indexbestright, &dbestright,dim);
+            int inext = (i + 1) % dim;
+            nearest(right, p, inext, &indexbestright, &dbestright,dim);
 
-            if(dbestright<d){
+            if(dbestright<*best_dist){
+#if 0
+        printf("a better point is found on the right since %10.7f < %10.7f\n",dbestright,*best_dist);
+#endif
                 *best_dist = dbestright;
                 *best_index = indexbestright;
 
             }
 
 
-            if (*best_dist> (division-p->x(i)) ){ /* if it is possible that a closer point may exist in the left branch */
+            if (dbestright > (p->x(i)-division) ){ /* if it is possible that a closer point may exist in the left branch */
 
                 kdNode *left = root->left;
-                double dbestleft;
-                int indexbestleft;
+                double dbestleft=LARGE;
+                int indexbestleft=-1;
 
-                i = (i + 1) % dim;
-                nearest(left, p, i, &indexbestleft, &dbestleft,dim);
+                int inext = (i + 1) % dim;
+                nearest(left, p, inext, &indexbestleft, &dbestleft,dim);
 
-                if (dbestleft<d){
-
+                if (dbestleft<*best_dist){
+#if 0
+        printf("a better point is found on the left since %10.7f < %10.7f\n",dbestleft,*best_dist);
+#endif
                     *best_dist = dbestleft;
                     *best_index = indexbestleft;
-                    return;
+
 
                 }
 
             }
-
+#if 0
+            printf("root %d is terminating\n",root->indx );
+#endif
             return;
+
 
         }
 
@@ -402,10 +435,6 @@ void nearest(kdNode *root, kdNode *p, int i, int* best_index, double *best_dist,
     }
 
 }
-
-
-
-
 
 void build_kdNodeList(mat data,kdNode *kdNodeVec ){
 
@@ -428,10 +457,15 @@ void build_kdNodeList(mat data,kdNode *kdNodeVec ){
 
 void kd_tree_test(void){
 
-    int number_of_points= 10;
+    int number_of_points= 20;
     mat X(number_of_points,2);
 
-    X.randu();
+
+    for (int i=0; i<number_of_points; i++){
+        X(i,0)=RandomDouble(0,1.0);
+        X(i,1)=RandomDouble(0,1.0);
+    }
+
 
     X.print();
 
@@ -475,20 +509,86 @@ void kd_tree_test(void){
 
     p->x = xinp;
 
-    printf("here\n");
-
     int best_index=-1;
-    double best_dist = 0.0;
+    double best_dist = LARGE;
 
     nearest(root, p, 0, &best_index, &best_dist, 2);
 
-    printf("nearest point = \n");
+    printf("nearest point search with the kd tree = \n");
     printf("index = %d\n",best_index);
+    printf("distance = %10.7f\n",best_dist);
     X.row(best_index).print();
 
+    int indices=-1;
+    double min_distance=0.0;
+    findKNeighbours(X, xinp, 1, &min_distance,&indices);
+
+    printf("nearest point with brute force search = \n");
+    printf("index = %d\n",indices);
+    printf("distance = %10.7f\n",min_distance);
+    X.row(indices).print();
 
 }
 
+void kd_tree_test2(void){
 
+
+    int dim = RandomInt(1,4);
+    int number_of_points= RandomInt(500,1000);
+
+    mat X(number_of_points,dim);
+
+    X.randu();
+
+    X.print();
+
+
+    kdNode *kdNodeVec = new kdNode[number_of_points];
+
+    build_kdNodeList(X,kdNodeVec );
+
+
+    kdNode * root = make_tree(kdNodeVec, number_of_points, 0);
+
+
+    int number_of_trials = RandomInt(1,1000);
+
+    for(int i=0; i<number_of_trials; i++){
+        rowvec p(dim);
+
+        for(int j=0; j<dim; j++){
+
+            p(j) = RandomDouble(0,1.0);
+
+        }
+        printf("p = \n");
+        p.print();
+        kdNode *xin = new kdNode;
+
+        xin->x = p;
+
+        int best_index=-1;
+        double best_dist = 0.0;
+
+        nearest(root, xin, 0, &best_index, &best_dist, dim);
+
+        printf("nearest point search with the kd tree = \n");
+        printf("index = %d\n",best_index);
+        X.row(best_index).print();
+
+        int indices=-1;
+        double min_distance=0.0;
+        findKNeighbours(X, p, 1, &min_distance,&indices);
+
+        printf("nearest point with brute force search = \n");
+        printf("index = %d\n",indices);
+        X.row(indices).print();
+
+        exit(1);
+
+    }
+
+
+}
 
 

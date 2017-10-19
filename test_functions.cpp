@@ -2609,6 +2609,35 @@ void perform_svn_test(Classifier_Function_param &test_function,
         double label=0.0;
         double func_val=0.0;
         test_function.func_ptr(x.memptr(), &label, &func_val);
+
+        /* add some noise to classification data */
+
+        double random_number = RandomDouble(0.0 , 1.0 );
+
+        if(random_number >=0.5){
+
+            func_val+=test_function.noise_level;
+        }
+        else{
+
+            func_val-=test_function.noise_level;
+        }
+        if (func_val > x(1)) {
+
+            label=1.0;
+        }
+        else{
+
+            label=-1.0;
+        }
+
+        /* generate outliers in the data*/
+        random_number = RandomDouble(0.0 , 1.0 );
+        if(random_number < 0.0) {
+
+            label = -label;
+        }
+
         data(i,test_function.number_of_independents) = label;
 
     }
@@ -2858,7 +2887,7 @@ void perform_svn_test(Classifier_Function_param &test_function,
 
 #if 0
 
-                    printf("starting x sweep at x = %10.7f\n",xcor);
+                printf("starting x sweep at x = %10.7f\n",xcor);
 #endif
 
                 for(int j=0; j<resolution; j++){ /* sweep in y-coordinate */
@@ -2981,7 +3010,100 @@ void perform_svn_test(Classifier_Function_param &test_function,
     } /* end of else */
 
 
+    /* make a an out of sample test */
 
+    int out_of_samples = 10000;
+    int count_mismatch=0;
+    for(int iter_out_of_sample=0; iter_out_of_sample<out_of_samples; iter_out_of_sample++){
+
+        rowvec x(test_function.number_of_independents);
+        rowvec xnorm(test_function.number_of_independents);
+
+
+        for(unsigned int j=0; j<test_function.number_of_independents; j++){
+
+            double lowerbound = test_function.bounds[j*2];
+            double upperbound  = test_function.bounds[j*2+1];
+
+            double random_number = RandomDouble(lowerbound , upperbound );
+
+            x(j) = random_number;
+
+
+        }
+
+        /* normalize data */
+        for (int i = 0; i < number_of_samples; i++) {
+
+            for (int j = 0; j < test_function.number_of_independents; j++) {
+                xnorm(j) = (x(j) - x_min(j)) / (x_max(j) - x_min(j));
+            }
+        }
+
+
+        double label=0.0;
+        double func_val=0.0;
+        test_function.func_ptr(x.memptr(), &label, &func_val);
+
+        /* iterate through all sv */
+        double svm_val=0;
+
+        for(unsigned int itersv=0; itersv<alpha.size(); itersv++){
+
+            if(alpha(itersv)>0){
+
+
+                if(model_parameters.kernel_type == SVM_RBF){
+
+                    double Kval=0.0;
+                    Kval = svm_rbf_kernel(X.row(itersv), xnorm, model_parameters.sigmaGausskernel);
+
+                    svm_val+= alpha(itersv)*y(itersv)*Kval;
+
+                }
+
+                if(model_parameters.kernel_type == SVM_POLYNOMIAL){
+
+                    double Kval=0.0;
+                    Kval = svm_polynomial_kernel(X.row(itersv), xnorm, model_parameters.cpolykernel,model_parameters.ppolykernel );
+                    svm_val+= alpha(itersv)*y(itersv)*Kval;
+
+                }
+
+            }
+
+        }/* iterate through all sv */
+
+        svm_val+=b;
+
+        int svm_label=0;
+        if(svm_val>=0){
+
+            svm_label=1;
+        }
+        else{
+
+            svm_label=-1;
+        }
+
+
+        if((svm_label*int(label)) <0 ){
+            count_mismatch++;
+#if 1
+            printf("x = \n");
+            x.print();
+            printf("svm_label = %d\n",svm_label);
+            printf("label     = %d\n",int(label));
+#endif
+        }
+
+
+
+
+    }
+
+    printf("Number of mismatches = %d\n",count_mismatch);
+    printf("Ratio = %5.3f\n",double(count_mismatch)/out_of_samples);
 
 
 
