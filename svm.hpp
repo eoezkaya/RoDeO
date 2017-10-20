@@ -2,6 +2,8 @@
 #define SVM_HPP
 #include <armadillo>
 #include "Rodeo_macros.hpp"
+#include "test_functions.hpp"
+
 using namespace arma;
 
 class SVM_param {
@@ -44,4 +46,10 @@ void train_svm(mat &X, vec &y,vec &alpha, double &b, SVM_param &model_parameters
 double svm_linear_kernel(rowvec x1, rowvec x2);
 double svm_polynomial_kernel(rowvec x1, rowvec x2, double c, double p);
 double svm_rbf_kernel(rowvec x1, rowvec x2, double sigma);
+
+void perform_svn_test(Classifier_Function_param &test_function,
+        int  number_of_samples,
+        int number_of_outliers,
+        SVM_KERNEL_TYPE kernel_type);
+
 #endif

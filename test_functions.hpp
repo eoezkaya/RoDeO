@@ -223,10 +223,7 @@ void perform_rbf_test(double (*test_function)(double *),
         int problem_dimension,
         RBF_TYPE rbf_type);
 
-void perform_svn_test(Classifier_Function_param &test_function,
-        int  number_of_samples,
-        int number_of_outliers,
-        SVM_KERNEL_TYPE kernel_type);
+
 
 
 #endif

@@ -584,7 +584,7 @@ void kd_tree_test2(void){
         printf("index = %d\n",indices);
         X.row(indices).print();
 
-        exit(1);
+
 
     }
 
