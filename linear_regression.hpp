@@ -4,6 +4,6 @@
 using namespace arma;
 
 int train_linear_regression(mat &X, vec &ys, vec &w, double lambda);
-
+void test_linear_regression(void);
 
 #endif
