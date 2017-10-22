@@ -195,7 +195,6 @@ binaryTreeNode* make_tree(binaryTreeNode*root, int len, int indx){
 
     delete[] binaryNodeVectemp;
 
-
     return n;
 }
 
@@ -213,13 +212,7 @@ void build_binaryNodeList(mat data,binaryTreeNode *binaryNodeList ){
 
     }
 
-
-
-
 }
-
-
-
 
 void nearest(binaryTreeNode *root,
         binaryTreeNode *p,
@@ -229,33 +222,40 @@ void nearest(binaryTreeNode *root,
         double *best_dist,
         int dim){
 
+    for(int i=0; i<K; i++){
+
+        best_dist[i] = LARGE;
+        best_index[i] = -1;
+    }
+
+
     /* default root is the best initially*/
 
+    double max_dist = -LARGE;
+    int max_dist_index = -1;
 
     double d = fabs(root->x(i) - p->x(i));
 
-#if 0
+#if 1
     printf("\n\nroot = %d\n",root->indx);
     root->x.print();
-    printf("distance to root = %10.7f\n",d);
-#endif
-
-
-#if 0
-    printf("%10.7f is better than %10.7f\n",d,*best_dist);
+    printf("distance to root = %10.7f (| %10.7f - %10.7f|   ) \n",d,root->x(i),p->x(i)  );
 #endif
 
     /* initialize  */
     best_index[0] = root->indx;
     best_dist[0]  = d;
 
+    max_dist = best_dist[0];
+    max_dist_index = best_index[0];
+
 
     /* there is only one  node in the tree so the best point is the root */
     if (root->left == NULL && root->right == NULL) {
-#if 0
+#if 1
         printf("tree has no left and right branches\n");
-        printf("best_index = %d\n",*best_index);
-        printf("best_distance = %10.7f\n",*best_dist);
+        printf("best_index = %d\n",best_index[0]);
+        printf("best_distance = %10.7f\n",best_dist[0]);
         printf("root %d is terminating\n",root->indx );
 
 #endif
@@ -266,136 +266,110 @@ void nearest(binaryTreeNode *root,
 
     /* There is only left branch in the tree */
     if (root->left != NULL && root->right == NULL) {
-#if 0
+#if 1
         printf("tree has only left branch\n");
 #endif
 
-        double max_dist = -LARGE;
-        int max_dist_index = -1;
+        find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
 
+#if 1
+        printf("max_dist = %10.7f\n", max_dist);
+#endif
 
-        for(int j=0; j<K; j++){
-
-            if(best_dist[j] > max_dist){
-                max_dist = best_dist[j];
-                max_dist_index = j;
-
-            }
-        }
-
-        kdNode *left = root->left;
+        binaryTreeNode *left = root->left;
         double *dbestleft= new double[K];
         int *indexbestleft= new int[K];
 
 
 
         /* return the K best of the left branch */
-        nearest(left, p,i, &indexbestleft, &dbestleft,dim);
+        nearest(left, p,K,i, indexbestleft, dbestleft,dim);
+#if 1
+        printf("best %d points in the left branch\n",K);
+        for(int i=0; i<K; i++){
 
+            printf("indx = %d, dist = %10.7f\n",indexbestleft[i],dbestleft[i]);
+        }
+#endif
 
         for(int j=0; j<K; j++){ /* check each new point */
 
-            if (dbestleft[j] < max_dist){ /* a better point is found on the left */
-
+            if (dbestleft[j] < max_dist){ /* a better point is found on the left branch*/
+#if 1
+                printf("dbestleft[%d] = %10.7f is better than %10.7f\n", j, dbestleft[j],max_dist );
+#endif
 
                 best_dist[max_dist_index] = dbestleft[j];
                 best_index[max_dist_index] = indexbestleft[j];
 
-
-                max_dist = -LARGE;
-                max_dist_index = -1;
-
-                /* update max distance */
-                for(int k=0; k<K; k++){
-                    dbestleft[k]=LARGE;
-                    indexbestleft[k]=-1;
-                }
-
-
+                /* update max_dist and max_dist_index*/
+                find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+#if 1
+                printf("max_dist = %10.7f\n", max_dist);
+#endif
             }
-
-
 
         }
 
         delete[] dbestleft;
         delete[] indexbestleft;
-#if 0
+#if 1
         printf("root %d is terminating\n",root->indx );
 #endif
         return;
     }
 
-
     /* There is only right branch in the tree */
     if (root->left == NULL && root->right != NULL) {
-#if 0
+#if 1
         printf("tree has only right branch\n");
 #endif
 
 
-        double max_dist = -LARGE;
-        int max_dist_index = -1;
 
-
-        for(int j=0; j<K; j++){
-
-            if(best_dist[j] > max_dist){
-                max_dist = best_dist[j];
-                max_dist_index = j;
-
-            }
-        }
-
-
-
-        kdNode *right = root->right;
-
+        find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+#if 1
+        printf("max_dist = %10.7f\n", max_dist);
+#endif
+        binaryTreeNode *right = root->right;
 
         double *dbestright= new double[K];
         int *indexbestright= new int[K];
 
-        nearest(right, p, i, &indexbestright, &dbestright,dim);
 
 
+        nearest(right, p, K,i, indexbestright, dbestright,dim);
+
+#if 1
+        printf("best %d points in the right branch\n",K);
+        for(int i=0; i<K; i++){
+
+            printf("indx = %d, dist = %10.7f\n",indexbestright[i],dbestright[i]);
+        }
+#endif
 
         for(int j=0; j<K; j++){ /* check each new point */
 
-            if (dbestright[j] < max_dist){ /* a better point is found on the left */
+            if (dbestright[j] < max_dist){ /* a better point is found on the right */
 
-
-                max_dist = -LARGE;
-                max_dist_index = -1;
-
-                /* update max distance */
-                for(int k=0; k<K; k++){
-                    dbestright[k]=LARGE;
-                    indexbestright[k]=-1;
-                }
-
-
+#if 1
+                printf("dbestright[%d] = %10.7f is better than %10.7f\n", j, dbestright[j],max_dist );
+#endif
                 best_dist[max_dist_index] = dbestright[j];
                 best_index[max_dist_index] = indexbestright[j];
 
-                max_dist = -LARGE;
-                max_dist_index = -1;
-
-                /* update max distance */
-                for(int k=0; k<K; k++){
-                    dbestleft[k]=LARGE;
-                    indexbestleft[k]=-1;
-                }
-
-
+                /* update max_dist and max_dist_index*/
+                find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+#if 1
+                printf("max_dist = %10.7f\n", max_dist);
+#endif
             }
-
-
 
         }
 
         delete[] dbestright;
         delete[] indexbestright;
-#if 0
+#if 1
         printf("root %d is terminating\n",root->indx );
 #endif
         return;
@@ -405,7 +379,7 @@ void nearest(binaryTreeNode *root,
     /* both branches exist */
     if (root->left != NULL && root->right != NULL) {
 
-#if 0
+#if 1
         printf("tree has two branches\n");
 #endif
 
@@ -414,138 +388,222 @@ void nearest(binaryTreeNode *root,
         /* if the point is on the left region*/
         if(p->x(i) < division){
 
-#if 0
+#if 1
             printf("the point is on the left : p->x(%d) = %10.7f < %10.7f\n",i,p->x(i),division);
 #endif
 
             /* first find the best in the left branch */
-            kdNode *left = root->left;
-            double dbestleft=LARGE;
-            int indexbestleft=-1;
+            binaryTreeNode *left = root->left;
+
+            double *dbestleft= new double[K];
+            int *indexbestleft= new int[K];
 
 
-            nearest(left, p, i, &indexbestleft, &dbestleft,dim);
+            find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
 
-            if(dbestleft<*best_dist){
-#if 0
-                printf("a better point is found on the left since %10.7f < %10.7f\n",dbestleft,*best_dist);
+#if 1
+            printf("max_dist = %10.7f\n", max_dist);
 #endif
-                *best_dist = dbestleft;
-                *best_index = indexbestleft;
+
+            nearest(left, p,K, i, indexbestleft, dbestleft,dim);
+#if 1
+            printf("best %d points in the left branch\n",K);
+            for(int i=0; i<K; i++){
+
+                printf("indx = %d, dist = %10.7f\n",indexbestleft[i],dbestleft[i]);
             }
-
-
-            if (dbestleft > (division-p->x(i)) ){ /* if it is possible that a closer point may exist in the right branch */
-
-                kdNode *right = root->right;
-                double dbestright=LARGE;
-                int indexbestright=-1;
-
-                int inext = (i + 1) % dim;
-                nearest(right, p, inext, &indexbestright, &dbestright,dim);
-
-                if (dbestright<*best_dist){
-#if 0
-                    printf("a better point is found on the right since %10.7f < %10.7f\n",dbestright,*best_dist);
 #endif
-                    *best_dist = dbestright;
-                    *best_index = indexbestright;
+            for(int j=0; j<K; j++){ /* check each new point */
 
+                if (dbestleft[j] < max_dist){ /* a better point is found on the left branch*/
+
+                    best_dist[max_dist_index] = dbestleft[j];
+                    best_index[max_dist_index] = indexbestleft[j];
+
+                    /* update max_dist and max_dist_index*/
+                    find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
 
                 }
 
+            }
+
+            delete[] dbestleft;
+            delete[] indexbestleft;
+
+
+            if (max_dist > (division-p->x(i)) ){ /* if it is possible that a closer point may exist in the right branch */
+
+                binaryTreeNode *right = root->right;
+
+                double *dbestright= new double[K];
+                int *indexbestright= new int[K];
+
+
+                nearest(right, p, K,i, indexbestright, dbestright,dim);
+
+#if 1
+                printf("best %d points in the right branch\n",K);
+                for(int i=0; i<K; i++){
+
+                    printf("indx = %d, dist = %10.7f\n",indexbestright[i],dbestright[i]);
+                }
+#endif
+
+                for(int j=0; j<K; j++){ /* check each new point */
+
+                    if (dbestright[j] < max_dist){ /* a better point is found on the right */
+
+                        best_dist[max_dist_index] = dbestright[j];
+                        best_index[max_dist_index] = indexbestright[j];
+
+                        /* update max_dist and max_dist_index*/
+                        find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+                    }
+
+                }
+
+                delete[] dbestright;
+                delete[] indexbestright;
 
             }
-#if 0
+#if 1
             printf("root %d is terminating\n",root->indx );
 #endif
             return;
 
         }
         else{ /* the point is on the right */
-#if 0
+#if 1
             printf("the point is on the right : p->x(%d) = %10.7f > %10.7f\n",i,p->x(i),division);
 #endif
 
             /* first find the best in the right branch */
-            kdNode *right = root->right;
-            double dbestright = LARGE;
-            int indexbestright = -1;
+            binaryTreeNode *right = root->right;
 
-            int inext = (i + 1) % dim;
-            nearest(right, p, inext, &indexbestright, &dbestright,dim);
+            double *dbestright= new double[K];
+            int *indexbestright= new int[K];
 
-            if(dbestright<*best_dist){
-#if 0
-                printf("a better point is found on the right since %10.7f < %10.7f\n",dbestright,*best_dist);
+            find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+#if 1
+            printf("max_dist = %10.7f\n", max_dist);
 #endif
-                *best_dist = dbestright;
-                *best_index = indexbestright;
+            nearest(right, p, K,i, indexbestright, dbestright,dim);
 
+#if 1
+            printf("best %d points in the right branch\n",K);
+            for(int i=0; i<K; i++){
+
+                printf("indx = %d, dist = %10.7f\n",indexbestright[i],dbestright[i]);
             }
-
-
-            if (dbestright > (p->x(i)-division) ){ /* if it is possible that a closer point may exist in the left branch */
-
-                kdNode *left = root->left;
-                double dbestleft=LARGE;
-                int indexbestleft=-1;
-
-                int inext = (i + 1) % dim;
-                nearest(left, p, inext, &indexbestleft, &dbestleft,dim);
-
-                if (dbestleft<*best_dist){
-#if 0
-                    printf("a better point is found on the left since %10.7f < %10.7f\n",dbestleft,*best_dist);
 #endif
-                    *best_dist = dbestleft;
-                    *best_index = indexbestleft;
 
+            for(int j=0; j<K; j++){ /* check each new point */
+
+                if (dbestright[j] < max_dist){ /* a better point is found on the right */
+
+                    best_dist[max_dist_index] = dbestright[j];
+                    best_index[max_dist_index] = indexbestright[j];
+
+                    /* update max_dist and max_dist_index*/
+                    find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
 
                 }
 
             }
-#if 0
+
+            delete[] dbestright;
+            delete[] indexbestright;
+
+            if ( max_dist > (p->x(i)-division) ){ /* if it is possible that a closer point may exist in the left branch */
+
+                binaryTreeNode *left = root->left;
+                double *dbestleft= new double[K];
+                int *indexbestleft= new int[K];
+
+
+                /* return the K best of the left branch */
+                nearest(left, p,K,i, indexbestleft, dbestleft,dim);
+#if 1
+                printf("best %d points in the left branch\n",K);
+                for(int i=0; i<K; i++){
+
+                    printf("indx = %d, dist = %10.7f\n",indexbestleft[i],dbestleft[i]);
+                }
+#endif
+
+                for(int j=0; j<K; j++){ /* check each new point */
+
+                    if (dbestleft[j] < max_dist){ /* a better point is found on the left branch*/
+
+
+                        best_dist[max_dist_index] = dbestleft[j];
+                        best_index[max_dist_index] = indexbestleft[j];
+
+                        /* update max_dist and max_dist_index*/
+                        find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+                    }
+
+                }
+
+                delete[] dbestleft;
+                delete[] indexbestleft;
+
+            }
+#if 1
             printf("root %d is terminating\n",root->indx );
 #endif
             return;
 
-
         }
-
 
     }
 
 }
 
-
-
-
-
-
-
 void binary_tree_test(void){
 
-    int number_of_points= 20;
-    mat X(number_of_points,4);
+
+    int number_of_points= RandomInt(20,50);
+
+    int dim = RandomInt(2,5);
+
+    int which_coordinate = RandomInt(0,dim-1);
+
+    int K=4;
+
+    int *best_index= new int[K];
+    double *best_dist = new double[K];
+
+    int *best_indexKNN= new int[K];
+    double *best_distKNN = new double[K];
+
+
+    mat X(number_of_points,dim);
 
 
     for (int i=0; i<number_of_points; i++){
-        X(i,0)=RandomDouble(0,1.0);
-        X(i,1)=RandomDouble(0,1.0);
-        X(i,2)=RandomDouble(0,1.0);
-        X(i,3)=RandomDouble(0,1.0);
+
+        for(int j=0; j<dim;j++){
+
+            X(i,j)=RandomDouble(0,1.0);
+
+        }
     }
 
 
+#if 1
     X.print();
+#endif
 
     binaryTreeNode *binaryNodeVec = new binaryTreeNode[number_of_points];
 
     build_binaryNodeList(X,binaryNodeVec );
 
 
-    binaryTreeNode * root = make_tree(binaryNodeVec, number_of_points, 0);
+    binaryTreeNode * root = make_tree(binaryNodeVec, number_of_points, which_coordinate);
 
 #if 1
 
@@ -569,7 +627,61 @@ void binary_tree_test(void){
     }
 #endif
 
+    int number_of_trials = RandomInt(1,1000);
 
+    for(int i=0; i<number_of_trials; i++){
+        rowvec p(dim);
+
+        for(int j=0; j<dim; j++){
+
+            p(j) = RandomDouble(0,1.0);
+
+        }
+#if 1
+        printf("p = \n");
+        p.print();
+#endif
+        binaryTreeNode *xin = new binaryTreeNode;
+
+        xin->x = p;
+
+        nearest(root, xin, K,which_coordinate, best_index, best_dist, dim);
+
+        printf("\n\nnearest point search with the binary search tree (coordinate = %d) \n", which_coordinate);
+
+        for(int i=0; i<K; i++){
+
+            printf("index = %d dist = %10.7f \n",best_index[i],best_dist[i]);
+            X.row(best_index[i]).print();
+
+        }
+
+        findKNeighbours(X, p, K,&which_coordinate , best_distKNN, best_indexKNN, 1);
+
+        printf("\n\nnearest point search with the brute force search (coordinate = %d) \n",which_coordinate);
+
+        for(int i=0; i<K; i++){
+
+            printf("index = %d dist = %10.7f \n",best_indexKNN[i],best_distKNN[i]);
+            X.row(best_index[i]).print();
+
+        }
+
+        if (check_if_lists_are_equal(best_index, best_indexKNN, K) == 0){
+
+            printf("There is a mismatch in lists\n");
+            exit(1);
+        }
+
+
+
+
+    }
+
+    delete[] best_index;
+    delete[] best_dist;
+    delete[] best_indexKNN;
+    delete[] best_distKNN;
 
 }
 

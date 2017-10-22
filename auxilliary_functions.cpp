@@ -6,6 +6,64 @@
 #include <vector>
 
 
+int check_if_lists_are_equal(int *list1, int *list2, int dim){
+
+    int flag=1;
+    for(int i=0; i<dim; i++){
+
+        int item_to_check = list1[i];
+
+        if ( is_in_the_list(item_to_check, list2, dim) == -1){
+
+            flag = 0;
+            return flag;
+
+
+        }
+    }
+
+    return flag;
+}
+
+
+void find_max_with_index(double *vec, int size, double *max_val, int *indx){
+
+    *max_val = -LARGE;
+
+    for(int i=0; i<size; i++){
+
+        if(vec[i] > *max_val){
+
+            *max_val = vec[i];
+            *indx = i;
+        }
+
+    }
+
+
+}
+
+
+
+void find_min_with_index(double *vec, int size, double *min_val, int *indx){
+
+    *min_val = LARGE;
+
+    for(int i=0; i<size; i++){
+
+        if(vec[i] < *min_val){
+
+            *min_val = vec[i];
+            *indx = i;
+        }
+
+    }
+
+
+}
+
+
+
 
 /** Returns the pdf of x, given the distribution described by mu and sigma..
  *
@@ -88,7 +146,7 @@ int is_in_the_list(int entry, std::vector<int> &list){
  * @return -1 if no, position in the list if yes
  *
  */
-int is_in_the_list(int entry, uvec &list){
+int is_in_the_list(unsigned int entry, uvec &list){
 
     int flag=-1;
 
@@ -323,7 +381,7 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 double L1norm(vec & x){
 
     double sum=0.0;
-    for(int i=0;i<x.size();i++){
+    for(unsigned int i=0;i<x.size();i++){
 
         sum+=fabs(x(i));
     }
@@ -334,7 +392,7 @@ double L1norm(vec & x){
 double L1norm(rowvec & x){
 
     double sum=0.0;
-    for(int i=0;i<x.size();i++){
+    for(unsigned int i=0;i<x.size();i++){
 
         sum+=fabs(x(i));
     }
@@ -345,7 +403,7 @@ double L1norm(rowvec & x){
 double L2norm(vec & x){
 
     double sum=0.0;
-    for(int i=0;i<x.size();i++){
+    for(unsigned int i=0;i<x.size();i++){
 
         sum+=x(i)*x(i);
     }
@@ -357,7 +415,7 @@ double L2norm(rowvec & x){
 
     double sum=0.0;
 
-    for(int i=0;i<x.size();i++){
+    for(unsigned int i=0;i<x.size();i++){
 
         sum+=x(i)*x(i);
     }
@@ -368,18 +426,21 @@ double L2norm(rowvec & x){
 double Lpnorm(vec & x, int p){
 
     double sum=0.0;
-    for(int i=0;i<x.size();i++){
+    for(unsigned int i=0;i<x.size();i++){
 
         sum+=pow(fabs(x(i)),p);
     }
 
     return pow(sum,1.0/p);
 }
+
+
+
 
 double Lpnorm(rowvec & x, int p){
 
     double sum=0.0;
-    for(int i=0;i<x.size();i++){
+    for(unsigned int i=0;i<x.size();i++){
 
         sum+=pow(fabs(x(i)),p);
     }
@@ -388,7 +449,27 @@ double Lpnorm(rowvec & x, int p){
 }
 
 
+double Lpnorm(vec & x, int p, int *indx, int number_of_inputs){
 
+    double sum=0.0;
+    for(int i=0;i<number_of_inputs;i++){
+
+        sum+=pow(fabs(x(indx[i])),p);
+    }
+
+    return pow(sum,1.0/p);
+}
+
+double Lpnorm(rowvec & x, int p, int *indx, int number_of_inputs){
+
+    double sum=0.0;
+    for(int i=0;i<number_of_inputs;i++){
+
+        sum+=pow(fabs(x(indx[i])),p);
+    }
+
+    return pow(sum,1.0/p);
+}
 
 bool file_exist(const char *fileName)
 {
@@ -409,11 +490,13 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices)
 
     int number_of_points= data.n_rows;
     int dim= data.n_cols;
-    vec minimum_distances(K);
 
+    for(int i=0; i<K; i++){
 
+        min_dist[i]= LARGE;
+        indices[i]= -1;
+    }
 
-    minimum_distances.fill(LARGE);
 
     for(int i=0; i<number_of_points; i++){ /* for each data point */
 
@@ -426,30 +509,77 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices)
         int worst_distance_index = -1;
 
 
-        for(unsigned int j=0; j<K; j++){
-
-            if(minimum_distances(j) > worst_distance ){
-
-                worst_distance =minimum_distances(j);
-                worst_distance_index = j;
-            }
-        }
+        find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
 
         /* a better point is found */
         if(distance < worst_distance){
 
-            minimum_distances(worst_distance_index)= distance;
+            min_dist[worst_distance_index]= distance;
             indices[worst_distance_index] = i;
 
         }
 
-
-
     }
-
-    *min_dist = min(minimum_distances);
 
 
 }
+
+/** brute force KNeighbours search with given index array for distance computation
+ *
+ * @param[in] data
+ * @param[in] p
+ * @param[in] K
+ * @param[in] input_indx
+ * @param[out] min_dist
+ * @param[out] indices
+ * @param[in] number_of_independent_variables
+ */
+
+void findKNeighbours(mat &data,
+                     rowvec &p,
+                     int K,
+                     int *input_indx ,
+                     double* min_dist,
+                     int *indices,
+                     int number_of_independent_variables){
+
+    int number_of_points= data.n_rows;
+    int dim= data.n_cols;
+
+    for(int i=0; i<K; i++){
+
+        min_dist[i]= LARGE;
+        indices[i]= -1;
+    }
+
+
+
+    for(int i=0; i<number_of_points; i++){ /* for each data point */
+
+        rowvec x = data.row(i);
+        rowvec xdiff = x-p;
+
+        double distance = Lpnorm(xdiff, dim, input_indx,number_of_independent_variables);
+
+        double worst_distance = -LARGE;
+        int worst_distance_index = -1;
+
+
+        find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
+
+
+        /* a better point is found */
+        if(distance < worst_distance){
+
+            min_dist[worst_distance_index]= distance;
+            indices[worst_distance_index] = i;
+
+        }
+
+    }
+
+}
+
+
 
 
