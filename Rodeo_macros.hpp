@@ -9,9 +9,6 @@ enum DATA_FILE_FORMAT {
 
 };
 
-
-
-
 enum SAMPLING_METHOD { 
 	EXISTING_FILE,          /* read samples from an existing file */
 	PREDEFINED_LOCATIONS,   /* generate samples for given locations */
@@ -60,8 +57,9 @@ enum SVM_KERNEL_TYPE {
 #define LARGE 10E14
 #define EPSILON 10-14
 #define EPSILON_SINGLE 10E-6
-#define TOL 1E-2
 
 
+#define MIN(x,y) ((x) <= (y) ? x : y)
+#define MAX(x,y) ((x) <= (y) ? y : x)
 
 #endif

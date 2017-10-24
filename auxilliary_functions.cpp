@@ -26,41 +26,7 @@ int check_if_lists_are_equal(int *list1, int *list2, int dim){
 }
 
 
-void find_max_with_index(double *vec, int size, double *max_val, int *indx){
 
-    *max_val = -LARGE;
-
-    for(int i=0; i<size; i++){
-
-        if(vec[i] > *max_val){
-
-            *max_val = vec[i];
-            *indx = i;
-        }
-
-    }
-
-
-}
-
-
-
-void find_min_with_index(double *vec, int size, double *min_val, int *indx){
-
-    *min_val = LARGE;
-
-    for(int i=0; i<size; i++){
-
-        if(vec[i] < *min_val){
-
-            *min_val = vec[i];
-            *indx = i;
-        }
-
-    }
-
-
-}
 
 
 
@@ -376,100 +342,9 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 }
 
-/* distance functions */
-
-double L1norm(vec & x){
-
-    double sum=0.0;
-    for(unsigned int i=0;i<x.size();i++){
-
-        sum+=fabs(x(i));
-    }
-
-    return sum;
-}
-
-double L1norm(rowvec & x){
-
-    double sum=0.0;
-    for(unsigned int i=0;i<x.size();i++){
-
-        sum+=fabs(x(i));
-    }
-
-    return sum;
-}
-
-double L2norm(vec & x){
-
-    double sum=0.0;
-    for(unsigned int i=0;i<x.size();i++){
-
-        sum+=x(i)*x(i);
-    }
-
-    return sqrt(sum);
-}
-
-double L2norm(rowvec & x){
-
-    double sum=0.0;
-
-    for(unsigned int i=0;i<x.size();i++){
-
-        sum+=x(i)*x(i);
-    }
-
-    return sqrt(sum);
-}
-
-double Lpnorm(vec & x, int p){
-
-    double sum=0.0;
-    for(unsigned int i=0;i<x.size();i++){
-
-        sum+=pow(fabs(x(i)),p);
-    }
-
-    return pow(sum,1.0/p);
-}
 
 
 
-
-double Lpnorm(rowvec & x, int p){
-
-    double sum=0.0;
-    for(unsigned int i=0;i<x.size();i++){
-
-        sum+=pow(fabs(x(i)),p);
-    }
-
-    return pow(sum,1.0/p);
-}
-
-
-double Lpnorm(vec & x, int p, int *indx, int number_of_inputs){
-
-    double sum=0.0;
-    for(int i=0;i<number_of_inputs;i++){
-
-        sum+=pow(fabs(x(indx[i])),p);
-    }
-
-    return pow(sum,1.0/p);
-}
-
-double Lpnorm(rowvec & x, int p, int *indx, int number_of_inputs){
-
-    double sum=0.0;
-    for(int i=0;i<number_of_inputs;i++){
-
-        sum+=pow(fabs(x(indx[i])),p);
-    }
-
-    return pow(sum,1.0/p);
-}
 
 bool file_exist(const char *fileName)
 {
@@ -536,12 +411,12 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices)
  */
 
 void findKNeighbours(mat &data,
-                     rowvec &p,
-                     int K,
-                     int *input_indx ,
-                     double* min_dist,
-                     int *indices,
-                     int number_of_independent_variables){
+        rowvec &p,
+        int K,
+        int *input_indx ,
+        double* min_dist,
+        int *indices,
+        int number_of_independent_variables){
 
     int number_of_points= data.n_rows;
     int dim= data.n_cols;
@@ -559,7 +434,7 @@ void findKNeighbours(mat &data,
         rowvec x = data.row(i);
         rowvec xdiff = x-p;
 
-        double distance = Lpnorm(xdiff, dim, input_indx,number_of_independent_variables);
+        double distance = Lpnorm(xdiff, number_of_independent_variables, input_indx);
 
         double worst_distance = -LARGE;
         int worst_distance_index = -1;

@@ -3,12 +3,46 @@
 #include "Rodeo_macros.hpp"
 #include <armadillo>
 #include <vector>
+#include <math.h>
 using namespace arma;
 
-  
-void find_max_with_index(double *vec, int size, double *max_val, int *indx);
+template<class T>
+void find_max_with_index(T vec, int size, double *max_val, int *indx){
 
-void find_min_with_index(double *vec, int size, double *min_val, int *indx);
+    *max_val = -LARGE;
+
+    for(int i=0; i<size; i++){
+
+        if(vec[i] > *max_val){
+
+            *max_val = vec[i];
+            *indx = i;
+        }
+
+    }
+
+
+}
+
+
+template<class T>
+void find_min_with_index(T vec, int size, double *min_val, int *indx){
+
+    *min_val = LARGE;
+
+    for(int i=0; i<size; i++){
+
+        if(vec[i] < *min_val){
+
+            *min_val = vec[i];
+            *indx = i;
+        }
+
+    }
+
+
+}
+
 
 
 double pdf(double x, double mu, double sigma);
@@ -39,24 +73,90 @@ void generate_validation_set(uvec &indices, int size);
 
 void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod);
 
-double L1norm(vec & x);
 
-double L1norm(rowvec & x);
 
-double L2norm(vec & x);
+/* distance functions */
 
-double L2norm(rowvec & x);
+template<class T>
+double L1norm(T x, int p, int* index=NULL){
+    if(index == NULL){
+        double sum=0.0;
+        for(unsigned int i=0;i<p;i++){
 
-double Lpnorm(vec & x, int p);
+            sum+=fabs(x(i));
+        }
+    }
+    else{
 
-double Lpnorm(rowvec & x, int p);
+        double sum=0.0;
+        for(unsigned int i=0;i<p;i++){
+
+            sum+=fabs(x(index[i]));
+        }
+
+    }
+
+    return sum;
+}
+
+
+template<class T>
+double L2norm(T x, int p, int* index=NULL){
+
+    double sum;
+    if(index == NULL){
+        sum=0.0;
+
+        for(unsigned int i=0;i<p;i++){
+
+            sum+=x(i)*x(i);
+        }
+
+    }
+    else{
+
+        sum=0.0;
+
+        for(unsigned int i=0;i<p;i++){
+
+            sum+=x(index[i])*x(index[i]);
+        }
+
+    }
+
+    return sqrt(sum);
+}
+
+template<class T>
+double Lpnorm(T x, int p, int *index=NULL){
+    double sum=0.0;
+
+    if(index == NULL){
+
+        for(unsigned int i=0;i<p;i++){
+            sum+=pow(fabs(x(i)),p);
+        }
+
+    }
+    else{
+
+        for(unsigned int i=0;i<p;i++){
+
+            sum+=pow(fabs(x(index[i])),p);
+        }
+
+
+    }
+    return pow(sum,1.0/p);
+}
+
 
 void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices);
 void findKNeighbours(mat &data,
-                     rowvec &p,
-                     int K,
-                     int *input_indx ,
-                     double* min_dist,
-                     int *indices,
-                     int number_of_independent_variables);
+        rowvec &p,
+        int K,
+        int *input_indx ,
+        double* min_dist,
+        int *indices,
+        int number_of_independent_variables);
 #endif

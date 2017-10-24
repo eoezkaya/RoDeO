@@ -585,7 +585,6 @@ void kd_tree_test2(void){
         X.row(indices).print();
 
 
-
     }
 
 

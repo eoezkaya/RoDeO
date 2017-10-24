@@ -81,34 +81,34 @@ void compute_PSI(mat &PSI, mat &X, double lambda, double sigma, int type){
 
             if(type == GAUSSIAN){
 
-                PSI(i,j) = rbf_psi_gaussian(L2norm(xdiff),sigma);
+                PSI(i,j) = rbf_psi_gaussian(L2norm(xdiff, xdiff.size()),sigma);
             }
 
 
             if(type == LINEAR){
 
-                PSI(i,j) = rbf_psi_linear(L2norm(xdiff));
+                PSI(i,j) = rbf_psi_linear(L2norm(xdiff, xdiff.size()));
             }
 
 
             if(type == THIN_PLATE_SPLINE){
 
-                PSI(i,j) = rbf_psi_tps(L2norm(xdiff));
+                PSI(i,j) = rbf_psi_tps(L2norm(xdiff, xdiff.size()));
             }
 
             if(type == CUBIC){
 
-                PSI(i,j) = rbf_psi_cubic(L2norm(xdiff));
+                PSI(i,j) = rbf_psi_cubic(L2norm(xdiff, xdiff.size()));
             }
 
             if(type == MULTIQUADRATIC){
 
-                PSI(i,j) = rbf_psi_multiquadratic(L2norm(xdiff),sigma);
+                PSI(i,j) = rbf_psi_multiquadratic(L2norm(xdiff, xdiff.size()),sigma);
             }
 
             if(type == INV_MULTIQUADRATIC){
 
-                PSI(i,j) = rbf_psi_inverse_multiquadratic(L2norm(xdiff),sigma);
+                PSI(i,j) = rbf_psi_inverse_multiquadratic(L2norm(xdiff, xdiff.size()),sigma);
             }
 
             /* add regularization term */
@@ -151,30 +151,30 @@ double calc_ftilde_rbf(mat &X, rowvec &xp, vec &w, int type, double sigma=1.0){
 
         if(type == GAUSSIAN){
 
-            ftilde += w(i)*rbf_psi_gaussian(L2norm(xdiff),sigma);
+            ftilde += w(i)*rbf_psi_gaussian(L2norm(xdiff, xdiff.size()),sigma);
         }
         if(type == LINEAR){
 
-            ftilde += w(i)*rbf_psi_linear(L2norm(xdiff));
+            ftilde += w(i)*rbf_psi_linear(L2norm(xdiff, xdiff.size()));
         }
 
         if(type == CUBIC){
 
-            ftilde += w(i)*rbf_psi_cubic(L2norm(xdiff));
+            ftilde += w(i)*rbf_psi_cubic(L2norm(xdiff, xdiff.size()));
         }
 
         if(type == THIN_PLATE_SPLINE){
 
-            ftilde += w(i)*rbf_psi_tps(L2norm(xdiff));
+            ftilde += w(i)*rbf_psi_tps(L2norm(xdiff, xdiff.size()));
         }
 
         if(type == MULTIQUADRATIC){
 
-            ftilde += w(i)*rbf_psi_multiquadratic(L2norm(xdiff),sigma);
+            ftilde += w(i)*rbf_psi_multiquadratic(L2norm(xdiff, xdiff.size()),sigma);
         }
         if(type == INV_MULTIQUADRATIC){
 
-            ftilde += w(i)*rbf_psi_inverse_multiquadratic(L2norm(xdiff),sigma);
+            ftilde += w(i)*rbf_psi_inverse_multiquadratic(L2norm(xdiff, xdiff.size()),sigma);
         }
 
 

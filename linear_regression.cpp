@@ -17,54 +17,54 @@ using namespace arma;
 
 int train_linear_regression(mat &X, vec &ys, vec &w, double lambda=0){
 
-	unsigned int dim = X.n_cols;
+    unsigned int dim = X.n_cols;
 
-	mat augmented_X(X.n_rows, dim + 1);
+    mat augmented_X(X.n_rows, dim + 1);
 
-	for (unsigned int i = 0; i < X.n_rows; i++) {
+    for (unsigned int i = 0; i < X.n_rows; i++) {
 
-		for (unsigned int j = 0; j <= dim; j++) {
+        for (unsigned int j = 0; j <= dim; j++) {
 
-			if (j == 0){
+            if (j == 0){
 
-			    augmented_X(i, j) = 1.0;
-			}
+                augmented_X(i, j) = 1.0;
+            }
 
-			else{
+            else{
 
-			    augmented_X(i, j) = X(i, j - 1);
-			}
+                augmented_X(i, j) = X(i, j - 1);
+            }
 
 
-		}
-	}
+        }
+    }
 
-	if(fabs(lambda) < EPSILON ){
+    if(fabs(lambda) < EPSILON ){
 #if 0
-		printf("Taking pseudo-inverse of augmented data matrix...\n");
+        printf("Taking pseudo-inverse of augmented data matrix...\n");
 #endif
-		mat psuedo_inverse_X_augmented = pinv(augmented_X);
+        mat psuedo_inverse_X_augmented = pinv(augmented_X);
 
-		//		psuedo_inverse_X_augmented.print();
+        //		psuedo_inverse_X_augmented.print();
 
-		w = psuedo_inverse_X_augmented * ys;
+        w = psuedo_inverse_X_augmented * ys;
 
-	}
+    }
 
-	else{
+    else{
 #if 0
-		printf("Regularization...\n");
+        printf("Regularization...\n");
 #endif
-		mat XtX = trans(augmented_X)*augmented_X;
+        mat XtX = trans(augmented_X)*augmented_X;
 
-		XtX = XtX + lambda*eye(XtX.n_rows,XtX.n_rows);
+        XtX = XtX + lambda*eye(XtX.n_rows,XtX.n_rows);
 
-		w = inv(XtX)*trans(augmented_X)*ys;
+        w = inv(XtX)*trans(augmented_X)*ys;
 
-	}
+    }
 
 
-	return 0;
+    return 0;
 } 
 
 
@@ -121,33 +121,37 @@ void test_linear_regression(void){
     int i;
     printf("testing linear regression...\n");
 
-    int N=8;
-    int number_of_features = 10;
+    int N=20; /* number of data points */
+    int degree_of_polynomial = 15;
 
     double bounds[2];
     bounds[0]=-1;
     bounds[1]=1;
-    //  generate_plot_1D_function(test_function1D,bounds,"test_function1D" );
 
     vec ys(N);
-    mat X(N,number_of_features);
+    mat X(N,degree_of_polynomial);
 
     FILE *lin_reg_points=fopen("lin_reg_points.dat","w");
+
     for(i=0; i<N; i++){
+
         double x = RandomDouble(bounds[0], bounds[1]);
 
-
         X(i,0) = (x-bounds[0]) / (bounds[1]-bounds[0]);
-        X(i,1) = X(i,0)*X(i,0);
+#if 1
+        printf("%10.7f ", X(i,0));
+#endif
+        for(int j=1; j< degree_of_polynomial; j++){
 
-        X(i,2) = pow(X(i,0),3);
-        X(i,3) = pow(X(i,0),4);
-        X(i,4) = pow(X(i,0),5);
-        X(i,5) = pow(X(i,0),6);
-        X(i,6) = pow(X(i,0),7);
-        X(i,7) = pow(X(i,0),8);
-        X(i,8) = pow(X(i,0),9);
-        X(i,9) = pow(X(i,0),10);
+            X(i,j) = pow( X(i,0), j+1);
+#if 1
+            printf("%10.7f ", X(i,j));
+#endif
+
+        }
+#if 1
+        printf("\n");
+#endif
 
 
         ys(i) = test_function1D3(&x);
@@ -156,13 +160,13 @@ void test_linear_regression(void){
 
     fclose(lin_reg_points);
 
-    #if 0
-      X.print();
-      ys.print();
+#if 0
+    X.print();
+    ys.print();
 #endif
 
 
-    vec w(number_of_features+1);
+    vec w(degree_of_polynomial+1);
     train_linear_regression(X,ys,w,0);
 
 
@@ -184,22 +188,14 @@ void test_linear_regression(void){
 
     double Ein =0;
     for(i=0; i<N; i++){
-        rowvec xi(number_of_features+1);
+        rowvec xi(degree_of_polynomial+1);
         xi(0)=1.0;
-        xi(1)=X(i,0);
-        xi(2)=X(i,1);
 
-        xi(3)=X(i,2);
-        xi(4)=X(i,3);
-        xi(5)=X(i,4);
-        xi(6)=X(i,5);
-        xi(7)=X(i,6);
-        xi(8)=X(i,7);
-        xi(9)=X(i,8);
-        xi(10)=X(i,9);
+        for(int j=1; j<degree_of_polynomial+1; j++){
 
-        double x = X(i,0)* (bounds[1]-bounds[0]) + bounds[0];
+            xi(j)=X(i,j-1);
 
+        }
 
         func_val = dot(xi,w);
         func_val_ex =ys(i);
@@ -216,19 +212,14 @@ void test_linear_regression(void){
     double Eout=0.0;
     x= bounds[0];
     for(int i=0;i<resolution;i++){
-        rowvec xi(number_of_features+1);
+        rowvec xi(degree_of_polynomial+1);
         xi(0)=1.0;
         xi(1)=(x-bounds[0])/(bounds[1]-bounds[0]) ;
-        xi(2)=xi(1)*xi(1);
 
-        xi(3)=pow(xi(1),3);
-        xi(4)=pow(xi(1),4);
-        xi(5)=pow(xi(1),5);
-        xi(6)=pow(xi(1),6);
-        xi(7)=pow(xi(1),7);
-        xi(8)=pow(xi(1),8);
-        xi(9)=pow(xi(1),9);
-        xi(10)=pow(xi(1),10);
+        for(int j=2;j<degree_of_polynomial+1;j++){
+
+            xi(j)=pow(xi(1),j) ;
+        }
 
         func_val = dot(xi,w);
         func_val_ex = test_function1D3(&x);

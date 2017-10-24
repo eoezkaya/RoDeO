@@ -13,18 +13,6 @@ using namespace arma;
 #include <math.h>
 #include <time.h>
 
-
-
-
-
-
-
-
-
-
-
-
-
 /* print an element of the lookup table indexed by indx */
 void print_table_element(IntLookupTable* table, int indx, int how) {
     int i;
@@ -1947,9 +1935,6 @@ void test_scatter_table(void){
 
 
     }
-
-
-
 
 
 
