@@ -6,7 +6,7 @@
 #include "test_functions.hpp"
 #include "rbf.hpp"
 #include "Rodeo_macros.hpp"
-
+#include "svm.hpp"
 
 
 int main(void){

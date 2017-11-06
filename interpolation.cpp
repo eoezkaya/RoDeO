@@ -1426,7 +1426,7 @@ void interpolateTableScatterdata(IntLookupTable* table,
 
     for(int i=0;i<number_of_indep_vars;i++){
 
-        if(isnan(interpolation_variable[i])){
+        if(std::isnan(interpolation_variable[i])){
 
             NaNflag = 1;
         }
