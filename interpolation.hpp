@@ -3,6 +3,7 @@
 #include <armadillo>
 using namespace arma;
 
+namespace tableInterpolation{
 
 typedef struct {
     double** data;   /* data points */
@@ -47,4 +48,5 @@ void interpolateTableScatterdata(IntLookupTable* table,
         int number_of_indep_vars,
         int number_of_vars_to_interpolate );
 
+}
 #endif

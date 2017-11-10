@@ -13,8 +13,10 @@ using namespace arma;
 #include <math.h>
 #include <time.h>
 
+namespace tableInterpolation{
+
 /* print an element of the lookup table indexed by indx */
-void print_table_element(IntLookupTable* table, int indx, int how) {
+void printTableElement(IntLookupTable* table, int indx, int how) {
     int i;
     double x;
 
@@ -65,11 +67,11 @@ void print_table_element(IntLookupTable* table, int indx, int how) {
 
 }
 
-void print_table(IntLookupTable* table, int how) {
+void printTable(IntLookupTable* table, int how) {
 
     for(int i=0; i<table->rowsize; i++){
 
-        print_table_element(table, i, how) ;
+        printTableElement(table, i, how) ;
 
     }
 
@@ -83,7 +85,7 @@ void print_table(IntLookupTable* table, int how) {
  *
  */
 
-void intfindKNeighbours(IntLookupTable* table,
+void findKNeighbours(IntLookupTable* table,
         double *xinp,
         int K,
         int *input_indx ,
@@ -163,7 +165,7 @@ void intfindKNeighbours(IntLookupTable* table,
  * @param[in] number_of_active_vars  number of active variables in the distance computation
  *
  */
-double intComputeDistanceToXmeani(double *xmean,
+double ComputeDistanceToXmeani(double *xmean,
         double *x,
         int *variable_index,
         int number_of_active_vars){
@@ -188,7 +190,7 @@ double intComputeDistanceToXmeani(double *xmean,
  * @param[in] index of the cluster to be enlarged
  *
  */
-void interpolateTableEnlargeCluster(IntLookupTable* table, int which_cluster){
+void EnlargeCluster(IntLookupTable* table, int which_cluster){
 
     int ideal_cluster_size=50;
 
@@ -233,7 +235,7 @@ void interpolateTableEnlargeCluster(IntLookupTable* table, int which_cluster){
  * @param[in] variable_index   indices of variables that are considered in the clustering
  * @param[in] number_of_active_vars   dim(variable_index)
  */
-int intKmeansClustering(IntLookupTable *table,
+int KmeansClustering(IntLookupTable *table,
         int ideal_cluster_size,
         int *variable_index,
         int number_of_active_vars){
@@ -446,7 +448,7 @@ int intKmeansClustering(IntLookupTable *table,
 
                 /* compute distance of the ith point to the jth cluster center */
 
-                distance[j]= intComputeDistanceToXmeani(table->cluster_means[j],
+                distance[j]= ComputeDistanceToXmeani(table->cluster_means[j],
                         x,
                         variable_index,
                         number_of_active_vars);
@@ -480,7 +482,7 @@ int intKmeansClustering(IntLookupTable *table,
 
             if(table->cluster_sizes[index_of_min_dist] ==  table->cluster_max_sizes[index_of_min_dist]-1  ){
 
-                interpolateTableEnlargeCluster(table, index_of_min_dist);
+                EnlargeCluster(table, index_of_min_dist);
 
             }
 
@@ -536,7 +538,7 @@ int intKmeansClustering(IntLookupTable *table,
         for(int i=0;i<number_of_clusters;i++){
 
 
-            xmean_differences[i]=intComputeDistanceToXmeani(table->cluster_means[i],
+            xmean_differences[i]=ComputeDistanceToXmeani(table->cluster_means[i],
                     xmean0[i],
                     variable_index,
                     number_of_active_vars);
@@ -585,7 +587,7 @@ int intKmeansClustering(IntLookupTable *table,
                     if(k!=j ){
                         /* compute distance to the jth cluster center */
 
-                        double dist= intComputeDistanceToXmeani(table->cluster_means[j],
+                        double dist= ComputeDistanceToXmeani(table->cluster_means[j],
                                 x,
                                 variable_index,
                                 number_of_active_vars);
@@ -608,7 +610,7 @@ int intKmeansClustering(IntLookupTable *table,
 
                 if(table->cluster_sizes[index_of_min_dist] ==  table->cluster_max_sizes[index_of_min_dist]-1  ){
 
-                    interpolateTableEnlargeCluster(table, index_of_min_dist);
+                    EnlargeCluster(table, index_of_min_dist);
 
                 }
 
@@ -688,7 +690,7 @@ int intKmeansClustering(IntLookupTable *table,
  * @param[in] b
  * @return   1 if x is in [a,b] 0 else
  */
-int interpolateTableCheckInterval(double x, double a, double b){
+int CheckInterval(double x, double a, double b){
 
     if( (x >=a && x<=b) || ( x >=b && x<=a) ) {
 
@@ -748,7 +750,7 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
         y2= table->data[1][table->last_interpolation_points[2]];
 
 
-        if ( interpolateTableCheckInterval(var1, x1, x2)   &&  interpolateTableCheckInterval(var2, y1, y2) )
+        if ( CheckInterval(var1, x1, x2)   &&  CheckInterval(var2, y1, y2) )
         {
 
             for(int i=0;i<number_of_vars_to_interpolate;i++){
@@ -775,7 +777,7 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
     } /* end of if */
 
     /* if the point is inside the box */
-    if ( interpolateTableCheckInterval(var1, 0.0, 1.0)   &&  interpolateTableCheckInterval(var2, 0.0, 1.0) )
+    if ( CheckInterval(var1, 0.0, 1.0)   &&  CheckInterval(var2, 0.0, 1.0) )
 
     {
 
@@ -804,7 +806,7 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
             xs=table->data[0][index1];
             xe=table->data[0][index2];
 
-            left=interpolateTableCheckInterval(var1, xs , xe );
+            left=CheckInterval(var1, xs , xe );
 
             if(left==1) {
 
@@ -838,7 +840,7 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
             xs=table->data[1][index1];
             xe=table->data[1][index2];
 
-            left=interpolateTableCheckInterval(var2,  xs , xe  );
+            left=CheckInterval(var2,  xs , xe  );
 
             if(left==1) {
 
@@ -894,10 +896,10 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
         y2=table->data[1][indx3];
 
 
-        print_table_element(table,indx1,0);
-        print_table_element(table,indx2,0);
-        print_table_element(table,indx3,0);
-        print_table_element(table,indx4,0);
+        printTableElement(table,indx1,0);
+        printTableElement(table,indx2,0);
+        printTableElement(table,indx3,0);
+        printTableElement(table,indx4,0);
 
         for(int i=0;i<number_of_vars_to_interpolate;i++){
 
@@ -1080,7 +1082,7 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
                 xs=table->data[0][index1];
                 xe=table->data[0][index2];
 
-                left=interpolateTableCheckInterval(var1, xs , xe );
+                left=CheckInterval(var1, xs , xe );
 
                 if(left==1) {
 
@@ -1136,7 +1138,7 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
                 xs=table->data[0][index1];
                 xe=table->data[0][index2];
 
-                left=interpolateTableCheckInterval(var1, xs , xe );
+                left=CheckInterval(var1, xs , xe );
 
                 if(left==1) {
 
@@ -1194,7 +1196,7 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
                 xe=table->data[1][index2];
 
 
-                left=interpolateTableCheckInterval(var2,  xs , xe  );
+                left=CheckInterval(var2,  xs , xe  );
 
                 if(left==1) {
 
@@ -1258,7 +1260,7 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
 
 
 
-                left=interpolateTableCheckInterval(var2,  xs , xe  );
+                left=CheckInterval(var2,  xs , xe  );
 
                 if(left==1) {
 
@@ -1296,10 +1298,10 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
         }
 
 #if 1
-        print_table_element(table,indx1,0);
-        print_table_element(table,indx2,0);
-        print_table_element(table,indx3,0);
-        print_table_element(table,indx4,0);
+        printTableElement(table,indx1,0);
+        printTableElement(table,indx2,0);
+        printTableElement(table,indx3,0);
+        printTableElement(table,indx4,0);
 #endif
 
         for(int i=0;i<number_of_vars_to_interpolate;i++){
@@ -1343,7 +1345,7 @@ void interpolateTable2DRectilinear(IntLookupTable* table,
  * @param[in] number_of_indep_vars
  * @return  cluster index of point x
  */
-int interpolateTableFindWhichCluster(IntLookupTable* table, double *x, int *x_index, int number_of_indep_vars){
+int FindWhichCluster(IntLookupTable* table, double *x, int *x_index, int number_of_indep_vars){
 
     double min_distance=LARGE;
     double distance;
@@ -1353,17 +1355,13 @@ int interpolateTableFindWhichCluster(IntLookupTable* table, double *x, int *x_in
 
     for(int i=0;i<table->number_of_clusters;i++){
 
-        if(table->cluster_sizes[i] > 0){ /* if a cluster has some elements */
-
             distance=0.0;
 
-            for(int k=0;k<number_of_indep_vars;k++){
+            for(int k=0; k<number_of_indep_vars; k++){
 
                 distance+=(x[k]-table->cluster_means[i][x_index[k]])*(x[k]-table->cluster_means[i][x_index[k]]);
 
             }
-
-            distance=sqrt(distance);
 
             if (distance < min_distance){
 
@@ -1371,7 +1369,7 @@ int interpolateTableFindWhichCluster(IntLookupTable* table, double *x, int *x_in
                 index=i;
             }
 
-        } /* end of if */
+
     } /* end of for */
 
 
@@ -1390,7 +1388,7 @@ int interpolateTableFindWhichCluster(IntLookupTable* table, double *x, int *x_in
  * @param[in] number_of_indep_vars
  * @return  distance
  */
-double interpolateTableCalcDistanceScatter(IntLookupTable *table, double *x, int indx, int * variable_index, int number_of_indep_vars ){
+double calcDistanceScatter(IntLookupTable *table, double *x, int indx, int * variable_index, int number_of_indep_vars ){
 
     double distance=0.0;
 
@@ -1400,7 +1398,7 @@ double interpolateTableCalcDistanceScatter(IntLookupTable *table, double *x, int
 
     }
 
-    return sqrt(distance);
+    return distance;
 
 }
 
@@ -1415,7 +1413,7 @@ double interpolateTableCalcDistanceScatter(IntLookupTable *table, double *x, int
  * @param[in] number_of_indep_vars
  * @return K if cluster has less points than K
  */
-int interpolateTableFindKneighbours(IntLookupTable* table,
+int findKneighbours(IntLookupTable* table,
         int *point_indices,
         double *point_distances,
         int cluster_no,
@@ -1447,7 +1445,7 @@ int interpolateTableFindKneighbours(IntLookupTable* table,
 
         /* calculate the distance */
 
-        dist=interpolateTableCalcDistanceScatter(table, x, index, x_index, number_of_indep_vars );
+        dist=calcDistanceScatter(table, x, index, x_index, number_of_indep_vars );
 
         if (dist < max_distance){ /* if a point with smaller distance is found */
 
@@ -1511,10 +1509,6 @@ void interpolateTableScatterdata(IntLookupTable* table,
 
     }
 
-
-
-
-
     if(NaNflag == 0){
 
         int cluster_no;
@@ -1533,7 +1527,7 @@ void interpolateTableScatterdata(IntLookupTable* table,
 
         if(table->number_of_clusters > 1){
 
-            cluster_no=interpolateTableFindWhichCluster(table,x,x_index,number_of_indep_vars);
+            cluster_no=FindWhichCluster(table,x,x_index,number_of_indep_vars);
 
             if(cluster_no == -1) {
 
@@ -1557,7 +1551,7 @@ void interpolateTableScatterdata(IntLookupTable* table,
 
 
         /* find the 4 nearest neighbours */
-        int K = interpolateTableFindKneighbours(table,
+        int K = findKneighbours(table,
                 nearest_point_indices,
                 nearest_point_distances,
                 cluster_no,
@@ -1568,10 +1562,10 @@ void interpolateTableScatterdata(IntLookupTable* table,
 
 #if 0
         fprintf(stdout,"nearest four points=\n");
-        print_table_element(table,nearest_point_indices[0],0);
-        print_table_element(table,nearest_point_indices[1],0);
-        print_table_element(table,nearest_point_indices[2],0);
-        print_table_element(table,nearest_point_indices[3],0);
+        printTableElement(table,nearest_point_indices[0],0);
+        printTableElement(table,nearest_point_indices[1],0);
+        printTableElement(table,nearest_point_indices[2],0);
+        printTableElement(table,nearest_point_indices[3],0);
 #endif
 
         for (int i=0; i<K; i++){
@@ -2278,7 +2272,7 @@ void test_2d_table(void){
     }
 
 
-    print_table(&table2D, 0);
+    printTable(&table2D, 0);
 
 
     /* try to interpolate in sample points */
@@ -2289,7 +2283,7 @@ void test_2d_table(void){
 
         int indx = RandomInt(0,table2D.rowsize);
 
-        print_table_element(&table2D,indx, 0);
+        printTableElement(&table2D,indx, 0);
         x = table2D.data[0][indx];
         x = x*(table2D.xmax[0]-table2D.xmin[0])+table2D.xmin[0];
         y = table2D.data[1][indx];
@@ -2409,7 +2403,7 @@ void test_scatter_table(void){
 
     IntLookupTable tablescatter;
 
-    tablescatter.rowsize    = 1000;
+    tablescatter.rowsize    = 100000;
     tablescatter.columnsize = 5;
 
     tablescatter.data = new double*[tablescatter.columnsize];
@@ -2448,7 +2442,7 @@ void test_scatter_table(void){
         f2 = x+y+x*y;
         f3 = (1-x)+ y*(1-x);
 
-#if 1
+#if 0
         printf("%d %10.7f %10.7f %10.7f %10.7f %10.7f\n",count,x,y,f1,f2,f3);
 #endif
 
@@ -2509,9 +2503,9 @@ void test_scatter_table(void){
     }
 
 
-
-    print_table(&tablescatter, 0);
-
+#if 0
+    printTable(&tablescatter, 0);
+#endif
 
     mat kddata(tablescatter.rowsize,2);
 
@@ -2525,7 +2519,7 @@ void test_scatter_table(void){
 
     }
 
-#if 1
+#if 0
     kddata.print();
 #endif
 
@@ -2543,7 +2537,7 @@ void test_scatter_table(void){
     variable_index[1] = 1;
 
     /* cluster the table using cluster_size = 50 */
-    intKmeansClustering(&tablescatter,50,variable_index,2);
+    KmeansClustering(&tablescatter,300,variable_index,2);
 
     // Record start time
     auto start = std::chrono::high_resolution_clock::now();
@@ -2586,7 +2580,7 @@ void test_scatter_table(void){
         for(int j=0; j<4;j++){
 
             //            printf("indices[%d] = %d\n",j,indices[j]);
-            print_table_element(&tablescatter, indices[j], 0);
+            printTableElement(&tablescatter, indices[j], 0);
 
         }
 #endif
@@ -2651,3 +2645,4 @@ void test_scatter_table(void){
     delete[] indices;
 }
 
+}

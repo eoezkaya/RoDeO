@@ -36,7 +36,7 @@ int find_which_cluster(mat cluster_means, rowvec x){
         rowvec xdiff = x - cluster_means.row(i);
         double distance = Lpnorm(xdiff, 2, x.size());
 #if 1
-        printf("xdiff = \n",i);
+        printf("xdiff = \n");
         xdiff.print();
         printf("distance = %10.7f\n",distance);
 #endif

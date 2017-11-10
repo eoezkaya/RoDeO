@@ -5,7 +5,15 @@
 #include "su2_optim.hpp"
 #include "test_functions.hpp"
 #include "rbf.hpp"
+#include "svm.hpp"
+#include "kd_tree.hpp"
+#include "binary_search_tree.hpp"
+#include "linear_regression.hpp"
+#include "kmeans_clustering.hpp"
+#include "interpolation.hpp"
 #include "Rodeo_macros.hpp"
+#include "auxilliary_functions.hpp"
+
 
 
 
@@ -20,6 +28,21 @@ int main(void){
 	printf("\n**************************************************************\n");
 
 
+	tableInterpolation::test_scatter_table();
+
+
+	exit(1);
+
+	binary_tree_test();
+
+
+    // free(million);
+
+
+    exit(1);
+
+
+
 
 
 	Classifier_Function_param test_function(2);
@@ -30,12 +53,12 @@ int main(void){
 	test_function.bounds[1]= 4.0;
 	test_function.bounds[2]=-6.0;
 	test_function.bounds[3]= 6.0;
-	test_function.noise_level = 0.1;
+	test_function.noise_level = 0.0;
 
 
 
 	perform_svn_test(test_function,
-	        100,
+	        200,
 	        0,
 	        SVM_RBF);
 
