@@ -4,6 +4,8 @@
 
 #include <armadillo>
 
+// added one line of comment
+
 using namespace arma;
 
 
