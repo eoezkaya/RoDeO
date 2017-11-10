@@ -8,6 +8,7 @@
 
 using namespace arma;
 
+/* some kernels for svm */
 double svm_linear_kernel(rowvec x1, rowvec x2){
 
     return dot(x1,x2);
