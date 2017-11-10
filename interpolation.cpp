@@ -77,6 +77,84 @@ void print_table(IntLookupTable* table, int how) {
 }
 
 
+
+/** brute force KNeighbours search with given index array for distance computation
+ *
+ *
+ */
+
+void intfindKNeighbours(IntLookupTable* table,
+        double *xinp,
+        int K,
+        int *input_indx ,
+        double* min_dist,
+        int *indices,
+        int number_of_independent_variables){
+
+    int number_of_points= table->rowsize;
+
+
+    for(int i=0; i<K; i++){
+
+        min_dist[i]= LARGE;
+        indices[i]= -1;
+    }
+
+
+
+    for(int i=0; i<number_of_points; i++){ /* for each data point */
+
+        rowvec x(number_of_independent_variables);
+
+        for(int j=0; j<number_of_independent_variables; j++){
+
+            x(j) = table->data[input_indx[j]][i];
+
+        }
+
+
+        rowvec xdiff(number_of_independent_variables);
+
+        for(int j=0; j<number_of_independent_variables; j++){
+
+            xdiff(j) = x(j)- xinp[j];
+
+        }
+
+
+
+#if 0
+        printf("xdiff = \n");
+        xdiff.print();
+#endif
+
+        double distance = L2norm(xdiff, xdiff.size());
+#if 0
+        printf("distance = %10.7f\n", distance);
+#endif
+
+        double worst_distance = -LARGE;
+        int worst_distance_index = -1;
+
+
+        find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
+
+
+        /* a better point is found */
+        if(distance < worst_distance){
+
+            min_dist[worst_distance_index]= distance;
+            indices[worst_distance_index] = i;
+
+        }
+
+    }
+
+}
+
+
+
+
 /** compute the distance of the point x w.r.t. to a cluster mean xmean .
  *
  * @param[in] xmean    mean center coordinates
@@ -1488,7 +1566,7 @@ void interpolateTableScatterdata(IntLookupTable* table,
                 x_index,
                 number_of_indep_vars);
 
-#if 1
+#if 0
         fprintf(stdout,"nearest four points=\n");
         print_table_element(table,nearest_point_indices[0],0);
         print_table_element(table,nearest_point_indices[1],0);
@@ -1496,42 +1574,42 @@ void interpolateTableScatterdata(IntLookupTable* table,
         print_table_element(table,nearest_point_indices[3],0);
 #endif
 
-for (int i=0; i<K; i++){
+        for (int i=0; i<K; i++){
 
-    if(fabs(nearest_point_distances[i]) < EPSILON) {
+            if(fabs(nearest_point_distances[i]) < EPSILON) {
 
-        nearest_point_distances[i]=EPSILON;
-    }
+                nearest_point_distances[i]=EPSILON;
+            }
 
-}
+        }
 
-/* find inverse distance weights */
+        /* find inverse distance weights */
 
-for (int i=0; i<K; i++){
+        for (int i=0; i<K; i++){
 
-    w[i]=1.0/(nearest_point_distances[i]*nearest_point_distances[i]);
-    wsum+=w[i];
-}
+            w[i]=1.0/(nearest_point_distances[i]*nearest_point_distances[i]);
+            wsum+=w[i];
+        }
 
-/* interpolation step */
+        /* interpolation step */
 
-for(int i=0;i<number_of_vars_to_interpolate;i++){
+        for(int i=0;i<number_of_vars_to_interpolate;i++){
 
-    result[i]=0.0;
-    for(int j=0; j<K; j++){
+            result[i]=0.0;
+            for(int j=0; j<K; j++){
 
-        f[j]= table->data[comp_index[i]][nearest_point_indices[j]];
-        result[i]+=w[j]*f[j];
-    }
+                f[j]= table->data[comp_index[i]][nearest_point_indices[j]];
+                result[i]+=w[j]*f[j];
+            }
 
 
-    result[i]=result[i]/wsum;
-    result[i]=result[i]*(table->xmax[comp_index[i]]-table->xmin[comp_index[i]])+table->xmin[comp_index[i]];
-}
+            result[i]=result[i]/wsum;
+            result[i]=result[i]*(table->xmax[comp_index[i]]-table->xmin[comp_index[i]])+table->xmin[comp_index[i]];
+        }
 
-delete[] x;
-delete[] nearest_point_distances;
-delete[] nearest_point_indices;
+        delete[] x;
+        delete[] nearest_point_distances;
+        delete[] nearest_point_indices;
 
     }
     else{
@@ -1550,6 +1628,547 @@ delete[] nearest_point_indices;
 
 }
 
+void intbuildkdNodeList(mat data,intkdNode *kdNodeVec ){
+
+    int dim = data.n_rows;
+
+    for(int i=0; i<dim; i++){
+
+        kdNodeVec[i].x = data.row(i);
+        kdNodeVec[i].indx = i;
+        kdNodeVec[i].left = NULL;
+        kdNodeVec[i].right = NULL;
+
+    }
+
+
+
+}
+
+
+
+double intKdtreedist(intkdNode *a, intkdNode *b) {
+
+    int dim = a->x.size();
+    double t, d = 0;
+    while (dim--) {
+        t = a->x(dim) - b->x(dim);
+        d += t * t;
+    }
+    return d;
+}
+
+
+
+double intKdtreefindmedian(intkdNode *nodelist, int len, int idx)
+{
+
+    if(len==2){
+
+        return nodelist[0].x(idx);
+    }
+
+    vec temp(len);
+
+    for(int i=0; i<len; i++){
+
+        temp(i) = nodelist[i].x(idx);
+    }
+
+    temp= sort(temp);
+
+    double median_value = temp(temp.size()/2);
+
+    return median_value;
+}
+
+
+
+intkdNode* intmaketree(intkdNode *root, int len, int indx){
+
+#if 0
+    printf("make_tree with root = %d and length = %d\n", root->indx, len);
+#endif
+
+
+    int dim = root[0].x.size();
+#if 0
+    printf("dim= %d\n",dim);
+#endif
+    if (len==0) {
+
+        return NULL;
+    }
+
+
+    intkdNode *start = &root[0];
+
+
+#if 0
+    printf("start node index= %d\n",start->indx);
+    printf("end node index  = %d\n",end->indx);
+    start->x.print();
+    end->x.print();
+#endif
+
+
+    double median_value = intKdtreefindmedian(start, len, indx);
+
+
+
+    std::vector<int> left_indices;
+    std::vector<int> right_indices;
+
+
+    int count=0;
+    int median_index =0;
+    for(int i=0; i<len; i++){
+
+        if(root[i].x(indx) < median_value) {
+
+            left_indices.push_back(i);
+
+        }
+        else if( root[i].x(indx) == median_value){
+
+            median_index=i;
+        }
+
+        else{
+
+            right_indices.push_back(i);
+        }
+
+
+    }
+
+    int leftsize = left_indices.size();
+    int rightsize = right_indices.size();
+
+#if 0
+    printf("left indices = \n");
+    for (std::vector<int>::iterator it = left_indices.begin() ; it != left_indices.end(); ++it)
+        std::cout << ' ' << *it;
+    std::cout << '\n';
+
+
+    printf("right indices = \n");
+    for (std::vector<int>::iterator it = right_indices.begin() ; it != right_indices.end(); ++it)
+        std::cout << ' ' << *it;
+    std::cout << '\n';
+
+    printf("median = %10.7f\n", median_value);
+    printf("median index = %d\n", median_index);
+    printf("leftsize = %d\n", leftsize);
+    printf("rightsize = %d\n", rightsize);
+#endif
+
+
+
+    intkdNode *kdNodeVectemp = new intkdNode[len];
+
+    count=0;
+    for (std::vector<int>::iterator it = left_indices.begin() ; it != left_indices.end(); ++it){
+        kdNodeVectemp[count].x = root[*it].x;
+        kdNodeVectemp[count].indx = root[*it].indx;
+        count++;
+
+    }
+
+    kdNodeVectemp[count].x = root[median_index].x;
+    kdNodeVectemp[count].indx = root[median_index].indx;
+    median_index = count;
+
+    count++;
+
+    for (std::vector<int>::iterator it = right_indices.begin() ; it != right_indices.end(); ++it){
+        kdNodeVectemp[count].x = root[*it].x;
+        kdNodeVectemp[count].indx = root[*it].indx;
+
+        count++;
+
+    }
+
+    for(int i=0; i<len; i++){
+
+        root[i].x    = kdNodeVectemp[i].x;
+        root[i].indx = kdNodeVectemp[i].indx;
+#if 0
+        printf("Node index = %d\n",root[i].indx);
+        root[i].x.print();
+#endif
+    }
+
+    intkdNode *n= &root[median_index];
+
+    indx = (indx + 1) % dim;
+
+    if (leftsize == 1){
+#if 0
+        printf("there is only one node in left = %d\n",root[0].indx);
+#endif
+        n->left = &root[0];
+
+
+    }
+    else if(leftsize == 0){
+
+        n->left = NULL;
+    }
+    else{
+#if 0
+        printf("calling left tree with root = %d and len = %d\n",leftsize);
+#endif
+        n->left  = intmaketree(&root[0], leftsize, indx);
+
+    }
+
+    if (rightsize == 1){
+#if 0
+        printf("there is only one node in right = %d\n",root[leftsize+1].indx);
+#endif
+        n->right = &root[leftsize+1];
+
+
+    }
+    else if(rightsize == 0){
+
+        n->right = NULL;
+    }
+    else{
+#if 0
+        printf("calling right tree with root = %d and len = %d\n",leftsize+1,rightsize);
+#endif
+        n->right = intmaketree(&root[leftsize+1], rightsize, indx );
+    }
+
+    delete[] kdNodeVectemp;
+
+
+    return n;
+}
+
+void intKdtreeNearest(intkdNode *root, intkdNode *p, int K, int i, int* best_index, double *best_dist, int dim){
+
+    for(int i=0; i<K; i++){
+
+        best_dist[i] = LARGE;
+        best_index[i] = -1;
+    }
+
+    int max_dist_index = root->indx;
+    /* default root is the best initially*/
+
+    rowvec xdiff = root->x - p->x;
+    double d = Lpnorm(xdiff, dim, xdiff.size());
+
+    double max_dist = d;
+
+#if 0
+    printf("\n\nroot = %d\n",root->indx);
+    root->x.print();
+    printf("distance to root = %10.7f\n",d);
+#endif
+
+
+#if 0
+    printf("%10.7f is better than %10.7f\n",d,*best_dist);
+#endif
+    /* initialize  */
+    best_index[0] = root->indx;
+    best_dist[0]  = d;
+
+
+    /* there is only one  node in the tree so the best point is the root */
+    if (root->left == NULL && root->right == NULL) {
+#if 0
+        printf("tree has no left and right branches\n");
+        printf("best_index = %d\n",*best_index);
+        printf("best_distance = %10.7f\n",*best_dist);
+        printf("root %d is terminating\n",root->indx );
+
+#endif
+
+        return;
+
+    }
+
+    /* There is only left branch in the tree */
+    if (root->left != NULL && root->right == NULL) {
+#if 0
+        printf("tree has only left branch\n");
+#endif
+
+        find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+        intkdNode *left = root->left;
+
+        double *dbestleft= new double[K];
+        int *indexbestleft= new int[K];
+
+
+        int inext = (i + 1) % dim;
+        intKdtreeNearest(left, p,K,inext, indexbestleft, dbestleft,dim);
+
+#if 0
+        printf("best %d points in the left branch\n",K);
+        for(int i=0; i<K; i++){
+
+            printf("indx = %d, dist = %10.7f\n",indexbestleft[i],dbestleft[i]);
+        }
+#endif
+
+
+        for(int j=0; j<K; j++){ /* check each new point */
+
+            if (dbestleft[j] < max_dist){ /* a better point is found on the left branch*/
+#if 0
+                printf("dbestleft[%d] = %10.7f is better than %10.7f\n", j, dbestleft[j],max_dist );
+#endif
+
+                best_dist[max_dist_index] = dbestleft[j];
+                best_index[max_dist_index] = indexbestleft[j];
+
+                /* update max_dist and max_dist_index*/
+                find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+#if 0
+                printf("max_dist = %10.7f\n", max_dist);
+#endif
+            }
+
+        }
+
+        delete[] dbestleft;
+        delete[] indexbestleft;
+#if 0
+        printf("root %d is terminating\n",root->indx );
+#endif
+        return;
+    }
+
+
+    /* There is only right branch in the tree */
+    if (root->left == NULL && root->right != NULL) {
+#if 0
+        printf("tree has only right branch\n");
+#endif
+
+        find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+        intkdNode *right = root->right;
+        double *dbestright= new double[K];
+        int *indexbestright= new int[K];
+
+        int inext = (i + 1) % dim;
+        intKdtreeNearest(right, p, K,inext, indexbestright, dbestright,dim);
+
+#if 0
+        printf("best %d points in the right branch\n",K);
+        for(int i=0; i<K; i++){
+
+            printf("indx = %d, dist = %10.7f\n",indexbestright[i],dbestright[i]);
+        }
+#endif
+
+        for(int j=0; j<K; j++){ /* check each new point */
+
+            if (dbestright[j] < max_dist){ /* a better point is found on the right */
+
+#if 0
+                printf("dbestright[%d] = %10.7f is better than %10.7f\n", j, dbestright[j],max_dist );
+#endif
+                best_dist[max_dist_index] = dbestright[j];
+                best_index[max_dist_index] = indexbestright[j];
+
+                /* update max_dist and max_dist_index*/
+                find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+#if 0
+                printf("max_dist = %10.7f\n", max_dist);
+#endif
+            }
+
+        }
+
+        delete[] dbestright;
+        delete[] indexbestright;
+#if 0
+        printf("root %d is terminating\n",root->indx );
+#endif
+        return;
+
+    }
+
+    /* both branches exist */
+    if (root->left != NULL && root->right != NULL) {
+
+#if 0
+        printf("tree has two branches\n");
+#endif
+
+        double division = root->x(i);
+
+        /* if the point is on the left region*/
+        if(p->x(i) < division){
+
+#if 0
+            printf("the point is on the left : p->x(%d) = %10.7f < %10.7f\n",i,p->x(i),division);
+#endif
+
+            /* first find the best in the left branch */
+            intkdNode *left = root->left;
+            double *dbestleft= new double[K];
+            int *indexbestleft= new int[K];
+
+
+            find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+            int inext = (i + 1) % dim;
+            intKdtreeNearest(left, p, K,inext, indexbestleft, dbestleft,dim);
+
+            for(int j=0; j<K; j++){ /* check each new point */
+
+                if (dbestleft[j] < max_dist){ /* a better point is found on the left branch*/
+
+                    best_dist[max_dist_index] = dbestleft[j];
+                    best_index[max_dist_index] = indexbestleft[j];
+
+                    /* update max_dist and max_dist_index*/
+                    find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+                }
+
+            }
+
+            delete[] dbestleft;
+            delete[] indexbestleft;
+
+
+            if (max_dist > (division-p->x(i)) ){ /* if it is possible that a closer point may exist in the right branch */
+
+                intkdNode *right = root->right;
+                double *dbestright= new double[K];
+                int *indexbestright= new int[K];
+
+                int inext = (i + 1) % dim;
+                intKdtreeNearest(right, p, K,inext, indexbestright, dbestright,dim);
+
+#if 0
+                printf("best %d points in the right branch\n",K);
+                for(int i=0; i<K; i++){
+
+                    printf("indx = %d, dist = %10.7f\n",indexbestright[i],dbestright[i]);
+                }
+#endif
+
+                for(int j=0; j<K; j++){ /* check each new point */
+
+                    if (dbestright[j] < max_dist){ /* a better point is found on the right */
+
+                        best_dist[max_dist_index] = dbestright[j];
+                        best_index[max_dist_index] = indexbestright[j];
+
+                        /* update max_dist and max_dist_index*/
+                        find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+                    }
+
+                }
+
+                delete[] dbestright;
+                delete[] indexbestright;
+
+
+            }
+#if 0
+            printf("root %d is terminating\n",root->indx );
+#endif
+            return;
+
+        }
+        else{ /* the point is on the right */
+#if 0
+            printf("the point is on the right : p->x(%d) = %10.7f > %10.7f\n",i,p->x(i),division);
+#endif
+
+            /* first find the best in the right branch */
+            intkdNode *right = root->right;
+            double *dbestright= new double[K];
+            int *indexbestright= new int[K];
+
+            find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+#if 0
+            printf("max_dist = %10.7f\n", max_dist);
+#endif
+            int inext = (i + 1) % dim;
+            intKdtreeNearest(right, p, K,inext, indexbestright, dbestright,dim);
+
+#if 0
+            printf("best %d points in the right branch\n",K);
+            for(int i=0; i<K; i++){
+
+                printf("indx = %d, dist = %10.7f\n",indexbestright[i],dbestright[i]);
+            }
+#endif
+
+            for(int j=0; j<K; j++){ /* check each new point */
+
+                if (dbestright[j] < max_dist){ /* a better point is found on the right */
+
+                    best_dist[max_dist_index] = dbestright[j];
+                    best_index[max_dist_index] = indexbestright[j];
+
+                    /* update max_dist and max_dist_index*/
+                    find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+                }
+
+            }
+
+            delete[] dbestright;
+            delete[] indexbestright;
+
+
+            if (max_dist > (p->x(i)-division) ){ /* if it is possible that a closer point may exist in the left branch */
+
+                intkdNode *left = root->left;
+                double *dbestleft= new double[K];
+                int *indexbestleft= new int[K];
+
+                int inext = (i + 1) % dim;
+                intKdtreeNearest(left, p,K,inext, indexbestleft, dbestleft,dim);
+
+                for(int j=0; j<K; j++){ /* check each new point */
+
+                    if (dbestleft[j] < max_dist){ /* a better point is found on the left branch*/
+
+
+                        best_dist[max_dist_index] = dbestleft[j];
+                        best_index[max_dist_index] = indexbestleft[j];
+
+                        /* update max_dist and max_dist_index*/
+                        find_max_with_index(best_dist,K,&max_dist,&max_dist_index);
+
+                    }
+
+                }
+
+                delete[] dbestleft;
+                delete[] indexbestleft;
+
+            }
+#if 0
+            printf("root %d is terminating\n",root->indx );
+#endif
+            return;
+
+
+        }
+
+
+    }
+
+}
 
 void test_2d_table(void){
 
@@ -1784,9 +2403,6 @@ void test_2d_table(void){
     }
 
 
-
-
-
 }
 
 void test_scatter_table(void){
@@ -1804,21 +2420,24 @@ void test_scatter_table(void){
 
     }
 
+
+    /* required for the bruce force method */
+
+    double *min_dist = new double[4];
+    int *indices = new int[4];
+
+    /* required for the bruce force method */
+
     double xs = -15.0;
     double xe = 22.0;
 
     double ys = 0.1;
     double ye = 1.8;
 
-
-
-
     double x,y;
 
     double f1,f2,f3;
 
-
-    x=xs; y=ys;
     int count=0;
 
     for(int i=0; i<tablescatter.rowsize; i++ ){
@@ -1829,21 +2448,23 @@ void test_scatter_table(void){
         f2 = x+y+x*y;
         f3 = (1-x)+ y*(1-x);
 
-        //            printf("%d %10.7f %10.7f %10.7f %10.7f %10.7f\n",count,x,y,f1,f2,f3);
+#if 1
+        printf("%d %10.7f %10.7f %10.7f %10.7f %10.7f\n",count,x,y,f1,f2,f3);
+#endif
 
         tablescatter.data[0][count]=x;
         tablescatter.data[1][count]=y;
         tablescatter.data[2][count]=f1;
         tablescatter.data[3][count]=f2;
         tablescatter.data[4][count]=f3;
+
         count++;
-
-
 
     }
 
     tablescatter.xmin = new double[tablescatter.columnsize];
     tablescatter.xmax = new double[tablescatter.columnsize];
+
 
     for(int i=0; i<tablescatter.columnsize; i++) { /* for each column of the table */
 
@@ -1852,14 +2473,23 @@ void test_scatter_table(void){
 
         for(int j=0;j<tablescatter.rowsize;j++){
 
-            if (tablescatter.data[i][j] < tablescatter.xmin[i]) tablescatter.xmin[i]=tablescatter.data[i][j];
-            if (tablescatter.data[i][j] > tablescatter.xmax[i]) tablescatter.xmax[i]=tablescatter.data[i][j];
+            if (tablescatter.data[i][j] < tablescatter.xmin[i]) {
+
+                tablescatter.xmin[i]=tablescatter.data[i][j];
+            }
+
+            if (tablescatter.data[i][j] > tablescatter.xmax[i]) {
+
+                tablescatter.xmax[i]=tablescatter.data[i][j];
+            }
         }
 
 
-
-
     }
+
+
+
+
 
 
 
@@ -1878,7 +2508,33 @@ void test_scatter_table(void){
 
     }
 
+
+
     print_table(&tablescatter, 0);
+
+
+    mat kddata(tablescatter.rowsize,2);
+
+    for(int i=0; i<2; i++) { /* for each column of the table */
+
+        for(int j=0;j<tablescatter.rowsize;j++){
+
+            kddata(j,i) = tablescatter.data[i][j];
+
+        }
+
+    }
+
+#if 1
+    kddata.print();
+#endif
+
+
+
+
+    intkdNode *kdNodeVec = new intkdNode[tablescatter.rowsize];
+    intbuildkdNodeList(kddata,kdNodeVec );
+    intkdNode * root = intmaketree(kdNodeVec, tablescatter.rowsize, 0);
 
 
     int variable_index[2];
@@ -1886,28 +2542,19 @@ void test_scatter_table(void){
     variable_index[0] = 0;
     variable_index[1] = 1;
 
+    /* cluster the table using cluster_size = 50 */
+    intKmeansClustering(&tablescatter,50,variable_index,2);
 
-    intKmeansClustering(&tablescatter,50,variable_index,1);
-
+    // Record start time
+    auto start = std::chrono::high_resolution_clock::now();
 
     /* try out of sample points */
-    for(int i=0; i<1000; i++){
+    for(int i=0; i<10000000; i++){
 
 
         double x = RandomDouble(-0.1,1.1);
         double y = RandomDouble(-0.1,1.1);
 
-
-
-#if 1
-        printf("x = %10.7f, y = %10.7f\n",x,y);
-#endif
-
-        x = x*(tablescatter.xmax[0]-tablescatter.xmin[0])+tablescatter.xmin[0];
-        y = y*(tablescatter.xmax[1]-tablescatter.xmin[1])+tablescatter.xmin[1];
-#if 1
-        printf("x = %10.7f, y = %10.7f\n",x,y);
-#endif
         double f1,f2,f3;
         f1 = exp((-x*x)/100.0 -(y*y)/100.0);
         f2 = x+y+x*y;
@@ -1921,7 +2568,63 @@ void test_scatter_table(void){
 
         double result[3];
         int comp_index[3]={2,3,4};
+#if 0
+        printf("\n\nx = %10.7f, y = %10.7f\n",x,y);
+#endif
 
+#if 0
+        intfindKNeighbours(&tablescatter,
+                xin,
+                4,
+                x_index ,
+                min_dist,
+                indices,
+                2);
+
+
+        printf("brute force KNN search results = \n");
+        for(int j=0; j<4;j++){
+
+            //            printf("indices[%d] = %d\n",j,indices[j]);
+            print_table_element(&tablescatter, indices[j], 0);
+
+        }
+#endif
+
+
+#if 0
+        intkdNode *xinkd = new intkdNode;
+        rowvec temp(2);
+        temp(0) = x;
+        temp(1) = y;
+        xinkd->x = temp;
+
+        intKdtreeNearest(root, xinkd, 4 ,0, indices, min_dist, 2);
+
+#if 0
+        printf("KD Tree results = \n");
+        for(int j=0; j<4; j++){
+
+            print_table_element(&tablescatter, indices[j], 0);
+
+        }
+#endif
+
+#endif
+        x = x*(tablescatter.xmax[0]-tablescatter.xmin[0])+tablescatter.xmin[0];
+        y = y*(tablescatter.xmax[1]-tablescatter.xmin[1])+tablescatter.xmin[1];
+#if 0
+        printf("x = %10.7f, y = %10.7f\n",x,y);
+#endif
+
+
+        xin[0]=x;
+        xin[1]=y;
+#if 0
+        printf("KNN with clustering results = \n");
+#endif
+
+#if 1
         interpolateTableScatterdata(&tablescatter,
                 xin,
                 x_index,
@@ -1929,14 +2632,22 @@ void test_scatter_table(void){
                 comp_index,
                 2,
                 3 );
+#endif
 
+#if 0
         printf("%d %10.7f %10.7f %10.7f  %10.7f  %10.7f \n", i,x,y, result[0],result[1],result[2]);
         printf("%d %10.7f %10.7f %10.7f  %10.7f  %10.7f \n\n", i,x,y, f1,f2,f3);
+#endif
 
 
     }
+    auto finish = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> elapsed = finish - start;
+    std::cout << "Elapsed time: " << elapsed.count() << " s\n";
 
 
-
+    delete[] min_dist;
+    delete[] indices;
 }
 

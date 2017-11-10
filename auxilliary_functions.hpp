@@ -6,6 +6,10 @@
 #include <math.h>
 using namespace arma;
 
+
+void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
+
+
 template<class T>
 void find_max_with_index(T vec, int size, double *max_val, int *indx){
 
@@ -128,19 +132,21 @@ double L2norm(T x, int p, int* index=NULL){
 }
 
 template<class T>
-double Lpnorm(T x, int p, int *index=NULL){
+double Lpnorm(T x, int p, int size,int *index=NULL){
     double sum=0.0;
+
 
     if(index == NULL){
 
-        for(unsigned int i=0;i<p;i++){
+        for(unsigned int i=0;i<size;i++){
+
             sum+=pow(fabs(x(i)),p);
         }
 
     }
     else{
 
-        for(unsigned int i=0;i<p;i++){
+        for(unsigned int i=0;i<size;i++){
 
             sum+=pow(fabs(x(index[i])),p);
         }
@@ -159,4 +165,7 @@ void findKNeighbours(mat &data,
         double* min_dist,
         int *indices,
         int number_of_independent_variables);
+
+void testLPnorm(void);
+
 #endif

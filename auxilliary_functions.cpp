@@ -6,6 +6,39 @@
 #include <vector>
 
 
+
+
+void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
+
+    int dim = matrixIn.n_cols;
+
+    vec xmin(dim);
+    vec xmax(dim);
+
+    for(int i=0; i<dim;i++){
+
+        xmin(i) = min(matrixIn.col(i));
+        xmax(i) = max(matrixIn.col(i));
+    }
+#if 1
+    printf("xmin = \n");
+    xmin.print();
+    printf("xmax = \n");
+    xmax.print();
+#endif
+
+
+    for(int i=0; i<matrixIn.n_rows;i++){
+
+        for(int j=0; j<dim;j++){
+
+            matrixOut(i,j)  = (matrixIn(i,j)-xmin(j))/(xmax(j)-xmin(j));
+        }
+
+    }
+
+}
+
 int check_if_lists_are_equal(int *list1, int *list2, int dim){
 
     int flag=1;
@@ -199,11 +232,12 @@ double RandomDouble(double a, double b) {
  *
  * @param[in] a
  * @param[in] b
- * @return random number between a and b
+ * @return random number in the interval [a,b]
  *
  */
 int RandomInt(int a, int b) {
 
+    b++;
     int diff = b-a;
     int random = rand() % diff;
     return a + random;
@@ -378,7 +412,7 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices)
         rowvec x = data.row(i);
         rowvec xdiff = x-p;
 
-        double distance = Lpnorm(xdiff, dim);
+        double distance = Lpnorm(xdiff, dim, xdiff.size());
 
         double worst_distance = -LARGE;
         int worst_distance_index = -1;
@@ -434,7 +468,15 @@ void findKNeighbours(mat &data,
         rowvec x = data.row(i);
         rowvec xdiff = x-p;
 
-        double distance = Lpnorm(xdiff, number_of_independent_variables, input_indx);
+#if 1
+        printf("xdiff = \n");
+        xdiff.print();
+#endif
+
+        double distance = Lpnorm(xdiff, number_of_independent_variables, xdiff.size(), input_indx);
+#if 1
+        printf("distance = %10.7f\n", distance);
+#endif
 
         double worst_distance = -LARGE;
         int worst_distance_index = -1;
@@ -455,6 +497,20 @@ void findKNeighbours(mat &data,
 
 }
 
+void testLPnorm(void){
 
+rowvec x(4);
+
+x(0)=1.2;
+x(1)=0.5;
+x(2)=0.3;
+x(3)=1.7;
+
+
+double lpnorm  = Lpnorm(x,2, x.size());
+printf("lp norm (p=2) = %10.7f\n",lpnorm);
+
+
+}
 
 

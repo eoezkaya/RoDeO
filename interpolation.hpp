@@ -23,6 +23,14 @@ typedef struct {
 
 } IntLookupTable;
 
+struct intkdNode{
+    int indx;
+    rowvec x;
+    struct intkdNode *left, *right;
+};
+
+
+
 
 void test_2d_table(void);
 void test_scatter_table(void);
