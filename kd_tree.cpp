@@ -15,6 +15,7 @@ using namespace arma;
 #include <time.h>
 
 
+namespace kdtree{
 
 inline double dist(kdNode *a, kdNode *b) {
 
@@ -725,4 +726,4 @@ void kd_tree_test2(void){
 
 }
 
-
+}

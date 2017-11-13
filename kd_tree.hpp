@@ -4,6 +4,8 @@
 using namespace arma;
 
 
+namespace kdtree{
+
 struct kdNode{
     int indx;
     rowvec x;
@@ -12,4 +14,7 @@ struct kdNode{
 
 void kd_tree_test(void);
 void kd_tree_test2(void);
+
+}
+
 #endif

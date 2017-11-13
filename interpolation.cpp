@@ -15,7 +15,12 @@ using namespace arma;
 
 namespace tableInterpolation{
 
-/* print an element of the lookup table indexed by indx */
+/* print an element of the lookup table indexed by indx
+ * @param[in] table
+ * @param[in] indx
+ * @param[in] how (if 0 print original values, if 1 print normalized, if 2 print both)
+ *
+ * */
 void printTableElement(IntLookupTable* table, int indx, int how) {
     int i;
     double x;
@@ -81,8 +86,12 @@ void printTable(IntLookupTable* table, int how) {
 
 
 /** brute force KNeighbours search with given index array for distance computation
- *
- *
+ * @param[in] table
+ * @param[in] K
+ * @param[in] input_indx
+ * @param[in] number_of_independent_variables
+ * @param[out] min_dist
+ * @param[out] indices
  */
 
 void findKNeighbours(IntLookupTable* table,
@@ -657,15 +666,6 @@ int KmeansClustering(IntLookupTable *table,
 
         }
     }
-
-
-
-
-
-
-
-
-
 
 
     for(int i=0;i<number_of_clusters;i++)
@@ -2482,12 +2482,6 @@ void test_scatter_table(void){
     }
 
 
-
-
-
-
-
-
     /* normalize the T-p table data  xnew= (xold-xmin)/(xmax-xmin)  */
 
 
@@ -2528,7 +2522,7 @@ void test_scatter_table(void){
 
     intkdNode *kdNodeVec = new intkdNode[tablescatter.rowsize];
     intbuildkdNodeList(kddata,kdNodeVec );
-    intkdNode * root = intmaketree(kdNodeVec, tablescatter.rowsize, 0);
+    intkdNode *root = intmaketree(kdNodeVec, tablescatter.rowsize, 0);
 
 
     int variable_index[2];
@@ -2548,11 +2542,6 @@ void test_scatter_table(void){
 
         double x = RandomDouble(-0.1,1.1);
         double y = RandomDouble(-0.1,1.1);
-
-        double f1,f2,f3;
-        f1 = exp((-x*x)/100.0 -(y*y)/100.0);
-        f2 = x+y+x*y;
-        f3 = (1-x)+ y*(1-x);
 
         double xin[2];
         xin[0]=x;

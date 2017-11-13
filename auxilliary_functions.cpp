@@ -20,7 +20,7 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
         xmin(i) = min(matrixIn.col(i));
         xmax(i) = max(matrixIn.col(i));
     }
-#if 1
+#if 0
     printf("xmin = \n");
     xmin.print();
     printf("xmax = \n");

@@ -3,6 +3,11 @@
 #include <armadillo>
 using namespace arma;
 
+namespace kmeans{
+
 void test_kmeansClustering(void);
 void test_iwd_with_kmeans_method(void);
+
+}
+
 #endif

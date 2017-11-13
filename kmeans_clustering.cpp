@@ -16,7 +16,7 @@ using namespace arma;
 #include <vector>
 #include <chrono>
 
-
+namespace kmeans{
 
 int find_which_cluster(mat cluster_means, rowvec x){
 
@@ -402,16 +402,13 @@ int kMeansClustering(mat &data,
 void test_kmeansClustering(void){
 
 
-    // Record start time
+    /* Record start time */
     auto start = std::chrono::high_resolution_clock::now();
 
-    int number_of_datapoints = RandomInt(1000,1000);
+    int number_of_datapoints = 5000;
+    int number_of_clusters = sqrt(number_of_datapoints);
 
-    number_of_datapoints = 1000;
-
-    int dim = RandomInt(2,5);
-
-    dim = 2;
+    int dim = 2;
 
     vec xs(dim);
     vec xe(dim);
@@ -436,18 +433,22 @@ void test_kmeansClustering(void){
     }
 
 #if 1
+    printf("Data matrix =\n");
     dataMatrix.print();
 #endif
 
     normalizeDataMatrix(dataMatrix, normalizedDataMatrix);
 
 
-#if 1
+#if 0
     printf("Normalized data matrix = \n");
     normalizedDataMatrix.print();
 #endif
 
-    int K = number_of_datapoints/50;
+
+
+    int K = number_of_datapoints/number_of_clusters;
+
 #if 1
     printf("number of points = %d\n",number_of_datapoints);
     printf("number of clusters = %d\n",K);
@@ -471,134 +472,14 @@ void test_kmeansClustering(void){
     std::chrono::duration<double> elapsed = finish - start;
     std::cout << "Elapsed time: " << elapsed.count() << " s\n";
 
+
+#if 1
+    visualize_clusters(normalizedDataMatrix, cluster_means, cluster_indices, K);
+#endif
+
     delete[] cluster_indices;
 
 }
 
-void test_iwd_with_kmeans_method(void){
 
-    auto start = std::chrono::high_resolution_clock::now();
-
-    int number_of_datapoints = 1000;
-    int dim = 2;
-
-    double *min_dist = new double[4];
-    int * indices = new int[4];
-
-    vec xs(dim);
-    vec xe(dim);
-
-    for(int i=0; i<dim; i++){
-        xe(i)= RandomDouble(-10.0,10.0);
-        xs(i)= RandomDouble(-10.0,10.0);
-    }
-
-    mat dataMatrix(number_of_datapoints,dim);
-    mat normalizedDataMatrix(number_of_datapoints,dim);
-
-    /* construct data matrix */
-    for(int i=0; i<number_of_datapoints; i++){
-
-        for(int j=0; j<dim; j++){
-
-            dataMatrix(i,j)=RandomDouble(xs(j),xe(j));
-
-        }
-
-    }
-
-#if 1
-    dataMatrix.print();
-#endif
-
-    normalizeDataMatrix(dataMatrix, normalizedDataMatrix);
-
-    int K = number_of_datapoints/50;
-
-#if 1
-    printf("number of points = %d\n",number_of_datapoints);
-    printf("number of clusters = %d\n",K);
-    printf("dimension = %d\n",dim);
-#endif
-
-    mat cluster_means(K,dim);
-
-    std::vector<int> *cluster_indices;
-
-    cluster_indices = new std::vector<int>[K];
-
-    kMeansClustering(normalizedDataMatrix,
-            cluster_means,
-            cluster_indices,
-            K);
-
-#if 0
-    print_clusters(normalizedDataMatrix, cluster_means, cluster_indices, K);
-    visualize_clusters(normalizedDataMatrix, cluster_means, cluster_indices, K);
-#endif
-    int number_of_trials =1000000;
-
-    for(int i=0; i<number_of_trials; i++){
-
-        rowvec x(dim);
-
-        for(int j=0; j<dim; j++){
-
-            x(j)=RandomDouble(0,1.0);
-
-        }
-
-        int cluster_no = find_which_cluster(cluster_means,x);
-
-#if 1
-        printf("x = \n");
-        x.print();
-        printf("the point is in the cluster %d\n",cluster_no);
-#endif
-
-        int cluster_size = cluster_indices[cluster_no].size();
-
-#if 1
-        printf("the cluster has %d points\n", cluster_size);
-
-        for(unsigned int j=0; j<cluster_size; j++){
-            int indx = cluster_indices[cluster_no].at(j);
-            normalizedDataMatrix.row(indx).print();
-
-        }
-
-#endif
-
-        mat cluster(cluster_size,dim);
-
-        for(unsigned int j=0; j<cluster_size; j++){
-                    int indx = cluster_indices[cluster_no].at(j);
-                    rowvec point = normalizedDataMatrix.row(indx);
-
-                    for(int k=0; k<dim; k++){
-
-                        cluster(j,k) = point(k);
-
-                    }
-
-         }
-
-
-        findKNeighbours(cluster, x, 4, min_dist,indices);
-#if 1
-        for(int k=0; k<4; k++){
-
-            printf("point %d\n",indices[k]);
-            cluster.row(indices[k]).print();
-
-        }
-#endif
-        exit(1);
-
-    }
-
-
-    delete[] min_dist;
-    delete[] indices;
 }
-
