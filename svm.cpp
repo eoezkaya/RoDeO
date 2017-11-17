@@ -34,6 +34,7 @@ double svm_rbf_kernel(rowvec x1, rowvec x2, double sigma){
 void train_svm(mat &X, vec &y,vec &alpha, double &b, SVM_param & model_parameters){
 
     unsigned int dim = y.size();
+    double *K = new double[dim*dim];
 
 
     const double Cminlog=0;
@@ -42,8 +43,6 @@ void train_svm(mat &X, vec &y,vec &alpha, double &b, SVM_param & model_parameter
     const double cmin=0.0;
     const double sigmamax=10.0;
     const double sigmamin=0.01;
-
-
 
     urowvec numberofsv(model_parameters.max_inner_iter);
     numberofsv.fill(0);
@@ -129,9 +128,16 @@ void train_svm(mat &X, vec &y,vec &alpha, double &b, SVM_param & model_parameter
         printf("C = %15.10f\n",model_parameters.Csoftmargin);
 #endif
 
+
+#if 1
+        printf("Allocating Kernel matrix (%d x %d matrix)\n",dim,dim);
+#endif
         /* Kernel matrix */
-        mat K(dim,dim);
-        K.fill(-1.0);
+
+
+
+
+
 
 
         /* evaluate Kernel matrix */
@@ -141,26 +147,25 @@ void train_svm(mat &X, vec &y,vec &alpha, double &b, SVM_param & model_parameter
 
                 if(model_parameters.kernel_type == SVM_LINEAR){
 
-                    K(i,j) = svm_linear_kernel(X.row(i),X.row(j));
+
+                    K[i*dim+j] = svm_linear_kernel(X.row(i),X.row(j));
+
                 }
 
                 if(model_parameters.kernel_type == SVM_RBF){
 
-                    K(i,j) = svm_rbf_kernel(X.row(i),X.row(j),model_parameters.sigmaGausskernel);
+                    K[i*dim+j]  = svm_rbf_kernel(X.row(i),X.row(j),model_parameters.sigmaGausskernel);
                 }
 
                 if(model_parameters.kernel_type == SVM_POLYNOMIAL){
 
-                    K(i,j) = svm_polynomial_kernel(X.row(i),X.row(j),model_parameters.cpolykernel,model_parameters.ppolykernel);
+                    K[i*dim+j]  = svm_polynomial_kernel(X.row(i),X.row(j),model_parameters.cpolykernel,model_parameters.ppolykernel);
                 }
 
 
             }
         }
 
-#if 0
-        K.print();
-#endif
 
 
         /* save K, y and C for QP input */
@@ -171,7 +176,7 @@ void train_svm(mat &X, vec &y,vec &alpha, double &b, SVM_param & model_parameter
 
             for(unsigned int j=0; j<dim; j++){
 
-                double val = y(i)*y(j)*K(i,j);
+                double val = y(i)*y(j)*K[i*dim+j] ;
 #if 0
                 printf("y(%d) = %5.2f y(%d) = %5.2f K(%d,%d) = %10.7f val = %10.7f\n",i,y(i),j,y(j),i,j,K(i,j),val);
 #endif
@@ -261,7 +266,7 @@ void train_svm(mat &X, vec &y,vec &alpha, double &b, SVM_param & model_parameter
         double sum=0.0;
         for(unsigned int i=0; i<alpha.size(); i++){
 
-            sum+= y(i)*alpha(i)*K(i,sv_index);
+            sum+= y(i)*alpha(i)*K[i*dim+sv_index];
 
         }
 
@@ -335,6 +340,8 @@ void train_svm(mat &X, vec &y,vec &alpha, double &b, SVM_param & model_parameter
     model_parameters.sigmaGausskernel = sigma_best;
     model_parameters.cpolykernel = c_best;
 
+
+    delete[] K;
 
 }
 
@@ -786,7 +793,7 @@ void perform_svn_test(Classifier_Function_param &test_function,
     } /* end of else */
 
 
-    /* make a an out of sample test */
+    /* make an out of sample test */
 
     int out_of_samples = 10000;
     int count_mismatch=0;

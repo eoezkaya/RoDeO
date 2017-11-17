@@ -6,7 +6,15 @@ using namespace arma;
 namespace kmeans{
 
 void test_kmeansClustering(void);
-void test_iwd_with_kmeans_method(void);
+void visualize_clusters(mat &data, mat &cluster_means,
+        std::vector<int> *cluster_indices, int K);
+int kMeansClustering(mat &data,
+        mat &cluster_means,
+        std::vector<int> *cluster_indices,
+        int K);
+
+
+int find_which_cluster(mat cluster_means, rowvec x);
 
 }
 

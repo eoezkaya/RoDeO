@@ -20,6 +20,7 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
         xmin(i) = min(matrixIn.col(i));
         xmax(i) = max(matrixIn.col(i));
     }
+
 #if 0
     printf("xmin = \n");
     xmin.print();
@@ -27,15 +28,23 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
     xmax.print();
 #endif
 
+    for(int j=0; j<dim;j++){
 
-    for(int i=0; i<matrixIn.n_rows;i++){
+        double delta = xmax(j)-xmin(j);
 
-        for(int j=0; j<dim;j++){
+        if( delta != 0 ){
 
-            matrixOut(i,j)  = (matrixIn(i,j)-xmin(j))/(xmax(j)-xmin(j));
+            for(int i=0; i<matrixIn.n_rows;i++){
+
+                matrixOut(i,j)  = (matrixIn(i,j)-xmin(j))/(delta);
+            }
+
         }
 
     }
+
+
+
 
 }
 
@@ -499,16 +508,16 @@ void findKNeighbours(mat &data,
 
 void testLPnorm(void){
 
-rowvec x(4);
+    rowvec x(4);
 
-x(0)=1.2;
-x(1)=0.5;
-x(2)=0.3;
-x(3)=1.7;
+    x(0)=1.2;
+    x(1)=0.5;
+    x(2)=0.3;
+    x(3)=1.7;
 
 
-double lpnorm  = Lpnorm(x,2, x.size());
-printf("lp norm (p=2) = %10.7f\n",lpnorm);
+    double lpnorm  = Lpnorm(x,2, x.size());
+    printf("lp norm (p=2) = %10.7f\n",lpnorm);
 
 
 }

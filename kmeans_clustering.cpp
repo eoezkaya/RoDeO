@@ -28,14 +28,14 @@ int find_which_cluster(mat cluster_means, rowvec x){
 
     for (unsigned int i=0; i<cluster_means.n_rows; i++){
 
-#if 1
+#if 0
         printf("cluster %d mean = \n",i);
         cluster_means.row(i).print();
 #endif
 
         rowvec xdiff = x - cluster_means.row(i);
         double distance = Lpnorm(xdiff, 2, x.size());
-#if 1
+#if 0
         printf("xdiff = \n");
         xdiff.print();
         printf("distance = %10.7f\n",distance);

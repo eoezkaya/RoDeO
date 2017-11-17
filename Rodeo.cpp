@@ -13,8 +13,8 @@
 #include "interpolation.hpp"
 #include "Rodeo_macros.hpp"
 #include "auxilliary_functions.hpp"
-
-
+#include "bitmap_image.hpp"
+#include "mnist.hpp"
 
 
 int main(void){
@@ -28,21 +28,10 @@ int main(void){
 	printf("\n**************************************************************\n");
 
 
-	tableInterpolation::test_scatter_table();
 
 
+	mnist();
 	exit(1);
-
-	binary_tree_test();
-
-
-    // free(million);
-
-
-    exit(1);
-
-
-
 
 
 	Classifier_Function_param test_function(2);
@@ -59,9 +48,10 @@ int main(void){
 
 	perform_svn_test(test_function,
 	        200,
-	        0,
+	        5,
 	        SVM_RBF);
 
+	exit(1);
 
 //	perform_rbf_test(Eggholder,
 //	        parameter_bounds,
