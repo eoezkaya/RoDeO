@@ -10,38 +10,38 @@
 
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
 
-    int dim = matrixIn.n_cols;
+	int dim = matrixIn.n_cols;
 
-    vec xmin(dim);
-    vec xmax(dim);
+	vec xmin(dim);
+	vec xmax(dim);
 
-    for(int i=0; i<dim;i++){
+	for(int i=0; i<dim;i++){
 
-        xmin(i) = min(matrixIn.col(i));
-        xmax(i) = max(matrixIn.col(i));
-    }
+		xmin(i) = min(matrixIn.col(i));
+		xmax(i) = max(matrixIn.col(i));
+	}
 
 #if 0
-    printf("xmin = \n");
-    xmin.print();
-    printf("xmax = \n");
-    xmax.print();
+	printf("xmin = \n");
+	xmin.print();
+	printf("xmax = \n");
+	xmax.print();
 #endif
 
-    for(int j=0; j<dim;j++){
+	for(int j=0; j<dim;j++){
 
-        double delta = xmax(j)-xmin(j);
+		double delta = xmax(j)-xmin(j);
 
-        if( delta != 0 ){
+		if( delta != 0 ){
 
-            for(int i=0; i<matrixIn.n_rows;i++){
+			for(int i=0; i<matrixIn.n_rows;i++){
 
-                matrixOut(i,j)  = (matrixIn(i,j)-xmin(j))/(delta);
-            }
+				matrixOut(i,j)  = (matrixIn(i,j)-xmin(j))/(delta);
+			}
 
-        }
+		}
 
-    }
+	}
 
 
 
@@ -50,21 +50,21 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
 
 int check_if_lists_are_equal(int *list1, int *list2, int dim){
 
-    int flag=1;
-    for(int i=0; i<dim; i++){
+	int flag=1;
+	for(int i=0; i<dim; i++){
 
-        int item_to_check = list1[i];
+		int item_to_check = list1[i];
 
-        if ( is_in_the_list(item_to_check, list2, dim) == -1){
+		if ( is_in_the_list(item_to_check, list2, dim) == -1){
 
-            flag = 0;
-            return flag;
+			flag = 0;
+			return flag;
 
 
-        }
-    }
+		}
+	}
 
-    return flag;
+	return flag;
 }
 
 
@@ -83,9 +83,9 @@ int check_if_lists_are_equal(int *list1, int *list2, int dim){
  */
 double pdf(double x, double mu, double sigma)
 {
-    /* Constants */
-    static const double pi = 3.14159265359;
-    return exp( (-1.0 * (x - mu) * (x - mu)) / (2 * sigma * sigma)) / (sigma * sqrt(2 * pi));
+	/* Constants */
+	static const double pi = 3.14159265359;
+	return exp( (-1.0 * (x - mu) * (x - mu)) / (2 * sigma * sigma)) / (sigma * sqrt(2 * pi));
 }
 
 /** Returns the cdf of x, given the distribution described by mu and sigma..
@@ -98,7 +98,7 @@ double pdf(double x, double mu, double sigma)
  */
 double cdf(double x, double mu, double sigma)
 {
-    return 0.5 * (1 + erf((x - mu) / (sigma * sqrt(2.0))));
+	return 0.5 * (1 + erf((x - mu) / (sigma * sqrt(2.0))));
 }
 
 
@@ -112,14 +112,14 @@ double cdf(double x, double mu, double sigma)
  */
 int is_in_the_list(int entry, int *list, int list_size){
 
-    int flag=-1;
+	int flag=-1;
 
-    for(int i=0;i< list_size;i++) {
+	for(int i=0;i< list_size;i++) {
 
-        if(list[i]==entry) flag=i;
-    }
+		if(list[i]==entry) flag=i;
+	}
 
-    return flag;
+	return flag;
 }
 
 /** checks whether an entry is in a list or not.
@@ -132,18 +132,18 @@ int is_in_the_list(int entry, int *list, int list_size){
  */
 int is_in_the_list(int entry, std::vector<int> &list){
 
-    int flag=-1;
+	int flag=-1;
 
-    for (std::vector<int>::iterator it = list.begin() ; it != list.end(); ++it){
+	for (std::vector<int>::iterator it = list.begin() ; it != list.end(); ++it){
 
-        if(*it == entry) {
+		if(*it == entry) {
 
-            flag = *it;
-        }
+			flag = *it;
+		}
 
-    }
+	}
 
-    return flag;
+	return flag;
 }
 
 /** checks whether an entry is in a list or not.
@@ -156,18 +156,18 @@ int is_in_the_list(int entry, std::vector<int> &list){
  */
 int is_in_the_list(unsigned int entry, uvec &list){
 
-    int flag=-1;
+	int flag=-1;
 
-    for (unsigned int i = 0 ; i< list.size(); i++){
+	for (unsigned int i = 0 ; i< list.size(); i++){
 
-        if(list(i) == entry) {
+		if(list(i) == entry) {
 
-            flag = i;
-        }
+			flag = i;
+		}
 
-    }
+	}
 
-    return flag;
+	return flag;
 }
 
 
@@ -182,43 +182,43 @@ int is_in_the_list(unsigned int entry, uvec &list){
  */
 void solve_linear_system_by_Cholesky(mat &U, mat &L, vec &x, vec &b){
 
-    int dim = x.size();
+	int dim = x.size();
 
-    /* initialize x */
+	/* initialize x */
 
-    x.fill(0.0);
+	x.fill(0.0);
 
-    vec y(dim);
+	vec y(dim);
 
-    /* forward subst. L y = b */
+	/* forward subst. L y = b */
 
-    y.fill(0.0);
+	y.fill(0.0);
 
-    for (int i = 0; i < dim; i++) {
+	for (int i = 0; i < dim; i++) {
 
-        double residual = 0.0;
-        for (int j = 0; j < i; j++) {
+		double residual = 0.0;
+		for (int j = 0; j < i; j++) {
 
-            residual = residual + L(i, j) * y(j);
+			residual = residual + L(i, j) * y(j);
 
-        }
+		}
 
-        y(i) = (b(i) - residual) / L(i, i);
-    }
+		y(i) = (b(i) - residual) / L(i, i);
+	}
 
-    /* back subst. U x = y */
+	/* back subst. U x = y */
 
-    for (int i = dim - 1; i >= 0; i--) {
+	for (int i = dim - 1; i >= 0; i--) {
 
-        double residual = 0.0;
-        for (int j = dim - 1; j > i; j--){
+		double residual = 0.0;
+		for (int j = dim - 1; j > i; j--){
 
-            residual += U(i, j) * x(j);
-        }
+			residual += U(i, j) * x(j);
+		}
 
 
-        x(i) = (y(i) - residual) / U(i, i);
-    }
+		x(i) = (y(i) - residual) / U(i, i);
+	}
 
 }
 
@@ -231,10 +231,10 @@ void solve_linear_system_by_Cholesky(mat &U, mat &L, vec &x, vec &b){
  */
 double RandomDouble(double a, double b) {
 
-    double random = ((double) rand()) / (double) RAND_MAX;
-    double diff = b - a;
-    double r = random * diff;
-    return a + r;
+	double random = ((double) rand()) / (double) RAND_MAX;
+	double diff = b - a;
+	double r = random * diff;
+	return a + r;
 }
 
 /** generate a random number between a and b
@@ -246,12 +246,21 @@ double RandomDouble(double a, double b) {
  */
 int RandomInt(int a, int b) {
 
-    b++;
-    int diff = b-a;
-    int random = rand() % diff;
-    return a + random;
+	b++;
+	int diff = b-a;
+	int random = rand() % diff;
+	return a + random;
 }
 
+void RandomVector(rowvec &x){
+
+	for(int i=0; i<x.size(); i++) {
+
+		x(i) = RandomDouble(0.0, 1.0);
+	}
+
+
+}
 
 
 /** generate a random number between xs and xe using the normal distribution
@@ -263,16 +272,16 @@ int RandomInt(int a, int b) {
  */
 double random_number(double xs, double xe, double sigma_factor){
 
-    double sigma=fabs((xe-xs))/sigma_factor;
-    double mu=(xe+xs)/2.0;
+	double sigma=fabs((xe-xs))/sigma_factor;
+	double mu=(xe+xs)/2.0;
 
-    if (sigma == 0.0) sigma=1.0;
+	if (sigma == 0.0) sigma=1.0;
 
-    /* construct a trivial random generator engine from a time-based seed */
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    std::default_random_engine generator (seed);
-    std::normal_distribution<double> distribution (mu,sigma);
-    return distribution(generator);
+	/* construct a trivial random generator engine from a time-based seed */
+	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+	std::default_random_engine generator (seed);
+	std::normal_distribution<double> distribution (mu,sigma);
+	return distribution(generator);
 }
 
 
@@ -285,69 +294,113 @@ double random_number(double xs, double xe, double sigma_factor){
  */
 void generate_validation_set(int *indices, int size, int N){
 
-    int number_of_indices_generated=0;
-    int random_int;
-    int flag;
-    while(number_of_indices_generated < N){
+	int number_of_indices_generated=0;
+	int random_int;
+	int flag;
 
-        while(1){
+#if 1
+	printf("size of the validation set = %d\n",size);
+	printf("size of the data set = %d\n",N);
+#endif
 
-            /* generate a random index */
-            random_int = rand() % size;
-            /* check if it is already in the list */
-            flag= is_in_the_list(random_int, indices, N);
+	if(size <0 || size>N){
 
-            if(flag == -1){
+		printf("Error: Size of the validation set is wrong");
+		exit(-1);
+	}
 
-                indices[number_of_indices_generated]= random_int;
-                number_of_indices_generated++;
-                break;
+	for(int i=0; i<size;i++){
 
-            }
+		indices[i]=-1;
+	}
+
+	/* initialize random seed: */
+	srand (time(NULL));
+
+	while(number_of_indices_generated < size){
+
+		while(1){
+
+			/* generate a random index */
+			random_int = rand() % N;
+#if 1
+			printf("random_int = %d\n",random_int);
+#endif
+			/* check if it is already in the list */
+			flag = is_in_the_list(random_int, indices, size);
+#if 1
+			printf("flag = %d\n",flag);
+#endif
+
+			if(flag == -1){
+
+				indices[number_of_indices_generated]= random_int;
+				number_of_indices_generated++;
+				break;
+
+			}
 
 
-        }
+		}
 
-    }
+	}
 
 
 }
 
 /** randomly generates the indices of a validation set
  *
- * @param[in] size   dimension of the validation set
+ * @param[in]  N:  dimension of the data set
  * @param[out] indices (arma::uvec)
  *
  */
-void generate_validation_set(uvec &indices, int size){
+void generate_validation_set(uvec &indices, int N){
 
-    int N= indices.size();
-    int number_of_indices_generated=0;
-    int random_int;
-    int flag;
-    while(number_of_indices_generated < N){
+	int size = indices.size();
+	int number_of_indices_generated=0;
+	int random_int;
+	int flag;
 
-        while(1){
+#if 0
+	printf("size of the validation set = %d\n",size);
+	printf("size of the data set = %d\n",N);
+#endif
 
-            /* generate a random index */
-            random_int = rand() % size;
-            /* check if it is already in the list */
-            flag= is_in_the_list(random_int, indices);
+	if(size <=0 || size>N){
 
-            if(flag == -1){
+		printf("Error: Size of the validation set is wrong");
+		exit(-1);
+	}
 
-                indices[number_of_indices_generated]= random_int;
-                number_of_indices_generated++;
-                break;
+	indices.fill(-1);
 
-            }
+	/* initialize random seed: */
+	srand (time(NULL));
 
 
-        }
+	while(number_of_indices_generated < size){
 
-    }
+		while(1){
 
-    indices = sort(indices);
+			/* generate a random index */
+			random_int = rand() % N;
+			/* check if it is already in the list */
+			flag= is_in_the_list(random_int, indices);
+
+			if(flag == -1){
+
+				indices[number_of_indices_generated]= random_int;
+				number_of_indices_generated++;
+				break;
+
+			}
+
+
+		}
+
+	}
+
+	indices = sort(indices);
 
 
 }
@@ -364,23 +417,23 @@ void generate_validation_set(uvec &indices, int size){
 void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod){
 
 
-    int added_rows=0;
-    for(unsigned int j=0; j<X.n_rows; j++){ /* for each row in the data matrix */
+	int added_rows=0;
+	for(unsigned int j=0; j<X.n_rows; j++){ /* for each row in the data matrix */
 
-        /* if j is not a validation point */
-        if ( is_in_the_list(int(j), indices) == -1){
+		/* if j is not a validation point */
+		if ( is_in_the_list(int(j), indices) == -1){
 
 #if 0
-            printf("%dth point is not a validation point\n",j);
+			printf("%dth point is not a validation point\n",j);
 #endif
-            Xmod.row(added_rows)=X.row(j);
-            ymod(added_rows)    =y(j);
-            added_rows++;
+			Xmod.row(added_rows)=X.row(j);
+			ymod(added_rows)    =y(j);
+			added_rows++;
 
-        }
+		}
 
 
-    }
+	}
 
 
 }
@@ -391,8 +444,8 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 bool file_exist(const char *fileName)
 {
-    std::ifstream infile(fileName);
-    return infile.good();
+	std::ifstream infile(fileName);
+	return infile.good();
 }
 
 
@@ -401,43 +454,54 @@ bool file_exist(const char *fileName)
  * @param[in] data
  * @param[in] p
  * @param[in] K
+ * @param[out] min_dist
  * @param[out] indices
  */
 
-void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices){
+void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, int norm){
 
-    int number_of_points= data.n_rows;
-    int dim= data.n_cols;
+	int number_of_points= data.n_rows;
+	int dim= data.n_cols;
 
-    for(int i=0; i<K; i++){
+	for(int i=0; i<K; i++){
 
-        min_dist[i]= LARGE;
-        indices[i]= -1;
-    }
-
-
-    for(int i=0; i<number_of_points; i++){ /* for each data point */
-
-        rowvec x = data.row(i);
-        rowvec xdiff = x-p;
-
-        double distance = Lpnorm(xdiff, dim, xdiff.size());
-
-        double worst_distance = -LARGE;
-        int worst_distance_index = -1;
+		min_dist[i]= LARGE;
+		indices[i]= -1;
+	}
 
 
-        find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
+	for(int i=0; i<number_of_points; i++){ /* for each data point */
 
-        /* a better point is found */
-        if(distance < worst_distance){
+		rowvec x = data.row(i);
+		rowvec xdiff = x-p;
 
-            min_dist[worst_distance_index]= distance;
-            indices[worst_distance_index] = i;
+		double distance = 0.0;
 
-        }
+		if(norm == xdiff.size()){
+			distance = Lpnorm(xdiff, dim, xdiff.size());
+		}
+		if(norm == 2){
+			distance = L2norm(xdiff, dim);
 
-    }
+		}
+#if 0
+		printf("distance = %10.7f\n", distance);
+#endif
+		double worst_distance = -LARGE;
+		int worst_distance_index = -1;
+
+
+		find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
+
+		/* a better point is found */
+		if(distance < worst_distance){
+
+			min_dist[worst_distance_index]= distance;
+			indices[worst_distance_index] = i;
+
+		}
+
+	}
 
 
 }
@@ -454,70 +518,103 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices)
  */
 
 void findKNeighbours(mat &data,
-        rowvec &p,
-        int K,
-        int *input_indx ,
-        double* min_dist,
-        int *indices,
-        int number_of_independent_variables){
+		rowvec &p,
+		int K,
+		int *input_indx ,
+		double* min_dist,
+		int *indices,
+		int number_of_independent_variables){
 
-    int number_of_points= data.n_rows;
-    int dim= data.n_cols;
+	int number_of_points= data.n_rows;
+	int dim= data.n_cols;
 
-    for(int i=0; i<K; i++){
+	for(int i=0; i<K; i++){
 
-        min_dist[i]= LARGE;
-        indices[i]= -1;
-    }
+		min_dist[i]= LARGE;
+		indices[i]= -1;
+	}
 
 
 
-    for(int i=0; i<number_of_points; i++){ /* for each data point */
+	for(int i=0; i<number_of_points; i++){ /* for each data point */
 
-        rowvec x = data.row(i);
-        rowvec xdiff = x-p;
+		rowvec x = data.row(i);
+		rowvec xdiff = x-p;
 
-#if 1
-        printf("xdiff = \n");
-        xdiff.print();
+#if 0
+		printf("xdiff = \n");
+		xdiff.print();
 #endif
 
-        double distance = Lpnorm(xdiff, number_of_independent_variables, xdiff.size(), input_indx);
-#if 1
-        printf("distance = %10.7f\n", distance);
+		double distance = Lpnorm(xdiff, number_of_independent_variables, xdiff.size(), input_indx);
+#if 0
+		printf("distance = %10.7f\n", distance);
 #endif
 
-        double worst_distance = -LARGE;
-        int worst_distance_index = -1;
+		double worst_distance = -LARGE;
+		int worst_distance_index = -1;
 
 
-        find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
+		find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
 
 
-        /* a better point is found */
-        if(distance < worst_distance){
+		/* a better point is found */
+		if(distance < worst_distance){
 
-            min_dist[worst_distance_index]= distance;
-            indices[worst_distance_index] = i;
+			min_dist[worst_distance_index]= distance;
+			indices[worst_distance_index] = i;
 
-        }
+		}
 
-    }
+	}
 
 }
 
+
+
+
+int getPopularlabel(int* labels, int size)
+{
+	int count = 1, tempCount;
+	int popular = labels[0];
+	int temp = 0;
+	for (int i = 0; i < (size - 1); i++)
+	{
+		temp = labels[i];
+		tempCount = 0;
+		for (int j = 1; j < size; j++)
+		{
+			if (temp == labels[j])
+				tempCount++;
+		}
+		if (tempCount > count)
+		{
+			popular = temp;
+			count = tempCount;
+		}
+	}
+	return popular;
+}
+
+
+
+
+
+
+
+
 void testLPnorm(void){
 
-    rowvec x(4);
+	rowvec x(4);
 
-    x(0)=1.2;
-    x(1)=0.5;
-    x(2)=0.3;
-    x(3)=1.7;
+	x(0)=1.2;
+	x(1)=0.5;
+	x(2)=0.3;
+	x(3)=1.7;
 
 
-    double lpnorm  = Lpnorm(x,2, x.size());
-    printf("lp norm (p=2) = %10.7f\n",lpnorm);
+	double lpnorm  = Lpnorm(x,2, x.size());
+	printf("lp norm (p=2) = %10.7f\n",lpnorm);
 
 
 }

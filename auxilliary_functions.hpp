@@ -57,6 +57,8 @@ double cdf(double x, double mu, double sigma);
 double RandomDouble(double a, double b);
 int RandomInt(int a, int b);
 
+void RandomVector(rowvec &x);
+
 double random_number(double xs, double xe, double sigma_factor);
 
 void solve_linear_system_by_Cholesky(mat &U, mat &L, vec &x, vec &b);
@@ -157,7 +159,14 @@ double Lpnorm(T x, int p, int size,int *index=NULL){
 }
 
 
-void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices);
+void findKNeighbours(mat &data,
+                     rowvec &p,
+                     int K,
+                     double* min_dist,
+                     int *indices,
+                     int norm=2);
+
+
 void findKNeighbours(mat &data,
         rowvec &p,
         int K,
@@ -165,6 +174,8 @@ void findKNeighbours(mat &data,
         double* min_dist,
         int *indices,
         int number_of_independent_variables);
+
+int getPopularlabel(int* labels, int size);
 
 void testLPnorm(void);
 

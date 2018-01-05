@@ -1,5 +1,6 @@
 
 #include <armadillo>
+#include <random>
 using namespace arma;
 
 
@@ -12,10 +13,7 @@ using namespace arma;
 
 void decide_nearest_seeding_point(rowvec x,vec Nx, rowvec &seeding_point_coordinates){
 
-
 	int dim = x.size();
-
-
 
 	for(int i=0;i<dim;i++){
 
@@ -62,6 +60,414 @@ void estimate_gradient(mat &regression_weights,
 
 }
 
+void train_seeding_points(
+		mat &newpoints,
+		mat &data_functional_values,
+		mat &data_gradients,
+		int linear_regression,
+		mat &regression_weights,
+		mat &kriging_params,
+		int max_iter)
+{
+
+	const double reg_param=0.00000001;
+	int dim = data_functional_values.n_cols-1;
+	int validation_set_size = data_functional_values.n_rows / 5;
+	int reduced_set_size = data_functional_values.n_rows - validation_set_size;
+
+	mat R(reduced_set_size,reduced_set_size);
+	R.fill(0.0);
+	uvec val_set_indices(validation_set_size);
+
+	/* number of points with only functional values */
+	int n_f_evals = data_functional_values.n_rows;
+	/* number of points with functional values + gradient sensitivities*/
+	int n_g_evals = data_gradients.n_rows;
+
+
+	int number_of_outer_iterations = 100;
+
+#if 1
+	printf("calling train_seeding_points...\n");
+	printf("linear regression = %d\n",linear_regression);
+	printf("regression weights: \n");
+	regression_weights.print();
+	printf("kriging parameters: \n");
+	kriging_params.print();
+	printf("data for functional values:\n");
+	data_functional_values.print();
+	printf("data for gradients :\n");
+	data_gradients.print();
+	printf("validation set size =  %d\n",validation_set_size);
+	printf("dim = %d\n",dim);
+	printf("number of points with functional values = %d\n",n_f_evals);
+	printf("number of points with sensitivity gradients = %d\n",n_g_evals);
+#endif
+
+
+	mat X_func,X_grad;
+
+
+	if(n_g_evals > 0){
+
+		X_grad = data_gradients.submat(0, 0, n_g_evals - 1, dim-1);
+
+
+	}
+
+
+	if(n_g_evals > 0){
+
+		X_func = data_functional_values.submat(0, 0, n_f_evals - 1, dim-1);
+
+	}
+
+
+#if 0
+	printf("X_func = \n");
+	X_func.print();
+
+	printf("X_grad = \n");
+	X_grad.print();
+#endif
+
+	/* find minimum and maximum of the columns of data */
+
+	vec x_max(dim);
+	x_max.fill(0.0);
+
+	vec x_min(dim);
+	x_min.fill(0.0);
+
+	for (int i = 0; i < dim; i++) {
+		x_max(i) = X_func.col(i).max();
+		x_min(i) = X_func.col(i).min();
+
+	}
+#if 0
+	printf("maximum = \n");
+	x_max.print();
+
+	printf("minimum = \n");
+	x_min.print();
+#endif
+
+
+	/* normalize data matrix */
+
+	for (int i = 0; i < X_func.n_rows; i++) {
+		for (int j = 0; j < dim; j++) {
+			X_func(i, j) = (1.0/dim)*(X_func(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+		}
+	}
+
+
+	for (int i = 0; i < X_grad.n_rows; i++) {
+		for (int j = 0; j < dim; j++) {
+			X_grad(i, j) = (1.0/dim)*(X_grad(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+		}
+	}
+
+#if 0
+	printf("X_func(normalized) = \n");
+	X_func.print();
+
+	printf("X_grad(normalized) = \n");
+	X_grad.print();
+#endif
+
+
+	mat Rgrad(n_g_evals,n_g_evals);
+	mat Rinvgrad(n_g_evals,n_g_evals);
+	vec Igrad = ones(n_g_evals);
+	vec beta0grad(dim);
+	mat R_inv_ys_min_beta_grad;
+
+	for(int i=0;i<dim;i++){
+
+		vec theta = kriging_params.col(i+1).head(dim);
+		vec gamma = kriging_params.col(i+1).tail(dim);
+		compute_R_matrix(theta,gamma,reg_param,Rgrad,X_grad);
+
+		vec ys = data_gradients.col(dim+i+1);
+
+		mat Rinvgrad = inv(Rgrad);
+		beta0grad(i) = (1.0/dot(Igrad,Rinvgrad*Igrad)) * (dot(Igrad,Rinvgrad*ys));
+		vec R_inv_ys_min_beta_temp = Rinvgrad* (ys-beta0grad(i)* Igrad);
+
+		R_inv_ys_min_beta_grad.insert_cols(i,R_inv_ys_min_beta_temp);
+
+#if 0
+		theta.print();
+		gamma.print();
+		Rgrad.print();
+		ys.print();
+		R_inv_ys_min_beta_grad.print();
+#endif
+
+
+
+	}
+
+
+#if 0
+	for(unsigned int i=0;i<X_grad.n_rows;i++){
+
+		rowvec x = X_grad.row(i);
+		rowvec xb(dim);
+		vec grad(dim);
+
+		for(int k=0;k<dim;k++){
+
+			grad(k) = calculate_f_tilde(x,
+					X_grad,
+					beta0grad(k),
+					regression_weights.col(k+1),
+					R_inv_ys_min_beta_grad.col(k),
+					kriging_params.col(k+1));
+
+		}
+
+		for(int j=0; j<dim;j++) x(j) = dim*x(j)* (x_max(j) - x_min(j))+x_min(j);
+
+		xb.fill(0.0);
+		double func_val_exact = Eggholder_adj(x.memptr(),xb.memptr());
+
+		printf("\n");
+		x.print();
+		printf("grad exact[0] = %10.7f grad exact[1] = %10.7f\n",xb[0],xb[1]);
+		printf("grad approx[0] = %10.7f grad approx[1] = %10.7f\n",grad(0),grad(1));
+
+	}
+#endif
+
+
+	mat Rfunc(reduced_set_size,reduced_set_size);
+	mat X_actual(reduced_set_size,dim);
+	vec ys_actual(reduced_set_size);
+	vec I= ones(reduced_set_size);
+	vec ys = data_functional_values.col(dim);
+	vec theta = kriging_params.col(0).head(dim);
+	vec gamma = kriging_params.col(0).tail(dim);
+	mat seeding_points;
+
+	double avg_cv_error=0.0;
+	double avg_cv_error_best = LARGE;
+
+
+	std::random_device rd;
+
+
+	int iter_sp = 0;
+	while(1){ /* in this loop new seeding points are added */
+
+		rowvec np(dim);
+		np.fill(0.0);
+#if 1
+		printf("adding new seeding point at iteration = %d\n",iter_sp);
+#endif
+		if(iter_sp > 0){
+
+			//			RandomVector(np);
+
+			for(int i=0; i<dim; i++){
+
+				double random = double(rd())/double(rd.max());
+				np(i) = random;
+
+			}
+
+#if 1
+			printf("new point:\n");
+			np.print();
+
+#endif
+
+			newpoints.insert_rows(newpoints.n_rows,np);
+#if 1
+			printf("new points:\n");
+			newpoints.print();
+#endif
+
+
+		}
+
+		double cv_error = 0.0;
+
+
+		for(int outer_iter=0; outer_iter<number_of_outer_iterations; outer_iter++){
+
+			generate_validation_set(val_set_indices, X_func.n_rows);
+
+			remove_validation_points_from_data(X_func, ys, val_set_indices, X_actual, ys_actual);
+
+			seeding_points= X_actual;
+
+			if(iter_sp > 0) {
+				seeding_points.insert_rows(seeding_points.n_rows,newpoints);
+
+			}
+#if 0
+			printf("seeding points:\n");
+			seeding_points.print();
+#endif
+
+
+
+			compute_R_matrix(theta,gamma,reg_param,Rfunc,X_actual);
+#if 0
+			Rfunc.print();
+#endif
+			mat Rinv = inv(Rfunc);
+
+			double beta0 = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys_actual));
+
+			vec R_inv_ys_min_beta = Rinv* (ys_actual-beta0* I);
+#if 0
+			printf("outer_iter = %d\n",outer_iter);
+			val_set_indices.print();
+			printf("X_func =\n");
+			X_func.print();
+			printf("X_func (reduced)=\n");
+			X_actual.print();
+			printf("ys =\n");
+			ys.print();
+			printf("ys (reduced)=\n");
+			ys_actual.print();
+#endif
+
+
+
+
+			for(int inner_it=0; inner_it< val_set_indices.size(); inner_it++){
+#if 0
+				printf("\ninner iteration %d\n",inner_it);
+#endif
+
+				rowvec x = X_func.row(val_set_indices(inner_it));
+
+				rowvec x_not_normalized(dim);
+				x_not_normalized.fill(0.0);
+
+				for(int j=0; j<dim;j++) x_not_normalized(j) = dim*x(j)* (x_max(j) - x_min(j))+x_min(j);
+
+#if 0
+				printf("x:\n");
+				x.print();
+				printf("x in original coordinates:\n");
+				x_not_normalized.print();
+#endif
+				double min_dist=0.0;
+				int indx;
+
+				/* find the closest seeding point */
+				findKNeighbours(seeding_points,
+						x,
+						1,
+						&min_dist,
+						&indx,
+						dim);
+
+
+				rowvec sp =  seeding_points.row(indx);
+				rowvec sp_not_normalized(dim);
+				sp_not_normalized.fill(0.0);
+
+				for(int j=0; j<dim;j++) sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+
+#if 0
+				printf("nearest point:\n");
+				sp.print();
+				printf("sp in original coordinates:\n");
+				sp_not_normalized.print();
+#endif
+
+
+				double ftilde_seed= calculate_f_tilde(sp,
+						X_actual,
+						beta0,
+						regression_weights.col(0),
+						R_inv_ys_min_beta,
+						kriging_params.col(0));
+
+#if 0
+				printf("ftilde_seed = %10.7f\n",ftilde_seed);
+#endif
+
+				vec grad(dim);
+
+				for(int k=0;k<dim;k++){
+
+					grad(k) = calculate_f_tilde(sp,
+							X_grad,
+							beta0grad(k),
+							regression_weights.col(k+1),
+							R_inv_ys_min_beta_grad.col(k),
+							kriging_params.col(k+1));
+
+				}
+#if 0
+				printf("gradient vector:\n");
+				trans(grad).print();
+#endif
+
+				double ftilde_linmodel = ftilde_seed + dot((x_not_normalized-sp_not_normalized),grad);
+
+				double fexact = ys(val_set_indices(inner_it));
+#if 0
+				printf("ftilde_linmodel = %10.7f\n",ftilde_linmodel);
+				printf("f exact         = %10.7f\n",fexact);
+#endif
+				cv_error+= (ftilde_linmodel-fexact)* (ftilde_linmodel-fexact);
+
+#if 0
+				printf("cross validation error = %10.7f\n",cv_error);
+#endif
+
+			} /* end of inner cv iteration */
+
+
+		} /* end of outer cv iteration */
+
+		avg_cv_error = cv_error/number_of_outer_iterations;
+
+
+#if 1
+		printf("average cross validation error = %10.7f\n",avg_cv_error);
+#endif
+
+		if(iter_sp > 0 ) {
+
+			if (avg_cv_error < avg_cv_error_best){
+				printf("average error decreased, the new point is accepted\n");
+				printf("new points now\n");
+
+				avg_cv_error_best = avg_cv_error;
+
+			}
+			else{
+
+				printf("average error increased, the new point is rejected\n");
+				newpoints.shed_row(newpoints.n_rows-1);
+				printf("new points now\n");
+				newpoints.print();
+
+			}
+
+			printf("avg_error = %10.7f avg_error_old = %10.7f\n",avg_cv_error,avg_cv_error_best);
+
+			if(iter_sp > max_iter ) break;
+		}
+
+		iter_sp ++;
+
+	} /* end of while(1) */
+
+
+
+
+}
+
 
 int train_TRGEK_response_surface(std::string input_file_name,
 		int linear_regression,
@@ -88,23 +494,18 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	std::ifstream in(input_file_name);
 
 	if(!in) {
-		printf("Cannot open input file %s...\n",input_file_name.c_str() );
-		return 1;
+		printf("Error: Cannot open input file %s...\n",input_file_name.c_str() );
+		exit(-1);
 	}
 
 
 	std::vector<double> temp;
-
-
 
 	std::string str;
 	int count_f=0;
 	int count_g=0;
 
 	while (std::getline(in, str)) {
-		// output the line
-		//				std::cout << "line = "<<str << std::endl;
-
 
 		std::string delimiter = ",";
 
@@ -112,24 +513,14 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		std::string token;
 		while ((pos = str.find(delimiter)) != std::string::npos) {
 			token = str.substr(0, pos);
-			//			std::cout << "token = "<<token << std::endl;
-
 
 			temp.push_back(atof(token.c_str()));
 
 
 			str.erase(0, pos + delimiter.length());
 		}
-		//				std::cout << "str = "<<str << std::endl;
 		temp.push_back(atof(str.c_str()));
 
-		//		std::cout<<"temp= \n";
-		for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
-
-			//			std::cout<<*it<<std::endl;
-
-
-		}
 
 
 		if(temp.size() == dim+1){ // function values
@@ -158,22 +549,18 @@ int train_TRGEK_response_surface(std::string input_file_name,
 			int count=0;
 			for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
 
-				//				std::cout<<*it<<std::endl;
+
 				newrow(count)=*it;
 				count++;
 
 			}
-			//			newrow.print();
+
 			count_g++;
 			data_gradients.resize(count_g, 2*dim+1);
 
 			data_gradients.row(count_g-1)=newrow;
 
-
 		}
-
-
-
 
 		temp.clear();
 
@@ -186,29 +573,21 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	/* number of points with functional values + gradient sensitivities*/
 	int n_g_evals = data_gradients.n_rows;
 
+#if 0
 	printf("number of points with only functional values = %d\n",n_f_evals);
 	printf("number of points with sensitivity gradients = %d\n",n_g_evals);
+#endif
 
-
-
-
-
-
-
+#if 0
 	printf("functional values data :\n");
 	data_functional_values.print();
 	printf("\n");
 
 
-
-
-
-
 	printf("gradient data (raw) :\n");
 	data_gradients.print();
 	printf("\n");
-
-
+#endif
 
 	mat X_func,X_grad;
 
@@ -220,43 +599,31 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		mat func_values_grad = data_gradients.submat( 0, 0, n_g_evals-1, dim );
 
-		//		func_values_grad.print();
-
 		data_functional_values.insert_rows(n_f_evals,func_values_grad);
 
+#if 0
 		printf("data_functional_values = \n");
 		data_functional_values.print();
-
-
-
+#endif
 	}
 
 
 	if(n_g_evals > 0){
 
-
-
-
 		X_func = data_functional_values.submat(0, 0, n_g_evals+n_f_evals - 1, dim-1);
-
 
 	}
 
 
-
+#if 0
 	printf("X_func = \n");
 	X_func.print();
 
 	printf("X_grad = \n");
 	X_grad.print();
-
-
-
-
-
+#endif
 
 	/* find minimum and maximum of the columns of data */
-
 	vec x_max(dim);
 	x_max.fill(0.0);
 
@@ -268,13 +635,13 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		x_min(i) = X_func.col(i).min();
 
 	}
-
+#if 0
 	printf("maximum = \n");
 	x_max.print();
 
 	printf("minimum = \n");
 	x_min.print();
-
+#endif
 	/* normalize data matrix */
 
 	for (int i = 0; i < X_func.n_rows; i++) {
@@ -290,17 +657,17 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		}
 	}
 
-
+#if 0
 	printf("X_func(normalized) = \n");
 	X_func.print();
 
 	printf("X_grad(normalized) = \n");
 	X_grad.print();
-
-
-
+#endif
 
 	for(int i=0;i<dim+1;i++){
+
+		printf("Training %dth variable\n",i);
 
 		std::string kriging_input_filename;
 
@@ -318,10 +685,6 @@ int train_TRGEK_response_surface(std::string input_file_name,
 			printf("kriging_input_data = \n");
 			data_functional_values.print();
 			printf("\n");
-
-
-
-
 
 		}
 
@@ -359,91 +722,27 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		printf("kriging_weights = \n");
 		kriging_weights_single_output.print();
 
-
-
-
-
-		vec theta = kriging_weights_single_output.head(dim);
-		vec gamma = kriging_weights_single_output.tail(dim);
-
-		if(i==0) {
-
-			mat R(n_g_evals+n_f_evals,n_g_evals+n_f_evals);
-			vec I = ones(n_g_evals+n_f_evals);
-
-			compute_R_matrix(theta,
-					gamma,
-					reg_param,
-					R,
-					X_func);
-
-			printf("R = \n");
-			R.print();
-			printf("\n");
-
-
-			vec ys = data_functional_values.col(dim);
-
-			printf("ys = \n");
-			ys.print();
-			printf("\n");
-
-
-			mat Rinv = inv(R);
-
-
-			beta0(i) = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys));
-
-			R_inv_ys_min_beta_func = Rinv* (ys-beta0(i)* I);
-
-			R_inv_ys_min_beta_func.print();
-
-
-		}
-		else {
-
-			mat R(n_g_evals,n_g_evals);
-			vec I = ones(n_g_evals);
-
-
-
-			compute_R_matrix(theta,
-					gamma,
-					reg_param,
-					R,
-					X_grad);
-
-
-
-
-			//			printf("R = \n");
-			//			R.print();
-
-
-			vec ys = kriging_input_data.col(dim);
-
-
-			printf("ys = \n");
-			ys.print();
-			printf("\n");
-
-			mat Rinv = inv(R);
-
-
-			beta0(i) = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys));
-			vec R_inv_ys_min_beta_temp = Rinv* (ys-beta0(i)* I);
-
-
-			R_inv_ys_min_beta.insert_cols(i-1,R_inv_ys_min_beta_temp);
-
-
-
-
-		}
-
-
-
 	}
+
+
+	vec ysfunc = data_functional_values.col(dim);
+	vec Ifunc = ones(X_func.n_rows);
+
+	mat Rfunc(X_func.n_rows,X_func.n_rows);
+	vec theta = kriging_params.col(0).head(dim);
+	vec gamma = kriging_params.col(0).tail(dim);
+	compute_R_matrix(theta,gamma,reg_param,Rfunc,X_func);
+
+	mat Rinvfunc = inv(Rfunc);
+
+	beta0(0) = (1.0/dot(Ifunc,Rinvfunc*Ifunc)) * (dot(Ifunc,Rinvfunc*ysfunc));
+	vec R_inv_ys_min_beta_temp = Rinvfunc* (ysfunc-beta0(0)* Ifunc);
+	R_inv_ys_min_beta.insert_cols(0,R_inv_ys_min_beta_temp);
+
+#if 1
+	printf("R_inv_ys_min_beta:\n");
+	R_inv_ys_min_beta.print();
+#endif
 
 
 	double in_sample_error = 0.0;
@@ -451,9 +750,87 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		rowvec x = X_func.row(i);
 
+
+
+		double func_val = calculate_f_tilde(x,
+				X_func,
+				beta0(0),
+				regression_weights.col(0),
+				R_inv_ys_min_beta.col(0),
+				kriging_params.col(0));
+
+
+
+		for(int j=0; j<dim;j++) x(j) = dim*x(j)* (x_max(j) - x_min(j))+x_min(j);
+
+
+		double func_val_exact = Eggholder(x.memptr());
+		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
+
+#if 1
+		printf("\n");
+		printf("x[%d] = ",i);
+		x.print();
+		printf("\n");
+		printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
+		printf("in sample error = %20.15f\n", in_sample_error);
+#endif
+
+	}
+
+
+	for(int i=0; i<dim; i++){
+
+
+		vec ysgrad = data_functional_values.col(i+1+dim);
+
+		vec Igrad = ones(X_grad.n_rows);
+
+		mat Rgrad(X_grad.n_rows,X_grad.n_rows);
+		vec theta = kriging_params.col(i+1).head(dim);
+		vec gamma = kriging_params.col(i+1).tail(dim);
+		compute_R_matrix(theta,gamma,reg_param,Rgrad,X_grad);
+
+		mat Rinvgrad = inv(Rgrad);
+
+		beta0(i+1) = (1.0/dot(Igrad,Rinvgrad*Igrad)) * (dot(Igrad,Rinvgrad*ysgrad));
+		vec R_inv_ys_min_beta_temp = Rinvgrad* (ysgrad-beta0(i+1)* Igrad);
+		R_inv_ys_min_beta.insert_cols(i+1,R_inv_ys_min_beta_temp);
+
+
+	}
+
+
+
+
+
+	exit(1);
+
+
+	mat newpoints;
+
+	train_seeding_points(
+			newpoints,
+			data_functional_values,
+			data_gradients,
+			linear_regression,
+			regression_weights,
+			kriging_params,
+			500);
+
+	mat seeding_points = X_func;
+	seeding_points.insert_rows(seeding_points.n_rows,newpoints);
+
+
+
+
+#if 0
+	double in_sample_error = 0.0;
+	for(unsigned int i=0;i<X_func.n_rows;i++){
+
+		rowvec x = X_func.row(i);
+
 		rowvec xb(dim);
-
-
 
 
 
@@ -476,18 +853,22 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		for(int j=0; j<dim;j++) x(j) = dim*x(j)* (x_max(j) - x_min(j))+x_min(j);
 
-		x.print();
+
 
 		xb.fill(0.0);
 		double func_val_exact = Eggholder_adj(x.memptr(),xb.memptr());
 
-		//					printf("\n");
-		//					x.print();
-		//					printf("\n");
-		//					printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
+#if 1
+		printf("\n");
+		x.print();
+		printf("\n");
+		printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
 
 		printf("grad exact[0] = %10.7f grad exact[1] = %10.7f\n",xb[0],xb[1]);
 		printf("grad approx[0] = %10.7f grad approx[1] = %10.7f\n",grad(0),grad(1));
+
+#endif
+
 		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
 
 
@@ -495,10 +876,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 	in_sample_error = sqrt(in_sample_error/X_func.n_rows);
 
-	printf("in sample error = %10.7f\n",in_sample_error);
-
-
-
+	printf("in sample error (function values) = %10.7f\n",in_sample_error);
 
 
 
@@ -570,7 +948,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 				double func_val_exact = Eggholder_adj(x.memptr(),xb.memptr());
 
 
-//				printf("%10.7f %10.7f %10.7f %10.7f %10.7f %10.7f\n",x(0),x(1),grad(0),xb(0),grad(1),xb(1));
+				//				printf("%10.7f %10.7f %10.7f %10.7f %10.7f %10.7f\n",x(0),x(1),grad(0),xb(0),grad(1),xb(1));
 
 				out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
 
@@ -591,35 +969,36 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 
+#if 0
 		/* plot the kriging response surface */
 
-//		std::string file_name_for_plot = "Eggholder_TRGEK_response_surface_";
-//		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-//
-//		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
-//
-//
-//
-//		FILE* in = popen(python_command.c_str(), "r");
-//
-//
-//		fprintf(in, "\n");
-//
-//
-//		/* plot the kriging response surface for df/dx1*/
-//
-//		std::string file_name_for_plot_g1 = "Eggholder_TRGEK_response_surface_g1_";
-//		file_name_for_plot_g1 += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-//
-//		std::string python_command_g1 = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_g1_file_name+ " "+ file_name_for_plot ;
-//
-//
-//
-//		FILE* in_g1 = popen(python_command_g1.c_str(), "r");
-//
-//
-//		fprintf(in_g1, "\n");
+		std::string file_name_for_plot = "Eggholder_TRGEK_response_surface_";
+		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
 
+		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
+
+
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+
+
+		/* plot the kriging response surface for df/dx1*/
+
+		std::string file_name_for_plot_g1 = "Eggholder_TRGEK_response_surface_g1_";
+		file_name_for_plot_g1 += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+		std::string python_command_g1 = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_g1_file_name+ " "+ file_name_for_plot ;
+
+
+
+		FILE* in_g1 = popen(python_command_g1.c_str(), "r");
+
+
+		fprintf(in_g1, "\n");
+#endif
 
 
 	}
@@ -627,6 +1006,8 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 	/* END */
+
+#if 0
 
 
 	double error_kriging=0.0;
@@ -657,9 +1038,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
 
 
-//		printf("xnorm = \n");
-//		xnorm.print();
-//		printf("\n");
+		//		printf("xnorm = \n");
+		//		xnorm.print();
+		//		printf("\n");
 
 		decide_nearest_seeding_point(xnorm,Nx,seedx);
 
@@ -722,12 +1103,12 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		double ftilde_linmodel = ftilde_seed + dot((x-seedxnotnormalized),grad);
 
-//		printf("ftilde_linmodel    = %10.7f\n",ftilde_linmodel);
+		//		printf("ftilde_linmodel    = %10.7f\n",ftilde_linmodel);
 
 
 		double func_val_exact = Eggholder(x.memptr());
 
-//		printf("func_val_exact    = %10.7f\n",func_val_exact);
+		//		printf("func_val_exact    = %10.7f\n",func_val_exact);
 
 
 		double ftilde_x= calculate_f_tilde(xnorm,
@@ -737,14 +1118,14 @@ int train_TRGEK_response_surface(std::string input_file_name,
 				R_inv_ys_min_beta_func,
 				kriging_params.col(0));
 
-//		printf("ftilde_x    = %10.7f\n",ftilde_x);
+		//		printf("ftilde_x    = %10.7f\n",ftilde_x);
 
 
 		error_kriging    += pow((ftilde_x-func_val_exact),2.0);
 		error_new_method += pow((ftilde_linmodel-func_val_exact),2.0);
 
-//		printf("error_kriging = %10.7f\n", error_kriging);
-//		printf("error_new_method = %10.7f\n",error_new_method);
+		//		printf("error_kriging = %10.7f\n", error_kriging);
+		//		printf("error_new_method = %10.7f\n",error_new_method);
 
 
 	}
@@ -757,37 +1138,12 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	printf("error_new_method = %10.7f\n",error_new_method);
 	printf("ratio = %10.7f\n", error_kriging/error_new_method);
 
-
-
-	exit(1);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif
 
 
 
 
 	/*estimate gradient*/
-
-
-
-
-
-
-
-
 
 
 	//	int number_of_validation_points_func= (n_g_evals+n_f_evals)*1/5;
@@ -817,21 +1173,14 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	//		}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif
 
 	return 0;
 
 }
+
+
+
+
+
+

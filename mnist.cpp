@@ -243,16 +243,16 @@ void mnist(void){
     printf("s =\n");
     s.print();
 
-//    vec U0 =255*U.col(0);
-//    drawDigit(U0,"1_mode.bmp");
-//    vec U1 =255*U.col(1);
-//    drawDigit(U1,"2_mode.bmp");
-//    vec U2 =255*U.col(2);
-//    drawDigit(U2,"3_mode.bmp");
-//    vec U3 =255*U.col(3);
-//    drawDigit(U3,"4_mode.bmp");
-//    vec U4 =255*U.col(4);
-//    drawDigit(U4,"5_mode.bmp");
+    //    vec U0 =255*U.col(0);
+    //    drawDigit(U0,"1_mode.bmp");
+    //    vec U1 =255*U.col(1);
+    //    drawDigit(U1,"2_mode.bmp");
+    //    vec U2 =255*U.col(2);
+    //    drawDigit(U2,"3_mode.bmp");
+    //    vec U3 =255*U.col(3);
+    //    drawDigit(U3,"4_mode.bmp");
+    //    vec U4 =255*U.col(4);
+    //    drawDigit(U4,"5_mode.bmp");
 
 #endif
 
@@ -285,31 +285,76 @@ void mnist(void){
 
 
 
+#if 0
 
-#if 1
     mat origData = reducedData*trans(reducedU);
     mat diff = origData- training_data;
 
-//    for(int i=0; i<diff.n_rows; i++){
-//
-//        for(int j=0; j<diff.n_cols; j++){
-//
-//            if (diff(i,j) > 10E-10){
-//
-//                printf("ERROR: There is a difference between!\n");
-//                exit(-1);
-//
-//            }
-//
-//        }
-//
-//
-//    }
+    //    for(int i=0; i<diff.n_rows; i++){
+    //
+    //        for(int j=0; j<diff.n_cols; j++){
+    //
+    //            if (diff(i,j) > 10E-10){
+    //
+    //                printf("ERROR: There is a difference between!\n");
+    //                exit(-1);
+    //
+    //            }
+    //
+    //        }
+    //
+    //
+    //    }
 
-    drawDigit(origData.row(0),"reduced.bmp");
-    drawDigit(training_data.row(0),"original.bmp");
+    //    drawDigit(origData.row(0),"reduced.bmp");
+    //    drawDigit(training_data.row(0),"original.bmp");
 
 #endif
+
+
+    mat validation_dataRed = validation_data*reducedU;
+
+
+    double min_dist[4];
+    int index[4];
+
+
+    for(int i=0; i<number_of_validation_samples; i++){
+
+        int labels[4];
+        rowvec x = validation_dataRed.row(i);
+#if 0
+        x.print();
+#endif
+        findKNeighbours(reducedData, x,4, min_dist,index,2);
+        //        printf("%d %d %d %d\n", index[0],index[1],index[2],index[3]);
+
+        labels[0] = int(training_labels(index[0]));
+        labels[1] = int(training_labels(index[1]));
+        labels[2] = int(training_labels(index[2]));
+        labels[3] = int(training_labels(index[3]));
+
+        int estimated_label = getPopularlabel(labels, 4);
+        int true_label = int(validation_labels(i));
+#if 1
+        if (estimated_label != true_label){
+            printf("label of 4 nearest neighbours = \n");
+
+            printf("%d %d %d %d\n", labels[0],labels[1],labels[2],labels[3]);
+            printf("true label = %d\n", int(validation_labels(i)));
+            printf("estimated label = %d\n", estimated_label);
+            drawDigit(validation_data.row(i),"validation.bmp");
+            drawDigit(training_data.row(index[0]),"N1.bmp");
+            drawDigit(training_data.row(index[1]),"N2.bmp");
+            drawDigit(training_data.row(index[2]),"N3.bmp");
+            drawDigit(training_data.row(index[3]),"N4.bmp");
+
+        }
+#endif
+    }
+
+
+
 
 
 

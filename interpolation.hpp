@@ -35,6 +35,7 @@ struct intkdNode{
 
 void test_2d_table(void);
 void test_scatter_table(void);
+void test_scatter_table2(void);
 void interpolateTable2DRectilinear(IntLookupTable* table,
         double x, double y,
         double *result,

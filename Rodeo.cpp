@@ -28,30 +28,34 @@ int main(void){
 	printf("\n**************************************************************\n");
 
 
-
-
-	mnist();
-	exit(1);
-
-
-	Classifier_Function_param test_function(2);
-
-	test_function.function_name="classification_test1";
-	test_function.func_ptr = classification_test1;
-	test_function.bounds[0]=-4.0;
-	test_function.bounds[1]= 4.0;
-	test_function.bounds[2]=-6.0;
-	test_function.bounds[3]= 6.0;
-	test_function.noise_level = 0.0;
-
-
-
-	perform_svn_test(test_function,
-	        200,
-	        5,
-	        SVM_RBF);
-
-	exit(1);
+//
+//	tableInterpolation::test_scatter_table();
+//	exit(1);
+//
+//
+//
+//	mnist();
+//
+//
+//
+//	Classifier_Function_param test_function(2);
+//
+//	test_function.function_name="classification_test1";
+//	test_function.func_ptr = classification_test1;
+//	test_function.bounds[0]=-4.0;
+//	test_function.bounds[1]= 4.0;
+//	test_function.bounds[2]=-6.0;
+//	test_function.bounds[3]= 6.0;
+//	test_function.noise_level = 0.0;
+//
+//
+//
+//	perform_svn_test(test_function,
+//	        200,
+//	        5,
+//	        SVM_RBF);
+//
+//	exit(1);
 
 //	perform_rbf_test(Eggholder,
 //	        parameter_bounds,
@@ -115,16 +119,22 @@ int main(void){
 //	exit(1);
 
 
-//	perform_trust_region_GEK_test(Eggholder,
-//				Eggholder_adj,
-//				parameter_bounds,
-//				"Eggholder" ,
-//				0,
-//				50,
-//				EXISTING_FILE,
-//				CHOLESKY,
-//				2,
-//				LINEAR_REGRESSION_OFF);
+	double parameter_bounds[4];
+	parameter_bounds[0]=0.0;
+	parameter_bounds[1]=100.0;
+	parameter_bounds[2]=0.0;
+	parameter_bounds[3]=100.0;
+
+	perform_trust_region_GEK_test(Eggholder,
+				Eggholder_adj,
+				parameter_bounds,
+				"Eggholder" ,
+				0,
+				50,
+				RANDOM_SAMPLING,
+				CHOLESKY,
+				2,
+				LINEAR_REGRESSION_OFF);
 
 
 
