@@ -2302,17 +2302,18 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 	}
 
 
+	double radius;
 
 	/* train the response surfaces */
-	train_TRGEK_response_surface(input_file_name,
+	train_TRGEK_response_surfacev2(input_file_name,
 			linear_regression,
 			regression_weights,
 			kriging_weights,
 			R_inv_ys_min_beta,
+			radius,
 			beta0,
 			number_of_max_function_evals_for_training,
 			dim);
-
 
 
 }
