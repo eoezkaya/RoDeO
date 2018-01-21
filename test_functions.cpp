@@ -2304,8 +2304,11 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 
 	double radius;
 
+#if 1
+	printf("Training the hyperparameters of the model\n");
+#endif
 	/* train the response surfaces */
-	train_TRGEK_response_surfacev2(input_file_name,
+	train_TRGEK_response_surface(input_file_name,
 			linear_regression,
 			regression_weights,
 			kriging_weights,

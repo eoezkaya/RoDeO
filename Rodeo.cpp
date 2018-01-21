@@ -121,9 +121,9 @@ int main(void){
 
 	double parameter_bounds[4];
 	parameter_bounds[0]=0.0;
-	parameter_bounds[1]=100.0;
+	parameter_bounds[1]=200.0;
 	parameter_bounds[2]=0.0;
-	parameter_bounds[3]=100.0;
+	parameter_bounds[3]=200.0;
 
 	perform_trust_region_GEK_test(Eggholder,
 				Eggholder_adj,
