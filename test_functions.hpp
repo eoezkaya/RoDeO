@@ -197,6 +197,15 @@ void generate_2D_test_function_data_GEK(double (*test_function)(double *),
 		int sampling_method);
 
 
+void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
+		double (*test_function_adj)(double *, double *),
+		std::string filename,
+		double *bounds,
+		int dim,
+		int number_of_samples_with_only_f_eval,
+		int number_of_samples_with_g_eval,
+		int sampling_method);
+
 void generate_1D_test_function_data_GEK(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		std::string filename,

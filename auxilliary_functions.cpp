@@ -254,7 +254,7 @@ int RandomInt(int a, int b) {
 
 void RandomVector(rowvec &x){
 
-	for(int i=0; i<x.size(); i++) {
+	for(unsigned int i=0; i<x.size(); i++) {
 
 		x(i) = RandomDouble(0.0, 1.0);
 	}
@@ -526,6 +526,10 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
 		}
 		if(norm == 2){
 			distance = L2norm(xdiff, dim);
+
+		}
+		if(norm == 1){
+					distance = L1norm(xdiff, dim);
 
 		}
 #if 0

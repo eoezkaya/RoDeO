@@ -14,17 +14,17 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
 template<class T>
 void find_max_with_index(T vec, int size, double *max_val, int *indx){
 
-    *max_val = -LARGE;
+	*max_val = -LARGE;
 
-    for(int i=0; i<size; i++){
+	for(int i=0; i<size; i++){
 
-        if(vec[i] > *max_val){
+		if(vec[i] > *max_val){
 
-            *max_val = vec[i];
-            *indx = i;
-        }
+			*max_val = vec[i];
+			*indx = i;
+		}
 
-    }
+	}
 
 
 }
@@ -33,17 +33,17 @@ void find_max_with_index(T vec, int size, double *max_val, int *indx){
 template<class T>
 void find_min_with_index(T vec, int size, double *min_val, int *indx){
 
-    *min_val = LARGE;
+	*min_val = LARGE;
 
-    for(int i=0; i<size; i++){
+	for(int i=0; i<size; i++){
 
-        if(vec[i] < *min_val){
+		if(vec[i] < *min_val){
 
-            *min_val = vec[i];
-            *indx = i;
-        }
+			*min_val = vec[i];
+			*indx = i;
+		}
 
-    }
+	}
 
 
 }
@@ -86,95 +86,95 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 template<class T>
 double L1norm(T x, int p, int* index=NULL){
-    if(index == NULL){
-        double sum=0.0;
-        for(unsigned int i=0;i<p;i++){
+	double sum=0.0;
+	if(index == NULL){
 
-            sum+=fabs(x(i));
-        }
-    }
-    else{
+		for(unsigned int i=0;i<p;i++){
 
-        double sum=0.0;
-        for(unsigned int i=0;i<p;i++){
+			sum+=fabs(x(i));
+		}
+	}
+	else{
 
-            sum+=fabs(x(index[i]));
-        }
+		for(unsigned int i=0;i<p;i++){
 
-    }
+			sum+=fabs(x(index[i]));
+		}
 
-    return sum;
+	}
+
+	return sum;
 }
 
 
 template<class T>
 double L2norm(T x, int p, int* index=NULL){
 
-    double sum;
-    if(index == NULL){
-        sum=0.0;
+	double sum;
+	if(index == NULL){
+		sum=0.0;
 
-        for(unsigned int i=0;i<p;i++){
+		for(unsigned int i=0;i<p;i++){
 
-            sum+=x(i)*x(i);
-        }
+			sum+=x(i)*x(i);
+		}
 
-    }
-    else{
+	}
+	else{
 
-        sum=0.0;
+		sum=0.0;
 
-        for(unsigned int i=0;i<p;i++){
+		for(unsigned int i=0;i<p;i++){
 
-            sum+=x(index[i])*x(index[i]);
-        }
+			sum+=x(index[i])*x(index[i]);
+		}
 
-    }
+	}
 
-    return sqrt(sum);
+	return sqrt(sum);
 }
 
 template<class T>
 double Lpnorm(T x, int p, int size,int *index=NULL){
-    double sum=0.0;
+	double sum=0.0;
 
 
-    if(index == NULL){
+	if(index == NULL){
 
-        for(unsigned int i=0;i<size;i++){
+		for(unsigned int i=0;i<size;i++){
 
-            sum+=pow(fabs(x(i)),p);
-        }
+			sum+=pow(fabs(x(i)),p);
+		}
 
-    }
-    else{
+	}
+	else{
 
-        for(unsigned int i=0;i<size;i++){
+		for(unsigned int i=0;i<size;i++){
 
-            sum+=pow(fabs(x(index[i])),p);
-        }
+			sum+=pow(fabs(x(index[i])),p);
+		}
 
 
-    }
-    return pow(sum,1.0/p);
+	}
+	return pow(sum,1.0/p);
 }
 
 
 void findKNeighbours(mat &data,
-                     rowvec &p,
-                     int K,
-                     double* min_dist,
-                     int *indices,
-                     int norm=2);
+		rowvec &p,
+		int K,
+		double* min_dist,
+		int *indices,
+		int norm=2);
 
 
 void findKNeighbours(mat &data,
-        rowvec &p,
-        int K,
-        int *input_indx ,
-        double* min_dist,
-        int *indices,
-        int number_of_independent_variables);
+		rowvec &p,
+		int K,
+		int *input_indx ,
+		double* min_dist,
+		int *indices,
+		int number_of_independent_variables);
 
 int getPopularlabel(int* labels, int size);
 

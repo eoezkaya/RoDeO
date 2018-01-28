@@ -18,9 +18,6 @@
 using namespace arma;
 
 
-
-
-
 void classification_test1(double *x, double *label, double *y){
 	/* y = sin(x)+x-1+sin(2x) * (separating curve) */
 
@@ -283,12 +280,6 @@ double Goldstein_Price_adj(double *x, double *xb) {
 }
 
 
-
-
-
-
-
-
 /* Rosenbrock test function with a = 1 and b= 100
  *
  * f(x,y) = (a-x)^2 + b(y-x^2)^2
@@ -386,42 +377,74 @@ double Borehole_adj(double *x, double *xb) {
 
 	ln_r_div_rw = log(x[1]/x[0]);
 	// ln(r/rw)
-    		double num = 2*pi*x[2]*(x[3]-x[5]);
-    		double numb;
-    		// 2pi*Tu*(Hu-Hl)
-    		double two_L_Tu = 2.0*x[6]*x[2];
-    		double two_L_Tub;
-    		double den = ln_r_div_rw*(1.0+two_L_Tu/(ln_r_div_rw*x[0]*x[0]*x[7])+x[2]/x[4]);
-    		double denb;
-    		numb = 1.0/den;
-    		denb = -(num*1.0/(den*den));
-    		temp1 = x[2]/x[4];
-    		temp0 = x[0]*x[0]*ln_r_div_rw*x[7];
-    		tempb = ln_r_div_rw*denb;
-    		tempb0 = -(two_L_Tu*tempb/(temp0*temp0));
-    		tempb1 = x[0]*x[0]*tempb0;
-    		tempb2 = tempb/x[4];
-    		ln_r_div_rwb = x[7]*tempb1 + (two_L_Tu/temp0+temp1+1.0)*denb;
-    		two_L_Tub = tempb/temp0;
-    		xb[0] = xb[0] + ln_r_div_rw*x[7]*2*x[0]*tempb0;
-    		xb[7] = xb[7] + ln_r_div_rw*tempb1;
-    		xb[2] = xb[2] + tempb2;
-    		xb[4] = xb[4] - temp1*tempb2;
-    		xb[6] = xb[6] + 2.0*x[2]*two_L_Tub;
-    		xb[2] = xb[2] + 2.0*x[6]*two_L_Tub;
-    		tempb3 = pi*2*numb;
-    		xb[2] = xb[2] + (x[3]-x[5])*tempb3;
-    		xb[3] = xb[3] + x[2]*tempb3;
-    		xb[5] = xb[5] - x[2]*tempb3;
-    		temp = x[1]/x[0];
-    		tempb4 = ln_r_div_rwb/(temp*x[0]);
-    		xb[1] = xb[1] + tempb4;
-    		xb[0] = xb[0] - temp*tempb4;
-    		return num/den;
+	double num = 2*pi*x[2]*(x[3]-x[5]);
+	double numb;
+	// 2pi*Tu*(Hu-Hl)
+	double two_L_Tu = 2.0*x[6]*x[2];
+	double two_L_Tub;
+	double den = ln_r_div_rw*(1.0+two_L_Tu/(ln_r_div_rw*x[0]*x[0]*x[7])+x[2]/x[4]);
+	double denb;
+	numb = 1.0/den;
+	denb = -(num*1.0/(den*den));
+	temp1 = x[2]/x[4];
+	temp0 = x[0]*x[0]*ln_r_div_rw*x[7];
+	tempb = ln_r_div_rw*denb;
+	tempb0 = -(two_L_Tu*tempb/(temp0*temp0));
+	tempb1 = x[0]*x[0]*tempb0;
+	tempb2 = tempb/x[4];
+	ln_r_div_rwb = x[7]*tempb1 + (two_L_Tu/temp0+temp1+1.0)*denb;
+	two_L_Tub = tempb/temp0;
+	xb[0] = xb[0] + ln_r_div_rw*x[7]*2*x[0]*tempb0;
+	xb[7] = xb[7] + ln_r_div_rw*tempb1;
+	xb[2] = xb[2] + tempb2;
+	xb[4] = xb[4] - temp1*tempb2;
+	xb[6] = xb[6] + 2.0*x[2]*two_L_Tub;
+	xb[2] = xb[2] + 2.0*x[6]*two_L_Tub;
+	tempb3 = pi*2*numb;
+	xb[2] = xb[2] + (x[3]-x[5])*tempb3;
+	xb[3] = xb[3] + x[2]*tempb3;
+	xb[5] = xb[5] - x[2]*tempb3;
+	temp = x[1]/x[0];
+	tempb4 = ln_r_div_rwb/(temp*x[0]);
+	xb[1] = xb[1] + tempb4;
+	xb[0] = xb[0] - temp*tempb4;
+	return num/den;
 }
 
+/*
+ *  Sw: Wing Area (ft^2) (150,200)
+ *  Wfw: Weight of fuel in the wing (lb) (220,300)
+ *  A: Aspect ratio (6,10)
+ *  Lambda: quarter chord sweep (deg) (-10,10)
+ *  q: dynamic pressure at cruise (lb/ft^2)  (16,45)
+ *  lambda: taper ratio (0.5,1)
+ *  tc: aerofoil thickness to chord ratio (0.08,0.18)
+ *  Nz: ultimate load factor (2.5,6)
+ *  Wdg: flight design gross weight (lb)  (1700,2500)
+ *  Wp: paint weight (lb/ft^2) (0.025, 0.08)
+ *
+ */
+double Forrester_wingweight(double *x){
+
+	double Sw=x[0];
+	double Wfw=x[1];
+	double A=x[2];
+	double Lambda=x[3];
+	double q=x[4];
+	double lambda=x[5];
+	double tc=x[6];
+	double Nz=x[7];
+	double Wdg=x[8];
+	double Wp=x[9];
 
 
+	double deg = (Lambda*3.14159265359)/180.0;
+
+	double W = 0.036*pow(Sw,0.758)*pow(Wfw,0.0035)*pow((A/(cos(deg)*cos(deg))),0.6) *
+			pow(q,0.006)*pow(lambda,0.04)*pow( (100.0*tc/cos(deg)), -0.3) *pow( (Nz*Wdg),0.49) + Sw*Wp;
+
+
+}
 
 
 
@@ -1827,8 +1850,6 @@ void generate_2D_test_function_data(double (*test_function)(double *),
 		fclose(outp);
 
 
-
-
 	}
 
 	if(sampling_method == LHS_RANDOM){
@@ -1863,11 +1884,7 @@ void generate_2D_test_function_data(double (*test_function)(double *),
 		fclose(outp);
 
 
-
-
 	}
-
-
 
 }
 
@@ -1996,6 +2013,135 @@ void generate_test_function_data(double (*test_function)(double *),
 	}
 
 }
+
+
+
+
+void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
+		double (*test_function_adj)(double *, double *),
+		std::string filename,
+		double *bounds,
+		int dim,
+		int number_of_samples_with_only_f_eval,
+		int number_of_samples_with_g_eval,
+		int sampling_method){
+
+#if 0
+	printf("generate_highdim_test_function_data_GEK...\n");
+	printf("dim = %d\n",dim);
+#endif
+
+	int number_of_function_evals  =  number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval;
+
+
+	if(sampling_method == EXISTING_FILE){
+
+		/* do nothing */
+
+	}
+
+	if(sampling_method == RANDOM_SAMPLING){
+
+		FILE *outp;
+
+		printf("opening file %s for input...\n",filename.c_str() );
+		outp = fopen(filename.c_str(), "w");
+
+		double *x = new double[dim];
+		double *xb = new double[dim];
+
+		/* write functional values to the output file */
+		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
+
+			for(int j=0; j<dim;j++){
+#if 0
+				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
+				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
+#endif
+				x[i] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+			}
+
+			double f_val = test_function(x);
+
+			for(int j=0; j<dim;j++){
+				printf("%10.7f, ",x[j]);
+				fprintf(outp,"%10.7f, ",x[j]);
+			}
+			printf("%10.7f\n",f_val);
+			fprintf(outp,"%10.7f\n",f_val);
+
+
+		}
+
+
+		/* write functional values and the gradient sensitivities to the output file */
+
+		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
+
+			for(int j=0; j<dim;j++){
+#if 0
+				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
+				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
+#endif
+
+				x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+				xb[j]=0.0;
+			}
+
+			double f_val = test_function_adj(x,xb);
+
+#if 0
+			double f_val_original = test_function(x);
+
+			printf("fval = %10.7f\n",f_val);
+			printf("fval(original) = %10.7f\n",f_val_original);
+
+			for(int j=0; j<dim;j++){
+				double eps = x[j]*0.0001;
+				x[j]+= eps;
+				double fplus = test_function(x);
+				x[j]-= eps;
+
+				double fdval = (fplus-f_val_original)/eps;
+				printf("fd = %10.7f\n",fdval);
+				printf("adj = %10.7f\n",xb[j]);
+
+
+			}
+#endif
+
+
+
+			for(int j=0; j<dim;j++){
+				printf("%10.7f, ",x[j]);
+				fprintf(outp,"%10.7f, ",x[j]);
+			}
+			printf("%10.7f, ",f_val);
+			fprintf(outp,"%10.7f, ",f_val);
+
+			for(int j=0; j<dim-1;j++){
+				printf("%10.7f, ",xb[j]);
+				fprintf(outp,"%10.7f, ",xb[j]);
+			}
+			printf("%10.7f\n",xb[dim-1]);
+			fprintf(outp,"%10.7f\n",xb[dim-1]);
+
+
+		}
+
+		fclose(outp);
+
+		delete[] x;
+		delete[] xb;
+
+	}
+
+
+}
+
+
+
+
 
 
 void generate_2D_test_function_data_GEK(double (*test_function)(double *),
@@ -2205,13 +2351,8 @@ void generate_1D_test_function_data_GEK(double (*test_function)(double *),
 
 		}
 
-
-
-
 		/* write functional values to the output file */
 		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
-
-
 
 			double f_val = test_function(&x(i));
 
@@ -2226,16 +2367,11 @@ void generate_1D_test_function_data_GEK(double (*test_function)(double *),
 
 			xb=0.0;
 
-
 			double f_val = test_function_adj(&x(i),&xb);
-
-
 
 			fprintf(outp,"%10.7f, %10.7f, %10.7f\n",x(i),f_val,xb);
 
 		}
-
-
 
 		fclose(outp);
 
@@ -2243,12 +2379,7 @@ void generate_1D_test_function_data_GEK(double (*test_function)(double *),
 	} /* end of random sampling */
 
 
-
-
-
 }
-
-
 
 
 void perform_trust_region_GEK_test(double (*test_function)(double *),
@@ -2292,7 +2423,7 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 	}
 
 
-	if(dim ==2){
+	if(dim == 2){
 		printf("Generating inputs using %d points (%d gradient computations)...\n",number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval,number_of_samples_with_g_eval);
 
 
@@ -2300,11 +2431,22 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 		generate_2D_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,number_of_samples_with_only_f_eval,number_of_samples_with_g_eval, sampling_method );
 
 	}
+	else{
+
+		/* generate the input data for test	*/
+		generate_highdim_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,dim,
+				number_of_samples_with_only_f_eval,
+				number_of_samples_with_g_eval,
+				sampling_method );
+
+	}
+
+
 
 
 	double radius;
 
-#if 1
+#if 0
 	printf("Training the hyperparameters of the model\n");
 #endif
 	/* train the response surfaces */
@@ -2408,160 +2550,147 @@ void perform_rbf_test(double (*test_function)(double *),
 	}
 
 #if 0
-printf("maximum = \n");
-x_max.print();
+	printf("maximum = \n");
+	x_max.print();
 
-printf("minimum = \n");
-x_min.print();
+	printf("minimum = \n");
+	x_min.print();
 
 #endif
 
-/* normalize data */
-for (int i = 0; i < nrows; i++) {
+	/* normalize data */
+	for (int i = 0; i < nrows; i++) {
 
-	for (int j = 0; j < dim; j++) {
-		X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-	}
-}
-
-
-/* weights of rbfs */
-vec w(nrows+1);
-
-
-/* train rbf weights */
-
-#if 0
-printf("Training rbf...\n");
-#endif
-
-double sigma=0.0;
-
-RBF_param model_parameters;
-model_parameters.type = rbf_type;
-
-#if 0
-model_parameters.print();
-#endif
-
-train_rbf(X, ys, w, sigma,model_parameters);
-
-#if 0
-printf("Rbf weights =\n");
-w.print();
-#endif
-
-
-
-double in_sample_error = 0.0;
-
-for(unsigned int i=0;i<X.n_rows;i++){
-
-	rowvec xp = X.row(i);
-
-
-
-
-	double func_val = calc_ftilde_rbf(X, xp, w, rbf_type, sigma);
-
-	/* convert to original input vector */
-	for(int j=0; j<problem_dimension;j++) {
-
-		xp(j) = xp(j)* (x_max(j) - x_min(j))+x_min(j);
-	}
-
-	double func_val_exact = test_function(xp.memptr());
-
-#if 0
-	printf("xp = \n");
-	xp.print();
-	printf("\n");
-	printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
-#endif
-
-	in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-
-
-}
-
-in_sample_error = in_sample_error/X.n_rows;
-
-printf("in sample error = %10.7f\n",in_sample_error);
-
-
-/* visualize with contour plot if the problem is 2D */
-if (problem_dimension == 2){
-	int resolution =100;
-
-	std::string rbf_response_surface_file_name = function_name+"_"+"rbf_response_surface_"+ std::to_string(number_of_samples )+".dat";
-
-	FILE *rbf_response_surface_file = fopen(rbf_response_surface_file_name.c_str(),"w");
-
-	double dx,dy; /* step sizes in x and y directions */
-	rowvec x(2);
-	rowvec xnorm(2);
-
-	double func_val;
-	dx = (bounds[1]-bounds[0])/(resolution-1);
-	dy = (bounds[3]-bounds[2])/(resolution-1);
-
-	double out_sample_error=0.0;
-
-	x[0] = bounds[0];
-	for(int i=0;i<resolution;i++){
-
-		x[1] = bounds[2];
-		for(int j=0;j<resolution;j++){
-
-			/* normalize x */
-			xnorm(0)= (x(0)- x_min(0)) / (x_max(0) - x_min(0));
-			xnorm(1)= (x(1)- x_min(1)) / (x_max(1) - x_min(1));
-
-
-			func_val = calc_ftilde_rbf(X, xnorm, w, rbf_type, sigma);
-
-			fprintf(rbf_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
-
-			double func_val_exact = test_function(x.memptr());
-
-			out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-
-
-
-			x[1]+=dy;
+		for (int j = 0; j < dim; j++) {
+			X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 		}
-		x[0]+= dx;
+	}
+
+
+	/* weights of rbfs */
+	vec w(nrows+1);
+
+
+	/* train rbf weights */
+
+#if 0
+	printf("Training rbf...\n");
+#endif
+
+	double sigma=0.0;
+
+	RBF_param model_parameters;
+	model_parameters.type = rbf_type;
+
+#if 0
+	model_parameters.print();
+#endif
+
+	train_rbf(X, ys, w, sigma,model_parameters);
+
+#if 0
+	printf("Rbf weights =\n");
+	w.print();
+#endif
+
+
+
+	double in_sample_error = 0.0;
+
+	for(unsigned int i=0;i<X.n_rows;i++){
+
+		rowvec xp = X.row(i);
+
+
+
+
+		double func_val = calc_ftilde_rbf(X, xp, w, rbf_type, sigma);
+
+		/* convert to original input vector */
+		for(int j=0; j<problem_dimension;j++) {
+
+			xp(j) = xp(j)* (x_max(j) - x_min(j))+x_min(j);
+		}
+
+		double func_val_exact = test_function(xp.memptr());
+
+#if 0
+		printf("xp = \n");
+		xp.print();
+		printf("\n");
+		printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
+#endif
+
+		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
 
 	}
-	fclose(rbf_response_surface_file);
 
-	out_sample_error = out_sample_error/(resolution*resolution);
+	in_sample_error = in_sample_error/X.n_rows;
 
-	printf("out of sample error = %10.7f\n",out_sample_error);
-
+	printf("in sample error = %10.7f\n",in_sample_error);
 
 
-	/* plot the kriging response surface */
+	/* visualize with contour plot if the problem is 2D */
+	if (problem_dimension == 2){
+		int resolution =100;
 
-	std::string file_name_for_plot = function_name+"_"+"rbf_response_surface_";
-	file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+		std::string rbf_response_surface_file_name = function_name+"_"+"rbf_response_surface_"+ std::to_string(number_of_samples )+".dat";
 
-	std::string python_command = "python -W ignore plot_2d_surface.py "+ rbf_response_surface_file_name+ " "+ file_name_for_plot ;
+		FILE *rbf_response_surface_file = fopen(rbf_response_surface_file_name.c_str(),"w");
+
+		double dx,dy; /* step sizes in x and y directions */
+		rowvec x(2);
+		rowvec xnorm(2);
+
+		double func_val;
+		dx = (bounds[1]-bounds[0])/(resolution-1);
+		dy = (bounds[3]-bounds[2])/(resolution-1);
+
+		double out_sample_error=0.0;
+
+		x[0] = bounds[0];
+		for(int i=0;i<resolution;i++){
+
+			x[1] = bounds[2];
+			for(int j=0;j<resolution;j++){
+
+				/* normalize x */
+				xnorm(0)= (x(0)- x_min(0)) / (x_max(0) - x_min(0));
+				xnorm(1)= (x(1)- x_min(1)) / (x_max(1) - x_min(1));
 
 
+				func_val = calc_ftilde_rbf(X, xnorm, w, rbf_type, sigma);
 
-	FILE* in = popen(python_command.c_str(), "r");
+				fprintf(rbf_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
+
+				double func_val_exact = test_function(x.memptr());
+
+				out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
+
+				x[1]+=dy;
+			}
+			x[0]+= dx;
+
+		}
+		fclose(rbf_response_surface_file);
+
+		out_sample_error = out_sample_error/(resolution*resolution);
+
+		printf("out of sample error = %10.7f\n",out_sample_error);
+
+		/* plot the kriging response surface */
+
+		std::string file_name_for_plot = function_name+"_"+"rbf_response_surface_";
+		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+		std::string python_command = "python -W ignore plot_2d_surface.py "+ rbf_response_surface_file_name+ " "+ file_name_for_plot ;
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+		fprintf(in, "\n");
 
 
-	fprintf(in, "\n");
-
+	}
 
 }
-
-
-
-
-}
-
-
 

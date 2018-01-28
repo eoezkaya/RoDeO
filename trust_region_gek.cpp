@@ -306,7 +306,7 @@ void train_optimal_radius(
 
 	max_r = -log(0.1)/ max(probe_distances_sample);
 	min_r = 0.0;
-	max_r = 5.0;
+	max_r = 2.5;
 
 	double dr = (max_r - min_r)/max_iter;
 
@@ -853,47 +853,30 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	X_grad.print();
 #endif
 
-	for(int i=0;i<dim+1;i++){
 
-		printf("Training %dth variable\n",i);
 
-		std::string kriging_input_filename;
+	if(n_f_evals == 0){
 
-		kriging_input_filename="trust_region_gek_input"+std::to_string(i)+".csv";
+#if 1
+		printf("all samples have gradients: training only functional values\n");
 
+#endif
+		std::string kriging_input_filename      = "trust_region_gek_input.csv";
+		std::string kriging_hyperparam_filename = "trust_region_gek_hyperparam.csv";
 		vec regression_weights_single_output=zeros(dim+1);
 		vec kriging_weights_single_output=zeros(dim);
 
 		mat kriging_input_data;
+		data_functional_values.save(kriging_input_filename, csv_ascii);
 
-		if(i==0){
-
-
-			data_functional_values.save(kriging_input_filename, csv_ascii);
-			printf("kriging_input_data = \n");
-			data_functional_values.print();
-			printf("\n");
-
-		}
-
-		else{
-			//			kriging_input_data.set_size(n_g_evals,dim+1);
-
-			for(int j=0;j<dim;j++) kriging_input_data.insert_cols( j, data_gradients.col(j) );
-
-			kriging_input_data.insert_cols( dim, data_gradients.col(dim+i) );
-
-			printf("kriging_input_data = \n");
-
-			kriging_input_data.print();
-
-			kriging_input_data.save(kriging_input_filename, csv_ascii);
-
-
-		}
+#if 1
+		printf("kriging_input_data = \n");
+		data_functional_values.print();
+		printf("\n");
+#endif
 
 		train_kriging_response_surface(kriging_input_filename,
-				"None",
+				kriging_hyperparam_filename,
 				linear_regression,
 				regression_weights_single_output,
 				kriging_weights_single_output,
@@ -901,16 +884,81 @@ int train_TRGEK_response_surface(std::string input_file_name,
 				max_number_of_function_calculations,
 				CSV_ASCII);
 
+		regression_weights.insert_cols(0,regression_weights_single_output);
+		kriging_params.insert_cols(0,kriging_weights_single_output);
 
-		regression_weights.insert_cols(i,regression_weights_single_output);
-		kriging_params.insert_cols(i,kriging_weights_single_output);
-
+#if 1
 		printf("regression_weights = \n");
 		regression_weights_single_output.print();
 		printf("kriging_weights = \n");
 		kriging_weights_single_output.print();
+#endif
+
 
 	}
+
+	else{
+
+		for(int i=0;i<dim+1;i++){
+
+			printf("Training %dth variable\n",i);
+
+			std::string kriging_input_filename;
+
+
+			kriging_input_filename="trust_region_gek_input"+std::to_string(i)+".csv";
+
+			vec regression_weights_single_output=zeros(dim+1);
+			vec kriging_weights_single_output=zeros(dim);
+
+			mat kriging_input_data;
+
+			if(i==0){
+
+
+				data_functional_values.save(kriging_input_filename, csv_ascii);
+				printf("kriging_input_data = \n");
+				data_functional_values.print();
+				printf("\n");
+
+			}
+
+			else{
+
+				for(int j=0;j<dim;j++) kriging_input_data.insert_cols( j, data_gradients.col(j) );
+
+				kriging_input_data.insert_cols( dim, data_gradients.col(dim+i) );
+
+				printf("kriging_input_data = \n");
+
+				kriging_input_data.print();
+
+				kriging_input_data.save(kriging_input_filename, csv_ascii);
+
+
+			}
+
+			train_kriging_response_surface(kriging_input_filename,
+					"None",
+					linear_regression,
+					regression_weights_single_output,
+					kriging_weights_single_output,
+					reg_param,
+					max_number_of_function_calculations,
+					CSV_ASCII);
+
+
+			regression_weights.insert_cols(i,regression_weights_single_output);
+			kriging_params.insert_cols(i,kriging_weights_single_output);
+
+			printf("regression_weights = \n");
+			regression_weights_single_output.print();
+			printf("kriging_weights = \n");
+			kriging_weights_single_output.print();
+
+		}
+
+	} /* end of else */
 
 
 	vec ysfunc = data_functional_values.col(dim);
@@ -967,40 +1015,45 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	}
 #endif
 
-	for(int i=0; i<dim; i++){
+
+	if(n_f_evals != 0){
+
+		for(int i=0; i<dim; i++){
 
 #if 0
-		printf("i = %d\n",i);
+			printf("i = %d\n",i);
 #endif
 
-		vec ysgrad = data_gradients.col(i+1+dim);
+			vec ysgrad = data_gradients.col(i+1+dim);
 
 #if 0
-		printf("ysgrad: \n",i);
-		ysgrad.print();
+			printf("ysgrad: \n",i);
+			ysgrad.print();
 #endif
 
 
-		vec Igrad = ones(X_grad.n_rows);
+			vec Igrad = ones(X_grad.n_rows);
 
-		mat Rgrad(X_grad.n_rows,X_grad.n_rows);
-		vec theta = kriging_params.col(i+1).head(dim);
-		vec gamma = kriging_params.col(i+1).tail(dim);
-		compute_R_matrix(theta,gamma,reg_param,Rgrad,X_grad);
+			mat Rgrad(X_grad.n_rows,X_grad.n_rows);
+			vec theta = kriging_params.col(i+1).head(dim);
+			vec gamma = kriging_params.col(i+1).tail(dim);
+			compute_R_matrix(theta,gamma,reg_param,Rgrad,X_grad);
 
 #if 0
-		printf("Rgrad: \n",i);
-		Rgrad.print();
+			printf("Rgrad: \n",i);
+			Rgrad.print();
 #endif
-		mat Rinvgrad = inv(Rgrad);
+			mat Rinvgrad = inv(Rgrad);
 
-		beta0(i+1) = (1.0/dot(Igrad,Rinvgrad*Igrad)) * (dot(Igrad,Rinvgrad*ysgrad));
-		vec R_inv_ys_min_beta_temp = Rinvgrad* (ysgrad-beta0(i+1)* Igrad);
-		R_inv_ys_min_beta.insert_cols(i+1,R_inv_ys_min_beta_temp);
+			beta0(i+1) = (1.0/dot(Igrad,Rinvgrad*Igrad)) * (dot(Igrad,Rinvgrad*ysgrad));
+			vec R_inv_ys_min_beta_temp = Rinvgrad* (ysgrad-beta0(i+1)* Igrad);
+			R_inv_ys_min_beta.insert_cols(i+1,R_inv_ys_min_beta_temp);
+
+		}
+
+
 
 	}
-
-
 #if 0 /* test surrogate models for sensitivities */
 	double in_sample_error = 0.0;
 	for(unsigned int i=0;i<X_grad.n_rows;i++){
@@ -1042,9 +1095,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		double bounds[4];
 		bounds[0]=0.0;
-		bounds[1]=200.0;
+		bounds[1]=100.0;
 		bounds[2]=0.0;
-		bounds[3]=200.0;
+		bounds[3]=100.0;
 
 		std::string kriging_response_surface_file_name = "Eggholder_TRGEK_response_surface.dat";
 
@@ -1144,6 +1197,110 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		fprintf(in, "\n");
 
 	}
+	else{
+		/* high dimensional data is not visualized */
+
+		int number_of_samples = 10000;
+
+		rowvec x(dim);
+		rowvec xb(dim);
+		rowvec xnorm(dim);
+
+		double out_sample_error=0.0;
+
+		double max_value = -LARGE;
+		double min_value =  LARGE;
+
+		rowvec pmin(dim);
+		rowvec pmax(dim);
+
+
+		double parameter_bounds[16];
+		parameter_bounds[0]=0.05;    // [0.05, 0.15]
+		parameter_bounds[1]=0.15;
+
+		parameter_bounds[2]=100.0;  // [100, 50000]
+		parameter_bounds[3]=50000.0;
+
+		parameter_bounds[4]=63500;  // [63500, 115600]
+		parameter_bounds[5]=115600;
+
+		parameter_bounds[6]=990;
+		parameter_bounds[7]=1110; // [990, 1110]
+
+		parameter_bounds[8]=63.1;
+		parameter_bounds[9]=116; // [[63.1, 116]]
+
+		parameter_bounds[10]=700;
+		parameter_bounds[11]=820; // [700, 820]
+
+		parameter_bounds[12]=1120;
+		parameter_bounds[13]=1680; // [1120, 1680]
+
+		parameter_bounds[14]=9855;
+		parameter_bounds[15]=12045; // [9855, 12045]
+
+
+
+		for(int i=0; i<number_of_samples; i++){
+
+			for(int j=0; j<dim;j++){
+
+				x(j) = RandomDouble(parameter_bounds[j*2], parameter_bounds[j*2+1]);
+				xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
+
+			}
+
+			double func_val = calculate_f_tilde(xnorm,
+					X_func,
+					beta0(0),
+					regression_weights.col(0),
+					R_inv_ys_min_beta.col(0),
+					kriging_params.col(0));
+
+			if(func_val < min_value){
+
+				min_value = func_val;
+				pmin = x;
+
+			}
+			if(func_val > max_value){
+
+				max_value = func_val;
+				pmax = x;
+
+			}
+
+
+			double func_val_exact = Borehole(x.memptr());
+
+			double sqr_error = (func_val_exact-func_val)*(func_val_exact-func_val);
+			out_sample_error+= sqr_error;
+
+
+#if 1
+			printf("at x: ");
+			x.print();
+			printf("func_val = %10.7f func_val_exact = %10.7f sqr_error = %10.7f\n",func_val,func_val_exact,sqr_error);
+#endif
+
+
+
+		}
+
+		out_sample_error = out_sample_error/number_of_samples;
+
+		printf("out of sample error (pure Kriging) = %10.7f\n",out_sample_error);
+		printf("min = %10.7f\n",min_value);
+		pmin.print();
+		printf("max = %10.7f\n",max_value);
+		pmax.print();
+
+
+
+	} /* end of else */
+
+
 #endif
 
 #if 1
@@ -1154,9 +1311,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		double bounds[4];
 		bounds[0]=0.0;
-		bounds[1]=200.0;
+		bounds[1]=100.0;
 		bounds[2]=0.0;
-		bounds[3]=200.0;
+		bounds[3]=100.0;
 
 		std::string kriging_response_surface_file_name = "Eggholder_pure_linmodel_response_surface.dat";
 
@@ -1270,10 +1427,6 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 				}
 
-
-
-
-
 				x[1]+=dy;
 			}
 			x[0]+= dx;
@@ -1303,9 +1456,127 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		fprintf(in, "\n");
 
 	}
+
+	else{ /*for higher dimensions */
+
+
+		int number_of_samples = 10000;
+
+		rowvec x(dim);
+		rowvec xb(dim);
+		rowvec xnorm(dim);
+
+		double out_sample_error=0.0;
+
+		double max_value = -LARGE;
+		double min_value =  LARGE;
+
+		rowvec pmin(dim);
+		rowvec pmax(dim);
+
+
+		double parameter_bounds[16];
+		parameter_bounds[0]=0.05;    // [0.05, 0.15]
+		parameter_bounds[1]=0.15;
+
+		parameter_bounds[2]=100.0;  // [100, 50000]
+		parameter_bounds[3]=50000.0;
+
+		parameter_bounds[4]=63500;  // [63500, 115600]
+		parameter_bounds[5]=115600;
+
+		parameter_bounds[6]=990;
+		parameter_bounds[7]=1110; // [990, 1110]
+
+		parameter_bounds[8]=63.1;
+		parameter_bounds[9]=116; // [[63.1, 116]]
+
+		parameter_bounds[10]=700;
+		parameter_bounds[11]=820; // [700, 820]
+
+		parameter_bounds[12]=1120;
+		parameter_bounds[13]=1680; // [1120, 1680]
+
+		parameter_bounds[14]=9855;
+		parameter_bounds[15]=12045; // [9855, 12045]
+
+
+
+		for(int i=0; i<number_of_samples; i++){
+
+			/* generate a random input vector and normalize it */
+
+			for(int j=0; j<dim;j++){
+
+				x(j) = RandomDouble(parameter_bounds[j*2], parameter_bounds[j*2+1]);
+				xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
+
+			}
+
+			double min_dist=0;
+			int indx = -1;
+
+			/* find the closest seeding point */
+			findKNeighbours(X_grad,
+					xnorm,
+					1,
+					&min_dist,
+					&indx,
+					1);
+
+
+			double func_val = data_gradients(indx,dim);
+
+			vec gradient(dim);
+
+			for(int j=0; j<dim; j++) gradient(j)= data_gradients(indx,j+dim+1);
+
+			rowvec sp =  X_grad.row(indx);
+			rowvec sp_not_normalized(dim);
+			sp_not_normalized.fill(0.0);
+
+			for(int j=0; j<dim;j++) sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+
+			double ftilde_linmodel = func_val + dot((x-sp_not_normalized),gradient);
+
+			double func_val_exact = Borehole(x.memptr());
+
+			double srq_error = (ftilde_linmodel-func_val_exact)*(ftilde_linmodel-func_val_exact);
+			out_sample_error+=srq_error;
+
+#if 1
+
+			printf("x:\n");
+			x.print();
+			printf("xnorm:\n");
+			xnorm.print();
+			printf("closest neighbour:\n");
+			X_grad.row(indx).print();
+			data_gradients.row(indx).print();
+			trans(gradient).print();
+			printf("functional value = %10.7f\n", func_val);
+			printf("ftilde_linmodel = %10.7f\n", ftilde_linmodel);
+			printf("func_val_exact = %10.7f\n", func_val_exact);
+
+			exit(1);
+
 #endif
 
-	//
+
+
+
+
+
+		}
+
+
+
+
+
+	}
+#endif
+
+
 	train_optimal_radius(
 			radius,
 			data_functional_values,
@@ -1326,9 +1597,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		double bounds[4];
 		bounds[0]=0.0;
-		bounds[1]=200.0;
+		bounds[1]=100.0;
 		bounds[2]=0.0;
-		bounds[3]=200.0;
+		bounds[3]=100.0;
 
 		std::string kriging_response_surface_file_name = "Eggholder_hybrid_response_surface.dat";
 
@@ -1362,17 +1633,6 @@ int train_TRGEK_response_surface(std::string input_file_name,
 				/* normalize x */
 				xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
 				xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
-
-//				int ridge_flag = 0;
-//
-//				for(int k=0; k<dim; k++){
-//
-//					if (  ( xnorm(k) > x_max(k) ) || (xnorm(k) < x_min(k)) ){
-//
-//						ridge_flag = 1;
-//					}
-//
-//				}
 
 
 
@@ -1413,10 +1673,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 
-//				if(ridge_flag) factor = factor*2;
+				//				if(ridge_flag) factor = factor*2;
 
 				double fval_kriging = 0.0;
-
 
 
 				/* pure kriging value at x = xnorm*/
