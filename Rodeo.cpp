@@ -45,7 +45,9 @@ int main(void){
 //			CHOLESKY,
 //			2,
 //			LINEAR_REGRESSION_OFF);
-
+//
+//
+//	exit(1);
 
 
 	double parameter_bounds[16];

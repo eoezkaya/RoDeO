@@ -575,16 +575,20 @@ void generate_contour_plot_2D_function_with_gradient(double (*test_function)(dou
 	fclose(test_function_data_g1);
 	fclose(test_function_data_g2);
 
-	std::string python_command = "python -W ignore plot_2d_surface.py "+ filename+ " "+ file_name_for_plot ;
+	std::string title = "function";
+	std::string python_command = "python -W ignore plot_2d_surface.py "+ filename+ " "+ file_name_for_plot + " "+title;
+
+
 	FILE* in = popen(python_command.c_str(), "r");
 	fprintf(in, "\n");
 
-
-	std::string python_command_g1 = "python -W ignore plot_2d_surface.py "+ filename_g1+ " "+ file_name_for_plot_g1 ;
+	title = "df/dx1";
+	std::string python_command_g1 = "python -W ignore plot_2d_surface.py "+ filename_g1+ " "+ file_name_for_plot_g1+ " "+title ;
 	FILE* in_g1 = popen(python_command_g1.c_str(), "r");
 	fprintf(in_g1, "\n");
 
-	std::string python_command_g2 = "python -W ignore plot_2d_surface.py "+ filename_g2+ " "+ file_name_for_plot_g2 ;
+	title = "df/dx2";
+	std::string python_command_g2 = "python -W ignore plot_2d_surface.py "+ filename_g2+ " "+ file_name_for_plot_g2 + " "+title;
 	FILE* in_g2 = popen(python_command_g2.c_str(), "r");
 	fprintf(in_g2, "\n");
 

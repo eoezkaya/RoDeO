@@ -12,48 +12,6 @@ using namespace arma;
 #include "auxilliary_functions.hpp"
 
 
-void decide_nearest_seeding_point(rowvec x,vec Nx, rowvec &seeding_point_coordinates){
-
-	int dim = x.size();
-
-	for(int i=0;i<dim;i++){
-
-		double dx = 1.0/(Nx(i)-1);
-
-		seeding_point_coordinates(i) = floor(x(i)/dx)*dx;
-	}
-
-}
-
-
-void estimate_gradient(mat &regression_weights,
-		mat &kriging_params,
-		vec &gradient,
-		mat &R_inv_ys_min_beta,
-		rowvec &x,
-		vec &beta0,
-		mat &X){
-
-
-	//	printf("estimate gradient\n");
-	int dim = x.size();
-
-
-	for(int i=1;i<dim+1;i++){
-
-		//		printf("i = %d\n",i);
-		gradient(i-1) = calculate_f_tilde(x,
-				X,
-				beta0(i),
-				regression_weights.col(i),
-				R_inv_ys_min_beta.col(i-1),
-				kriging_params.col(i));
-
-	}
-
-}
-
-
 void train_optimal_radius(
 		double &r,
 		mat &data_functional_values,
@@ -69,6 +27,10 @@ void train_optimal_radius(
 	int validation_set_size = (data_functional_values.n_rows) / 5.0;  /* validation set size (default 20 percent of the points) */
 	int reduced_set_size = data_functional_values.n_rows - validation_set_size;
 	int reduced_set_size_grad = data_gradients.n_rows - validation_set_size;
+
+	/* shows mapping between the original data set and the reduced data set */
+	uvec data_map(reduced_set_size_grad);
+	data_map.fill(-1);
 
 	mat R(reduced_set_size,reduced_set_size);
 	R.fill(0.0);
@@ -154,15 +116,19 @@ void train_optimal_radius(
 
 	/* normalize data matrix */
 
-	for (int i = 0; i < X_func.n_rows; i++) {
+	for (unsigned int i = 0; i < X_func.n_rows; i++) {
+
 		for (int j = 0; j < dim; j++) {
+
 			X_func(i, j) = (1.0/dim)*(X_func(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 		}
 	}
 
 
-	for (int i = 0; i < X_grad.n_rows; i++) {
+	for (unsigned int i = 0; i < X_grad.n_rows; i++) {
+
 		for (int j = 0; j < dim; j++) {
+
 			X_grad(i, j) = (1.0/dim)*(X_grad(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 		}
 	}
@@ -263,7 +229,7 @@ void train_optimal_radius(
 
 	vec probe_distances_sample(X_func.n_rows);
 
-	for(int i=0;i<X_func.n_rows; i++){
+	for(unsigned int i=0; i<X_func.n_rows; i++){
 
 		rowvec np = X_func.row(i);
 
@@ -303,10 +269,11 @@ void train_optimal_radius(
 
 	double average_distance_sample = mean(probe_distances_sample);
 
+	/* define the search range for the hyperparameter r */
 
-	max_r = -log(0.1)/ max(probe_distances_sample);
+	//	max_r = -log(0.1)/ max(probe_distances_sample);
 	min_r = 0.0;
-	max_r = 2.5;
+	max_r = 0.1;
 
 	double dr = (max_r - min_r)/max_iter;
 
@@ -346,12 +313,10 @@ void train_optimal_radius(
 
 		for(int outer_iter=0; outer_iter<number_of_outer_iterations; outer_iter++){
 
+
 			/* generate the set of indices for the validation set */
 			generate_validation_set(val_set_indices, X_func.n_rows);
 
-#if 0
-			trans(val_set_indices).print();
-#endif
 
 			for(int i=0; i<val_set_indices.size(); i++){
 
@@ -359,25 +324,53 @@ void train_optimal_radius(
 			}
 
 #if 0
+			printf("validation set grad:\n");
 			trans(val_set_indices_grad).print();
+			printf("validation set:\n");
 			trans(val_set_indices).print();
+
 #endif
 
 
 			/* remove validation set from data : X_actual= X_func-val_set_indices*/
-			remove_validation_points_from_data(X_func, ys, val_set_indices, X_actual, ys_actual);
+			remove_validation_points_from_data(X_func, ys, val_set_indices, X_actual, ys_actual,data_map);
 
 
+			/* evaluate the correlation matrix R */
 			compute_R_matrix(theta,gamma,reg_param,Rfunc,X_actual);
 #if 0
 			Rfunc.print();
 #endif
 
-			mat Rinv = inv(Rfunc);
 
-			double beta0 = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys_actual));
+			/* compute Cholesky decomposition */
+			mat U(Rfunc.n_rows,Rfunc.n_rows);
+			int flag = chol(U, Rfunc);
 
-			vec R_inv_ys_min_beta = Rinv* (ys_actual-beta0* I);
+			if (flag == 0) {
+
+				printf("Error: Ill conditioned correlation matrix in Cholesky decomposition\n");
+
+				exit(-1);
+			}
+
+			mat L = trans(U);
+
+			vec R_inv_ys(Rfunc.n_rows); /* R^-1* ys */
+			vec R_inv_I (Rfunc.n_rows); /* R^-1* I */
+			vec R_inv_ys_min_beta(Rfunc.n_rows); /* R^-1* (ys-beta0*F) */
+
+
+			solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys_actual);
+			solve_linear_system_by_Cholesky(U, L, R_inv_I, I);
+
+			/* compute the bias term beta0 */
+			double beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
+
+			vec ys_min_betaI = ys_actual-beta0*I;
+
+			solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaI );
+
 
 #if 0
 			printf("outer_iter = %d\n",outer_iter);
@@ -390,41 +383,56 @@ void train_optimal_radius(
 			ys.print();
 			printf("ys (reduced)=\n");
 			ys_actual.print();
+			printf("n_g_evals = %d\n",n_g_evals);
+			printf("n_f_evals = %d\n",n_f_evals);
 #endif
 
 			vec beta0grad(dim);
 			mat R_inv_ys_min_beta_grad;
 
-			for(int i=0; i<dim;i++){
+			/* if some samples have only functional values, then interpolation for sensitivities is required */
+			if ( n_g_evals != n_f_evals ) {
 
-				vec ysgrad = data_gradients.col(dim+i+1);
+
+
+				for(int i=0; i<dim;i++){ /* for each component of the gradient vector */
+
+					/* assign ys vector */
+					vec ysgrad = data_gradients.col(dim+i+1);
 #if 0
-				printf("ysgrad:\n");
-				trans(ysgrad).print();
+					printf("ysgrad:\n");
+					trans(ysgrad).print();
 #endif
 
-				remove_validation_points_from_data(X_grad, ysgrad, val_set_indices_grad, X_actual_grad, ys_actual_grad);
+					remove_validation_points_from_data(X_grad, ysgrad, val_set_indices_grad, X_actual_grad, ys_actual_grad,data_map);
 
 #if 0
-				printf("ys_actual_grad:\n");
-				trans(ys_actual_grad).print();
+					printf("ys_actual_grad:\n");
+					trans(ys_actual_grad).print();
 #endif
-				vec theta_grad = kriging_params.col(i+1).head(dim);
-				vec gamma_grad = kriging_params.col(i+1).tail(dim);
 
-				mat Rgrad(reduced_set_size_grad,reduced_set_size_grad);
-				Rgrad.fill(0.0);
-				compute_R_matrix(theta_grad,gamma_grad,reg_param,Rgrad,X_actual_grad);
 
-				mat Rinvgrad = inv(Rgrad);
+					/* assign hyperparameters theta and gamma */
+					vec theta_grad = kriging_params.col(i+1).head(dim);
+					vec gamma_grad = kriging_params.col(i+1).tail(dim);
 
-				beta0grad(i) = (1.0/dot(Igrad,Rinvgrad*Igrad)) * (dot(Igrad,Rinvgrad*ys_actual_grad));
+					mat Rgrad(reduced_set_size_grad,reduced_set_size_grad);
+					Rgrad.fill(0.0);
+					compute_R_matrix(theta_grad,gamma_grad,reg_param,Rgrad,X_actual_grad);
 
-				vec R_inv_ys_min_beta_temp = Rinvgrad* (ys_actual_grad-beta0grad(i)* Igrad);
+					beta0grad(i) = (1.0/dot(Igrad,solve(Rgrad,Igrad))) * (dot(Igrad,solve(Rgrad,ys_actual_grad)));
 
-				R_inv_ys_min_beta_grad.insert_cols(i,R_inv_ys_min_beta_temp);
+					vec R_inv_ys_min_beta_temp = solve( Rgrad, (ys_actual_grad-beta0grad(i)* Igrad));
+
+					R_inv_ys_min_beta_grad.insert_cols(i,R_inv_ys_min_beta_temp);
+
+
+
+				}
 
 			}
+
+
 
 #if 0
 			/* validate kriging models at reduced set */
@@ -462,7 +470,9 @@ void train_optimal_radius(
 #endif
 
 
+			/* iterate through the validation set */
 			for(int inner_it=0; inner_it< val_set_indices.size(); inner_it++){
+
 #if 0
 				printf("\n\ninner iteration %d\n",inner_it);
 				printf("trying point %d\n",val_set_indices(inner_it));
@@ -527,15 +537,10 @@ void train_optimal_radius(
 				sp_not_normalized.print();
 #endif
 
-
 				rowvec xdiff = x-sp;
-				double distance = L2norm(xdiff, dim);
-
-
+				double distance = L1norm(xdiff, dim);
 
 				double fval_kriging = 0.0;
-
-
 
 				/* pure kriging value at x */
 				fval_kriging = calculate_f_tilde(x,
@@ -546,29 +551,52 @@ void train_optimal_radius(
 						kriging_params.col(0));
 
 
-
-
 				/* calculate Taylor approximation */
 				double fval_linmodel = ys_actual(indx);
-# if 0
+#if 0
 				double fexact_sp= Eggholder(sp_not_normalized.memptr());
 #endif
 
 				vec grad(dim);
 
-				for(int k=0;k<dim;k++){
 
-					grad(k) = calculate_f_tilde(sp,
-							X_actual_grad,
-							beta0grad(k),
-							regression_weights.col(k+1),
-							R_inv_ys_min_beta_grad.col(k),
-							kriging_params.col(k+1));
+				if ( n_g_evals == n_f_evals ){
+
+					int map_indx = data_map(indx);
+#if 0
+					printf("index at the gradient data matrix = %d\n",map_indx);
+					data_gradients.row(map_indx).print();
+#endif
+
+					for(int k=0;k<dim;k++){
+
+						grad(k) = data_gradients(map_indx,dim+1+k);
+
+
+					}
+
+#if 0
+					printf("grad:\n");
+					trans(grad).print();
+#endif
+
+				}
+				else{
+
+					for(int k=0;k<dim;k++){
+
+						grad(k) = calculate_f_tilde(sp,
+								X_grad,
+								beta0grad(k),
+								regression_weights.col(k+1),
+								R_inv_ys_min_beta_grad.col(k),
+								kriging_params.col(k+1));
+
+					}
 
 				}
 
-
-				double normgrad = L2norm(grad, dim);
+				double normgrad = L1norm(grad, dim);
 
 
 				fval_linmodel+= dot((x_not_normalized-sp_not_normalized),grad);
@@ -656,6 +684,18 @@ void train_optimal_radius(
 
 
 }
+
+
+
+/*
+ *
+ * @param[in] input_file_name
+ * @param[in] linear_regression
+ *
+ * */
+
+
+
 int train_TRGEK_response_surface(std::string input_file_name,
 		int linear_regression,
 		mat &regression_weights,
@@ -666,6 +706,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		int &max_number_of_function_calculations,
 		int dim) {
 
+	/* regularization parameter added to the diagonal of the correlation matrix */
 
 	double reg_param=0.00000001;
 
@@ -673,10 +714,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 			input_file_name.c_str());
 
 
-	mat data_functional_values; // data matrix for only functional values
-	mat data_gradients;         // data matrix for only functional values + gradient sensitivities
+	mat data_functional_values; /* data matrix for only functional values */
+	mat data_gradients;         /* data matrix for only functional values + gradient sensitivities */
 
-
+	/* R^-1 * (ys-betaI) */
 	vec R_inv_ys_min_beta_func;
 
 	std::ifstream in(input_file_name);
@@ -686,7 +727,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		exit(-1);
 	}
 
-
+	/* read the input file */
 	std::vector<double> temp;
 
 	std::string str;
@@ -711,18 +752,18 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 
-		if(temp.size() == dim+1){ // function values
+		if( int(temp.size()) == dim+1){ /* function values */
 
 			rowvec newrow(dim+1);
 			int count=0;
 			for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
 
-				//				std::cout<<*it<<std::endl;
+
 				newrow(count)=*it;
 				count++;
 
 			}
-			//			newrow.print();
+
 			count_f++;
 			data_functional_values.resize(count_f, dim+1);
 
@@ -731,7 +772,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 		}
-		else{ // function+gradient information
+		else{ /* function+gradient information */
 
 			rowvec newrow(2*dim+1);
 			int count=0;
@@ -752,7 +793,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		temp.clear();
 
-		// now we loop back and get the next line in 'str'
+		/* now we loop back and get the next line in 'str' */
 	}
 
 
@@ -766,7 +807,8 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	printf("number of points with sensitivity gradients = %d\n",n_g_evals);
 #endif
 
-#if 0
+
+#if 1
 	printf("functional values data :\n");
 	data_functional_values.print();
 	printf("\n");
@@ -775,7 +817,24 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	printf("gradient data (raw) :\n");
 	data_gradients.print();
 	printf("\n");
+
+	/* gradient data format (not normalized):
+	 *
+	 * x1 x2 ... xn f g1 g2 ..gn
+	 *
+	 *
+	 * functional data format (not normalized):
+	 *
+	 * x1 x2 ... xn f
+	 *
+	 *
+	 */
+
+
 #endif
+
+
+
 
 	mat X_func,X_grad;
 
@@ -819,10 +878,12 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	x_min.fill(0.0);
 
 	for (int i = 0; i < dim; i++) {
+
 		x_max(i) = X_func.col(i).max();
 		x_min(i) = X_func.col(i).min();
 
 	}
+
 #if 0
 	printf("maximum = \n");
 	x_max.print();
@@ -830,17 +891,23 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	printf("minimum = \n");
 	x_min.print();
 #endif
-	/* normalize data matrix */
 
-	for (int i = 0; i < X_func.n_rows; i++) {
+
+	/* normalize data matrices X_func and X_grad */
+
+	for (unsigned int i = 0; i < X_func.n_rows; i++) {
+
 		for (int j = 0; j < dim; j++) {
+
 			X_func(i, j) = (1.0/dim)*(X_func(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 		}
 	}
 
 
-	for (int i = 0; i < X_grad.n_rows; i++) {
+	for (unsigned int i = 0; i < X_grad.n_rows; i++) {
+
 		for (int j = 0; j < dim; j++) {
+
 			X_grad(i, j) = (1.0/dim)*(X_grad(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 		}
 	}
@@ -858,9 +925,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	if(n_f_evals == 0){
 
 #if 1
-		printf("all samples have gradients: training only functional values\n");
+		printf("all samples have gradient information: training only functional values\n");
 
 #endif
+
 		std::string kriging_input_filename      = "trust_region_gek_input.csv";
 		std::string kriging_hyperparam_filename = "trust_region_gek_hyperparam.csv";
 		vec regression_weights_single_output=zeros(dim+1);
@@ -869,11 +937,13 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		mat kriging_input_data;
 		data_functional_values.save(kriging_input_filename, csv_ascii);
 
-#if 1
+#if 0
 		printf("kriging_input_data = \n");
 		data_functional_values.print();
 		printf("\n");
 #endif
+
+		/* train the Kriging response surface for functional values */
 
 		train_kriging_response_surface(kriging_input_filename,
 				kriging_hyperparam_filename,
@@ -897,12 +967,13 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 	}
 
-	else{
+	else{ /* there are some sample points without gradient information */
 
 		for(int i=0;i<dim+1;i++){
 
+#if 1
 			printf("Training %dth variable\n",i);
-
+#endif
 			std::string kriging_input_filename;
 
 
@@ -961,18 +1032,21 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	} /* end of else */
 
 
+
 	vec ysfunc = data_functional_values.col(dim);
 	vec Ifunc  = ones(X_func.n_rows);
 
 	mat Rfunc(X_func.n_rows,X_func.n_rows);
 	vec theta = kriging_params.col(0).head(dim);
 	vec gamma = kriging_params.col(0).tail(dim);
+
+	/* correlation matrix for functional value interpolations */
 	compute_R_matrix(theta,gamma,reg_param,Rfunc,X_func);
 
-	mat Rinvfunc = inv(Rfunc);
 
-	beta0(0) = (1.0/dot(Ifunc,Rinvfunc*Ifunc)) * (dot(Ifunc,Rinvfunc*ysfunc));
-	vec R_inv_ys_min_beta_temp = Rinvfunc* (ysfunc-beta0(0)* Ifunc);
+
+	beta0(0) = (1.0/dot(Ifunc,solve(Rfunc,Ifunc) )) * (dot(Ifunc,solve(Rfunc,ysfunc)));
+	vec R_inv_ys_min_beta_temp = solve( Rfunc, (ysfunc-beta0(0)* Ifunc));
 	R_inv_ys_min_beta.insert_cols(0,R_inv_ys_min_beta_temp);
 
 #if 0
@@ -984,6 +1058,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	double in_sample_error = 0.0;
 	for(unsigned int i=0;i<X_func.n_rows;i++){
 
+		/* get a sample point */
 		rowvec x = X_func.row(i);
 
 
@@ -1054,6 +1129,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 	}
+
 #if 0 /* test surrogate models for sensitivities */
 	double in_sample_error = 0.0;
 	for(unsigned int i=0;i<X_grad.n_rows;i++){
@@ -1109,7 +1185,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		rowvec xb(2);
 		rowvec xnorm(2);
 
-		double func_val;
+
 		dx = (bounds[1]-bounds[0])/(resolution-1);
 		dy = (bounds[3]-bounds[2])/(resolution-1);
 
@@ -1129,9 +1205,6 @@ int train_TRGEK_response_surface(std::string input_file_name,
 				/* normalize x */
 				xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
 				xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
-
-
-
 
 
 				double func_val = calculate_f_tilde(xnorm,
@@ -1167,8 +1240,6 @@ int train_TRGEK_response_surface(std::string input_file_name,
 #endif
 
 
-
-
 				x[1]+=dy;
 			}
 			x[0]+= dx;
@@ -1187,7 +1258,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		std::string file_name_for_plot = "Eggholder_purekriging_response_surface_";
 		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
 
-		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
+		std::string title = "Kriging";
+		std::string python_command = "python -W ignore plot_2d_surface.py "
+				+ kriging_response_surface_file_name+ " "
+				+ file_name_for_plot + " "+title;
 
 
 
@@ -1200,7 +1274,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	else{
 		/* high dimensional data is not visualized */
 
-		int number_of_samples = 10000;
+		int number_of_samples = 50000;
 
 		rowvec x(dim);
 		rowvec xb(dim);
@@ -1213,6 +1287,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		rowvec pmin(dim);
 		rowvec pmax(dim);
+
 
 
 		double parameter_bounds[16];
@@ -1278,7 +1353,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 			out_sample_error+= sqr_error;
 
 
-#if 1
+#if 0
 			printf("at x: ");
 			x.print();
 			printf("func_val = %10.7f func_val_exact = %10.7f sqr_error = %10.7f\n",func_val,func_val_exact,sqr_error);
@@ -1360,11 +1435,30 @@ int train_TRGEK_response_surface(std::string input_file_name,
 						dim);
 
 
+
 				rowvec sp =  seeding_points.row(indx);
 				rowvec sp_not_normalized(dim);
 				sp_not_normalized.fill(0.0);
 
-				for(int j=0; j<dim;j++) sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+				for(int j=0; j<dim;j++) {
+
+					sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+				}
+
+#if 0
+				printf("x:\n");
+				x.print();
+				printf("closest point is:\n");
+				sp.print();
+				printf("in original coordinates:\n");
+				sp_not_normalized.print();
+				printf("original data entry:\n");
+				data_gradients.row(indx).print();
+
+
+#endif
+
+				/* estimate the functional value at the nearest point from the Kriging estimator */
 
 				double func_val = calculate_f_tilde(sp,
 						X_func,
@@ -1376,16 +1470,38 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 				vec gradient(dim);
 
-				for(int k=0;k<dim;k++){
 
-					//		printf("i = %d\n",i);
-					gradient(k) = calculate_f_tilde(sp,
-							X_grad,
-							beta0(k+1),
-							regression_weights.col(k+1),
-							R_inv_ys_min_beta.col(k+1),
-							kriging_params.col(k+1));
+				if(n_f_evals == 0){
 
+					for(int k=0;k<dim;k++){
+
+						gradient(k) = data_gradients(indx,dim+1+k);
+
+					}
+
+#if 0
+					printf("gradient:\n");
+					trans(gradient).print();
+
+#endif
+				}
+
+
+
+				else{
+
+					for(int k=0;k<dim;k++){
+
+						//		printf("i = %d\n",i);
+						gradient(k) = calculate_f_tilde(sp,
+								X_grad,
+								beta0(k+1),
+								regression_weights.col(k+1),
+								R_inv_ys_min_beta.col(k+1),
+								kriging_params.col(k+1));
+
+
+					}
 
 				}
 
@@ -1446,7 +1562,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		std::string file_name_for_plot = "Eggholder_linmodel_response_surface_";
 		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
 
-		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
+		std::string title = "Taylor_approximation";
+		std::string python_command = "python -W ignore plot_2d_surface.py "
+				+ kriging_response_surface_file_name+ " "
+				+ file_name_for_plot + " "+title;
 
 
 
@@ -1460,7 +1579,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 	else{ /*for higher dimensions */
 
 
-		int number_of_samples = 10000;
+		int number_of_samples = 50000;
 
 		rowvec x(dim);
 		rowvec xb(dim);
@@ -1535,7 +1654,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 			rowvec sp_not_normalized(dim);
 			sp_not_normalized.fill(0.0);
 
-			for(int j=0; j<dim;j++) sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+			for(int j=0; j<dim;j++) {
+
+				sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+			}
 
 			double ftilde_linmodel = func_val + dot((x-sp_not_normalized),gradient);
 
@@ -1544,7 +1666,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 			double srq_error = (ftilde_linmodel-func_val_exact)*(ftilde_linmodel-func_val_exact);
 			out_sample_error+=srq_error;
 
-#if 1
+#if 0
 
 			printf("x:\n");
 			x.print();
@@ -1558,10 +1680,22 @@ int train_TRGEK_response_surface(std::string input_file_name,
 			printf("ftilde_linmodel = %10.7f\n", ftilde_linmodel);
 			printf("func_val_exact = %10.7f\n", func_val_exact);
 
-			exit(1);
+
 
 #endif
 
+			if(ftilde_linmodel< min_value){
+
+				min_value = ftilde_linmodel;
+				pmin = x;
+
+			}
+			if(ftilde_linmodel > max_value){
+
+				max_value = ftilde_linmodel;
+				pmax = x;
+
+			}
 
 
 
@@ -1569,13 +1703,21 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		}
 
+		out_sample_error = out_sample_error/(number_of_samples);
 
 
+		printf("out of sample error (Taylor approximation) = %10.7f\n",out_sample_error);
+		printf("min = %10.7f\n",min_value);
+		pmin.print();
+		printf("max = %10.7f\n",max_value);
+		pmax.print();
 
 
 	}
 #endif
 
+
+	/* train the hyperparameter of the hybrid model */
 
 	train_optimal_radius(
 			radius,
@@ -1587,11 +1729,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 			200);
 
 
-
-
 #if 1
 
-	if (dim == 2){ /* visualize only linear model response surface */
+	if (dim == 2){
 
 		int resolution =100;
 
@@ -1657,7 +1797,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 					sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
 				}
 
-#if 0
+#if 1
 				printf("x:\n");
 				x.print();
 				printf("xnorm:\n");
@@ -1687,23 +1827,35 @@ int train_TRGEK_response_surface(std::string input_file_name,
 						kriging_params.col(0));
 
 
-
-
-				/* calculate Taylor approximation */
-				double fval_linmodel = ysfunc(indx);
-
-
 				vec grad(dim);
 
-				for(int k=0;k<dim;k++){
 
-					grad(k) = calculate_f_tilde(sp,
-							X_grad,
-							beta0(k+1),
-							regression_weights.col(k+1),
-							R_inv_ys_min_beta.col(k+1),
-							kriging_params.col(k+1));
+				if(n_f_evals == 0){
 
+#if 1
+					printf("data_gradients at row = %d\n",indx);
+					data_gradients.row(indx).print();
+#endif
+
+					for(int k=0;k<dim;k++){
+
+						grad(k) = data_gradients(indx,dim+1+k);
+
+					}
+				}
+				else{
+
+					for(int k=0;k<dim;k++){
+
+						grad(k) = calculate_f_tilde(sp,
+								X_grad,
+								beta0(k+1),
+								regression_weights.col(k+1),
+								R_inv_ys_min_beta.col(k+1),
+								kriging_params.col(k+1));
+
+
+					}
 
 				}
 
@@ -1711,8 +1863,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 				double factor = exp(-radius*distance*normgrad);
 
-				fval_linmodel= fval_linmodel + dot((x-sp_not_normalized),grad);
+				/* calculate Taylor approximation at x = xnorm */
 
+				double fval_linmodel= ysfunc(indx) + dot((x-sp_not_normalized),grad);
 
 				double fval = factor*fval_linmodel + (1.0-factor)*fval_kriging;
 
@@ -1749,8 +1902,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 				}
 
 
-
-#if 0
+#if 1
 				printf("factor = %10.7f\n", factor);
 				printf("fkriging      = %10.7f flinmodel       = %10.7f\n",fval_kriging,fval_linmodel);
 				printf("ftilde       = %10.7f fexact       = %10.7f\n",fval,func_val_exact);
@@ -1784,7 +1936,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		std::string file_name_for_plot = "Eggholder_hybrid_response_surface_";
 		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
 
-		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
+		std::string title = "Hybrid_model";
+		std::string python_command = "python -W ignore plot_2d_surface.py "
+				+ kriging_response_surface_file_name+ " "
+				+ file_name_for_plot + title;
 
 
 
@@ -1794,9 +1949,191 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		fprintf(in, "\n");
 
 	}
+	else{
+
+		int number_of_samples = 50000;
+
+		rowvec x(dim);
+		rowvec xb(dim);
+		rowvec xnorm(dim);
+
+		double out_sample_error=0.0;
+
+		double max_value = -LARGE;
+		double min_value =  LARGE;
+
+		double max_exactvalue = -LARGE;
+		double min_exactvalue =  LARGE;
+
+		rowvec pmin(dim);
+		rowvec pmax(dim);
+		rowvec pminex(dim);
+		rowvec pmaxex(dim);
+
+
+		double parameter_bounds[16];
+		parameter_bounds[0]=0.05;    // [0.05, 0.15]
+		parameter_bounds[1]=0.15;
+
+		parameter_bounds[2]=100.0;  // [100, 50000]
+		parameter_bounds[3]=50000.0;
+
+		parameter_bounds[4]=63500;  // [63500, 115600]
+		parameter_bounds[5]=115600;
+
+		parameter_bounds[6]=990;
+		parameter_bounds[7]=1110; // [990, 1110]
+
+		parameter_bounds[8]=63.1;
+		parameter_bounds[9]=116; // [[63.1, 116]]
+
+		parameter_bounds[10]=700;
+		parameter_bounds[11]=820; // [700, 820]
+
+		parameter_bounds[12]=1120;
+		parameter_bounds[13]=1680; // [1120, 1680]
+
+		parameter_bounds[14]=9855;
+		parameter_bounds[15]=12045; // [9855, 12045]
+
+
+
+		for(int i=0; i<number_of_samples; i++){
+
+			/* generate a random input vector and normalize it */
+
+			for(int j=0; j<dim;j++){
+
+				x(j) = RandomDouble(parameter_bounds[j*2], parameter_bounds[j*2+1]);
+				xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
+
+			}
+
+
+			double fval_kriging = 0.0;
+
+
+			/* pure kriging value at x = xnorm*/
+			fval_kriging = calculate_f_tilde(xnorm,
+					X_func,
+					beta0(0),
+					regression_weights.col(0),
+					R_inv_ys_min_beta.col(0),
+					kriging_params.col(0));
+
+			double min_dist=0;
+			int indx = -1;
+
+			/* find the closest seeding point */
+			findKNeighbours(X_grad,
+					xnorm,
+					1,
+					&min_dist,
+					&indx,
+					1);
+
+
+
+			rowvec sp =  X_grad.row(indx);
+			rowvec sp_not_normalized(dim);
+			sp_not_normalized.fill(0.0);
+
+			for(int j=0; j<dim;j++) {
+
+				sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+			}
+
+			rowvec xdiff = xnorm-sp;
+			double distance = L1norm(xdiff, dim);
+
+			/* get the functional value from the data */
+			double func_val = data_gradients(indx,dim);
+
+
+			vec grad(dim);
+
+			for(int j=0; j<dim; j++) {
+
+				grad(j)= data_gradients(indx,j+dim+1);
+			}
+
+
+			double normgrad= L1norm(grad, dim);
+
+			double factor = exp(-radius*distance*normgrad);
+
+			double fval_linmodel= func_val + dot((x-sp_not_normalized),grad);
+
+			double fval = factor*fval_linmodel + (1.0-factor)*fval_kriging;
+
+			double func_val_exact = Borehole(x.memptr());
+
+			double srq_error = (fval-func_val_exact)*(fval-func_val_exact);
+			out_sample_error+=srq_error;
+
+#if 0
+
+			printf("x:\n");
+			x.print();
+			printf("xnorm:\n");
+			xnorm.print();
+			printf("closest neighbour:\n");
+			X_grad.row(indx).print();
+			data_gradients.row(indx).print();
+			trans(grad).print();
+			printf("factor = %10.7f\n", factor);
+			printf("fval_kriging = %10.7f\n", fval_kriging);
+			printf("ftilde_linmodel = %10.7f\n", fval_linmodel);
+			printf("fval = %10.7f\n", fval);
+			printf("func_val_exact = %10.7f\n", func_val_exact);
+
+
+
 #endif
 
+			if(fval < min_value){
 
+				min_value = fval;
+				pmin = x;
+
+			}
+			if(fval > max_value){
+
+				max_value = fval;
+				pmax = x;
+
+			}
+
+
+			if(func_val_exact < min_exactvalue){
+
+				min_exactvalue = func_val_exact;
+				pminex = x;
+
+			}
+			if(func_val_exact > max_exactvalue){
+
+				max_exactvalue = func_val_exact;
+				pmaxex = x;
+
+			}
+
+
+		} /* end of for */
+
+		out_sample_error = out_sample_error/(number_of_samples);
+
+
+		printf("out of sample error (hybrid model) = %10.7f\n",out_sample_error);
+		printf("min = %10.7f\n",min_value);
+		pmin.print();
+		printf("max = %10.7f\n",max_value);
+		pmax.print();
+
+
+	} /* end of else */
+
+#endif
 
 
 	return 0;

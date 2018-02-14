@@ -39,7 +39,7 @@ void su2_try_NACA0012_classic_solution(void){
 	vec dv         = zeros(number_of_design_variables);
 	vec dv_save         = zeros(number_of_design_variables);
 
-//		std::string input_file_name="su2_optimal_design_vector.csv";
+	//		std::string input_file_name="su2_optimal_design_vector.csv";
 	std::string input_file_name="robust_optimal_design_vector_lisa.csv";
 
 	mat data;
@@ -95,13 +95,13 @@ void su2_try_NACA0012_classic_solution(void){
 	}
 
 
-			double cdmean = mean(cd_vec);
-			double clmean = mean(cl_vec);
-			double areamean = mean(area_vec);
+	double cdmean = mean(cd_vec);
+	double clmean = mean(cl_vec);
+	double areamean = mean(area_vec);
 
-			double cdstd = stddev(cd_vec);
-			double clstd = stddev(cl_vec);
-			double areastd = stddev(area_vec);
+	double cdstd = stddev(cd_vec);
+	double clstd = stddev(cl_vec);
+	double areastd = stddev(area_vec);
 
 	printf("Statistics = \n");
 	printf("CD:  mean = %10.7f  std = %10.7f\n",cdmean,cdstd);
@@ -677,7 +677,7 @@ void su2_optimize(void){
 			/* inner MC loop */
 			for(int inner_mc_iter=0; inner_mc_iter<200;inner_mc_iter++ ){
 
-//				printf("mc inner loop iter = %d\n",inner_mc_iter);
+				//				printf("mc inner loop iter = %d\n",inner_mc_iter);
 
 				vec dv_with_noise(number_of_design_variables);
 				rowvec dv_tilde_with_noise(number_of_design_variables);
@@ -720,7 +720,7 @@ void su2_optimize(void){
 				if(area_tilde < worst_case_area) worst_case_area = area_tilde;
 
 
-//				printf("Area tilde = %10.7f\n",area_tilde );
+				//				printf("Area tilde = %10.7f\n",area_tilde );
 
 				/* estimate the cl of the new design by the surrogate model */
 
@@ -736,7 +736,7 @@ void su2_optimize(void){
 				if(cl_tilde < worst_case_cl) worst_case_cl = cl_tilde;
 
 
-//				printf("CL tilde = %10.7f\n",cl_tilde );
+				//				printf("CL tilde = %10.7f\n",cl_tilde );
 
 				//			printf("Approximating CD...\n");
 				cd_tilde=0.0;
@@ -754,8 +754,8 @@ void su2_optimize(void){
 
 				average_cd+= cd_tilde;
 
-//				printf("CD tilde = %10.7f\n",cd_tilde );
-//				printf("average CD tilde = %10.7f\n",average_cd );
+				//				printf("CD tilde = %10.7f\n",cd_tilde );
+				//				printf("average CD tilde = %10.7f\n",average_cd );
 
 
 
@@ -1331,8 +1331,8 @@ void su2_optimize(void){
 			for(unsigned int i=0;i<optimization_data.n_rows;i++){
 				if(optimization_data(i,number_of_design_variables+1) < min_CD ){
 					if(optimization_data(i,number_of_design_variables) >= CL_constraint &&
-					   optimization_data(i,number_of_design_variables+2) >= Area_constraint &&
-					   is_in_the_list(i,indices_of_ls_designs) == -1){
+							optimization_data(i,number_of_design_variables+2) >= Area_constraint &&
+							is_in_the_list(i,indices_of_ls_designs) == -1){
 						min_CD = optimization_data(i,number_of_design_variables+1);
 						index_best_design=i;
 
@@ -1347,172 +1347,172 @@ void su2_optimize(void){
 			}
 
 
-				printf("Starting point for the gradient assisted sampling:\n");
-				printf("Design No = %d\n",index_best_design);
+			printf("Starting point for the gradient assisted sampling:\n");
+			printf("Design No = %d\n",index_best_design);
 
 
-				best_design = optimization_data.row(index_best_design);
-				best_design.print();
-
-
-
-
-				for(int i=0;i<number_of_design_variables;i++){
-					dv(i) = best_design(i);
+			best_design = optimization_data.row(index_best_design);
+			best_design.print();
 
 
 
+
+			for(int i=0;i<number_of_design_variables;i++){
+				dv(i) = best_design(i);
+
+
+
+			}
+
+			//		dv.print();
+
+
+
+			//		exit(1);
+
+
+
+			stepsize = stepsize0;
+			/* CD value of the best design */
+			double f0 = best_design(number_of_design_variables+1);
+
+
+
+			call_SU2_Adjoint_Solver(dv, grad_dv,CL,CD,area);
+			number_of_gradient_evaluations++;
+
+			printf("CL = %10.7f\n",CL);
+			printf("CD = %10.7f\n",CD);
+			printf("area = %10.7f\n",area);
+
+			printf("gradient vector:\n");
+			grad_dv.print();
+
+
+			dv_save     = dv;
+			dv_savenorm = dv;
+
+			/* normalize dv_savenorm */
+			for (int j = 0; j < number_of_design_variables; j++) {
+				dv_savenorm(j) = (1.0/number_of_design_variables)
+						    																																																																																																																 *(dv_savenorm(j) - x_min(j)) / (x_max(j) - x_min(j));
+			}
+
+
+			for(int ls_index; ls_index< max_number_of_linesearches; ls_index++ ){
+
+				printf("ls = %d\n",ls_index);
+
+
+
+
+				/* modify the design vector */
+				dv = dv - stepsize*grad_dv;
+
+				printf("dv dv0 |dv-dv0|:\n");
+				for(unsigned int i=0; i<dv.size();i++){
+					printf("%10.7f %10.7f %10.7f\n",dv(i),dv_save(i),fabs(dv(i)- dv_save(i)   ) );
 				}
 
-				//		dv.print();
 
 
-
-				//		exit(1);
-
-
-
-				stepsize = stepsize0;
-				/* CD value of the best design */
-				double f0 = best_design(number_of_design_variables+1);
+				dvnorm = dv;
+				/* normalize dvnorm*/
+				for (int j = 0; j < number_of_design_variables; j++) {
+					dvnorm(j) = (1.0/number_of_design_variables)
+									        																																																																																																																*(dvnorm(j) - x_min(j)) / (x_max(j) - x_min(j));
+				}
 
 
+				/* compute the distance between dv and dv_save in normalized coordinates */
 
-				call_SU2_Adjoint_Solver(dv, grad_dv,CL,CD,area);
-				number_of_gradient_evaluations++;
+				double normdv = norm((dvnorm-dv_savenorm),number_of_design_variables);
+				/* if the distance is too small break */
+				if ( normdv < tolerance) {
+					printf("design change is too small...\n");
+					printf("norm = %15.10f\n",normdv);
+
+					break;
+				}
+
+
+				call_SU2_CFD_Solver(dv,CL,CD,area);
+				number_of_function_evaluations++;
+
 
 				printf("CL = %10.7f\n",CL);
 				printf("CD = %10.7f\n",CD);
 				printf("area = %10.7f\n",area);
 
-				printf("gradient vector:\n");
-				grad_dv.print();
+
+				/* insert a row to the data matrix*/
+				optimization_data.insert_rows( dimension_of_R, 1 );
+				for(int i=0;i<number_of_design_variables;i++){
+					optimization_data(dimension_of_R,i) = dv(i);
+				}
+				optimization_data(dimension_of_R,number_of_design_variables)   = CL;
+				optimization_data(dimension_of_R,number_of_design_variables+1) = CD;
+				optimization_data(dimension_of_R,number_of_design_variables+2) = area;
 
 
-				dv_save     = dv;
-				dv_savenorm = dv;
-
-				/* normalize dv_savenorm */
-				for (int j = 0; j < number_of_design_variables; j++) {
-					dv_savenorm(j) = (1.0/number_of_design_variables)
-						    																																																																																																														 *(dv_savenorm(j) - x_min(j)) / (x_max(j) - x_min(j));
+				/* insert a row to the data matrix X*/
+				X.insert_rows( dimension_of_R, 1 );
+				for(int i=0;i<number_of_design_variables;i++){
+					X(dimension_of_R,i) = dvnorm(i);
 				}
 
 
-				for(int ls_index; ls_index< max_number_of_linesearches; ls_index++ ){
-
-					printf("ls = %d\n",ls_index);
-
-
-
-
-					/* modify the design vector */
-					dv = dv - stepsize*grad_dv;
-
-					printf("dv dv0 |dv-dv0|:\n");
-					for(unsigned int i=0; i<dv.size();i++){
-						printf("%10.7f %10.7f %10.7f\n",dv(i),dv_save(i),fabs(dv(i)- dv_save(i)   ) );
-					}
+				/* insert a row to the cl kriging data matrix*/
+				cl_kriging_data.insert_rows( dimension_of_R, 1 );
+				for(int i=0;i<number_of_design_variables;i++){
+					cl_kriging_data(dimension_of_R,i) = dv(i);
+				}
+				cl_kriging_data(dimension_of_R,number_of_design_variables) = CL;
 
 
+				/* insert a row to the cd kriging data matrix*/
+				cd_kriging_data.insert_rows( dimension_of_R, 1 );
+				for(int i=0;i<number_of_design_variables;i++){
+					cd_kriging_data(dimension_of_R,i) = dv(i);
+				}
+				cd_kriging_data(dimension_of_R,number_of_design_variables) = CD;
 
-					dvnorm = dv;
-					/* normalize dvnorm*/
-					for (int j = 0; j < number_of_design_variables; j++) {
-						dvnorm(j) = (1.0/number_of_design_variables)
-									        																																																																																																														*(dvnorm(j) - x_min(j)) / (x_max(j) - x_min(j));
-					}
+				/* insert a row to the area kriging data matrix*/
+				area_kriging_data.insert_rows( dimension_of_R, 1 );
+				for(int i=0;i<number_of_design_variables;i++){
+					area_kriging_data(dimension_of_R,i) = dv(i);
+				}
+				area_kriging_data(dimension_of_R,number_of_design_variables) = area;
 
+				/* save updated data */
 
-					/* compute the distance between dv and dv_save in normalized coordinates */
-
-					double normdv = norm((dvnorm-dv_savenorm),number_of_design_variables);
-					/* if the distance is too small break */
-					if ( normdv < tolerance) {
-						printf("design change is too small...\n");
-						printf("norm = %15.10f\n",normdv);
-
-						break;
-					}
-
-
-					call_SU2_CFD_Solver(dv,CL,CD,area);
-					number_of_function_evaluations++;
+				optimization_data.save(all_data_file.c_str(), csv_ascii);
+				cl_kriging_data.save(cl_kriging_input_file.c_str(), csv_ascii);
+				cd_kriging_data.save(cd_kriging_input_file.c_str(), csv_ascii);
+				area_kriging_data.save(area_kriging_input_file.c_str(), csv_ascii);
 
 
-					printf("CL = %10.7f\n",CL);
-					printf("CD = %10.7f\n",CD);
-					printf("area = %10.7f\n",area);
+				/* update dimension of R */
+				dimension_of_R = optimization_data.n_rows;
 
 
-					/* insert a row to the data matrix*/
-					optimization_data.insert_rows( dimension_of_R, 1 );
-					for(int i=0;i<number_of_design_variables;i++){
-						optimization_data(dimension_of_R,i) = dv(i);
-					}
-					optimization_data(dimension_of_R,number_of_design_variables)   = CL;
-					optimization_data(dimension_of_R,number_of_design_variables+1) = CD;
-					optimization_data(dimension_of_R,number_of_design_variables+2) = area;
+				/* if no improvement can be made reduce the stepsize */
+				if(CD < f0 && CL >=CL_constraint && area >=Area_constraint ) {
+					printf("A better design is found\n");
+					break;
+				}
 
-
-					/* insert a row to the data matrix X*/
-					X.insert_rows( dimension_of_R, 1 );
-					for(int i=0;i<number_of_design_variables;i++){
-						X(dimension_of_R,i) = dvnorm(i);
-					}
-
-
-					/* insert a row to the cl kriging data matrix*/
-					cl_kriging_data.insert_rows( dimension_of_R, 1 );
-					for(int i=0;i<number_of_design_variables;i++){
-						cl_kriging_data(dimension_of_R,i) = dv(i);
-					}
-					cl_kriging_data(dimension_of_R,number_of_design_variables) = CL;
-
-
-					/* insert a row to the cd kriging data matrix*/
-					cd_kriging_data.insert_rows( dimension_of_R, 1 );
-					for(int i=0;i<number_of_design_variables;i++){
-						cd_kriging_data(dimension_of_R,i) = dv(i);
-					}
-					cd_kriging_data(dimension_of_R,number_of_design_variables) = CD;
-
-					/* insert a row to the area kriging data matrix*/
-					area_kriging_data.insert_rows( dimension_of_R, 1 );
-					for(int i=0;i<number_of_design_variables;i++){
-						area_kriging_data(dimension_of_R,i) = dv(i);
-					}
-					area_kriging_data(dimension_of_R,number_of_design_variables) = area;
-
-					/* save updated data */
-
-					optimization_data.save(all_data_file.c_str(), csv_ascii);
-					cl_kriging_data.save(cl_kriging_input_file.c_str(), csv_ascii);
-					cd_kriging_data.save(cd_kriging_input_file.c_str(), csv_ascii);
-					area_kriging_data.save(area_kriging_input_file.c_str(), csv_ascii);
-
-
-					/* update dimension of R */
-					dimension_of_R = optimization_data.n_rows;
-
-
-					/* if no improvement can be made reduce the stepsize */
-					if(CD < f0 && CL >=CL_constraint && area >=Area_constraint ) {
-						printf("A better design is found\n");
-						break;
-					}
-
-					else {
-						stepsize = stepsize/2.0;
-						dv = dv_save;
-					}
+				else {
+					stepsize = stepsize/2.0;
+					dv = dv_save;
+				}
 
 
 
-				} /* end of gradient sampling loop*/
+			} /* end of gradient sampling loop*/
 
 
-				indices_of_ls_designs.push_back(index_best_design);
+			indices_of_ls_designs.push_back(index_best_design);
 
 
 		} /* end of if */
@@ -1537,6 +1537,35 @@ void su2_optimize(void){
 
 }
 
+void initial_data_acquisitionGEK(int number_of_initial_samples ){
+
+
+	FILE* CL_Kriging_data;
+	FILE* CD_Kriging_data;
+	FILE* Area_Kriging_data;
+	FILE* AllData;
+
+	printf("Initial Data Acqusition...\n");
+	int number_of_design_variables = 38;
+	int number_of_function_evals = number_of_initial_samples;
+
+	double upper_bound_dv =  0.003;
+	double lower_bound_dv = -0.003;
+
+	double area_constraint= 0.0816;
+	//	double area_constraint= 0.0778;
+
+	double deltax = upper_bound_dv-lower_bound_dv;
+
+
+	vec dv(number_of_design_variables);
+
+
+
+
+
+}
+
 void initial_data_acquisition(int number_of_initial_samples ){
 
 
@@ -1552,7 +1581,7 @@ void initial_data_acquisition(int number_of_initial_samples ){
 	double upper_bound_dv =  0.003;
 	double lower_bound_dv = -0.003;
 
-//NACA0012	double area_constraint= 0.0816;
+	//NACA0012	double area_constraint= 0.0816;
 	double area_constraint= 0.0778;
 
 	double deltax = upper_bound_dv-lower_bound_dv;
@@ -1750,7 +1779,7 @@ void initial_data_acquisition(int number_of_initial_samples ){
 		system(solver_command.c_str());
 
 
-//		exit(1);
+		//		exit(1);
 
 		double CL=0,CD=0;
 
@@ -1915,7 +1944,7 @@ int call_SU2_CFD_Solver(vec &dv,
 	system("SU2_DEF config_DEF_new.cfg > su2def_output");
 
 
-		system("./plot_airfoil > junk");
+	system("./plot_airfoil > junk");
 
 	system("cp mesh_out.su2  mesh_airfoil.su2");
 

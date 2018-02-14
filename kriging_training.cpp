@@ -164,15 +164,18 @@ double compute_dr_dxi_dxj(rowvec x_i, rowvec x_j, vec theta,int l,int k){
 	double dx;
 
 	for (int i = 0;i<dim;i++){
+
 		corr = corr + theta(i) * pow(fabs(x_i(i)-x_j(i)),2.0);
 	}
 
 	corr = exp(-corr);
 
 	if (k == l){
+
 		dx = 2.0*theta(k)*(-2.0*theta(k)*pow((x_i(k)-x_j(k)),2.0)+1.0)*corr;
 	}
 	if (k != l) {
+
 		dx = -4.0*theta(k)*theta(l)*(x_i(k)-x_j(k))*(x_i(l)-x_j(l))*corr;
 	}
 
@@ -337,34 +340,6 @@ void compute_R_matrix_GEK(vec theta,
 
 
 
-
-
-
-/* calculate the approximation by the surrogate model for the given x */
-
-double calculate_f_tildeCV(rowvec x, mat &X, double beta0, vec R_inv_ys_min_beta, vec theta, vec gamma){
-
-
-	int dim = x.size();
-	vec r(X.n_rows);
-
-
-	double f_kriging = 0.0;
-
-	for(unsigned int i=0;i<X.n_rows;i++){
-
-		r(i) = compute_R(x, X.row(i), theta, gamma);
-
-	}
-
-
-	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
-
-
-
-	return f_kriging;
-
-}
 
 
 /** compute the f_tilde for the Kriging model
@@ -576,8 +551,6 @@ double calculate_f_tilde_GEK(rowvec &x,
 
 
 
-
-
 /* calculate the fitness of a member with the given theta (only for GEK)*/
 int calculate_fitness_GEK(member &new_born,
 		double reg_param,
@@ -648,8 +621,8 @@ int calculate_fitness_GEK(member &new_born,
 		int flag_svd = svd( U, s, V, R );
 
 		if (flag_svd == 0) {
-			printf("SVD could not be performed\n");
 
+			printf("Error: SVD could not be performed\n");
 			exit(-1);
 		}
 
@@ -1460,7 +1433,7 @@ int train_kriging_response_surface(std::string input_file_name,
 					bool status = hyper_param.load(file_name_hyperparameters.c_str(), csv_ascii);
 					if(status == false)
 					{
-						cout << "Problem with the hyperparameter input" << endl;
+						cout << "Some problem with the hyperparameter input" << endl;
 						exit(-1);
 
 					}
@@ -1468,18 +1441,63 @@ int train_kriging_response_surface(std::string input_file_name,
 #if 1
 #pragma omp master
 					{
-						printf("hyper parameters:\n");
+						printf("hyper parameters read from the file (theta; gamma)^T:\n");
 						hyper_param.print();
 					}
 #endif
 
+					if(hyper_param.n_cols != 2*dim){
+#if 1
+#pragma omp master
+						{
+							printf("hyper parameters do not match the problem dimensions\n");
+						}
+#endif
+						for (int j = 0; j < dim; j++) {
 
-					for(unsigned i=0; i<dim;i++) new_born.theta(i) = hyper_param(0,i);
-					for(unsigned i=dim; i<2*dim;i++) new_born.gamma(i-dim) = hyper_param(0,i);
+							new_born.theta(j) = RandomDouble(0, 10); //theta
+							new_born.gamma(j) = RandomDouble(0, 2); //gamma
+
+						}
+
+					}
+
+					else{
+
+						for(unsigned i=0; i<dim;i++) {
+
+							if(hyper_param(0,i) < 100.0){
+
+								new_born.theta(i) = hyper_param(0,i);
+							}
+							else{
+
+								new_born.theta(i) = 1.0;
+							}
+
+
+						}
+						for(unsigned i=dim; i<2*dim;i++) {
+
+							if( hyper_param(0,i) < 2.0) {
+
+								new_born.gamma(i-dim) = hyper_param(0,i);
+
+							}
+							else{
+
+								new_born.gamma(i-dim) = 1.0;
+							}
+						}
+
+					}
+
+
 				}
-				else{
+				else{ /* assign random parameters if there is no file */
 
 					for (int j = 0; j < dim; j++) {
+
 						new_born.theta(j) = RandomDouble(0, 10); //theta
 						new_born.gamma(j) = RandomDouble(0, 2); //gamma
 
@@ -1487,11 +1505,11 @@ int train_kriging_response_surface(std::string input_file_name,
 
 
 				}
+#if 0
+				new_born.theta.print();
+				new_born.gamma.print();
 
-				//					new_born.theta.print();
-				//					new_born.gamma.print();
-
-
+#endif
 
 				calculate_fitness(new_born,
 						reg_param,
@@ -2152,11 +2170,7 @@ int train_GEK_response_surface(std::string input_file_name,
 
 			}
 
-
 		}
-
-
-
 
 	} /* end of i loop */
 	population_max= -LARGE;
@@ -2191,10 +2205,6 @@ int train_GEK_response_surface(std::string input_file_name,
 
 
 #pragma omp barrier			
-
-
-
-
 
 
 	tid = omp_get_thread_num();

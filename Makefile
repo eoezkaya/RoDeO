@@ -8,8 +8,6 @@ auxilliary_functions.o linear_regression.o rbf.o svm.o kd_tree.o interpolation.o
 binary_search_tree.o kmeans_clustering.o bitmap_test.o mnist.o ann.o
 make: $(OBJ)
 	$(CC) $(CFLAGS) -o rodeo $(OBJ) $(LDFLAGS)
-make debug: $(OBJ)
-	$(CC) -std=c++11 -fopenmp -g -o rodeo $(OBJ) $(LDFLAGS)	
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $<

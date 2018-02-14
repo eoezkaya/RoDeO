@@ -15,18 +15,23 @@ x = data[:,0]
 y = data[:,1]
 z = data[:,2]
 
+
 xi = np.linspace(min(x), max(x))
 yi = np.linspace(min(y), max(y))
 
 X, Y = np.meshgrid(xi, yi)
 Z = griddata(x, y, z, xi, yi)
 
-
+title = sys.argv[3]
 
 surf = ax.plot_surface(X, Y, Z, rstride=5, cstride=5, cmap=cm.jet,
                        linewidth=1, antialiased=True)
 
 ax.set_zlim3d(np.min(Z), np.max(Z))
+ax.set_title(title)
+ax.set_xlabel("x1")
+ax.set_ylabel("x2")
+ax.set_zlabel("f")
 fig.colorbar(surf)
 
 figure_file = sys.argv[2]

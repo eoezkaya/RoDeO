@@ -79,7 +79,7 @@ void generate_validation_set(int *indices, int size, int N);
 void generate_validation_set(uvec &indices, int size);
 
 void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod);
-void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod, std::map<int,int> &validation_map);
+void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod, uvec &map);
 
 
 /* distance functions */

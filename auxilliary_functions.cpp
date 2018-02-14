@@ -410,7 +410,49 @@ void generate_validation_set(uvec &indices, int N){
  * @param[in] indices
  * @param[out] Xmod
  * @param[out] ymod
+ * @param[out] map
  */
+void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod, uvec &map){
+
+
+	int added_rows=0;
+	for(unsigned int j=0; j<X.n_rows; j++){ /* for each row in the data matrix */
+
+		/* if j is not a validation point */
+		if ( is_in_the_list(int(j), indices) == -1){
+
+#if 0
+			printf("%dth point is not a validation point\n",j);
+#endif
+			Xmod.row(added_rows)=X.row(j);
+			ymod(added_rows)    =y(j);
+			map(added_rows) = j;
+			added_rows++;
+
+
+		}
+
+
+	}
+#if 0
+			printf("data set map\n");
+			map.print();
+#endif
+
+
+
+
+}
+
+/** generates a modified data set by removing validation points
+ *
+ * @param[in] X
+ * @param[in] y
+ * @param[in] indices
+ * @param[out] Xmod
+ * @param[out] ymod
+ */
+
 void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod){
 
 
@@ -432,55 +474,7 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 	}
 
-
-}
-
-/** generates a modified data set by removing validation points
- *
- * @param[in] X
- * @param[in] y
- * @param[in] indices
- * @param[out] Xmod
- * @param[out] ymod
- * @param[out] validation_map
- */
-void remove_validation_points_from_data(mat &X,
-		vec &y,
-		uvec & indices,
-		mat &Xmod,
-		vec &ymod,
-		std::map<int,int> &validation_map){
-
-#if 0
-	printf("remove_validation_points_from_data with map version\n");
-	printf("validation indices:\n");
-	trans(indices).print();
-#endif
-
-	int added_rows=0;
-	for(unsigned int j=0; j<X.n_rows; j++){ /* for each row in the data matrix */
-
-		/* if j is not a validation point */
-		if ( is_in_the_list(int(j), indices) == -1){
-
-#if 0
-			printf("%dth point is not a validation point\n",j);
-#endif
-			Xmod.row(added_rows)=X.row(j);
-			ymod(added_rows)    =y(j);
-			validation_map.insert ( std::pair<int,int>(added_rows,j) );
-			added_rows++;
-
-		}
-
-
-	}
-#if 0
-	std::map<int,int>::iterator it;
-	std::cout << "validation map contains:\n";
-	for (it=validation_map.begin(); it!=validation_map.end(); ++it)
-		std::cout << it->first << " => " << it->second << '\n';
-#endif
+	exit(1);
 
 }
 
