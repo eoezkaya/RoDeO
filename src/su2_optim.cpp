@@ -1395,7 +1395,7 @@ void su2_optimize(void){
 			/* normalize dv_savenorm */
 			for (int j = 0; j < number_of_design_variables; j++) {
 				dv_savenorm(j) = (1.0/number_of_design_variables)
-						    																																																																																																																 *(dv_savenorm(j) - x_min(j)) / (x_max(j) - x_min(j));
+						    																																																																																																																				 *(dv_savenorm(j) - x_min(j)) / (x_max(j) - x_min(j));
 			}
 
 
@@ -1420,7 +1420,7 @@ void su2_optimize(void){
 				/* normalize dvnorm*/
 				for (int j = 0; j < number_of_design_variables; j++) {
 					dvnorm(j) = (1.0/number_of_design_variables)
-									        																																																																																																																*(dvnorm(j) - x_min(j)) / (x_max(j) - x_min(j));
+									        																																																																																																																				*(dvnorm(j) - x_min(j)) / (x_max(j) - x_min(j));
 				}
 
 
@@ -1545,7 +1545,10 @@ void initial_data_acquisitionGEK(int number_of_initial_samples ){
 	FILE* Area_Kriging_data;
 	FILE* AllData;
 
-	printf("Initial Data Acqusition...\n");
+#if 1
+	printf("Initial Data Acqusition with adjoints...\n");
+#endif
+
 	int number_of_design_variables = 38;
 	int number_of_function_evals = number_of_initial_samples;
 
@@ -1559,10 +1562,56 @@ void initial_data_acquisitionGEK(int number_of_initial_samples ){
 
 
 	vec dv(number_of_design_variables);
+	mat dv_lhs(number_of_function_evals,number_of_design_variables);
+
+	/* generate lhs designs */
+
+	std::string str_problem_dim = std::to_string(number_of_design_variables);
+	std::string lhs_filename = "lhs_points.dat";
+	std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(2*number_of_function_evals)+ " center" ;
+
+#if 0
+	dv_lhs.print();
+	printf("%s\n",python_command.c_str());
+#endif
+	system(python_command.c_str());
+
+
+	dv_lhs.load("lhs_points.dat", raw_ascii);
+
+
+	/* shuffle samples */
+	dv_lhs = shuffle(dv_lhs);
+
+
+	dv_lhs*= deltax;
+	dv_lhs+= lower_bound_dv;
+
+#if 0
+	dv_lhs.print();
+#endif
 
 
 
+	for(int doe_iter=0; doe_iter<number_of_initial_samples; doe_iter++){
 
+		vec dv = trans(dv_lhs.row(doe_iter));
+		vec gradient(number_of_design_variables);
+		double CL,CD,area;
+
+#if 1
+		dv.print();
+#endif
+
+		call_SU2_Adjoint_Solver(dv,
+				gradient,
+				CL,
+				CD,
+				area
+		);
+
+
+	} /* end of DoE iterations */
 
 }
 

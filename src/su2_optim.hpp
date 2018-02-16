@@ -40,6 +40,8 @@ int call_SU2_Adjoint_Solver(vec &dv,
 
 void initial_data_acquisition(int number_of_initial_samples );
 
+void initial_data_acquisitionGEK(int number_of_initial_samples );
+
 void su2_try_NACA0012_classic_solution(void);
 
 #endif

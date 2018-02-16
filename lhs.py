@@ -26,7 +26,9 @@ f = open('lhs_points.dat', 'w')
 
 
 for i in range(int(number_of_samples)):
-	f.write(str(design[i,0])+' '+str(design[i,1])+'\n')
+	for j in range(int(dimension)):
+		f.write(str(design[i,j])+' ')
+	f.write("\n")
 
 
 #plt.show(block=False)
