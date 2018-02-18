@@ -31,7 +31,9 @@ int call_SU2_CFD_Solver(vec &dv,
 		               double &CD,
 		               double &area);
 
-int call_SU2_Adjoint_Solver(vec &dv,
+
+int call_SU2_Adjoint_Solver(
+		vec &dv,
 		vec &gradient,
 		double &CL,
 		double &CD,
