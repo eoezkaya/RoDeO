@@ -28,15 +28,7 @@ void train_optimal_radius(
 	int reduced_set_size = data_functional_values.n_rows - validation_set_size;
 	int reduced_set_size_grad = data_gradients.n_rows - validation_set_size;
 
-	/* shows mapping between the original data set and the reduced data set */
-	uvec data_map(reduced_set_size_grad);
-	data_map.fill(-1);
 
-	mat R(reduced_set_size,reduced_set_size);
-	R.fill(0.0);
-
-	uvec val_set_indices(validation_set_size);
-	uvec val_set_indices_grad(validation_set_size);
 
 	/* number of points with functional values */
 	int n_f_evals = data_functional_values.n_rows;
@@ -44,7 +36,7 @@ void train_optimal_radius(
 	int n_g_evals = data_gradients.n_rows;
 
 
-	int number_of_outer_iterations = 2000;
+	int number_of_outer_iterations = 1000;
 
 #if 0
 	printf("calling train_seeding_points...\n");
@@ -143,24 +135,6 @@ void train_optimal_radius(
 #endif
 
 
-
-	mat Rfunc(reduced_set_size,reduced_set_size);
-	mat X_actual(reduced_set_size,dim);
-	mat X_actual_grad(reduced_set_size_grad,dim);
-	vec ys_actual(reduced_set_size);
-	vec ys_actual_grad(reduced_set_size_grad);
-
-	vec I= ones(reduced_set_size);
-	vec Igrad= ones(reduced_set_size_grad);
-
-
-	vec ys = data_functional_values.col(dim);
-	vec theta = kriging_params.col(0).head(dim);
-	vec gamma = kriging_params.col(0).tail(dim);
-
-
-
-	double avg_cv_error=0.0;
 	double avg_cv_error_best = LARGE;
 
 
@@ -186,6 +160,7 @@ void train_optimal_radius(
 		np.fill(0.0);
 
 
+
 		/* generate a random point in the design space */
 		for(int i=0; i<dim; i++){
 
@@ -206,12 +181,15 @@ void train_optimal_radius(
 				2);
 
 
+
+
 #if 0
 		printf("point:\n");
 		np.print();
 		printf("nearest neighbour is:\n");
 		X_func.row(indx).print();
 		printf("minimum distance (L2 norm)= %10.7f\n\n",min_dist);
+
 
 #endif
 
@@ -226,23 +204,28 @@ void train_optimal_radius(
 
 
 
+	/* obtain sample statistics */
 
 	vec probe_distances_sample(X_func.n_rows);
 
 	for(unsigned int i=0; i<X_func.n_rows; i++){
 
+
+
 		rowvec np = X_func.row(i);
+
 
 		double min_dist[2]={0.0,0.0};
 		int indx[2];
 
-		/* find the closest seeding point to the np in the data set */
+		/* find the closest two points to the np in the data set */
 		findKNeighbours(X_func,
 				np,
 				2,
 				min_dist,
 				indx,
 				2);
+
 
 #if 0
 		printf("point:\n");
@@ -253,31 +236,57 @@ void train_optimal_radius(
 		printf("second nearest neighbour is:\n");
 		X_func.row(indx[1]).print();
 		printf("minimum distance (L2 norm)= %10.7f\n\n",min_dist[1]);
-
 #endif
 
-		if(min_dist[0] > min_dist[1]){
+		probe_distances_sample(i)=min_dist[1];
 
-			probe_distances_sample(i)=min_dist[0];
-		}
-		else{
-
-			probe_distances_sample(i)=min_dist[1];
-		}
 
 	}
 
 	double average_distance_sample = mean(probe_distances_sample);
 
+	/* obtain gradient statistics */
+	double sumnormgrad = 0.0;
+	for(unsigned int i=0; i<X_grad.n_rows; i++){
+
+		vec grad(dim);
+
+		for(int k=0;k<dim;k++){
+
+			grad(k) = data_gradients(i,dim+1+k);
+
+
+		}
+		double normgrad= L1norm(grad, dim);
+#if 0
+		printf("entry at the data gradients:\n");
+		data_gradients.row(i).print();
+		printf("gradient:\n");
+		trans(grad).print();
+		printf("norm of the gradient = %10.7e\n",normgrad);
+#endif
+		sumnormgrad+= normgrad;
+
+
+	}
+
+	double avg_norm_grad= sumnormgrad/X_grad.n_rows;
+#if 1
+	printf("average norm grad = %10.7e\n", avg_norm_grad);
+#endif
 	/* define the search range for the hyperparameter r */
 
-	//	max_r = -log(0.1)/ max(probe_distances_sample);
+
 	min_r = 0.0;
-	max_r = 0.1;
+	//	max_r = 1.0/dim;
+	max_r = -log(0.1)/ (max(probe_distances_sample) * avg_norm_grad);
+	//	max_r = 0.01;
 
-	double dr = (max_r - min_r)/max_iter;
+	double dr;
 
-#if 0
+	dr = (max_r - min_r)/(max_iter);
+
+#if 1
 	printf("average distance = %10.7f\n",average_distance);
 	printf("average distance for the samples= %10.7f\n",average_distance_sample);
 	printf("standart deviation = %10.7f\n",std_distance);
@@ -287,306 +296,259 @@ void train_optimal_radius(
 	printf("min (sample)       = %10.7f\n",min(probe_distances_sample));
 	printf("max (sample)       = %10.7f\n",max(probe_distances_sample));
 	printf("max_r = %10.7f\n",max_r);
-	printf("factor at maximum distance at max r = %10.7f\n",exp(-max_r*max(probe_distances_sample)));
+	printf("dr = %10.7f\n",dr);
+	printf("factor at maximum distance at max r = %10.7f\n",exp(-max_r*max(probe_distances_sample)* avg_norm_grad));
 #endif
 
 
-	int iter_sp = 0;
-	std::random_device rd;
-
-	while(1){ /* in this loop new radius values are tried */
 
 
 
-		r = min_r+iter_sp*dr;
+	for(int iter_sp=0; iter_sp<max_iter; iter_sp++){
+
+
+		/* value of the hyper parameter to be tried */
+		double hyper_param = min_r+(iter_sp)*dr;
+
 
 #if 0
+		printf("tid = %d\n",tid);
 		printf("iter_sp = %d\n",iter_sp);
-		printf("r = %10.7f\n",r);
+		printf("hyper_param = %10.7f\n",hyper_param);
 #endif
 
 
-
+		double avg_cv_error=0.0;
 		double cv_error = 0.0;
 
 		/* outer iterations loop for cv */
+#pragma omp parallel
+		{
 
-		for(int outer_iter=0; outer_iter<number_of_outer_iterations; outer_iter++){
+			int num_out_iter_per_core = number_of_outer_iterations/omp_get_num_threads();
 
-
-			/* generate the set of indices for the validation set */
-			generate_validation_set(val_set_indices, X_func.n_rows);
-
-
-			for(int i=0; i<val_set_indices.size(); i++){
-
-				val_set_indices_grad(i) = val_set_indices(i)+ (n_f_evals - n_g_evals);
-			}
-
-#if 0
-			printf("validation set grad:\n");
-			trans(val_set_indices_grad).print();
-			printf("validation set:\n");
-			trans(val_set_indices).print();
-
-#endif
-
-
-			/* remove validation set from data : X_actual= X_func-val_set_indices*/
-			remove_validation_points_from_data(X_func, ys, val_set_indices, X_actual, ys_actual,data_map);
-
-
-			/* evaluate the correlation matrix R */
-			compute_R_matrix(theta,gamma,reg_param,Rfunc,X_actual);
-#if 0
-			Rfunc.print();
-#endif
-
-
-			/* compute Cholesky decomposition */
-			mat U(Rfunc.n_rows,Rfunc.n_rows);
-			int flag = chol(U, Rfunc);
-
-			if (flag == 0) {
-
-				printf("Error: Ill conditioned correlation matrix in Cholesky decomposition\n");
-
-				exit(-1);
-			}
-
-			mat L = trans(U);
-
-			vec R_inv_ys(Rfunc.n_rows); /* R^-1* ys */
-			vec R_inv_I (Rfunc.n_rows); /* R^-1* I */
-			vec R_inv_ys_min_beta(Rfunc.n_rows); /* R^-1* (ys-beta0*F) */
-
-
-			solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys_actual);
-			solve_linear_system_by_Cholesky(U, L, R_inv_I, I);
-
-			/* compute the bias term beta0 */
-			double beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
-
-			vec ys_min_betaI = ys_actual-beta0*I;
-
-			solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaI );
-
-
-#if 0
-			printf("outer_iter = %d\n",outer_iter);
-			val_set_indices.print();
-			printf("X_func =\n");
-			X_func.print();
-			printf("X_func (reduced)=\n");
-			X_actual.print();
-			printf("ys =\n");
-			ys.print();
-			printf("ys (reduced)=\n");
-			ys_actual.print();
-			printf("n_g_evals = %d\n",n_g_evals);
-			printf("n_f_evals = %d\n",n_f_evals);
-#endif
-
-			vec beta0grad(dim);
-			mat R_inv_ys_min_beta_grad;
-
-			/* if some samples have only functional values, then interpolation for sensitivities is required */
-			if ( n_g_evals != n_f_evals ) {
+			for(int outer_iter=0; outer_iter<num_out_iter_per_core; outer_iter++){
 
 
 
-				for(int i=0; i<dim;i++){ /* for each component of the gradient vector */
+				/* shows mapping between the original data set and the reduced data set */
+				uvec data_map(reduced_set_size_grad);
+				data_map.fill(-1);
 
-					/* assign ys vector */
-					vec ysgrad = data_gradients.col(dim+i+1);
-#if 0
-					printf("ysgrad:\n");
-					trans(ysgrad).print();
-#endif
+				uvec val_set_indices(validation_set_size);
+				uvec val_set_indices_grad(validation_set_size);
 
-					remove_validation_points_from_data(X_grad, ysgrad, val_set_indices_grad, X_actual_grad, ys_actual_grad,data_map);
+				/* correlation matrix for the reduced data set */
+				mat Rfunc(reduced_set_size,reduced_set_size);
+				Rfunc.fill(0.0);
 
-#if 0
-					printf("ys_actual_grad:\n");
-					trans(ys_actual_grad).print();
-#endif
+				mat X_actual(reduced_set_size,dim);
+				mat X_actual_grad(reduced_set_size_grad,dim);
 
+				vec ys_actual(reduced_set_size);
+				vec ys_actual_grad(reduced_set_size_grad);
 
-					/* assign hyperparameters theta and gamma */
-					vec theta_grad = kriging_params.col(i+1).head(dim);
-					vec gamma_grad = kriging_params.col(i+1).tail(dim);
-
-					mat Rgrad(reduced_set_size_grad,reduced_set_size_grad);
-					Rgrad.fill(0.0);
-					compute_R_matrix(theta_grad,gamma_grad,reg_param,Rgrad,X_actual_grad);
-
-					beta0grad(i) = (1.0/dot(Igrad,solve(Rgrad,Igrad))) * (dot(Igrad,solve(Rgrad,ys_actual_grad)));
-
-					vec R_inv_ys_min_beta_temp = solve( Rgrad, (ys_actual_grad-beta0grad(i)* Igrad));
-
-					R_inv_ys_min_beta_grad.insert_cols(i,R_inv_ys_min_beta_temp);
+				vec I= ones(reduced_set_size);
+				vec Igrad= ones(reduced_set_size_grad);
 
 
-
-				}
-
-			}
+				vec ys = data_functional_values.col(dim);
 
 
-
-#if 0
-			/* validate kriging models at reduced set */
-			for(unsigned int i=0;i<X_actual_grad.n_rows;i++){
-
-				rowvec x = X_actual_grad.row(i);
-				rowvec xb(dim);
-				vec grad(dim);
-
-				for(int k=0;k<dim;k++){
-
-					grad(k) = calculate_f_tilde(x,
-							X_actual_grad,
-							beta0grad(k),
-							regression_weights.col(k+1),
-							R_inv_ys_min_beta_grad.col(k),
-							kriging_params.col(k+1));
-
-				}
-
-				for(int j=0; j<dim;j++) {
-
-					x(j) = dim*x(j)* (x_max(j) - x_min(j))+x_min(j);
-				}
-
-				xb.fill(0.0);
-				double func_val_exact = Eggholder_adj(x.memptr(),xb.memptr());
-
-				printf("\n");
-				x.print();
-				printf("grad exact[0] = %10.7f grad exact[1] = %10.7f\n",xb[0],xb[1]);
-				printf("grad approx[0] = %10.7f grad approx[1] = %10.7f\n",grad(0),grad(1));
-
-			}
-#endif
+				/* assign Kriging hyper parameters */
+				vec theta = kriging_params.col(0).head(dim);
+				vec gamma = kriging_params.col(0).tail(dim);
 
 
-			/* iterate through the validation set */
-			for(int inner_it=0; inner_it< val_set_indices.size(); inner_it++){
+				/* generate the set of indices for the validation set */
+				generate_validation_set(val_set_indices, X_func.n_rows);
 
-#if 0
-				printf("\n\ninner iteration %d\n",inner_it);
-				printf("trying point %d\n",val_set_indices(inner_it));
-#endif
 
-				/* get the validation point */
-				rowvec x = X_func.row(val_set_indices(inner_it));
+				for(unsigned int i=0; i<val_set_indices.size(); i++){
 
-				/* calculate x in original coordinates */
-				rowvec x_not_normalized(dim);
-				x_not_normalized.fill(0.0);
-
-				for(int j=0; j<dim;j++) {
-
-					x_not_normalized(j) = dim*x(j)* (x_max(j) - x_min(j))+x_min(j);
+					val_set_indices_grad(i) = val_set_indices(i)+ (n_f_evals - n_g_evals);
 				}
 
 #if 0
-				printf("x:\n");
-				x.print();
-				printf("x in original coordinates:\n");
-				x_not_normalized.print();
+				printf("validation set grad:\n");
+				trans(val_set_indices_grad).print();
+				printf("validation set:\n");
+				trans(val_set_indices).print();
+
 #endif
-				double min_dist=0.0;
-				int indx;
 
-				/* find the closest point to the validation point in the actual data set*/
-				findKNeighbours(X_actual,
-						x,
-						1,
-						&min_dist,
-						&indx,
-						2);
 
-				if(fabs(min_dist)< EPSILON ){
+				/* remove validation set from data : X_actual= X_func-val_set_indices*/
+				remove_validation_points_from_data(X_func,
+						ys,
+						val_set_indices,
+						X_actual,
+						ys_actual,
+						data_map);
 
-					printf("fabs(min_dist)< SMALL!\n");
+
+				vec ys_actual_wo_linreg = ys_actual;
+
+				/* update ys_actual if linear regression is on */
+
+				if (linear_regression == LINEAR_REGRESSION_ON) {
+
+					mat augmented_X(X_actual.n_rows, dim + 1);
+
+					for (unsigned int i = 0; i < X_actual.n_rows; i++) {
+
+						for (int j = 0; j <= dim; j++) {
+
+							if (j == 0){
+
+								augmented_X(i, j) = 1.0;
+							}
+							else {
+
+								augmented_X(i, j) = X_actual(i, j - 1);
+
+							}
+						}
+					}
+
+					/* now update the ys vector */
+
+					vec ys_reg = augmented_X * regression_weights;
+
+#if 0
+					for(unsigned int i=0; i<ys.size(); i++){
+
+						printf("%10.7f %10.7f\n",ys_actual(i),ys_reg(i));
+					}
+#endif
+					ys_actual = ys_actual - ys_reg;
+
+#if 0
+					printf("Updated ys_actual vector = \n");
+#endif
+
+
+
+				} /* end of linear regression part*/
+
+
+
+
+				/* evaluate the correlation matrix R */
+				compute_R_matrix(theta,gamma,reg_param,Rfunc,X_actual);
+#if 0
+				Rfunc.print();
+#endif
+
+
+				/* compute Cholesky decomposition */
+				mat U(Rfunc.n_rows,Rfunc.n_rows);
+				int flag = chol(U, Rfunc);
+
+				if (flag == 0) {
+
+					printf("Error: Ill conditioned correlation matrix in Cholesky decomposition\n");
+
 					exit(-1);
 				}
 
-				/* sp is the nearest data point */
-				rowvec sp =  X_actual.row(indx);
-				rowvec sp_not_normalized(dim);
-				sp_not_normalized.fill(0.0);
+				mat L = trans(U);
 
-				for(int j=0; j<dim;j++) {
+				vec R_inv_ys(Rfunc.n_rows); /* R^-1* ys */
+				vec R_inv_I (Rfunc.n_rows); /* R^-1* I */
+				vec R_inv_ys_min_beta(Rfunc.n_rows); /* R^-1* (ys-beta0*F) */
 
-					sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+
+				solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys_actual);
+				solve_linear_system_by_Cholesky(U, L, R_inv_I, I);
+
+				/* compute the bias term beta0 */
+				double beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
+
+				vec ys_min_betaI = ys_actual-beta0*I;
+
+				solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaI );
+
+
+#if 0
+#pragma omp master
+				{
+					printf("outer_iter = %d\n",outer_iter);
+					val_set_indices.print();
+					printf("X_func =\n");
+					X_func.print();
+					printf("X_func (reduced)=\n");
+					X_actual.print();
+					printf("ys =\n");
+					ys.print();
+					printf("ys (reduced)=\n");
+					ys_actual.print();
+					printf("n_g_evals = %d\n",n_g_evals);
+					printf("n_f_evals = %d\n",n_f_evals);
 				}
-
-#if 0
-				printf("X_actual:\n");
-				X_actual.print();
-
-				printf("X_func:\n");
-				X_func.print();
-
-				printf("nearest point:\n");
-				printf("index = %d\n",indx);
-				sp.print();
-				printf("nearest point in original coordinates:\n");
-				sp_not_normalized.print();
 #endif
 
-				rowvec xdiff = x-sp;
-				double distance = L1norm(xdiff, dim);
+				vec beta0grad(dim);
+				mat R_inv_ys_min_beta_grad;
 
-				double fval_kriging = 0.0;
+				/* if some samples have only functional values, then interpolation for sensitivities is required */
+				if ( n_g_evals != n_f_evals ) {
 
-				/* pure kriging value at x */
-				fval_kriging = calculate_f_tilde(x,
-						X_actual,
-						beta0,
-						regression_weights.col(0),
-						R_inv_ys_min_beta,
-						kriging_params.col(0));
+					printf("Error: This part is not implemented properly yet\n");
+					exit(1);
 
 
-				/* calculate Taylor approximation */
-				double fval_linmodel = ys_actual(indx);
+					for(int i=0; i<dim;i++){ /* for each component of the gradient vector */
+
+						/* assign ys vector */
+						vec ysgrad = data_gradients.col(dim+i+1);
 #if 0
-				double fexact_sp= Eggholder(sp_not_normalized.memptr());
+						printf("ysgrad:\n");
+						trans(ysgrad).print();
 #endif
 
-				vec grad(dim);
+						remove_validation_points_from_data(X_grad, ysgrad, val_set_indices_grad, X_actual_grad, ys_actual_grad,data_map);
 
-
-				if ( n_g_evals == n_f_evals ){
-
-					int map_indx = data_map(indx);
 #if 0
-					printf("index at the gradient data matrix = %d\n",map_indx);
-					data_gradients.row(map_indx).print();
+						printf("ys_actual_grad:\n");
+						trans(ys_actual_grad).print();
 #endif
 
-					for(int k=0;k<dim;k++){
 
-						grad(k) = data_gradients(map_indx,dim+1+k);
+						/* assign hyperparameters theta and gamma */
+						vec theta_grad = kriging_params.col(i+1).head(dim);
+						vec gamma_grad = kriging_params.col(i+1).tail(dim);
+
+						mat Rgrad(reduced_set_size_grad,reduced_set_size_grad);
+						Rgrad.fill(0.0);
+						compute_R_matrix(theta_grad,gamma_grad,reg_param,Rgrad,X_actual_grad);
+
+						beta0grad(i) = (1.0/dot(Igrad,solve(Rgrad,Igrad))) * (dot(Igrad,solve(Rgrad,ys_actual_grad)));
+
+						vec R_inv_ys_min_beta_temp = solve( Rgrad, (ys_actual_grad-beta0grad(i)* Igrad));
+
+						R_inv_ys_min_beta_grad.insert_cols(i,R_inv_ys_min_beta_temp);
+
 
 
 					}
 
-#if 0
-					printf("grad:\n");
-					trans(grad).print();
-#endif
-
 				}
-				else{
+
+
+
+#if 0
+				/* validate kriging models at reduced set */
+				for(unsigned int i=0;i<X_actual_grad.n_rows;i++){
+
+					rowvec x = X_actual_grad.row(i);
+					rowvec xb(dim);
+					vec grad(dim);
 
 					for(int k=0;k<dim;k++){
 
-						grad(k) = calculate_f_tilde(sp,
-								X_grad,
+						grad(k) = calculate_f_tilde(x,
+								X_actual_grad,
 								beta0grad(k),
 								regression_weights.col(k+1),
 								R_inv_ys_min_beta_grad.col(k),
@@ -594,60 +556,204 @@ void train_optimal_radius(
 
 					}
 
+					for(int j=0; j<dim;j++) {
+
+						x(j) = dim*x(j)* (x_max(j) - x_min(j))+x_min(j);
+					}
+
+					xb.fill(0.0);
+					double func_val_exact = Eggholder_adj(x.memptr(),xb.memptr());
+
+					printf("\n");
+					x.print();
+					printf("grad exact[0] = %10.7f grad exact[1] = %10.7f\n",xb[0],xb[1]);
+					printf("grad approx[0] = %10.7f grad approx[1] = %10.7f\n",grad(0),grad(1));
+
 				}
+#endif
 
-				double normgrad = L1norm(grad, dim);
+
+				/* iterate through the validation set */
+				for(unsigned int inner_it=0; inner_it< val_set_indices.size(); inner_it++){
+
+#if 0
+					printf("\n\ninner iteration %d\n",inner_it);
+					printf("trying point %d\n",val_set_indices(inner_it));
+#endif
+
+					/* get the validation point */
+					rowvec x = X_func.row(val_set_indices(inner_it));
+
+					/* calculate x in original coordinates */
+					rowvec x_not_normalized(dim);
+					x_not_normalized.fill(0.0);
+
+					for(int j=0; j<dim;j++) {
+
+						x_not_normalized(j) = dim*x(j)* (x_max(j) - x_min(j))+x_min(j);
+					}
+
+#if 0
+					printf("x:\n");
+					x.print();
+					printf("x in original coordinates:\n");
+					x_not_normalized.print();
+#endif
+					double min_dist=0.0;
+					int indx;
+
+					/* find the closest point to the validation point in the actual data set*/
+					findKNeighbours(X_actual,
+							x,
+							1,
+							&min_dist,
+							&indx,
+							2);
+
+					if(fabs(min_dist)< EPSILON ){
+
+						printf("fabs(min_dist)< SMALL!\n");
+						exit(-1);
+					}
+
+					/* sp is the nearest data point */
+					rowvec sp =  X_actual.row(indx);
+					rowvec sp_not_normalized(dim);
+					sp_not_normalized.fill(0.0);
+
+					for(int j=0; j<dim;j++) {
+
+						sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+					}
+
+#if 0
+					printf("X_actual:\n");
+					X_actual.print();
+
+					printf("X_func:\n");
+					X_func.print();
+
+					printf("nearest point:\n");
+					printf("index = %d\n",indx);
+					sp.print();
+					printf("nearest point in original coordinates:\n");
+					sp_not_normalized.print();
+#endif
+
+					rowvec xdiff = x-sp;
+					double distance = L1norm(xdiff, dim);
+
+					double fval_kriging = 0.0;
+
+					/* pure kriging value at x */
+					fval_kriging = calculate_f_tilde(x,
+							X_actual,
+							beta0,
+							regression_weights.col(0),
+							R_inv_ys_min_beta,
+							kriging_params.col(0));
 
 
-				fval_linmodel+= dot((x_not_normalized-sp_not_normalized),grad);
+					/* calculate Taylor approximation */
+					double fval_linmodel = ys_actual_wo_linreg(indx);
+#if 0
+					double fexact_sp= Eggholder(sp_not_normalized.memptr());
+#endif
 
-				double factor = exp(-r*distance*normgrad);
-				double fval = factor*fval_linmodel + (1.0-factor)*fval_kriging;
+					vec grad(dim);
 
-				double fexact = ys(val_set_indices(inner_it));
 
-				double  sqr_error = (fval-fexact)* (fval-fexact);
-				cv_error+= sqr_error;
+					if ( n_g_evals == n_f_evals ){
+
+						int map_indx = data_map(indx);
+#if 0
+						printf("index at the gradient data matrix = %d\n",map_indx);
+						data_gradients.row(map_indx).print();
+#endif
+
+						for(int k=0;k<dim;k++){
+
+							grad(k) = data_gradients(map_indx,dim+1+k);
+
+
+						}
+
+#if 0
+						printf("grad:\n");
+						trans(grad).print();
+#endif
+
+					}
+					else{
+
+						for(int k=0;k<dim;k++){
+
+							grad(k) = calculate_f_tilde(sp,
+									X_grad,
+									beta0grad(k),
+									regression_weights.col(k+1),
+									R_inv_ys_min_beta_grad.col(k),
+									kriging_params.col(k+1));
+
+						}
+
+					}
+
+					double normgrad = L1norm(grad, dim);
+
+
+					fval_linmodel+= dot((x_not_normalized-sp_not_normalized),grad);
+
+					double factor = exp(-hyper_param*distance*normgrad);
+					double fval = factor*fval_linmodel + (1.0-factor)*fval_kriging;
+
+					double fexact = ys(val_set_indices(inner_it));
+
+					double  sqr_error = (fval-fexact)* (fval-fexact);
+					cv_error+= sqr_error;
 
 
 #if 0
-
-				printf("gradient vector:\n");
-				trans(grad).print();
-				printf("ys_actual(indx) = %10.7f\n",ys_actual(indx));
-				printf("fval_linmodel = %10.7f\n",fval_linmodel);
-				printf("fexact_sp = %10.7f\n",fexact_sp);
-				printf("fval_kriging = %10.7f\n",fval_kriging);
-				printf("diff = ");
-				(x_not_normalized-sp_not_normalized).print();
-				printf("first order term = %10.7f\n",dot((x_not_normalized-sp_not_normalized),grad));
-
-				printf("factor        = %10.7f\n",factor);
-				printf("r        = %10.7f\n",r);
-				printf("f approx        = %10.7f\n",fval);
-				printf("f exact         = %10.7f\n",fexact);
-				printf("sqr_error       = %10.7f\n",sqr_error);
+#pragma omp master
+					{
+						printf("\n");
+						//					printf("gradient vector:\n");
+						//					trans(grad).print();
+						printf("ys_actual(indx) = %10.7f\n",ys_actual_wo_linreg(indx));
+						printf("fval_linmodel = %10.7f\n",fval_linmodel);
+						printf("fval_kriging = %10.7f\n",fval_kriging);
+						//					printf("diff = ");
+						//					(x_not_normalized-sp_not_normalized).print();
+						//					printf("first order term = %10.7f\n",dot((x_not_normalized-sp_not_normalized),grad));
+						printf("factor        = %10.7f\n",factor);
+						//					printf("r        = %10.7f\n",r);
+						printf("f approx        = %10.7f\n",fval);
+						printf("f exact         = %10.7f\n",fexact);
+						printf("sqr_error       = %10.7f\n",sqr_error);
+					}
 #endif
 
 
 
 #if 0
-				printf("cross validation error = %10.7f\n",cv_error);
+					printf("cross validation error = %10.7f\n",cv_error);
 #endif
 
 
-			} /* end of inner cv iteration */
+				} /* end of inner cv iteration */
 
 
 
 
-		} /* end of outer cv iteration */
+			} /* end of outer cv iteration */
 
-		avg_cv_error = cv_error/(number_of_outer_iterations*val_set_indices.size());
+		} /* end of parallel region */
+
+		avg_cv_error = cv_error/(number_of_outer_iterations*validation_set_size);
 
 
 #if 0
-		printf("average cross validation error = %10.7f\n",avg_cv_error);
+		printf("average cross validation error = %10.7e\n",avg_cv_error);
 #endif
 
 
@@ -658,30 +764,31 @@ void train_optimal_radius(
 			printf("new points now\n");
 #endif
 			avg_cv_error_best = avg_cv_error;
-			best_r= r;
+			best_r= hyper_param;
+
 
 		}
 		else{
-
 
 #if 0
 			printf("average error increased\n");
 
 #endif
+
 		}
 #if 1
-		printf("r= %10.7f avg_error = %10.7f avg_error_best = %10.7f best r = %10.7f\n",r,avg_cv_error,avg_cv_error_best,best_r);
+		printf("it = %d r= %10.7e avg_cv_error = %10.7e avg_error_best = %10.7e best r = %10.7e\n",iter_sp,hyper_param,avg_cv_error,avg_cv_error_best,best_r);
 #endif
-		if(iter_sp > max_iter ) break;
+
+		if(avg_cv_error > avg_cv_error_best*1.2 ) break;
 
 
-		iter_sp ++;
+	} /* end of for */
 
 
 
-	} /* end of while(1) */
 
-
+	r = best_r;
 
 }
 
@@ -697,6 +804,7 @@ void train_optimal_radius(
 
 
 int train_TRGEK_response_surface(std::string input_file_name,
+		std::string hyper_parameter_file_name,
 		int linear_regression,
 		mat &regression_weights,
 		mat &kriging_params,
@@ -704,7 +812,8 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		double &radius,
 		vec &beta0,
 		int &max_number_of_function_calculations,
-		int dim) {
+		int dim,
+		int train_hyper_param) {
 
 	/* regularization parameter added to the diagonal of the correlation matrix */
 
@@ -808,7 +917,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 #endif
 
 
-#if 1
+#if 0
 	printf("functional values data :\n");
 	data_functional_values.print();
 	printf("\n");
@@ -833,14 +942,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 #endif
 
-
-
-
 	mat X_func,X_grad;
 
 
 	if(n_g_evals > 0){
-
 
 		X_grad = data_gradients.submat(0, 0, n_g_evals - 1, dim-1);
 
@@ -930,7 +1035,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 #endif
 
 		std::string kriging_input_filename      = "trust_region_gek_input.csv";
-		std::string kriging_hyperparam_filename = "trust_region_gek_hyperparam.csv";
+
 		vec regression_weights_single_output=zeros(dim+1);
 		vec kriging_weights_single_output=zeros(dim);
 
@@ -946,7 +1051,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		/* train the Kriging response surface for functional values */
 
 		train_kriging_response_surface(kriging_input_filename,
-				kriging_hyperparam_filename,
+				hyper_parameter_file_name,
 				linear_regression,
 				regression_weights_single_output,
 				kriging_weights_single_output,
@@ -959,15 +1064,18 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 #if 1
 		printf("regression_weights = \n");
-		regression_weights_single_output.print();
+		trans(regression_weights_single_output).print();
 		printf("kriging_weights = \n");
-		kriging_weights_single_output.print();
+		trans(kriging_weights_single_output).print();
 #endif
 
 
 	}
 
 	else{ /* there are some sample points without gradient information */
+
+		printf("Error: This part has not been implemented yet\n");
+		exit(1);
 
 		for(int i=0;i<dim+1;i++){
 
@@ -1034,6 +1142,50 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 	vec ysfunc = data_functional_values.col(dim);
+
+	/* update ys_func if linear regression is on */
+	if (linear_regression == LINEAR_REGRESSION_ON) {
+
+		mat augmented_X(X_func.n_rows, dim + 1);
+
+		for (unsigned int i = 0; i < X_func.n_rows; i++) {
+
+			for (int j = 0; j <= dim; j++) {
+
+				if (j == 0){
+
+					augmented_X(i, j) = 1.0;
+				}
+				else {
+
+					augmented_X(i, j) = X_func(i, j - 1);
+
+				}
+			}
+		}
+
+		/* now update the ys vector */
+
+		vec ys_reg = augmented_X * regression_weights;
+
+#if 0
+		for(unsigned int i=0; i<ysfunc.size(); i++){
+
+			printf("%10.7f %10.7f\n",ysfunc(i),ys_reg(i));
+		}
+#endif
+		ysfunc = ysfunc - ys_reg;
+
+#if 0
+		printf("Updated ys vector = \n");
+#endif
+
+
+
+	} /* end of linear regression part*/
+
+
+
 	vec Ifunc  = ones(X_func.n_rows);
 
 	mat Rfunc(X_func.n_rows,X_func.n_rows);
@@ -1164,7 +1316,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 #endif
 
 
-#if 1
+#if 0
 
 	if (dim == 2){
 		int resolution =100;
@@ -1378,7 +1530,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 #endif
 
-#if 1
+#if 0
 
 	if (dim == 2){ /* visualize only linear model response surface */
 		mat seeding_points = X_func;
@@ -1719,17 +1871,18 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 	/* train the hyperparameter of the hybrid model */
 
-	train_optimal_radius(
-			radius,
-			data_functional_values,
-			data_gradients,
-			linear_regression,
-			regression_weights,
-			kriging_params,
-			200);
+	if( train_hyper_param == 1){
+		train_optimal_radius(
+				radius,
+				data_functional_values,
+				data_gradients,
+				linear_regression,
+				regression_weights,
+				kriging_params,
+				200);
 
-
-#if 1
+	}
+#if 0
 
 	if (dim == 2){
 

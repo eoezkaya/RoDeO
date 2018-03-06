@@ -374,6 +374,7 @@ double calculate_f_tilde(rowvec xp,
 	if(regression_weights.size() !=0){
 
 		for(unsigned int i=0;i<xp.size();i++){
+
 			f_regression += xp(i)*regression_weights(i+1);
 		}
 
@@ -441,6 +442,7 @@ void calculate_f_tilde_and_ssqr(
 	if(regression_weights.size() !=0){
 
 		for(unsigned int i=0;i<xp.size();i++){
+
 			f_regression += xp(i)*regression_weights(i+1);
 		}
 
@@ -464,7 +466,7 @@ void calculate_f_tilde_and_ssqr(
 	vec R_inv_r(X.n_rows);
 
 
-	/* solve the linear system R x = r by Cholesky */
+	/* solve the linear system R x = r by Cholesky matrices U and L*/
 	solve_linear_system_by_Cholesky(U, L, R_inv_r, r);
 
 
@@ -1290,7 +1292,7 @@ int train_kriging_response_surface(std::string input_file_name,
 
 
 
-#if 1
+#if 0
 	printf("X:\n");
 	X.print();
 	printf("ys:\n");
@@ -1311,41 +1313,52 @@ int train_kriging_response_surface(std::string input_file_name,
 
 	}
 
-	//	printf("maximum = \n");
-	//	x_max.print();
+#if 0
+	printf("maximum = \n");
+	x_max.print();
 
-	//	printf("minimum = \n");
-	//	x_min.print();
+	printf("minimum = \n");
+	x_min.print();
+#endif
+
 
 	/* normalize data matrix */
 
 	for (int i = 0; i < nrows; i++) {
+
 		for (int j = 0; j < dim; j++) {
+
 			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 		}
 	}
 
-	//	printf("Normalized data = \n");
-	//	X.print();
-
+#if 0
+	printf("Normalized data = \n");
+	X.print();
+#endif
 
 	/* train linear regression */
 	if (linear_regression == LINEAR_REGRESSION_ON) { // if linear regression is on
 
 
-		int lin_reg_return =
-				train_linear_regression(X, ys, regression_weights, 10E-6);
+		int lin_reg_return = train_linear_regression(X, ys, regression_weights, 10E-6);
 
 
 		mat augmented_X(nrows, dim + 1);
 
 		for (int i = 0; i < nrows; i++) {
+
 			for (int j = 0; j <= dim; j++) {
-				if (j == 0)
+
+				if (j == 0){
+
 					augmented_X(i, j) = 1.0;
-				else
+				}
+				else {
+
 					augmented_X(i, j) = X(i, j - 1);
 
+				}
 			}
 		}
 
@@ -1353,22 +1366,23 @@ int train_kriging_response_surface(std::string input_file_name,
 
 		vec ys_reg = augmented_X * regression_weights;
 
+#if 0
+		for(unsigned int i=0; i<ys.size(); i++){
 
-		//		for(unsigned int i=0; i<ys.size(); i++){
-		//
-		//			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
-		//		}
-
+			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
+		}
+#endif
 		ys = ys - ys_reg;
 
-		//		printf("Updated ys vector = \n");
-
+#if 0
+		printf("Updated ys vector = \n");
+#endif
 
 		for(unsigned int i=0; i<regression_weights.size();i++ ){
 
 			if(fabs(regression_weights(i)) > 10E5){
 
-				printf("WARNING: Linear regression coefficient is too large= \n");
+				printf("WARNING: Linear regression coefficients are too large= \n");
 				printf("regression_weights(%d) = %10.7f\n",i,regression_weights(i));
 			}
 
@@ -1544,18 +1558,18 @@ int train_kriging_response_surface(std::string input_file_name,
 
 			/* update population properties after initital iterations */
 			if (i >= number_of_initial_population) {
+
 				update_population_properties (population);
 			}
 
 
 
-			//			if (total_number_of_function_evals % 50 == 0)
-			//				printf("# of function calculations =  %d\n",
-			//						total_number_of_function_evals);
+			if (total_number_of_function_evals % 100 == 0){
 
-			//			int tid = omp_get_thread_num();
-			//			printf("Thread %d i= %d\n",tid,i);
+				printf("# of function calculations =  %d\n",
+						total_number_of_function_evals);
 
+			}
 
 			member new_born;
 			new_born.theta.set_size(dim);
@@ -1586,7 +1600,7 @@ int train_kriging_response_surface(std::string input_file_name,
 			//		new_born.theta.print();
 			//		new_born.gamma.print();
 
-			//	printf("calculate_fitness\n");
+
 			calculate_fitness(new_born,
 					reg_param,
 					Rmatrix,
@@ -1651,17 +1665,19 @@ int train_kriging_response_surface(std::string input_file_name,
 
 #pragma omp barrier		
 
-
+#if 0
 		printf("kriging model training is over...\n");
 		printf("tread %d best design log likelihood = %10.7f\n",omp_get_thread_num(),population_max );
-
+#endif
 
 
 
 #pragma omp critical
 		{
 			if (population_max > population_overall_max){
+#if 0
 				printf("tread %d, population_overall_max = %10.7f\n",omp_get_thread_num(),population_overall_max);
+#endif
 				population_overall_max = population_max;
 				population_overall_max_tread_id = omp_get_thread_num();
 			}
@@ -1671,18 +1687,13 @@ int train_kriging_response_surface(std::string input_file_name,
 #pragma omp barrier			
 
 
-
-
-
-
 		tid = omp_get_thread_num();
 		if(tid == population_overall_max_tread_id){
 
 
-			//			print_population(population);
-
+#if 1
 			printf("tread %d has the best design with the log likelihood = %10.7f\n",population_overall_max_tread_id,population_overall_max );
-
+#endif
 			population.at(population_max_index).print();
 
 			kriging_params.set_size(2*dim);
@@ -1692,6 +1703,7 @@ int train_kriging_response_surface(std::string input_file_name,
 
 			FILE *hyperparameters_output = fopen(file_name_hyperparameters.c_str(),"w");
 			for(unsigned int i=0; i<kriging_params.size()-1;i++){
+
 				fprintf(hyperparameters_output,"%10.7f, ",kriging_params(i) );
 
 			}
@@ -2187,17 +2199,19 @@ int train_GEK_response_surface(std::string input_file_name,
 
 #pragma omp barrier		
 
-
+#if 0
 	printf("GEK model training is over...\n");
 	printf("tread %d best design log likelihood = %10.7f\n",omp_get_thread_num(),population_max );
-
+#endif
 
 
 
 #pragma omp critical
 	{
 		if (population_max > population_overall_max){
+#if 0
 			printf("tread %d, population_overall_max = %10.7f\n",omp_get_thread_num(),population_overall_max);
+#endif
 			population_overall_max = population_max;
 			population_overall_max_tread_id = omp_get_thread_num();
 		}
@@ -2210,8 +2224,9 @@ int train_GEK_response_surface(std::string input_file_name,
 	tid = omp_get_thread_num();
 	if(tid == population_overall_max_tread_id){
 
+#if 1
 		printf("tread %d has the best design with log likelihood = %10.7f\n",population_overall_max_tread_id,population_overall_max );
-
+#endif
 		population.at(population_max_index).print();
 
 		kriging_params.set_size(dim);

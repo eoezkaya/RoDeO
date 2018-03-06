@@ -170,7 +170,8 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 		int sampling_method,
 		int method_for_solving_lin_eq,
 		int dim,
-		int linear_regression);
+		int linear_regression,
+		std::string python_dir);
 
 
 

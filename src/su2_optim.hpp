@@ -2,7 +2,6 @@
 #define SU2_OPTIM_HPP
 
 
-
 #include <armadillo>
 
 
@@ -24,7 +23,7 @@ typedef struct {
 
 
 
-void su2_optimize(void);
+void su2_optimize(std::string python_dir);
 
 int call_SU2_CFD_Solver(vec &dv,
 		               double &CL,
@@ -37,12 +36,14 @@ int call_SU2_Adjoint_Solver(
 		vec &gradient,
 		double &CL,
 		double &CD,
-		double &area
+		double &area,
+		int type,
+		double area_constraint
 );
 
-void initial_data_acquisition(int number_of_initial_samples );
+void initial_data_acquisition( int number_of_initial_samples );
 
-void initial_data_acquisitionGEK(int number_of_initial_samples );
+void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_samples );
 
 void su2_try_NACA0012_classic_solution(void);
 

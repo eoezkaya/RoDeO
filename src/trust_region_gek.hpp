@@ -3,6 +3,7 @@
 
 
 int train_TRGEK_response_surface(std::string input_file_name,
+		std::string hyper_parameter_file_name,
 		int linear_regression,
 		mat &regression_weights,
 		mat &kriging_params,
@@ -10,6 +11,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		double &radius,
 		vec &beta0,
 		int &max_number_of_function_calculations,
-		int dim);
+		int dim,
+		int train_hyper_param);
 
 #endif

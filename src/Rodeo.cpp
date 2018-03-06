@@ -34,7 +34,7 @@ int main(void){
 	printf("	 |_| \\_\\___/|____/ \\___|\\___/  \n");
 
 	printf("\n");
-	printf("    RObust DEsign Optimization Package - TU Kaiserslautern     ");
+	printf("    RObust DEsign Optimization Package      ");
 	printf("\n\n\n");
 
 
@@ -47,25 +47,26 @@ int main(void){
 
 	int ret = chdir (settings.cwd.c_str());
 
-		double parameter_bounds[4];
-		parameter_bounds[0]=0.0;
-		parameter_bounds[1]=100.0;
-		parameter_bounds[2]=0.0;
-		parameter_bounds[3]=100.0;
-
-		perform_trust_region_GEK_test(Eggholder,
-				Eggholder_adj,
-				parameter_bounds,
-				"Eggholder" ,
-				0,
-				150,
-				RANDOM_SAMPLING,
-				CHOLESKY,
-				2,
-				LINEAR_REGRESSION_OFF);
-
-
-		exit(1);
+//	double parameter_bounds[4];
+//	parameter_bounds[0]=0.0;
+//	parameter_bounds[1]=100.0;
+//	parameter_bounds[2]=0.0;
+//	parameter_bounds[3]=100.0;
+//
+//	perform_trust_region_GEK_test(Eggholder,
+//			Eggholder_adj,
+//			parameter_bounds,
+//			"Eggholder" ,
+//			0,
+//			50,
+//			RANDOM_SAMPLING,
+//			CHOLESKY,
+//			2,
+//			LINEAR_REGRESSION_OFF,
+//			settings.python_dir);
+//
+//
+//	exit(1);
 
 
 	//	double parameter_bounds[16];
@@ -104,7 +105,7 @@ int main(void){
 	//			8,
 	//			LINEAR_REGRESSION_OFF);
 
-//	initial_data_acquisitionGEK(200);
+	su2_optimize(settings.python_dir);
 
 
 }

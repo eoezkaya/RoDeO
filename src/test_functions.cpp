@@ -509,8 +509,15 @@ void generate_contour_plot_2D_function(double (*test_function)(double *), double
 }
 
 
-/* generate the contour plot with the given function and its gradient sensitivities within specified bounds and resolution  */
-void generate_contour_plot_2D_function_with_gradient(double (*test_function)(double *, double *), double *bounds, std::string function_name, int resolution=100){
+/* generate the contour plot with the given function
+ * and its gradient sensitivities within specified bounds and resolution
+ *
+ *   */
+void generate_contour_plot_2D_function_with_gradient(double (*test_function)(double *, double *),
+		                                             double *bounds,
+													 std::string function_name,
+													 std::string python_dir,
+													 int resolution=100){
 	/* first generate output data file */
 
 	std::string filename= function_name;
@@ -576,19 +583,19 @@ void generate_contour_plot_2D_function_with_gradient(double (*test_function)(dou
 	fclose(test_function_data_g2);
 
 	std::string title = "function";
-	std::string python_command = "python -W ignore plot_2d_surface.py "+ filename+ " "+ file_name_for_plot + " "+title;
+	std::string python_command = "python -W ignore "+python_dir+"/plot_2d_surface.py "+ filename+ " "+ file_name_for_plot + " "+title;
 
 
 	FILE* in = popen(python_command.c_str(), "r");
 	fprintf(in, "\n");
 
 	title = "df/dx1";
-	std::string python_command_g1 = "python -W ignore plot_2d_surface.py "+ filename_g1+ " "+ file_name_for_plot_g1+ " "+title ;
+	std::string python_command_g1 = "python -W ignore "+python_dir+"/plot_2d_surface.py "+ filename_g1+ " "+ file_name_for_plot_g1+ " "+title ;
 	FILE* in_g1 = popen(python_command_g1.c_str(), "r");
 	fprintf(in_g1, "\n");
 
 	title = "df/dx2";
-	std::string python_command_g2 = "python -W ignore plot_2d_surface.py "+ filename_g2+ " "+ file_name_for_plot_g2 + " "+title;
+	std::string python_command_g2 = "python -W ignore "+python_dir+"/plot_2d_surface.py "+ filename_g2+ " "+ file_name_for_plot_g2 + " "+title;
 	FILE* in_g2 = popen(python_command_g2.c_str(), "r");
 	fprintf(in_g2, "\n");
 
@@ -596,9 +603,6 @@ void generate_contour_plot_2D_function_with_gradient(double (*test_function)(dou
 
 
 }
-
-
-
 
 
 
@@ -2395,7 +2399,8 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 		int sampling_method,
 		int method_for_solving_lin_eq,
 		int dim,
-		int linear_regression){
+		int linear_regression,
+		std::string python_dir){
 
 	if(dim <= 0){
 		printf("Error: problem dimension must be greater than zero\n");
@@ -2421,7 +2426,7 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 
 	if(dim ==2){
 		/* generate the contour_plot */
-		generate_contour_plot_2D_function_with_gradient(test_function_adj, bounds, function_name);
+		generate_contour_plot_2D_function_with_gradient(test_function_adj, bounds, function_name, python_dir);
 
 
 	}
@@ -2455,6 +2460,7 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 #endif
 	/* train the response surfaces */
 	train_TRGEK_response_surface(input_file_name,
+			"None",
 			linear_regression,
 			regression_weights,
 			kriging_weights,
@@ -2462,7 +2468,7 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 			radius,
 			beta0,
 			number_of_max_function_evals_for_training,
-			dim);
+			dim,1);
 
 
 }

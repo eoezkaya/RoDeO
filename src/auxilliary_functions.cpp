@@ -435,8 +435,8 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 	}
 #if 0
-			printf("data set map\n");
-			map.print();
+	printf("data set map\n");
+	map.print();
 #endif
 
 
@@ -498,8 +498,14 @@ bool file_exist(const char *fileName)
 
 void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, int norm){
 
+#if 0
+	printf("findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, int norm)...\n");
+#endif
+
 	int number_of_points= data.n_rows;
 	int dim= data.n_cols;
+
+
 
 	for(int i=0; i<K; i++){
 
@@ -516,14 +522,17 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
 		double distance = 0.0;
 
 		if(norm == xdiff.size()){
+
 			distance = Lpnorm(xdiff, dim, xdiff.size());
 		}
 		if(norm == 2){
+
 			distance = L2norm(xdiff, dim);
 
 		}
 		if(norm == 1){
-					distance = L1norm(xdiff, dim);
+
+			distance = L1norm(xdiff, dim);
 
 		}
 #if 0
@@ -544,6 +553,33 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
 		}
 
 	}
+
+	/* sort the indices */
+
+	for(int i=0; i<K; i++){
+
+		for(int j=i+1; j<K; j++){
+
+			if(min_dist[i] > min_dist[j]){
+
+				double temp;
+				int tempindx;
+				temp = min_dist[j];
+				tempindx = indices[j];
+
+				min_dist[j] =  min_dist[i];
+				indices[j] = indices[i];
+
+				min_dist[i] =  temp;
+				indices[i] = tempindx;
+
+			}
+
+
+		}
+
+	}
+
 
 
 }
