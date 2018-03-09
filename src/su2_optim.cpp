@@ -134,13 +134,15 @@ void su2_optimize(std::string python_dir){
 	const double lift_penalty_param = LARGE;
 	const double area_penalty_param = LARGE;
 
-	double CL_constraint = 0.3269340;
-	double Area_constraint = 0.0816925;
+	double CL_constraint = 0.32;
+	double Area_constraint = 0.081;
 
 	double reg_param = 10E-7;
 
 
-	const int number_of_EI_iter = 1000000;
+	int number_of_EI_iter;
+	int number_of_EI_iter_local = 100000;
+	int number_of_EI_iter_global = 10000000;
 
 	int number_of_function_evals = 0;
 
@@ -703,6 +705,10 @@ void su2_optimize(std::string python_dir){
 		worst_EI_array_indx = 0;
 
 
+	    number_of_EI_iter = number_of_EI_iter_local+number_of_EI_iter_global;
+
+	    rowvec dp_best = optimization_data.row(sample_min_indx);
+
 		for(int iter_EI=0; iter_EI<number_of_EI_iter; iter_EI++){
 
 
@@ -710,14 +716,7 @@ void su2_optimize(std::string python_dir){
 			rowvec dvnorm(number_of_design_variables);
 
 
-			if(iter_EI < number_of_EI_iter/10){
-
-				int random_data_point_indx = RandomInt(0,number_of_data_points-1);
-
-#if 0
-				printf("selected random data point = %d\n",random_data_point_indx);
-#endif
-				rowvec dp = optimization_data.row(random_data_point_indx);
+			if(iter_EI < number_of_EI_iter_local){
 
 
 				for(int k=0; k<number_of_design_variables; k++){
@@ -725,7 +724,7 @@ void su2_optimize(std::string python_dir){
 
 					double perturbation = RandomDouble(lower_bound_dv/100, upper_bound_dv/100);
 
-					dv(k)= dp(k)+perturbation;
+					dv(k)= dp_best(k)+perturbation;
 					dvnorm(k) = (1.0/number_of_design_variables)*(dv(k)-x_min(k)) / (x_max(k)-x_min(k));
 				}
 
@@ -1127,6 +1126,7 @@ void su2_optimize(std::string python_dir){
 
 		}
 
+		number_of_EI_iter_global = number_of_EI_iter_global/2;
 
 		it_count_outer_loop++;
 
