@@ -1,0 +1,10 @@
+# current working directory
+cwd: /home/eoezkaya/RoDeO/Examples/Steady_RAE2822
+#cwd: /home/eoezkaya/RoDeO/Examples/Eggholder
+# directory for the python scripts
+python_dir: /home/eoezkaya/RoDeO/python
+# regularization parameter lambda for Kriging
+lambda: 10E-6
+# number of iterations for the EA based Kriging training
+num_iter_EA_Kriging: 10000
+

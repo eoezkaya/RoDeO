@@ -2585,8 +2585,8 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 	double upper_bound_dv =  0.003;
 	double lower_bound_dv = -0.003;
 
-	double area_constraint= 0.0816;
-	//	double area_constraint= 0.0778;
+//	double area_constraint= 0.0816;
+	double area_constraint= 0.0778;
 
 	double deltax = upper_bound_dv-lower_bound_dv;
 
@@ -2747,7 +2747,7 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 
 
 
-			AllData = fopen("naca0012_optimization_history.csv","a+");
+			AllData = fopen("rae2822_optimization_history.csv","a+");
 			for(int i=0;i<number_of_design_variables;i++){
 
 				fprintf(AllData, "%10.7f, ",dv[i]);
@@ -3271,7 +3271,7 @@ int call_SU2_Adjoint_Solver(
 	std::string basic_text;
 	getline (ifs, basic_text, (char) ifs.eof());
 
-#if 0
+#if 1
 	cout<<basic_text;
 #endif
 
@@ -3296,16 +3296,20 @@ int call_SU2_Adjoint_Solver(
 
 	system("SU2_DEF config_DEF_new.cfg > su2def_output");
 
-	//	system("./plot_airfoil > junk");
+
+	system("./plot_airfoil > junk");
+
+
 
 	system("cp mesh_out.su2  mesh_airfoil.su2");
 
-	system("SU2_GEO inv_NACA0012_adj_drag.cfg > su2geo_output");
+	system("SU2_GEO config_AD_drag.cfg > su2geo_output");
+
 
 
 	double *geo_data = new double[10];
 
-	std::ifstream geo_outstream("of_func.dat");
+	std::ifstream geo_outstream("of_eval.dat");
 	std::string str;
 	int count=0;
 	while (std::getline(geo_outstream, str))
@@ -3330,9 +3334,11 @@ int call_SU2_Adjoint_Solver(
 
 	area = geo_data[6];
 
-#if 0
+#if 1
 	printf("Area of the airfoil = %10.7f\n", area);
 #endif
+
+
 
 	if(area < area_constraint) {
 #if 1
@@ -3345,13 +3351,13 @@ int call_SU2_Adjoint_Solver(
 
 	if(type == 1){
 
-		solver_command = "discrete_adjoint.py -f inv_NACA0012_adj_drag.cfg -n 2 > discrete_adjoint_output";
+		solver_command = "discrete_adjoint.py -f config_AD_drag.cfg -n 2 > discrete_adjoint_output";
 
 	}
 
 	if(type == 2){
 
-		solver_command = "discrete_adjoint.py -f inv_NACA0012_adj_lift.cfg -n 2 > discrete_adjoint_output";
+		solver_command = "discrete_adjoint.py -f config_AD_lift.cfg -n 2 > discrete_adjoint_output";
 
 	}
 
@@ -3407,7 +3413,7 @@ int call_SU2_Adjoint_Solver(
 
 
 	}
-#if 0
+#if 1
 	printf("cl = %10.7f\n",CL);
 	printf("cd = %10.7f\n",CD);
 #endif
@@ -3447,7 +3453,7 @@ int call_SU2_Adjoint_Solver(
 	} /* end of while */
 
 
-#if 0
+#if 1
 	printf("gradient:\n");
 	trans(gradient).print();
 #endif

@@ -105,7 +105,9 @@ int main(void){
 	//			8,
 	//			LINEAR_REGRESSION_OFF);
 
-	su2_optimize(settings.python_dir);
+	initial_data_acquisitionGEK(settings.python_dir, 200);
+
+//	su2_optimize(settings.python_dir);
 
 
 }
