@@ -780,7 +780,7 @@ void train_optimal_radius(
 		printf("it = %d r= %10.7e avg_cv_error = %10.7e avg_error_best = %10.7e best r = %10.7e\n",iter_sp,hyper_param,avg_cv_error,avg_cv_error_best,best_r);
 #endif
 
-		if(avg_cv_error > avg_cv_error_best*1.2 ) break;
+		//		if(avg_cv_error > avg_cv_error_best*1.2 ) break;
 
 
 	} /* end of for */
@@ -1316,16 +1316,121 @@ int train_TRGEK_response_surface(std::string input_file_name,
 #endif
 
 
-#if 0
+#if 1
+
+	/* for 1D problems */
+
+	if(dim == 1){
+
+		int resolution =10000;
+
+		double bounds[2];
+		bounds[0]=-2.0;
+		bounds[1]=2.0;
+
+		std::string kriging_response_surface_file_name = "1DTest_TRGEK_response_surface.dat";
+
+		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
+
+
+		double dx,dy; /* step sizes in x and y directions */
+		rowvec x(1);
+		rowvec xb(1);
+		rowvec xnorm(1);
+
+		double out_sample_error=0.0;
+
+		double max_value = -LARGE;
+		double min_value =  LARGE;
+
+		rowvec pmin(dim);
+		rowvec pmax(dim);
+
+
+		dx = (bounds[1]-bounds[0])/(resolution-1);
+
+		x[0] = bounds[0];
+
+		for(int i=0;i<resolution;i++){
+
+			/* normalize x */
+			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
+
+			double func_val = calculate_f_tilde(xnorm,
+					X_func,
+					beta0(0),
+					regression_weights.col(0),
+					R_inv_ys_min_beta.col(0),
+					kriging_params.col(0));
+
+			if(func_val < min_value){
+
+				min_value = func_val;
+				pmin = x;
+
+			}
+			if(func_val > max_value){
+
+				max_value = func_val;
+				pmax = x;
+
+			}
+
+
+			double func_val_exact = test_function1D(x.memptr());
+
+
+			double sqr_error = (func_val_exact-func_val)*(func_val_exact-func_val);
+			out_sample_error+= sqr_error;
+			fprintf(kriging_response_surface_file,"%10.7f %10.7f\n",x(0),func_val);
+
+
+
+
+			x[0]+= dx;
+		}
+		fclose(kriging_response_surface_file);
+
+		out_sample_error = out_sample_error/(resolution);
+
+		printf("out of sample error (pure Kriging) = %10.7f\n",out_sample_error);
+		printf("min = %10.7f\n",min_value);
+		pmin.print();
+		printf("max = %10.7f\n",max_value);
+		pmax.print();
+#if 1
+		std::string file_name_for_plot = "1DTest_purekriging_response_surface_";
+		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+		std::string title = "1Dtest";
+		std::string python_command = "python -W ignore plot_1d_function.py "
+				+ kriging_response_surface_file_name+ " "
+				+ file_name_for_plot + " "+title;
+
+
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+#endif
+
+
+
+	}
+
+
+
+
 
 	if (dim == 2){
 		int resolution =100;
 
 		double bounds[4];
 		bounds[0]=0.0;
-		bounds[1]=100.0;
+		bounds[1]=200.0;
 		bounds[2]=0.0;
-		bounds[3]=100.0;
+		bounds[3]=200.0;
 
 		std::string kriging_response_surface_file_name = "Eggholder_TRGEK_response_surface.dat";
 
@@ -1406,7 +1511,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		pmin.print();
 		printf("max = %10.7f\n",max_value);
 		pmax.print();
-
+#if 0
 		std::string file_name_for_plot = "Eggholder_purekriging_response_surface_";
 		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
 
@@ -1421,9 +1526,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 		fprintf(in, "\n");
-
+#endif
 	}
-	else{
+	else if(dim>2) {
 		/* high dimensional data is not visualized */
 
 		int number_of_samples = 50000;
@@ -1443,30 +1548,54 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 		double parameter_bounds[16];
-		parameter_bounds[0]=0.05;    // [0.05, 0.15]
-		parameter_bounds[1]=0.15;
+		//		parameter_bounds[0]=0.05;    // [0.05, 0.15]
+		//		parameter_bounds[1]=0.15;
+		//
+		//		parameter_bounds[2]=100.0;  // [100, 50000]
+		//		parameter_bounds[3]=50000.0;
+		//
+		//		parameter_bounds[4]=63500;  // [63500, 115600]
+		//		parameter_bounds[5]=115600;
+		//
+		//		parameter_bounds[6]=990;
+		//		parameter_bounds[7]=1110; // [990, 1110]
+		//
+		//		parameter_bounds[8]=63.1;
+		//		parameter_bounds[9]=116; // [[63.1, 116]]
+		//
+		//		parameter_bounds[10]=700;
+		//		parameter_bounds[11]=820; // [700, 820]
+		//
+		//		parameter_bounds[12]=1120;
+		//		parameter_bounds[13]=1680; // [1120, 1680]
+		//
+		//		parameter_bounds[14]=9855;
+		//		parameter_bounds[15]=12045; // [9855, 12045]
 
-		parameter_bounds[2]=100.0;  // [100, 50000]
-		parameter_bounds[3]=50000.0;
 
-		parameter_bounds[4]=63500;  // [63500, 115600]
-		parameter_bounds[5]=115600;
+		parameter_bounds[0]=-2.0;
+		parameter_bounds[1]= 2.0;
 
-		parameter_bounds[6]=990;
-		parameter_bounds[7]=1110; // [990, 1110]
+		parameter_bounds[2]=-2.0;
+		parameter_bounds[3]= 2.0;
 
-		parameter_bounds[8]=63.1;
-		parameter_bounds[9]=116; // [[63.1, 116]]
+		parameter_bounds[4]=-2.0;
+		parameter_bounds[5]= 2.0;
 
-		parameter_bounds[10]=700;
-		parameter_bounds[11]=820; // [700, 820]
+		parameter_bounds[6]=-2.0;
+		parameter_bounds[7]= 2.0;
 
-		parameter_bounds[12]=1120;
-		parameter_bounds[13]=1680; // [1120, 1680]
+		parameter_bounds[8]=-2.0;
+		parameter_bounds[9]= 2.0;
 
-		parameter_bounds[14]=9855;
-		parameter_bounds[15]=12045; // [9855, 12045]
+		parameter_bounds[10]=-2.0;
+		parameter_bounds[11]=2.0;
 
+		parameter_bounds[12]=-2.0;
+		parameter_bounds[13]=2.0;
+
+		parameter_bounds[14]=-2.0;
+		parameter_bounds[15]=2.0;
 
 
 		for(int i=0; i<number_of_samples; i++){
@@ -1499,7 +1628,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 			}
 
 
-			double func_val_exact = Borehole(x.memptr());
+			double func_val_exact = Rosenbrock8D(x.memptr());
 
 			double sqr_error = (func_val_exact-func_val)*(func_val_exact-func_val);
 			out_sample_error+= sqr_error;
@@ -1530,7 +1659,199 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 #endif
 
-#if 0
+#if 1
+
+	if (dim == 1){ /* visualize only linear model response surface for 1D problems */
+			mat seeding_points = X_func;
+			int resolution =10000;
+
+					double bounds[2];
+					bounds[0]=-2.0;
+					bounds[1]=2.0;
+
+			std::string kriging_response_surface_file_name = "1DTest_pure_linmodel_response_surface.dat";
+
+			FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
+
+
+			double dx; /* step sizes in x */
+			rowvec x(1);
+			rowvec xnorm(1);
+
+
+			dx = (bounds[1]-bounds[0])/(resolution-1);
+
+
+			double out_sample_error=0.0;
+
+			double max_value = -LARGE;
+			double min_value =  LARGE;
+			rowvec pmin(dim);
+			rowvec pmax(dim);
+
+
+			x[0] = bounds[0];
+			for(int i=0;i<resolution;i++){
+
+
+					/* normalize x */
+					xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
+
+					double min_dist=0.0;
+					int indx;
+
+					/* find the closest seeding point */
+					findKNeighbours(seeding_points,
+							xnorm,
+							1,
+							&min_dist,
+							&indx,
+							dim);
+
+
+
+					rowvec sp =  seeding_points.row(indx);
+					rowvec sp_not_normalized(dim);
+					sp_not_normalized.fill(0.0);
+
+					for(int j=0; j<dim;j++) {
+
+						sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+					}
+
+	#if 0
+					printf("x:\n");
+					x.print();
+					printf("closest point is:\n");
+					sp.print();
+					printf("in original coordinates:\n");
+					sp_not_normalized.print();
+					printf("original data entry:\n");
+					data_gradients.row(indx).print();
+
+
+	#endif
+
+					/* estimate the functional value at the nearest point from the Kriging estimator */
+
+					double func_val = calculate_f_tilde(sp,
+							X_func,
+							beta0(0),
+							regression_weights.col(0),
+							R_inv_ys_min_beta.col(0),
+							kriging_params.col(0));
+
+
+					vec gradient(dim);
+
+
+					if(n_f_evals == 0){
+
+						for(int k=0;k<dim;k++){
+
+							gradient(k) = data_gradients(indx,dim+1+k);
+
+						}
+
+	#if 0
+						printf("gradient:\n");
+						trans(gradient).print();
+
+	#endif
+					}
+
+
+
+					else{
+
+						for(int k=0;k<dim;k++){
+
+							//		printf("i = %d\n",i);
+							gradient(k) = calculate_f_tilde(sp,
+									X_grad,
+									beta0(k+1),
+									regression_weights.col(k+1),
+									R_inv_ys_min_beta.col(k+1),
+									kriging_params.col(k+1));
+
+
+						}
+
+					}
+
+
+					double ftilde_linmodel = func_val + dot((x-sp_not_normalized),gradient);
+					fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),ftilde_linmodel);
+
+					double func_val_exact = test_function1D(x.memptr());
+
+					double srq_error = (ftilde_linmodel-func_val_exact)*(ftilde_linmodel-func_val_exact);
+					out_sample_error+=srq_error;
+	#if 0
+					printf("x:\n");
+					x.print();
+					printf("xnorm:\n");
+					xnorm.print();
+					printf("nearest point:\n");
+					sp.print();
+					printf("sp in original coordinates:\n");
+					sp_not_normalized.print();
+					printf("gradient:\n");
+					trans(gradient).print();
+					printf("func_val = %10.7f\n",func_val);
+					printf("ftilde_linmodel = %10.7f\n",ftilde_linmodel);
+					printf("func_val_exact = %10.7f\n",func_val_exact);
+	#endif
+
+
+					if(ftilde_linmodel < min_value){
+
+						min_value = ftilde_linmodel;
+						pmin = x;
+
+					}
+					if(ftilde_linmodel > max_value){
+
+						max_value = ftilde_linmodel;
+						pmax = x;
+
+					}
+
+
+				x[0]+= dx;
+
+			}
+			fclose(kriging_response_surface_file);
+
+			out_sample_error = out_sample_error/(resolution);
+
+
+			printf("out of sample error (Taylor approximation) = %10.7f\n",out_sample_error);
+			printf("min = %10.7f\n",min_value);
+			pmin.print();
+			printf("max = %10.7f\n",max_value);
+			pmax.print();
+#if 1
+			std::string file_name_for_plot = "1DTest_linmodel_response_surface_";
+			file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+			std::string title = "Taylor_approximation";
+			std::string python_command = "python -W ignore plot_1d_function.py "
+					+ kriging_response_surface_file_name+ " "
+					+ file_name_for_plot + " "+title;
+
+
+
+			FILE* in = popen(python_command.c_str(), "r");
+
+
+			fprintf(in, "\n");
+#endif
+		}
+
+
+	exit(1);
+
 
 	if (dim == 2){ /* visualize only linear model response surface */
 		mat seeding_points = X_func;
@@ -1538,9 +1859,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		double bounds[4];
 		bounds[0]=0.0;
-		bounds[1]=100.0;
+		bounds[1]=200.0;
 		bounds[2]=0.0;
-		bounds[3]=100.0;
+		bounds[3]=200.0;
 
 		std::string kriging_response_surface_file_name = "Eggholder_pure_linmodel_response_surface.dat";
 
@@ -1710,7 +2031,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		pmin.print();
 		printf("max = %10.7f\n",max_value);
 		pmax.print();
-
+#if 0
 		std::string file_name_for_plot = "Eggholder_linmodel_response_surface_";
 		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
 
@@ -1725,10 +2046,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 		fprintf(in, "\n");
-
+#endif
 	}
 
-	else{ /*for higher dimensions */
+	else if(dim>2){ /*for higher dimensions */
 
 
 		int number_of_samples = 50000;
@@ -1747,30 +2068,54 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 		double parameter_bounds[16];
-		parameter_bounds[0]=0.05;    // [0.05, 0.15]
-		parameter_bounds[1]=0.15;
+		//		parameter_bounds[0]=0.05;    // [0.05, 0.15]
+		//		parameter_bounds[1]=0.15;
+		//
+		//		parameter_bounds[2]=100.0;  // [100, 50000]
+		//		parameter_bounds[3]=50000.0;
+		//
+		//		parameter_bounds[4]=63500;  // [63500, 115600]
+		//		parameter_bounds[5]=115600;
+		//
+		//		parameter_bounds[6]=990;
+		//		parameter_bounds[7]=1110; // [990, 1110]
+		//
+		//		parameter_bounds[8]=63.1;
+		//		parameter_bounds[9]=116; // [[63.1, 116]]
+		//
+		//		parameter_bounds[10]=700;
+		//		parameter_bounds[11]=820; // [700, 820]
+		//
+		//		parameter_bounds[12]=1120;
+		//		parameter_bounds[13]=1680; // [1120, 1680]
+		//
+		//		parameter_bounds[14]=9855;
+		//		parameter_bounds[15]=12045; // [9855, 12045]
 
-		parameter_bounds[2]=100.0;  // [100, 50000]
-		parameter_bounds[3]=50000.0;
 
-		parameter_bounds[4]=63500;  // [63500, 115600]
-		parameter_bounds[5]=115600;
+		parameter_bounds[0]=-2.0;
+		parameter_bounds[1]= 2.0;
 
-		parameter_bounds[6]=990;
-		parameter_bounds[7]=1110; // [990, 1110]
+		parameter_bounds[2]=-2.0;
+		parameter_bounds[3]= 2.0;
 
-		parameter_bounds[8]=63.1;
-		parameter_bounds[9]=116; // [[63.1, 116]]
+		parameter_bounds[4]=-2.0;
+		parameter_bounds[5]= 2.0;
 
-		parameter_bounds[10]=700;
-		parameter_bounds[11]=820; // [700, 820]
+		parameter_bounds[6]=-2.0;
+		parameter_bounds[7]= 2.0;
 
-		parameter_bounds[12]=1120;
-		parameter_bounds[13]=1680; // [1120, 1680]
+		parameter_bounds[8]=-2.0;
+		parameter_bounds[9]= 2.0;
 
-		parameter_bounds[14]=9855;
-		parameter_bounds[15]=12045; // [9855, 12045]
+		parameter_bounds[10]=-2.0;
+		parameter_bounds[11]=2.0;
 
+		parameter_bounds[12]=-2.0;
+		parameter_bounds[13]=2.0;
+
+		parameter_bounds[14]=-2.0;
+		parameter_bounds[15]=2.0;
 
 
 		for(int i=0; i<number_of_samples; i++){
@@ -1813,7 +2158,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 			double ftilde_linmodel = func_val + dot((x-sp_not_normalized),gradient);
 
-			double func_val_exact = Borehole(x.memptr());
+			double func_val_exact = Rosenbrock8D(x.memptr());
 
 			double srq_error = (ftilde_linmodel-func_val_exact)*(ftilde_linmodel-func_val_exact);
 			out_sample_error+=srq_error;
@@ -1871,18 +2216,22 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 	/* train the hyperparameter of the hybrid model */
 
-	if( train_hyper_param == 1){
-		train_optimal_radius(
-				radius,
-				data_functional_values,
-				data_gradients,
-				linear_regression,
-				regression_weights,
-				kriging_params,
-				200);
+	//	if( train_hyper_param == 1){
+	//		train_optimal_radius(
+	//				radius,
+	//				data_functional_values,
+	//				data_gradients,
+	//				linear_regression,
+	//				regression_weights,
+	//				kriging_params,
+	//				200);
+	//
+	//	}
 
-	}
-#if 0
+
+	radius = 0.1;
+
+#if 1
 
 	if (dim == 2){
 
@@ -1890,9 +2239,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 		double bounds[4];
 		bounds[0]=0.0;
-		bounds[1]=100.0;
+		bounds[1]=200.0;
 		bounds[2]=0.0;
-		bounds[3]=100.0;
+		bounds[3]=200.0;
 
 		std::string kriging_response_surface_file_name = "Eggholder_hybrid_response_surface.dat";
 
@@ -1950,7 +2299,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 					sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
 				}
 
-#if 1
+#if 0
 				printf("x:\n");
 				x.print();
 				printf("xnorm:\n");
@@ -1985,7 +2334,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 				if(n_f_evals == 0){
 
-#if 1
+#if 0
 					printf("data_gradients at row = %d\n",indx);
 					data_gradients.row(indx).print();
 #endif
@@ -2055,7 +2404,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 				}
 
 
-#if 1
+#if 0
 				printf("factor = %10.7f\n", factor);
 				printf("fkriging      = %10.7f flinmodel       = %10.7f\n",fval_kriging,fval_linmodel);
 				printf("ftilde       = %10.7f fexact       = %10.7f\n",fval,func_val_exact);
@@ -2085,7 +2434,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		pminex.print();
 		printf("max (exact) = %10.7f\n",max_exactvalue);
 		pmaxex.print();
-
+#if 0
 		std::string file_name_for_plot = "Eggholder_hybrid_response_surface_";
 		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
 
@@ -2100,6 +2449,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 		fprintf(in, "\n");
+#endif
+
+
+
 
 	}
 	else{
@@ -2125,30 +2478,54 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 		double parameter_bounds[16];
-		parameter_bounds[0]=0.05;    // [0.05, 0.15]
-		parameter_bounds[1]=0.15;
+		//		parameter_bounds[0]=0.05;    // [0.05, 0.15]
+		//		parameter_bounds[1]=0.15;
+		//
+		//		parameter_bounds[2]=100.0;  // [100, 50000]
+		//		parameter_bounds[3]=50000.0;
+		//
+		//		parameter_bounds[4]=63500;  // [63500, 115600]
+		//		parameter_bounds[5]=115600;
+		//
+		//		parameter_bounds[6]=990;
+		//		parameter_bounds[7]=1110; // [990, 1110]
+		//
+		//		parameter_bounds[8]=63.1;
+		//		parameter_bounds[9]=116; // [[63.1, 116]]
+		//
+		//		parameter_bounds[10]=700;
+		//		parameter_bounds[11]=820; // [700, 820]
+		//
+		//		parameter_bounds[12]=1120;
+		//		parameter_bounds[13]=1680; // [1120, 1680]
+		//
+		//		parameter_bounds[14]=9855;
+		//		parameter_bounds[15]=12045; // [9855, 12045]
 
-		parameter_bounds[2]=100.0;  // [100, 50000]
-		parameter_bounds[3]=50000.0;
 
-		parameter_bounds[4]=63500;  // [63500, 115600]
-		parameter_bounds[5]=115600;
+		parameter_bounds[0]=-2.0;
+		parameter_bounds[1]= 2.0;
 
-		parameter_bounds[6]=990;
-		parameter_bounds[7]=1110; // [990, 1110]
+		parameter_bounds[2]=-2.0;
+		parameter_bounds[3]= 2.0;
 
-		parameter_bounds[8]=63.1;
-		parameter_bounds[9]=116; // [[63.1, 116]]
+		parameter_bounds[4]=-2.0;
+		parameter_bounds[5]= 2.0;
 
-		parameter_bounds[10]=700;
-		parameter_bounds[11]=820; // [700, 820]
+		parameter_bounds[6]=-2.0;
+		parameter_bounds[7]= 2.0;
 
-		parameter_bounds[12]=1120;
-		parameter_bounds[13]=1680; // [1120, 1680]
+		parameter_bounds[8]=-2.0;
+		parameter_bounds[9]= 2.0;
 
-		parameter_bounds[14]=9855;
-		parameter_bounds[15]=12045; // [9855, 12045]
+		parameter_bounds[10]=-2.0;
+		parameter_bounds[11]=2.0;
 
+		parameter_bounds[12]=-2.0;
+		parameter_bounds[13]=2.0;
+
+		parameter_bounds[14]=-2.0;
+		parameter_bounds[15]=2.0;
 
 
 		for(int i=0; i<number_of_samples; i++){
@@ -2219,7 +2596,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 			double fval = factor*fval_linmodel + (1.0-factor)*fval_kriging;
 
-			double func_val_exact = Borehole(x.memptr());
+			double func_val_exact = Rosenbrock8D(x.memptr());
 
 			double srq_error = (fval-func_val_exact)*(fval-func_val_exact);
 			out_sample_error+=srq_error;

@@ -134,7 +134,8 @@ void su2_optimize(std::string python_dir){
 	const double lift_penalty_param = LARGE;
 	const double area_penalty_param = LARGE;
 
-	double CL_constraint = 0.32;
+//	double CL_constraint = 0.32;
+	double CL_constraint = 0.723;
 	double Area_constraint = 0.081;
 
 	double reg_param = 10E-7;
@@ -705,9 +706,9 @@ void su2_optimize(std::string python_dir){
 		worst_EI_array_indx = 0;
 
 
-	    number_of_EI_iter = number_of_EI_iter_local+number_of_EI_iter_global;
+		number_of_EI_iter = number_of_EI_iter_local+number_of_EI_iter_global;
 
-	    rowvec dp_best = optimization_data.row(sample_min_indx);
+		rowvec dp_best = optimization_data.row(sample_min_indx);
 
 		for(int iter_EI=0; iter_EI<number_of_EI_iter; iter_EI++){
 
@@ -2585,7 +2586,7 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 	double upper_bound_dv =  0.003;
 	double lower_bound_dv = -0.003;
 
-//	double area_constraint= 0.0816;
+	//	double area_constraint= 0.0816;
 	double area_constraint= 0.0778;
 
 	double deltax = upper_bound_dv-lower_bound_dv;
@@ -2650,11 +2651,13 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 		trans(dv).print();
 #endif
 
+		printf("calling adjoint solver for lift...\n");
+		call_SU2_Adjoint_Solver(dv,gradient_cl,CL,CD,area,2,area_constraint);
+
 		printf("calling adjoint solver for drag...\n");
 		call_SU2_Adjoint_Solver(dv,gradient_cd,CL,CD,area,1,area_constraint);
 
-		printf("calling adjoint solver for lift...\n");
-		call_SU2_Adjoint_Solver(dv,gradient_cl,CL,CD,area,2,area_constraint);
+
 
 #if 1
 		printf("area = %10.7f\n",area);
@@ -2668,7 +2671,8 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 
 
 
-#if 0
+
+#if 0 /* validate adjoint results by finite difference approximations */
 
 		call_SU2_CFD_Solver(dv,CL,CD,area);
 		double f0_cd = CD;
@@ -2763,7 +2767,6 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 			doe_iter++;
 
 		}
-
 
 
 		if( doe_iter >= number_of_function_evals ) break;
@@ -3260,6 +3263,8 @@ int call_SU2_Adjoint_Solver(
 		double area_constraint
 ){
 
+	/* initialize all variables to zero */
+
 	CD = 0.0;
 	CL = 0.0;
 	area = 0.0;
@@ -3271,7 +3276,7 @@ int call_SU2_Adjoint_Solver(
 	std::string basic_text;
 	getline (ifs, basic_text, (char) ifs.eof());
 
-#if 1
+#if 0
 	cout<<basic_text;
 #endif
 
@@ -3351,13 +3356,13 @@ int call_SU2_Adjoint_Solver(
 
 	if(type == 1){
 
-		solver_command = "discrete_adjoint.py -f config_AD_drag.cfg -n 2 > discrete_adjoint_output";
+		solver_command = "discrete_adjoint.py -f config_AD_drag.cfg -n 2 > discrete_adjoint_cd_output";
 
 	}
 
 	if(type == 2){
 
-		solver_command = "discrete_adjoint.py -f config_AD_lift.cfg -n 2 > discrete_adjoint_output";
+		solver_command = "discrete_adjoint.py -f config_AD_lift.cfg -n 2 > discrete_adjoint_cl_output";
 
 	}
 
@@ -3453,7 +3458,7 @@ int call_SU2_Adjoint_Solver(
 	} /* end of while */
 
 
-#if 1
+#if 0
 	printf("gradient:\n");
 	trans(gradient).print();
 #endif

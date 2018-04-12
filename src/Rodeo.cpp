@@ -46,27 +46,27 @@ int main(void){
 	settings.read();
 
 	int ret = chdir (settings.cwd.c_str());
-
-//	double parameter_bounds[4];
-//	parameter_bounds[0]=0.0;
-//	parameter_bounds[1]=100.0;
-//	parameter_bounds[2]=0.0;
-//	parameter_bounds[3]=100.0;
-//
-//	perform_trust_region_GEK_test(Eggholder,
-//			Eggholder_adj,
-//			parameter_bounds,
-//			"Eggholder" ,
-//			0,
-//			50,
-//			RANDOM_SAMPLING,
-//			CHOLESKY,
-//			2,
-//			LINEAR_REGRESSION_OFF,
-//			settings.python_dir);
-//
-//
-//	exit(1);
+	//
+	//	double parameter_bounds[4];
+	//	parameter_bounds[0]=0.0;
+	//	parameter_bounds[1]=200.0;
+	//	parameter_bounds[2]=0.0;
+	//	parameter_bounds[3]=200.0;
+	//
+	//	perform_trust_region_GEK_test(Eggholder,
+	//			Eggholder_adj,
+	//			parameter_bounds,
+	//			"Eggholder" ,
+	//			0,
+	//			75,
+	//			RANDOM_SAMPLING,
+	//			CHOLESKY,
+	//			2,
+	//			LINEAR_REGRESSION_OFF,
+	//			settings.python_dir);
+	//
+	//
+	//	exit(1);
 
 
 	//	double parameter_bounds[16];
@@ -99,15 +99,80 @@ int main(void){
 	//			parameter_bounds,
 	//			"Borehole" ,
 	//			0,
-	//			200,
+	//			300,
 	//			RANDOM_SAMPLING,
 	//			CHOLESKY,
 	//			8,
-	//			LINEAR_REGRESSION_OFF);
+	//			LINEAR_REGRESSION_OFF,
+	//			settings.python_dir);
 
-	initial_data_acquisitionGEK(settings.python_dir, 200);
 
-//	su2_optimize(settings.python_dir);
+	//	double parameter_bounds[16];
+	//	parameter_bounds[0]=-2.0;
+	//	parameter_bounds[1]= 2.0;
+	//
+	//	parameter_bounds[2]=-2.0;
+	//	parameter_bounds[3]= 2.0;
+	//
+	//	parameter_bounds[4]=-2.0;
+	//	parameter_bounds[5]= 2.0;
+	//
+	//	parameter_bounds[6]=-2.0;
+	//	parameter_bounds[7]= 2.0;
+	//
+	//	parameter_bounds[8]=-2.0;
+	//	parameter_bounds[9]= 2.0;
+	//
+	//	parameter_bounds[10]=-2.0;
+	//	parameter_bounds[11]=2.0;
+	//
+	//	parameter_bounds[12]=-2.0;
+	//	parameter_bounds[13]=2.0;
+	//
+	//	parameter_bounds[14]=-2.0;
+	//	parameter_bounds[15]=2.0;
+	//
+	//	perform_trust_region_GEK_test(Rosenbrock8D,
+	//			Rosenbrock8D_b,
+	//			parameter_bounds,
+	//			"Rosenbrock8D" ,
+	//			0,
+	//			300,
+	//			RANDOM_SAMPLING,
+	//			CHOLESKY,
+	//			8,
+	//			LINEAR_REGRESSION_OFF,
+	//			settings.python_dir);
+
+
+
+
+
+
+	double parameter_bounds[2];
+	parameter_bounds[0]=-2.0;
+	parameter_bounds[1]= 2.0;
+
+
+
+	perform_trust_region_GEK_test(test_function1D,
+			test_function1D_adj,
+			parameter_bounds,
+			"test_function1D" ,
+			0,
+			10,
+			RANDOM_SAMPLING,
+			CHOLESKY,
+			1,
+			LINEAR_REGRESSION_OFF,
+			settings.python_dir);
+
+
+
+
+	//	initial_data_acquisitionGEK(settings.python_dir, 200);
+
+	//	su2_optimize(settings.python_dir);
 
 
 }

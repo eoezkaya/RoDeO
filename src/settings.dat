@@ -1,6 +1,8 @@
 # current working directory
-cwd: /home/eoezkaya/RoDeO/Examples/Steady_RAE2822
+#cwd: /home/eoezkaya/RoDeO/Examples/Steady_RAE2822
 #cwd: /home/eoezkaya/RoDeO/Examples/Eggholder
+#cwd: /home/eoezkaya/RoDeO/Examples/Borehole
+cwd: /home/eoezkaya/RoDeO/Examples/1DTest
 # directory for the python scripts
 python_dir: /home/eoezkaya/RoDeO/python
 # regularization parameter lambda for Kriging

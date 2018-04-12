@@ -296,6 +296,54 @@ double Rosenbrock(double *x){
 }
 
 
+double Rosenbrock8D(double *x){
+
+
+	double temp=0.0;
+
+	for(int i=0; i<7; i++){
+
+		temp+= 100.0*(x[i+1]-x[i]*x[i])*(x[i+1]-x[i]*x[i]) + (1-x[i])*(1-x[i]);
+	}
+
+	return temp;
+
+}
+
+
+double Rosenbrock8D_b(double *x, double *xb) {
+	double temp = 0.0;
+	double tempb0 = 0.0;
+
+
+	for(int i=0; i<8; i++){
+		xb[i]=0.0;
+
+	}
+
+	for(int i=0; i<7; i++){
+
+		temp+= 100.0*(x[i+1]-x[i]*x[i])*(x[i+1]-x[i]*x[i]) + (1-x[i])*(1-x[i]);
+	}
+
+
+	tempb0 = 1.0;
+	{
+		double tempb;
+		for (int i = 6; i > -1; --i) {
+			tempb = 100.0*2*(x[i+1]-x[i]*x[i])*tempb0;
+			xb[i + 1] = xb[i + 1] + tempb;
+			xb[i] = xb[i] - 2*(1-x[i])*tempb0 - 2*x[i]*tempb;
+		}
+	}
+
+	return temp;
+}
+
+
+
+
+
 /* Himmelblau test function
  *
  * f(x,y) = (x^2+y-11)^2 + (x+y^2-7)^2
@@ -514,10 +562,10 @@ void generate_contour_plot_2D_function(double (*test_function)(double *), double
  *
  *   */
 void generate_contour_plot_2D_function_with_gradient(double (*test_function)(double *, double *),
-		                                             double *bounds,
-													 std::string function_name,
-													 std::string python_dir,
-													 int resolution=100){
+		double *bounds,
+		std::string function_name,
+		std::string python_dir,
+		int resolution=100){
 	/* first generate output data file */
 
 	std::string filename= function_name;
@@ -2456,7 +2504,7 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 	double radius;
 
 #if 0
-	printf("Training the hyperparameters of the model\n");
+	printf("Training the hyperparameters of the model...\n");
 #endif
 	/* train the response surfaces */
 	train_TRGEK_response_surface(input_file_name,
