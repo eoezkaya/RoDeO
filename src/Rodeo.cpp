@@ -46,6 +46,30 @@ int main(void){
 	settings.read();
 
 	int ret = chdir (settings.cwd.c_str());
+
+
+	double parameter_bounds[4];
+	parameter_bounds[0]=-2.0;
+	parameter_bounds[1]=2.0;
+	parameter_bounds[2]=-2.0;
+	parameter_bounds[3]=2.0;
+
+	perform_trust_region_GEK_test(Herbie2D,
+			Herbie2D_adj,
+			parameter_bounds,
+			"Herbie2D" ,
+			0,
+		    128,
+			LHS_CENTER,
+			CHOLESKY,
+			2,
+			LINEAR_REGRESSION_OFF,
+			settings.python_dir);
+
+
+
+
+
 	//
 	//	double parameter_bounds[4];
 	//	parameter_bounds[0]=0.0;
@@ -149,23 +173,23 @@ int main(void){
 
 
 
-	double parameter_bounds[2];
-	parameter_bounds[0]=-2.0;
-	parameter_bounds[1]= 2.0;
-
-
-
-	perform_trust_region_GEK_test(test_function1D,
-			test_function1D_adj,
-			parameter_bounds,
-			"test_function1D" ,
-			0,
-			10,
-			RANDOM_SAMPLING,
-			CHOLESKY,
-			1,
-			LINEAR_REGRESSION_OFF,
-			settings.python_dir);
+	//	double parameter_bounds[2];
+	//	parameter_bounds[0]=-2.0;
+	//	parameter_bounds[1]= 2.0;
+	//
+	//
+	//
+	//	perform_trust_region_GEK_test(test_function1D,
+	//			test_function1D_adj,
+	//			parameter_bounds,
+	//			"test_function1D" ,
+	//			0,
+	//			50,
+	//			RANDOM_SAMPLING,
+	//			CHOLESKY,
+	//			1,
+	//			LINEAR_REGRESSION_OFF,
+	//			settings.python_dir);
 
 
 

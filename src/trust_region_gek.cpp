@@ -36,7 +36,7 @@ void train_optimal_radius(
 	int n_g_evals = data_gradients.n_rows;
 
 
-	int number_of_outer_iterations = 1000;
+	int number_of_outer_iterations = 10000;
 
 #if 0
 	printf("calling train_seeding_points...\n");
@@ -279,7 +279,7 @@ void train_optimal_radius(
 
 	min_r = 0.0;
 	//	max_r = 1.0/dim;
-	max_r = -log(0.1)/ (max(probe_distances_sample) * avg_norm_grad);
+	max_r = -2*log(0.00001)/ (max(probe_distances_sample) * avg_norm_grad);
 	//	max_r = 0.01;
 
 	double dr;
@@ -817,7 +817,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 	/* regularization parameter added to the diagonal of the correlation matrix */
 
-	double reg_param=0.00000001;
+	double reg_param=0.000001;
 
 	printf("training trust-region Kriging response surface for the data : %s\n",
 			input_file_name.c_str());
@@ -1427,12 +1427,12 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		int resolution =100;
 
 		double bounds[4];
-		bounds[0]=0.0;
-		bounds[1]=200.0;
-		bounds[2]=0.0;
-		bounds[3]=200.0;
+		bounds[0]=-2.0;
+		bounds[1]=2.0;
+		bounds[2]=-2.0;
+		bounds[3]=2.0;
 
-		std::string kriging_response_surface_file_name = "Eggholder_TRGEK_response_surface.dat";
+		std::string kriging_response_surface_file_name = "Herbie2D_TRGEK_response_surface.dat";
 
 		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
 
@@ -1485,7 +1485,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 				}
 
 
-				double func_val_exact = Eggholder(x.memptr());
+				double func_val_exact = Herbie2D(x.memptr());
 
 
 				double sqr_error = (func_val_exact-func_val)*(func_val_exact-func_val);
@@ -1659,198 +1659,211 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 #endif
 
+
+
 #if 1
 
 	if (dim == 1){ /* visualize only linear model response surface for 1D problems */
-			mat seeding_points = X_func;
-			int resolution =10000;
+		mat seeding_points = X_func;
+		int resolution =10000;
 
-					double bounds[2];
-					bounds[0]=-2.0;
-					bounds[1]=2.0;
+		double bounds[2];
+		bounds[0]=-2.0;
+		bounds[1]=2.0;
 
-			std::string kriging_response_surface_file_name = "1DTest_pure_linmodel_response_surface.dat";
+		std::string kriging_response_surface_file_name = "1DTest_pure_linmodel_response_surface.dat";
 
-			FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
-
-
-			double dx; /* step sizes in x */
-			rowvec x(1);
-			rowvec xnorm(1);
+		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
 
 
-			dx = (bounds[1]-bounds[0])/(resolution-1);
+		double dx; /* step sizes in x */
+		rowvec x(1);
+		rowvec xnorm(1);
 
 
-			double out_sample_error=0.0;
-
-			double max_value = -LARGE;
-			double min_value =  LARGE;
-			rowvec pmin(dim);
-			rowvec pmax(dim);
+		dx = (bounds[1]-bounds[0])/(resolution-1);
 
 
-			x[0] = bounds[0];
-			for(int i=0;i<resolution;i++){
+		double out_sample_error=0.0;
+
+		double max_value = -LARGE;
+		double min_value =  LARGE;
+		rowvec pmin(dim);
+		rowvec pmax(dim);
 
 
-					/* normalize x */
-					xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
-
-					double min_dist=0.0;
-					int indx;
-
-					/* find the closest seeding point */
-					findKNeighbours(seeding_points,
-							xnorm,
-							1,
-							&min_dist,
-							&indx,
-							dim);
+		x[0] = bounds[0];
+		for(int i=0;i<resolution;i++){
 
 
+			/* normalize x */
+			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
 
-					rowvec sp =  seeding_points.row(indx);
-					rowvec sp_not_normalized(dim);
-					sp_not_normalized.fill(0.0);
+			double min_dist=0.0;
+			int indx;
 
-					for(int j=0; j<dim;j++) {
-
-						sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
-					}
-
-	#if 0
-					printf("x:\n");
-					x.print();
-					printf("closest point is:\n");
-					sp.print();
-					printf("in original coordinates:\n");
-					sp_not_normalized.print();
-					printf("original data entry:\n");
-					data_gradients.row(indx).print();
-
-
-	#endif
-
-					/* estimate the functional value at the nearest point from the Kriging estimator */
-
-					double func_val = calculate_f_tilde(sp,
-							X_func,
-							beta0(0),
-							regression_weights.col(0),
-							R_inv_ys_min_beta.col(0),
-							kriging_params.col(0));
-
-
-					vec gradient(dim);
-
-
-					if(n_f_evals == 0){
-
-						for(int k=0;k<dim;k++){
-
-							gradient(k) = data_gradients(indx,dim+1+k);
-
-						}
-
-	#if 0
-						printf("gradient:\n");
-						trans(gradient).print();
-
-	#endif
-					}
+			/* find the closest seeding point */
+			findKNeighbours(seeding_points,
+					xnorm,
+					1,
+					&min_dist,
+					&indx,
+					dim);
 
 
 
-					else{
-
-						for(int k=0;k<dim;k++){
-
-							//		printf("i = %d\n",i);
-							gradient(k) = calculate_f_tilde(sp,
-									X_grad,
-									beta0(k+1),
-									regression_weights.col(k+1),
-									R_inv_ys_min_beta.col(k+1),
-									kriging_params.col(k+1));
+			rowvec sp =  seeding_points.row(indx);
 
 
-						}
 
-					}
-
-
-					double ftilde_linmodel = func_val + dot((x-sp_not_normalized),gradient);
-					fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),ftilde_linmodel);
-
-					double func_val_exact = test_function1D(x.memptr());
-
-					double srq_error = (ftilde_linmodel-func_val_exact)*(ftilde_linmodel-func_val_exact);
-					out_sample_error+=srq_error;
-	#if 0
-					printf("x:\n");
-					x.print();
-					printf("xnorm:\n");
-					xnorm.print();
-					printf("nearest point:\n");
-					sp.print();
-					printf("sp in original coordinates:\n");
-					sp_not_normalized.print();
-					printf("gradient:\n");
-					trans(gradient).print();
-					printf("func_val = %10.7f\n",func_val);
-					printf("ftilde_linmodel = %10.7f\n",ftilde_linmodel);
-					printf("func_val_exact = %10.7f\n",func_val_exact);
-	#endif
+			rowvec sp_not_normalized(dim);
+			sp_not_normalized.fill(0.0);
 
 
-					if(ftilde_linmodel < min_value){
-
-						min_value = ftilde_linmodel;
-						pmin = x;
-
-					}
-					if(ftilde_linmodel > max_value){
-
-						max_value = ftilde_linmodel;
-						pmax = x;
-
-					}
 
 
-				x[0]+= dx;
+
+			for(int j=0; j<dim;j++) {
+
+				sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
 
 			}
-			fclose(kriging_response_surface_file);
 
-			out_sample_error = out_sample_error/(resolution);
-
-
-			printf("out of sample error (Taylor approximation) = %10.7f\n",out_sample_error);
-			printf("min = %10.7f\n",min_value);
-			pmin.print();
-			printf("max = %10.7f\n",max_value);
-			pmax.print();
-#if 1
-			std::string file_name_for_plot = "1DTest_linmodel_response_surface_";
-			file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-
-			std::string title = "Taylor_approximation";
-			std::string python_command = "python -W ignore plot_1d_function.py "
-					+ kriging_response_surface_file_name+ " "
-					+ file_name_for_plot + " "+title;
+#if 0
+			printf("x:\n");
+			x.print();
+			printf("closest point is:\n");
+			sp.print();
+			printf("in original coordinates:\n");
+			sp_not_normalized.print();
+			printf("original data entry:\n");
+			data_gradients.row(indx).print();
 
 
-
-			FILE* in = popen(python_command.c_str(), "r");
-
-
-			fprintf(in, "\n");
 #endif
+
+			/* estimate the functional value at the nearest point from the Kriging estimator */
+
+			double func_val = calculate_f_tilde(sp,
+					X_func,
+					beta0(0),
+					regression_weights.col(0),
+					R_inv_ys_min_beta.col(0),
+					kriging_params.col(0));
+
+
+
+
+
+			vec gradient(dim);
+
+
+			if(n_f_evals == 0){
+
+				for(int k=0;k<dim;k++){
+
+					gradient(k) = data_gradients(indx,dim+1+k);
+
+				}
+
+#if 0
+				printf("gradient:\n");
+				trans(gradient).print();
+
+#endif
+			}
+
+
+
+			else{
+
+				for(int k=0;k<dim;k++){
+
+					//		printf("i = %d\n",i);
+					gradient(k) = calculate_f_tilde(sp,
+							X_grad,
+							beta0(k+1),
+							regression_weights.col(k+1),
+							R_inv_ys_min_beta.col(k+1),
+							kriging_params.col(k+1));
+
+
+				}
+
+			}
+
+
+			double ftilde_linmodel = func_val + dot((x-sp_not_normalized),gradient);
+			fprintf(kriging_response_surface_file,"%10.7f %10.7f\n",x(0),ftilde_linmodel);
+
+			double func_val_exact = test_function1D(x.memptr());
+
+			double srq_error = (ftilde_linmodel-func_val_exact)*(ftilde_linmodel-func_val_exact);
+			out_sample_error+=srq_error;
+#if 0
+			printf("x:\n");
+			x.print();
+			printf("xnorm:\n");
+			xnorm.print();
+			printf("nearest point:\n");
+			sp.print();
+			printf("sp in original coordinates:\n");
+			sp_not_normalized.print();
+			printf("gradient:\n");
+			trans(gradient).print();
+			printf("func_val = %10.7f\n",func_val);
+			printf("ftilde_linmodel = %10.7f\n",ftilde_linmodel);
+			printf("func_val_exact = %10.7f\n",func_val_exact);
+#endif
+
+
+			if(ftilde_linmodel < min_value){
+
+				min_value = ftilde_linmodel;
+				pmin = x;
+
+			}
+			if(ftilde_linmodel > max_value){
+
+				max_value = ftilde_linmodel;
+				pmax = x;
+
+			}
+
+
+			x[0]+= dx;
+
 		}
+		fclose(kriging_response_surface_file);
+
+		out_sample_error = out_sample_error/(resolution);
 
 
-	exit(1);
+		printf("out of sample error (Taylor approximation) = %10.7f\n",out_sample_error);
+		printf("min = %10.7f\n",min_value);
+		pmin.print();
+		printf("max = %10.7f\n",max_value);
+		pmax.print();
+#if 1
+		std::string file_name_for_plot = "1DTest_linmodel_response_surface_";
+		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+		std::string title = "Taylor_approximation";
+		std::string python_command = "python -W ignore plot_1d_function.py "
+				+ kriging_response_surface_file_name+ " "
+				+ file_name_for_plot + " "+title;
+
+
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+#endif
+	}
+
+
+
 
 
 	if (dim == 2){ /* visualize only linear model response surface */
@@ -1858,12 +1871,12 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		int resolution =100;
 
 		double bounds[4];
-		bounds[0]=0.0;
-		bounds[1]=200.0;
-		bounds[2]=0.0;
-		bounds[3]=200.0;
+		bounds[0]=-2.0;
+		bounds[1]=2.0;
+		bounds[2]=-2.0;
+		bounds[3]=2.0;
 
-		std::string kriging_response_surface_file_name = "Eggholder_pure_linmodel_response_surface.dat";
+		std::string kriging_response_surface_file_name = "Herbie2D_pure_linmodel_response_surface.dat";
 
 		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
 
@@ -1982,7 +1995,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 				double ftilde_linmodel = func_val + dot((x-sp_not_normalized),gradient);
 				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),ftilde_linmodel);
 
-				double func_val_exact = Eggholder(x.memptr());
+				double func_val_exact = Herbie2D(x.memptr());
 
 				double srq_error = (ftilde_linmodel-func_val_exact)*(ftilde_linmodel-func_val_exact);
 				out_sample_error+=srq_error;
@@ -2216,34 +2229,253 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 	/* train the hyperparameter of the hybrid model */
 
-	//	if( train_hyper_param == 1){
-	//		train_optimal_radius(
-	//				radius,
-	//				data_functional_values,
-	//				data_gradients,
-	//				linear_regression,
-	//				regression_weights,
-	//				kriging_params,
-	//				200);
-	//
-	//	}
+	if( train_hyper_param == 1){
+		train_optimal_radius(
+				radius,
+				data_functional_values,
+				data_gradients,
+				linear_regression,
+				regression_weights,
+				kriging_params,
+				200);
+
+	}
 
 
-	radius = 0.1;
+
 
 #if 1
+
+	if (dim == 1){
+
+		int resolution =10000;
+
+		double bounds[2];
+		bounds[0]=-2.0;
+		bounds[1]=2.0;
+
+
+		std::string kriging_response_surface_file_name = "1DTest_hybrid_response_surface.dat";
+
+		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
+
+
+		double dx; /* step sizes in x  */
+		rowvec x(1);
+		rowvec xnorm(1);
+
+
+		dx = (bounds[1]-bounds[0])/(resolution-1);
+
+
+		double out_sample_error=0.0;
+
+		double max_value = -LARGE;
+		double min_value =  LARGE;
+		double max_exactvalue = -LARGE;
+		double min_exactvalue =  LARGE;
+		rowvec pmin(dim);
+		rowvec pmax(dim);
+		rowvec pminex(dim);
+		rowvec pmaxex(dim);
+
+		x[0] = bounds[0];
+		for(int i=0;i<resolution;i++){
+
+			/* normalize x */
+			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
+
+
+
+
+			double min_dist=0.0;
+			int indx;
+
+			/* find the closest point */
+			findKNeighbours(X_func,
+					xnorm,
+					1,
+					&min_dist,
+					&indx,
+					dim);
+
+
+			rowvec sp =  X_func.row(indx);
+			rowvec sp_not_normalized(dim);
+			sp_not_normalized.fill(0.0);
+
+			for(int j=0; j<dim;j++) {
+
+				sp_not_normalized(j) = dim*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+			}
+
+#if 0
+			printf("x:\n");
+			x.print();
+			printf("xnorm:\n");
+			xnorm.print();
+			printf("nearest point:\n");
+			sp.print();
+			printf("nearest point in original coordinates:\n");
+			sp_not_normalized.print();
+#endif
+
+			rowvec xdiff = xnorm-sp;
+			double distance = L1norm(xdiff, dim);
+
+
+
+
+
+			double fval_kriging = 0.0;
+
+
+			/* pure kriging value at x = xnorm*/
+			fval_kriging = calculate_f_tilde(xnorm,
+					X_func,
+					beta0(0),
+					regression_weights.col(0),
+					R_inv_ys_min_beta.col(0),
+					kriging_params.col(0));
+
+
+			vec grad(dim);
+
+
+			if(n_f_evals == 0){
+
+#if 0
+				printf("data_gradients at row = %d\n",indx);
+				data_gradients.row(indx).print();
+#endif
+
+				for(int k=0;k<dim;k++){
+
+					grad(k) = data_gradients(indx,dim+1+k);
+
+				}
+			}
+			else{
+
+				for(int k=0;k<dim;k++){
+
+					grad(k) = calculate_f_tilde(sp,
+							X_grad,
+							beta0(k+1),
+							regression_weights.col(k+1),
+							R_inv_ys_min_beta.col(k+1),
+							kriging_params.col(k+1));
+
+
+				}
+
+			}
+
+			double normgrad= L1norm(grad, dim);
+
+			double factor = exp(-radius*distance*normgrad);
+
+			/* calculate Taylor approximation at x = xnorm */
+
+			double fval_linmodel= ysfunc(indx) + dot((x-sp_not_normalized),grad);
+
+			double fval = factor*fval_linmodel + (1.0-factor)*fval_kriging;
+
+
+			fprintf(kriging_response_surface_file,"%10.7f %10.7f\n",x(0),fval);
+
+			double func_val_exact = test_function1D(x.memptr());
+
+			if(fval < min_value){
+
+				min_value = fval;
+				pmin = x;
+
+			}
+			if(fval > max_value){
+
+				max_value = fval;
+				pmax = x;
+
+			}
+
+
+			if(func_val_exact < min_exactvalue){
+
+				min_exactvalue = func_val_exact;
+				pminex = x;
+
+			}
+			if(func_val_exact > max_exactvalue){
+
+				max_exactvalue = func_val_exact;
+				pmaxex = x;
+
+			}
+
+
+#if 0
+			printf("factor = %10.7f\n", factor);
+			printf("fkriging      = %10.7f flinmodel       = %10.7f\n",fval_kriging,fval_linmodel);
+			printf("ftilde       = %10.7f fexact       = %10.7f\n",fval,func_val_exact);
+
+#endif
+
+			double srq_error = (fval-func_val_exact)*(fval-func_val_exact);
+			out_sample_error+=srq_error;
+
+
+
+			x[0]+= dx;
+
+		}
+		fclose(kriging_response_surface_file);
+
+		out_sample_error = out_sample_error/(resolution);
+
+		printf("out of sample error (hybrid model) = %10.7f\n",out_sample_error);
+		printf("min = %10.7f\n",min_value);
+		pmin.print();
+		printf("max = %10.7f\n",max_value);
+		pmax.print();
+		printf("min (exact) = %10.7f\n",min_exactvalue);
+		pminex.print();
+		printf("max (exact) = %10.7f\n",max_exactvalue);
+		pmaxex.print();
+#if 1
+		std::string file_name_for_plot = "1DTest_hybrid_response_surface_";
+		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+		std::string title = "Hybrid_model";
+		std::string python_command = "python -W ignore plot_1d_function.py "
+				+ kriging_response_surface_file_name+ " "
+				+ file_name_for_plot + title;
+
+
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+#endif
+
+
+
+
+	}
+
 
 	if (dim == 2){
 
 		int resolution =100;
 
 		double bounds[4];
-		bounds[0]=0.0;
-		bounds[1]=200.0;
-		bounds[2]=0.0;
-		bounds[3]=200.0;
+		bounds[0]=-2.0;
+		bounds[1]=2.0;
+		bounds[2]=-2.0;
+		bounds[3]=2.0;
 
-		std::string kriging_response_surface_file_name = "Eggholder_hybrid_response_surface.dat";
+		std::string kriging_response_surface_file_name = "Herbie2D_hybrid_response_surface.dat";
 
 		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
 
@@ -2311,7 +2543,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 #endif
 
 				rowvec xdiff = xnorm-sp;
-				double distance = L2norm(xdiff, dim);
+				double distance = L1norm(xdiff, dim);
 
 
 
@@ -2361,7 +2593,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 				}
 
-				double normgrad= L2norm(grad, dim);
+				double normgrad= L1norm(grad, dim);
 
 				double factor = exp(-radius*distance*normgrad);
 
@@ -2374,7 +2606,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),fval);
 
-				double func_val_exact = Eggholder(x.memptr());
+				double func_val_exact = Herbie2D(x.memptr());
 
 				if(fval < min_value){
 
@@ -2455,7 +2687,7 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 	}
-	else{
+	else if(dim>2){
 
 		int number_of_samples = 50000;
 

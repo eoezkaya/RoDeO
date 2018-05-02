@@ -63,6 +63,72 @@ double test_function1D(double *x){
 }
 
 
+double Waves2D(double *x){
+
+	double coef = 0.001;
+	double term1 = coef*sin(100*x[0]);
+	double term2 = coef*cos(100*x[1]);
+
+	if(x[0] > 1 || x[0] < -1 || x[1] > 1 || x[1] < -1){
+
+		return sin(x[0])+ cos(x[1]);
+
+	}
+	else{
+
+		return sin(x[0])+ cos(x[1])+term1+term2;
+	}
+
+}
+
+double Waves2D_adj(double *x,double *xb){
+	double coef = 0.001;
+	double term1 = coef*sin(100*x[0]);
+	double term2 = coef*cos(100*x[1]);
+
+	if(x[0] > 1 || x[0] < -1 || x[1] > 1 || x[1] < -1){
+		xb[0] = cos(x[0]);
+		xb[1] = -sin(x[1]);
+		return sin(x[0])+ cos(x[1]);
+	}
+	else{
+
+		xb[0] = cos(x[0])+coef*100*cos(100*x[0]);
+		xb[1] = -sin(x[1])-coef*100*sin(100*x[1]);
+
+		return sin(x[0])+ cos(x[1])+term1+term2;
+	}
+
+
+
+}
+
+
+double Herbie2D(double *x){
+
+	return exp(-pow((x[0]-1),2))+exp(-0.8*pow((x[0]+1),2))-0.05*sin(8*(x[0]+0.1))
+	+ exp(-pow((x[1]-1),2))+exp(-0.8*pow((x[1]+1),2))-0.05*sin(8*(x[1]+0.1));
+
+}
+
+double Herbie2D_adj(double *x, double *xb) {
+
+	double Herbie2Db=1.0;
+	xb[0] = 0.0;
+	xb[1] = 0.0;
+
+	xb[0] = xb[0] + (-8*(cos(8*(x[0]+0.1))*0.05)-0.8*exp(-(0.8*pow(x[0]+1, 2))
+	)*2*pow(x[0]+1, 2-1)-exp(-pow(x[0]-1, 2))*2*pow(x[0]-1, 2-1))*
+	Herbie2Db;
+	xb[1] = xb[1] + (-8*(cos(8*(x[1]+0.1))*0.05)-0.8*exp(-(0.8*pow(x[1]+1, 2))
+	)*2*pow(x[1]+1, 2-1)-exp(-pow(x[1]-1, 2))*2*pow(x[1]-1, 2-1))*
+	Herbie2Db;
+	return exp(-pow((x[0]-1),2))+exp(-0.8*pow((x[0]+1),2))-0.05*sin(8*(x[0]+0.1))
+	+ exp(-pow((x[1]-1),2))+exp(-0.8*pow((x[1]+1),2))-0.05*sin(8*(x[1]+0.1));
+}
+
+
+
 double test_function1D_adj(double *x, double *xb){
 
 
@@ -1149,7 +1215,8 @@ void perform_GEK_test(double (*test_function)(double *),
 		int sampling_method,
 		int method_for_solving_lin_eq,
 		int dim,
-		int linear_regression){
+		int linear_regression,
+		std::string python_dir){
 
 	if(dim <= 0){
 		printf("Error: problem dimension must be greater than zero\n");
@@ -1182,7 +1249,14 @@ void perform_GEK_test(double (*test_function)(double *),
 
 
 		/* generate the input data for test	*/
-		generate_2D_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,number_of_samples_with_only_f_eval,number_of_samples_with_g_eval, sampling_method );
+		generate_2D_test_function_data_GEK(test_function,
+				test_function_adj,
+				input_file_name,
+				bounds,
+				number_of_samples_with_only_f_eval,
+				number_of_samples_with_g_eval,
+				sampling_method,
+				python_dir);
 
 	}
 
@@ -2206,10 +2280,12 @@ void generate_2D_test_function_data_GEK(double (*test_function)(double *),
 		double bounds[4],
 		int number_of_samples_with_only_f_eval,
 		int number_of_samples_with_g_eval,
-		int sampling_method){
+		int sampling_method,
+		std::string python_dir){
 
 
-	int number_of_function_evals  =  number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval;
+	int number_of_function_evals  =  number_of_samples_with_only_f_eval
+			+ number_of_samples_with_g_eval;
 
 
 	if(sampling_method == EXISTING_FILE){
@@ -2217,6 +2293,85 @@ void generate_2D_test_function_data_GEK(double (*test_function)(double *),
 		/* do nothing */
 
 	}
+
+
+	if(sampling_method == LHS_CENTER){
+		printf("Generating LHS_CENTER samples ...\n");
+
+		vec x(number_of_function_evals);
+		vec y(number_of_function_evals);
+		double xs = bounds[0];
+		double xe = bounds[1];
+
+		double ys = bounds[2];
+		double ye = bounds[3];
+
+		std::string lhs_filename = "lhs_points.dat";
+		std::string python_command = "python -W ignore "+ python_dir+"/lhs.py "
+				+ lhs_filename+ " "+ "2" + " "
+				+ std::to_string(number_of_function_evals)
+		+ " center" ;
+
+#if 0
+		printf("python_command = %s\n",python_command.c_str());
+#endif
+
+		system(python_command.c_str());
+
+		FILE *inp= fopen("lhs_points.dat","r");
+		FILE *outp = fopen(filename.c_str(), "w");
+
+
+		for(int i=0; i<number_of_function_evals;i++ ){
+
+			fscanf(inp,"%lf %lf\n",&x(i),&y(i));
+
+
+		}
+		fclose(inp);
+
+
+		/* write functional values to the output file */
+		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
+
+			double xin[2];
+			xin[0]=x[i]*(xe-xs)+xs;
+			xin[1]=y[i]*(ye-ys)+ys;
+			double f_val = test_function(xin);
+			printf("%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
+			fprintf(outp,"%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
+
+		}
+
+		/* write functional values and the gradient sensitivities to the output file */
+
+		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
+
+			double xin[2];
+			double xb[2];
+			xb[0]=0.0;
+			xb[1]=0.0;
+			xin[0]=x[i]*(xe-xs)+xs;
+			xin[1]=y[i]*(ye-ys)+ys;
+			double f_val = test_function_adj(xin,xb);
+
+
+			printf("%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",xin[0],xin[1],f_val,xb[0],xb[1]);
+			fprintf(outp,"%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",xin[0],xin[1],f_val,xb[0],xb[1]);
+
+		}
+
+
+
+
+		fclose(outp);
+
+
+
+
+	}
+
+
 
 
 
@@ -2485,7 +2640,14 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 
 
 		/* generate the input data for test	*/
-		generate_2D_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,number_of_samples_with_only_f_eval,number_of_samples_with_g_eval, sampling_method );
+		generate_2D_test_function_data_GEK(test_function,
+				test_function_adj,
+				input_file_name,
+				bounds,
+				number_of_samples_with_only_f_eval,
+				number_of_samples_with_g_eval,
+				sampling_method,
+				python_dir);
 
 	}
 	else{
@@ -2751,4 +2913,56 @@ void perform_rbf_test(double (*test_function)(double *),
 	}
 
 }
+
+void test_norms(int dim){
+
+	int number_of_points = 1000000;
+	vec dist1(number_of_points);
+	vec dist2(number_of_points);
+
+	for(int i=0; i<number_of_points; i++){
+
+		rowvec p1(dim);
+		rowvec p2(dim);
+
+		for(int j=0; j<dim;j++) {
+
+			p1(j)= RandomDouble(0.0, 1.0);
+			p2(j)= RandomDouble(0.0, 1.0);
+
+		}
+		rowvec diff = p1-p2;
+
+		dist2(i) = L2norm(diff,dim);
+		dist1(i) = L1norm(diff,dim);
+
+		//		printf("%d L2 = %10.7f L1 = %10.7f\n",i,dist2(i),dist1(i));
+
+
+	}
+
+
+	double max2= max(dist2);
+	double max1= max(dist1);
+
+	dist2 = dist2/max2;
+	dist1 = dist1/max1;
+
+	double meanL2 = mean(dist2);
+	double meanL1 = mean(dist1);
+	double stddevL2 = stddev(dist2);
+	double stddevL1 = stddev(dist1);
+
+	printf("mean L2 = %10.7f\n",meanL2);
+	printf("mean L1 = %10.7f\n",meanL1);
+	printf("stddev L2 = %10.7f\n",stddevL2);
+	printf("stddev L1 = %10.7f\n",stddevL1);
+
+
+
+
+
+
+}
+
 

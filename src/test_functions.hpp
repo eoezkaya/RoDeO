@@ -115,6 +115,13 @@ double simple_2D_linear_test_function1_adj(double *x, double *xb);
 double Eggholder(double *x);
 double Eggholder_adj(double *x, double *xb);
 
+double Waves2D(double *x);
+double Waves2D_adj(double *x,double *xb);
+
+double Herbie2D(double *x);
+double Herbie2D_adj(double *x, double *xb);
+
+
 double McCormick(double *x);
 double McCormick_adj(double *x, double *xb);
 
@@ -158,13 +165,15 @@ void perform_kriging_test(double (*test_function)(double *),
 
 void perform_GEK_test(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
-		double *bounds, std::string function_name ,
+		double *bounds,
+		std::string function_name ,
 		int  number_of_samples_with_only_f_eval,
 		int number_of_samples_with_g_eval,
 		int sampling_method,
 		int method_for_solving_lin_eq,
 		int dim,
-		int linear_regression);
+		int linear_regression,
+		std::string python_dir);
 
 
 void perform_trust_region_GEK_test(double (*test_function)(double *),
@@ -200,7 +209,8 @@ void generate_2D_test_function_data_GEK(double (*test_function)(double *),
 		double bounds[4],
 		int number_of_samples_with_only_f_eval,
 		int number_of_samples_with_g_eval,
-		int sampling_method);
+		int sampling_method,
+		std::string python_dir);
 
 
 void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
@@ -238,7 +248,7 @@ void perform_rbf_test(double (*test_function)(double *),
         int problem_dimension,
         RBF_TYPE rbf_type);
 
-
+void test_norms(int dim);
 
 
 #endif
