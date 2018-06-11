@@ -361,6 +361,93 @@ double Rosenbrock(double *x){
 
 }
 
+double Rosenbrock_adj(double *x, double *xb) {
+	double tempb;
+	double Rosenbrockb = 1.0;
+
+	xb[0] = 0.0;
+	xb[1] = 0.0;
+	tempb = 100.0*2*(x[1]-x[0]*x[0])*Rosenbrockb;
+	xb[0] = xb[0] - 2*x[0]*tempb - 2*(1.0-x[0])*Rosenbrockb;
+	xb[1] = xb[1] + tempb;
+
+	return ( (1.0-x[0])* (1.0-x[0]) + 100.0 *(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0]));
+
+}
+
+
+double Rosenbrock3D(double *x){
+
+	double term1 = (1.0-x[0])* (1.0-x[0]) + 100.0 *(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0]);
+	double term2 = (1.0-x[1])* (1.0-x[1]) + 100.0 *(x[2]-x[1]*x[1])*(x[2]-x[1]*x[1]);
+	return term1+term2;
+
+
+}
+
+double Rosenbrock3D_adj(double *x, double *xb) {
+
+	double Rosenbrock3Db = 1.0;
+	xb[0] = 0.0; xb[1] = 0.0; xb[2] = 0.0;
+
+    double term1 = (1.0-x[0])*(1.0-x[0]) + 100.0*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0]);
+    double term1b = 0.0;
+    double term2 = (1.0-x[1])*(1.0-x[1]) + 100.0*(x[2]-x[1]*x[1])*(x[2]-x[1]*x[1]);
+    double term2b = 0.0;
+    double tempb;
+    double tempb0;
+
+    term1b = Rosenbrock3Db;
+    term2b = Rosenbrock3Db;
+    tempb = 100.0*2*(x[2]-x[1]*x[1])*term2b;
+    xb[1] = xb[1] - 2*x[1]*tempb - 2*(1.0-x[1])*term2b;
+    xb[2] = xb[2] + tempb;
+    tempb0 = 100.0*2*(x[1]-x[0]*x[0])*term1b;
+    xb[0] = xb[0] - 2*x[0]*tempb0 - 2*(1.0-x[0])*term1b;
+    xb[1] = xb[1] + tempb0;
+    return term1+term2;
+}
+
+double Rosenbrock4D(double *x){
+
+	double term1 = (1.0-x[0])* (1.0-x[0]) + 100.0 *(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0]);
+	double term2 = (1.0-x[1])* (1.0-x[1]) + 100.0 *(x[2]-x[1]*x[1])*(x[2]-x[1]*x[1]);
+	double term3 = (1.0-x[2])* (1.0-x[2]) + 100.0 *(x[3]-x[2]*x[2])*(x[3]-x[2]*x[2]);
+	return term1+term2+term3;
+
+
+}
+
+double Rosenbrock4D_adj(double *x, double *xb) {
+	double Rosenbrock4Db = 1.0;
+	xb[0] = 0.0; xb[1] = 0.0; xb[2] = 0.0; xb[3] = 0.0;
+    double term1 = (1.0-x[0])*(1.0-x[0]) + 100.0*(x[1]-x[0]*x[0])*(x[1]-x[0]*x
+    [0]);
+    double term1b = 0.0;
+    double term2 = (1.0-x[1])*(1.0-x[1]) + 100.0*(x[2]-x[1]*x[1])*(x[2]-x[1]*x
+    [1]);
+    double term2b = 0.0;
+    double term3 = (1.0-x[2])*(1.0-x[2]) + 100.0*(x[3]-x[2]*x[2])*(x[3]-x[2]*x
+    [2]);
+    double term3b = 0.0;
+    double tempb;
+    double tempb0;
+    double tempb1;
+    double Rosenbrock4D;
+    term1b = Rosenbrock4Db;
+    term2b = Rosenbrock4Db;
+    term3b = Rosenbrock4Db;
+    tempb = 100.0*2*(x[3]-x[2]*x[2])*term3b;
+    xb[2] = xb[2] - 2*x[2]*tempb - 2*(1.0-x[2])*term3b;
+    xb[3] = xb[3] + tempb;
+    tempb0 = 100.0*2*(x[2]-x[1]*x[1])*term2b;
+    xb[1] = xb[1] - 2*x[1]*tempb0 - 2*(1.0-x[1])*term2b;
+    xb[2] = xb[2] + tempb0;
+    tempb1 = 100.0*2*(x[1]-x[0]*x[0])*term1b;
+    xb[0] = xb[0] - 2*x[0]*tempb1 - 2*(1.0-x[0])*term1b;
+    xb[1] = xb[1] + tempb1;
+    return term1+term2+term3;
+}
 
 double Rosenbrock8D(double *x){
 
@@ -377,7 +464,7 @@ double Rosenbrock8D(double *x){
 }
 
 
-double Rosenbrock8D_b(double *x, double *xb) {
+double Rosenbrock8D_adj(double *x, double *xb) {
 	double temp = 0.0;
 	double tempb0 = 0.0;
 
@@ -407,6 +494,53 @@ double Rosenbrock8D_b(double *x, double *xb) {
 }
 
 
+double Shubert(double *x){
+
+	double term1 =0.0;
+	double term2 =0.0;
+
+	for(int i=0; i<5; i++){
+
+		term1+= i*cos( (i+1)*x[0]+i );
+
+	}
+
+	for(int j=0; j<5; j++){
+
+		term2+= j*cos((j+1)*x[1]+j);
+
+	}
+
+
+	return term1*term2;
+
+}
+
+
+double Shubert_adj(double *x, double *xb) {
+    double term1 = 0.0;
+    double term1b = 0.0;
+    double term2 = 0.0;
+    double term2b = 0.0;
+    double Shubertb=1.0;
+
+    xb[0]=0.0;
+    xb[1]=0.0;
+
+    for (int i = 0; i < 5; ++i)
+        term1 = term1 + i*cos((i+1)*x[0]+i);
+    for (int j = 0; j < 5; ++j)
+        term2 = term2 + j*cos((j+1)*x[1]+j);
+    term1b = term2*Shubertb;
+    term2b = term1*Shubertb;
+    for (int j = 4; j > -1; --j)
+        xb[1] = xb[1] - sin(j+(j+1)*x[1])*j*(j+1)*term2b;
+    for (int i = 4; i > -1; --i)
+        xb[0] = xb[0] - sin(i+(i+1)*x[0])*i*(i+1)*term1b;
+
+    return term1*term2;
+
+}
 
 
 

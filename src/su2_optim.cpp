@@ -17,6 +17,158 @@
 using namespace arma;
 
 
+void SU2_CFD(std::string input_filename){
+
+	int number_of_design_variables = 38;
+	mat data(1,number_of_design_variables);
+
+	data.load(input_filename,csv_ascii);
+
+#if 1
+	cout.precision(11);
+	cout.setf(ios::fixed);
+
+	data.raw_print(cout, "dv:");
+#endif
+
+	double area,CL,CD,type,area_constraint;
+
+	type=1;
+	area_constraint = 0.0778116;
+
+	vec dv(number_of_design_variables);
+	vec grad(number_of_design_variables);
+
+	for(int i=0; i<number_of_design_variables; i++){
+
+		dv(i) = data(0,i);
+
+	}
+
+
+	call_SU2_Adjoint_Solver(
+			dv,
+			grad,
+			CL,
+			CD,
+			area,
+			type,
+			area_constraint);
+
+
+}
+
+
+
+int is_equal(rowvec r1, rowvec r2){
+
+	int flag = -1;
+
+	int dim1 = r1.size();
+	int dim2 = r2.size();
+
+	if(dim1 != dim2){
+
+		printf("Error: dim1 and dim2 are not equal!\n");
+		exit(-1);
+
+	}
+
+	for(int i=0; i<dim1;i++) {
+
+		if( fabs(r1(i)- r2(i)) < 10E-6 ) {
+
+			flag = 1;
+		}
+		else{
+
+			flag = 0;
+			break;
+		}
+	}
+
+	return flag;
+
+}
+
+void check_double_points_data(std::string filename, int nvars){
+#if 1
+	printf("checking double points for the file %s...\n",filename.c_str());
+#endif
+	mat data;
+	data.load(filename, raw_ascii);
+#if 0
+	data.print();
+#endif
+
+	int nrows = data.n_rows;
+#if 1
+	printf("data has initially %d rows\n",nrows);
+#endif
+
+
+	mat dataX(nrows, nvars);
+
+	for(int i=0; i<nrows; i++){
+
+		for(int j=0; j<nvars; j++){
+
+			dataX(i,j) = data(i,j);
+
+		}
+
+	}
+
+#if 0
+	dataX.print();
+#endif
+
+	for(int i=0; i<nrows; i++){
+
+		rowvec ri = dataX.row(i);
+
+		int eqflag = 0;
+		int jindex = -1;
+
+		/* check all the rows of the data */
+
+		for(int j=0; j<nrows; j++){
+
+			rowvec rj = dataX.row(j);
+			if(i!=j){
+
+				if(is_equal(ri,rj)){
+
+					eqflag = 1;
+					jindex = j;
+				}
+
+			}
+
+		}
+
+		if(eqflag == 1){
+
+			printf("Error: data point %d and %d are the same!\n",i+1,jindex+1);
+
+			printf("row %d:\n",i);
+			dataX.row(i).print();
+			printf("row %d:\n",jindex);
+			dataX.row(jindex).print();
+
+
+			exit(-1);
+
+		}
+
+
+	}
+
+
+
+}
+
+
 
 void su2_try_NACA0012_classic_solution(void){
 
@@ -134,10 +286,12 @@ void su2_optimize(std::string python_dir){
 	const double lift_penalty_param = LARGE;
 	const double area_penalty_param = LARGE;
 
-//	double CL_constraint = 0.32;
-	double CL_constraint = 0.723;
-	double Area_constraint = 0.081;
 
+	/* constraints for cl and area */
+	double CL_constraint = 0.723;
+	double Area_constraint = 0.0778;
+
+	/* regularization parameter for Kriging */
 	double reg_param = 10E-7;
 
 
@@ -148,7 +302,7 @@ void su2_optimize(std::string python_dir){
 	int number_of_function_evals = 0;
 
 	/* copy training data from the samples folder */
-	system("cp ./Samples/naca0012_optimization_history.csv ./");
+	system("cp ./Samples/rae2822_optimization_history.csv ./");
 	system("cp ./Samples/CL_Kriging.csv ./");
 	system("cp ./Samples/CD_Kriging.csv ./");
 	system("cp ./Samples/Area_Kriging.csv ./");
@@ -160,6 +314,15 @@ void su2_optimize(std::string python_dir){
 	std::string cd_kriging_input_file = "CD_Kriging.csv";
 	std::string area_kriging_input_file = "Area_Kriging.csv";
 
+
+	/* check double points in the data */
+	check_double_points_data(area_kriging_input_file,number_of_design_variables);
+	check_double_points_data(cd_kriging_input_file,number_of_design_variables);
+	check_double_points_data(cl_kriging_input_file,number_of_design_variables);
+
+
+
+
 	/* file names for the Kriging hyperparameters (for CD, CL and area) */
 	std::string cl_kriging_hyperparameters_file = "CL_Kriging_Hyperparameters.csv";
 	std::string cd_kriging_hyperparameters_file = "CD_Kriging_Hyperparameters.csv";
@@ -167,7 +330,7 @@ void su2_optimize(std::string python_dir){
 
 
 	/* file name for the optimization history */
-	std::string all_data_file = "naca0012_optimization_history.csv";
+	std::string all_data_file = "rae2822_optimization_history.csv";
 
 
 	/* obtain statistics from the existing data */
@@ -248,7 +411,16 @@ void su2_optimize(std::string python_dir){
 
 		/* load samples from file*/
 		mat optimization_data;
+		mat cl_data;
+		mat cd_data;
+		mat area_data;
+
+
 		optimization_data.load(all_data_file.c_str(), csv_ascii);
+
+		cl_data.load(cl_kriging_input_file.c_str(),csv_ascii );
+		cd_data.load(cd_kriging_input_file.c_str(),csv_ascii );
+		area_data.load(area_kriging_input_file.c_str(),csv_ascii );
 
 #if 0
 		printf("optimization data:\n");
@@ -257,11 +429,21 @@ void su2_optimize(std::string python_dir){
 #endif
 
 
-		/* normalized input variables */
-		mat X(optimization_data.n_rows,number_of_design_variables);
+
 
 		/*dimension of R */
 		int number_of_data_points = optimization_data.n_rows;
+
+
+		int number_of_data_points_CL = cl_data.n_rows;
+		int number_of_data_points_CD = cd_data.n_rows;
+		int number_of_data_points_area = area_data.n_rows;
+
+		/* normalized input variables */
+		mat X(number_of_data_points,number_of_design_variables);
+		mat X_CL(number_of_data_points_CL,number_of_design_variables);
+		mat X_CD(number_of_data_points_CD,number_of_design_variables);
+		mat X_area(number_of_data_points_area,number_of_design_variables);
 
 		if(it_count_outer_loop == 0) {
 
@@ -273,6 +455,9 @@ void su2_optimize(std::string python_dir){
 		for(int i=0; i<number_of_design_variables;i++){
 
 			X.col(i) = optimization_data.col(i);
+			X_CL.col(i) =   cl_data.col(i);
+			X_CD.col(i) =   cd_data.col(i);
+			X_area.col(i) = area_data.col(i);
 
 		}
 
@@ -309,26 +494,20 @@ void su2_optimize(std::string python_dir){
 			for (int j = 0; j < number_of_design_variables; j++) {
 
 				X(i, j) = (1.0/number_of_design_variables)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+				X_CL(i, j) = (1.0/number_of_design_variables)*(X_CL(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+				X_CD(i, j) = (1.0/number_of_design_variables)*(X_CD(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+				X_area(i, j) = (1.0/number_of_design_variables)*(X_area(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+
 			}
 		}
 
 
 
-		/* data matrices for surrogate model training (cl,cd,S) */
-		mat cl_kriging_data;
-		mat cd_kriging_data;
-		mat area_kriging_data;
-
-		/* load data for Kriging training */
-		cl_kriging_data.load(cl_kriging_input_file.c_str(), csv_ascii);
-		cd_kriging_data.load(cd_kriging_input_file.c_str(), csv_ascii);
-		area_kriging_data.load(area_kriging_input_file.c_str(), csv_ascii);
-
 
 		/* assign ys vectors for CL,CD and area */
-		vec ys_CL =   optimization_data.col(number_of_design_variables);
-		vec ys_CD =   optimization_data.col(number_of_design_variables+1);
-		vec ys_S = optimization_data.col(number_of_design_variables+2);
+		vec ys_CL   =   optimization_data.col(number_of_design_variables);
+		vec ys_CD   =   optimization_data.col(number_of_design_variables+1);
+		vec ys_area =   optimization_data.col(number_of_design_variables+2);
 
 
 
@@ -382,23 +561,30 @@ void su2_optimize(std::string python_dir){
 
 		/* correlation matrices for cd,cl and area */
 
-		mat R_CL(number_of_data_points,number_of_data_points);
-		mat R_CD(number_of_data_points,number_of_data_points);
-		mat R_S(number_of_data_points,number_of_data_points);
+		mat R_CL(number_of_data_points_CL,number_of_data_points_CL);
+		mat R_CD(number_of_data_points_CD,number_of_data_points_CD);
+		mat R_S(number_of_data_points_area,number_of_data_points_area);
 
 		/* lower and upper diagonal matrices for Cholesky decomposition */
 
-		mat U_CL(number_of_data_points,number_of_data_points);
-		mat U_CD(number_of_data_points,number_of_data_points);
+		mat U_CL(number_of_data_points_CL,number_of_data_points_CL);
+		mat U_CD(number_of_data_points_CD,number_of_data_points_CD);
 		mat U_S(number_of_data_points,number_of_data_points);
 
 
-		mat L_CL(number_of_data_points,number_of_data_points);
-		mat L_CD(number_of_data_points,number_of_data_points);
-		mat L_S(number_of_data_points,number_of_data_points);
+		mat L_CL(number_of_data_points_CL,number_of_data_points_CL);
+		mat L_CD(number_of_data_points_CD,number_of_data_points_CD);
+		mat L_S(number_of_data_points_area,number_of_data_points_area);
 
 		/* vector of ones */
-		vec I = ones(number_of_data_points);
+		vec I_CL = ones(number_of_data_points_CL);
+		vec I_CD = ones(number_of_data_points_CD);
+		vec I_area = ones(number_of_data_points_area);
+
+
+		ys_CL   =   CL_data.col(number_of_design_variables);
+		ys_CD   =   CD_data.col(number_of_design_variables+1);
+		ys_area =   area_data.col(number_of_design_variables+2);
 
 #if 0
 		cl_kriging_data.print();
@@ -444,7 +630,7 @@ void su2_optimize(std::string python_dir){
 
 		/* train response surface for CL */
 
-		r_CL =  0.11364798;
+		r_CL = 9.76E-03;
 		train_TRGEK_response_surface(cl_kriging_input_file,
 				cl_kriging_hyperparameters_file,
 				LINEAR_REGRESSION_ON,
@@ -465,7 +651,7 @@ void su2_optimize(std::string python_dir){
 
 		/* train response surface for CD */
 
-		r_CD =  0.638;
+		r_CD =  8.28E-02;
 		train_TRGEK_response_surface(cd_kriging_input_file,
 				cd_kriging_hyperparameters_file,
 				LINEAR_REGRESSION_ON,
@@ -503,9 +689,14 @@ void su2_optimize(std::string python_dir){
 
 
 
+
+
+
 		/*update y vectors according to linear regression*/
 
-		mat augmented_X(number_of_data_points, number_of_design_variables + 1);
+		mat augmented_X_CL(number_of_data_points_CL, number_of_design_variables + 1);
+		mat augmented_X_CD(number_of_data_points_CD, number_of_design_variables + 1);
+		mat augmented_X_area(number_of_data_points_area, number_of_design_variables + 1);
 
 		for (int i = 0; i < number_of_data_points; i++) {
 
@@ -513,19 +704,23 @@ void su2_optimize(std::string python_dir){
 
 				if (j == 0){
 
-					augmented_X(i, j) = 1.0;
+					augmented_X_CL(i, j) = 1.0;
+					augmented_X_CD(i, j) = 1.0;
+					augmented_X_area(i, j) = 1.0;
 				}
 				else{
 
-					augmented_X(i, j) = X(i, j - 1);
+					augmented_X_CL(i, j) = X_CL(i, j - 1);
+					augmented_X_CD(i, j) = X_CD(i, j - 1);
+					augmented_X_area(i, j) = X_area(i, j - 1);
 
 				}
 			}
 		}
 
-		vec ys_reg_cl = augmented_X * regression_weights_CL;
-		vec ys_reg_cd = augmented_X * regression_weights_CD;
-		vec ys_reg_S = augmented_X * regression_weights_S;
+		vec ys_reg_cl = augmented_X_CL * regression_weights_CL;
+		vec ys_reg_cd = augmented_X_CD * regression_weights_CD;
+		vec ys_reg_S = augmented_X_area * regression_weights_S;
 
 
 		ys_CL = ys_CL - ys_reg_cl;
@@ -571,7 +766,7 @@ void su2_optimize(std::string python_dir){
 				gamma_CL,
 				reg_param,
 				R_CL,
-				X);
+				X_CL);
 #if 0
 		printf("R_CL:\n");
 		R_CL.print();
@@ -593,15 +788,15 @@ void su2_optimize(std::string python_dir){
 		vec R_inv_I_CL(number_of_data_points);
 
 		solve_linear_system_by_Cholesky(U_CL, L_CL, R_inv_ys_CL, ys_CL); /* solve R x = ys */
-		solve_linear_system_by_Cholesky(U_CL, L_CL, R_inv_I_CL, I);      /* solve R x = I */
+		solve_linear_system_by_Cholesky(U_CL, L_CL, R_inv_I_CL, I_CL);      /* solve R x = I */
 
 
-		double	beta0_CL = (1.0/dot(I,R_inv_I_CL)) * (dot(I,R_inv_ys_CL));
+		double	beta0_CL = (1.0/dot(I,R_inv_I_CL)) * (dot(I_CL,R_inv_ys_CL));
 #if 0
 		printf("beta0_CL= %20.15f\n",beta0);
 #endif
 
-		vec ys_min_betaI_CL = ys_CL-beta0_CL*I;
+		vec ys_min_betaI_CL = ys_CL-beta0_CL*I_CL;
 
 		vec R_inv_ys_min_beta_CL(number_of_data_points);
 
@@ -615,7 +810,7 @@ void su2_optimize(std::string python_dir){
 				gamma_CD,
 				reg_param,
 				R_CD,
-				X);
+				X_CD);
 
 
 		int cholesky_return_CD = chol(U_CD, R_CD);
@@ -633,7 +828,7 @@ void su2_optimize(std::string python_dir){
 
 
 		solve_linear_system_by_Cholesky(U_CD, L_CD, R_inv_ys_CD, ys_CD); /* solve R x = ys */
-		solve_linear_system_by_Cholesky(U_CD, L_CD, R_inv_I_CD, I);   /* solve R x = I */
+		solve_linear_system_by_Cholesky(U_CD, L_CD, R_inv_I_CD, I_CD);   /* solve R x = I */
 
 
 

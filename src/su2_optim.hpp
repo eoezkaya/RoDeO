@@ -20,8 +20,9 @@ typedef struct {
 } MC_design;
 
 
+void SU2_CFD(std::string input_filename);
 
-
+void check_double_points_data(std::string filename);
 
 void su2_optimize(std::string python_dir);
 

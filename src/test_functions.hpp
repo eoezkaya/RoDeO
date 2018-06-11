@@ -129,12 +129,22 @@ double Goldstein_Price(double *x);
 double Goldstein_Price_adj(double *x, double *xb);
 
 double Rosenbrock(double *x);
+double Rosenbrock_adj(double *x, double *xb);
+
+
+double Rosenbrock3D(double *x);
+double Rosenbrock3D_adj(double *x, double *xb);
+
+double Rosenbrock4D(double *x);
+double Rosenbrock4D_adj(double *x, double *xb);
+
 
 
 double Rosenbrock8D(double *x);
-double Rosenbrock8D_b(double *x, double *xb) ;
+double Rosenbrock8D_adj(double *x, double *xb) ;
 
-
+double Shubert(double *x);
+double Shubert_adj(double *x, double *xb);
 
 double Himmelblau(double *x);
 double Himmelblau_adj(double *x, double *xb);
