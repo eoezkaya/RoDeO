@@ -96,14 +96,14 @@ void check_double_points_data(std::string filename, int nvars){
 	printf("checking double points for the file %s...\n",filename.c_str());
 #endif
 	mat data;
-	data.load(filename, raw_ascii);
-#if 0
+	data.load(filename, csv_ascii);
+#if 1
 	data.print();
 #endif
 
 	int nrows = data.n_rows;
-#if 1
-	printf("data has initially %d rows\n",nrows);
+#if 0
+	printf("data has initially %d rows with nvars = %d\n",nrows,nvars);
 #endif
 
 
@@ -297,7 +297,7 @@ void su2_optimize(std::string python_dir){
 
 	int number_of_EI_iter;
 	int number_of_EI_iter_local = 100000;
-	int number_of_EI_iter_global = 10000000;
+	int number_of_EI_iter_global = 1000000;
 
 	int number_of_function_evals = 0;
 
@@ -331,7 +331,7 @@ void su2_optimize(std::string python_dir){
 
 	/* file name for the optimization history */
 	std::string all_data_file = "rae2822_optimization_history.csv";
-
+	check_double_points_data(all_data_file,number_of_design_variables);
 
 	/* obtain statistics from the existing data */
 	double EI_dist_tol = 0.0;
@@ -342,11 +342,6 @@ void su2_optimize(std::string python_dir){
 	mat stat_data;
 	stat_data.load(all_data_file.c_str(), csv_ascii);
 
-#if 0
-	printf("optimization data:\n");
-	optimization_data.print();
-
-#endif
 
 
 	/* normalized input variables */
@@ -360,7 +355,7 @@ void su2_optimize(std::string python_dir){
 
 	}
 
-#if 0
+#if 1
 	printf("X_stat:\n");
 	X_stat.print();
 #endif
@@ -417,7 +412,6 @@ void su2_optimize(std::string python_dir){
 
 
 		optimization_data.load(all_data_file.c_str(), csv_ascii);
-
 		cl_data.load(cl_kriging_input_file.c_str(),csv_ascii );
 		cd_data.load(cd_kriging_input_file.c_str(),csv_ascii );
 		area_data.load(area_kriging_input_file.c_str(),csv_ascii );
@@ -494,14 +488,34 @@ void su2_optimize(std::string python_dir){
 			for (int j = 0; j < number_of_design_variables; j++) {
 
 				X(i, j) = (1.0/number_of_design_variables)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+
+			}
+		}
+		for (unsigned int i = 0; i < X_CL.n_rows; i++) {
+
+			for (int j = 0; j < number_of_design_variables; j++) {
+
 				X_CL(i, j) = (1.0/number_of_design_variables)*(X_CL(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+
+			}
+		}
+		for (unsigned int i = 0; i < X_CD.n_rows; i++) {
+
+			for (int j = 0; j < number_of_design_variables; j++) {
+
 				X_CD(i, j) = (1.0/number_of_design_variables)*(X_CD(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-				X_area(i, j) = (1.0/number_of_design_variables)*(X_area(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 
 			}
 		}
 
+		for (unsigned int i = 0; i < X_area.n_rows; i++) {
 
+			for (int j = 0; j < number_of_design_variables; j++) {
+
+				X_area(i, j) = (1.0/number_of_design_variables)*(X_area(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+
+			}
+		}
 
 
 		/* assign ys vectors for CL,CD and area */
@@ -509,9 +523,14 @@ void su2_optimize(std::string python_dir){
 		vec ys_CD   =   optimization_data.col(number_of_design_variables+1);
 		vec ys_area =   optimization_data.col(number_of_design_variables+2);
 
-
-
-
+#if 0
+		printf("ys_CL:\n");
+		trans(ys_CL).print();
+		printf("ys_CD:\n");
+		trans(ys_CD).print();
+		printf("ys_area:\n");
+		trans(ys_area).print();
+#endif
 
 
 		/* now find the best sample point */
@@ -519,7 +538,7 @@ void su2_optimize(std::string python_dir){
 		double sample_min = LARGE;
 		double best_sample_CD = 0.0;
 		double best_sample_CL= 0.0;
-		double best_sample_S = 0.0;
+		double best_sample_area = 0.0;
 		int sample_min_indx = -1;
 
 		for(unsigned int k=0; k<ys_CD.size(); k++){
@@ -532,9 +551,9 @@ void su2_optimize(std::string python_dir){
 				obj_fun += lift_penalty_param*(CL_constraint-ys_CL(k));
 			}
 
-			if(ys_S(k) < Area_constraint){
+			if(ys_area(k) < Area_constraint){
 
-				obj_fun += area_penalty_param*(Area_constraint-ys_S(k));
+				obj_fun += area_penalty_param*(Area_constraint-ys_area(k));
 			}
 
 			if(obj_fun < sample_min){
@@ -543,7 +562,7 @@ void su2_optimize(std::string python_dir){
 				sample_min_indx = k;
 				best_sample_CD = ys_CD(k);
 				best_sample_CL = ys_CL(k);
-				best_sample_S = ys_S(k);
+				best_sample_area = ys_area(k);
 
 			}
 
@@ -552,29 +571,30 @@ void su2_optimize(std::string python_dir){
 		printf("Best sample in the data set is the %dth entry :\n",sample_min_indx);
 		optimization_data.row(sample_min_indx).print();
 		printf("objective function value = %10.7e\n",sample_min);
-		printf("CD = %10.7e\n",best_sample_CD);
-		printf("CL = %10.7e\n",best_sample_CL);
-		printf("S = %10.7e\n",best_sample_S);
+		printf("CD   = %10.7e\n",best_sample_CD);
+		printf("CL   = %10.7e\n",best_sample_CL);
+		printf("Area = %10.7e\n",best_sample_area);
 
 
 #endif
+
 
 		/* correlation matrices for cd,cl and area */
 
 		mat R_CL(number_of_data_points_CL,number_of_data_points_CL);
 		mat R_CD(number_of_data_points_CD,number_of_data_points_CD);
-		mat R_S(number_of_data_points_area,number_of_data_points_area);
+		mat R_area(number_of_data_points_area,number_of_data_points_area);
 
 		/* lower and upper diagonal matrices for Cholesky decomposition */
 
 		mat U_CL(number_of_data_points_CL,number_of_data_points_CL);
 		mat U_CD(number_of_data_points_CD,number_of_data_points_CD);
-		mat U_S(number_of_data_points,number_of_data_points);
+		mat U_area(number_of_data_points_area,number_of_data_points_area);
 
 
 		mat L_CL(number_of_data_points_CL,number_of_data_points_CL);
 		mat L_CD(number_of_data_points_CD,number_of_data_points_CD);
-		mat L_S(number_of_data_points_area,number_of_data_points_area);
+		mat L_area(number_of_data_points_area,number_of_data_points_area);
 
 		/* vector of ones */
 		vec I_CL = ones(number_of_data_points_CL);
@@ -582,9 +602,10 @@ void su2_optimize(std::string python_dir){
 		vec I_area = ones(number_of_data_points_area);
 
 
-		ys_CL   =   CL_data.col(number_of_design_variables);
-		ys_CD   =   CD_data.col(number_of_design_variables+1);
-		ys_area =   area_data.col(number_of_design_variables+2);
+		/* for the Kriging, update ys vectors */
+		ys_CL   =   cl_data.col(number_of_design_variables);
+		ys_CD   =   cd_data.col(number_of_design_variables);
+		ys_area =   area_data.col(number_of_design_variables);
 
 #if 0
 		cl_kriging_data.print();
@@ -592,7 +613,10 @@ void su2_optimize(std::string python_dir){
 
 
 #if 1
-		printf("number of samples = %d\n",number_of_data_points);
+		printf("number of samples (all data)  = %d\n",number_of_data_points);
+		printf("number of samples (CL data)   = %d\n",number_of_data_points_CL);
+		printf("number of samples (CD data)   = %d\n",number_of_data_points_CD);
+		printf("number of samples (area data) = %d\n",number_of_data_points_area);
 #endif
 
 		/* visualize the CL&CD of the samples */
@@ -606,6 +630,8 @@ void su2_optimize(std::string python_dir){
 		FILE* in = popen(python_command.c_str(), "r");
 		fprintf(in, "\n");
 
+
+		/* visualize the CL&CD of the samples */
 
 		mat kriging_weights_CD;
 		mat regression_weights_CD;
@@ -623,14 +649,14 @@ void su2_optimize(std::string python_dir){
 		vec beta0_CL_tr(number_of_design_variables+1);
 
 
-		vec kriging_weights_S;
-		vec regression_weights_S;
+		vec kriging_weights_area;
+		vec regression_weights_area;
 
 
 
 		/* train response surface for CL */
 
-		r_CL = 9.76E-03;
+		r_CL = 9.76E-02;
 		train_TRGEK_response_surface(cl_kriging_input_file,
 				cl_kriging_hyperparameters_file,
 				LINEAR_REGRESSION_ON,
@@ -651,7 +677,7 @@ void su2_optimize(std::string python_dir){
 
 		/* train response surface for CD */
 
-		r_CD =  8.28E-02;
+		r_CD =  9.28E-01;
 		train_TRGEK_response_surface(cd_kriging_input_file,
 				cd_kriging_hyperparameters_file,
 				LINEAR_REGRESSION_ON,
@@ -674,17 +700,17 @@ void su2_optimize(std::string python_dir){
 		train_kriging_response_surface(area_kriging_input_file,
 				area_kriging_hyperparameters_file,
 				LINEAR_REGRESSION_ON,
-				regression_weights_S,
-				kriging_weights_S,
+				regression_weights_area,
+				kriging_weights_area,
 				reg_param,
 				max_number_of_function_calculations_training,
 				CSV_ASCII);
 
 #if 1
 		printf("kriging weights (area):\n");
-		trans(kriging_weights_S).print();
+		trans(kriging_weights_area).print();
 		printf("regression weights (area):\n");
-		trans(regression_weights_S).print();
+		trans(regression_weights_area).print();
 #endif
 
 
@@ -698,21 +724,55 @@ void su2_optimize(std::string python_dir){
 		mat augmented_X_CD(number_of_data_points_CD, number_of_design_variables + 1);
 		mat augmented_X_area(number_of_data_points_area, number_of_design_variables + 1);
 
-		for (int i = 0; i < number_of_data_points; i++) {
+		for (int i = 0; i < number_of_data_points_CL; i++) {
 
 			for (int j = 0; j <= number_of_design_variables; j++) {
 
 				if (j == 0){
 
 					augmented_X_CL(i, j) = 1.0;
-					augmented_X_CD(i, j) = 1.0;
-					augmented_X_area(i, j) = 1.0;
+
 				}
 				else{
 
 					augmented_X_CL(i, j) = X_CL(i, j - 1);
+
+
+				}
+			}
+		}
+
+		for (int i = 0; i < number_of_data_points_CD; i++) {
+
+			for (int j = 0; j <= number_of_design_variables; j++) {
+
+				if (j == 0){
+
+					augmented_X_CD(i, j) = 1.0;
+
+				}
+				else{
+
 					augmented_X_CD(i, j) = X_CD(i, j - 1);
+
+
+				}
+			}
+		}
+
+		for (int i = 0; i < number_of_data_points_area; i++) {
+
+			for (int j = 0; j <= number_of_design_variables; j++) {
+
+				if (j == 0){
+
+					augmented_X_area(i, j) = 1.0;
+
+				}
+				else{
+
 					augmented_X_area(i, j) = X_area(i, j - 1);
+
 
 				}
 			}
@@ -720,14 +780,21 @@ void su2_optimize(std::string python_dir){
 
 		vec ys_reg_cl = augmented_X_CL * regression_weights_CL;
 		vec ys_reg_cd = augmented_X_CD * regression_weights_CD;
-		vec ys_reg_S = augmented_X_area * regression_weights_S;
+		vec ys_reg_area = augmented_X_area * regression_weights_area;
 
 
 		ys_CL = ys_CL - ys_reg_cl;
-		ys_CD = ys_CD - ys_reg_cd;
-		ys_S = ys_S - ys_reg_S;
+		ys_CD= ys_CD - ys_reg_cd;
+		ys_area = ys_area - ys_reg_area;
 
-
+#if 0
+		printf("ys_CL:\n");
+		trans(ys_CL).print();
+		printf("ys_CD:\n");
+		trans(ys_CD).print();
+		printf("ys_area:\n");
+		trans(ys_area).print();
+#endif
 
 
 		vec theta_CL = kriging_weights_CL.col(0).head(number_of_design_variables);
@@ -737,8 +804,8 @@ void su2_optimize(std::string python_dir){
 		vec gamma_CD = kriging_weights_CD.col(0).tail(number_of_design_variables);
 
 
-		vec theta_S = kriging_weights_S.head(number_of_design_variables);
-		vec gamma_S = kriging_weights_S.tail(number_of_design_variables);
+		vec theta_area = kriging_weights_area.head(number_of_design_variables);
+		vec gamma_area = kriging_weights_area.tail(number_of_design_variables);
 
 
 #if 0
@@ -784,21 +851,19 @@ void su2_optimize(std::string python_dir){
 
 		L_CL = trans(U_CL);
 
-		vec R_inv_ys_CL(number_of_data_points);
-		vec R_inv_I_CL(number_of_data_points);
+		vec R_inv_ys_CL(number_of_data_points_CL);
+		vec R_inv_I_CL(number_of_data_points_CL);
 
 		solve_linear_system_by_Cholesky(U_CL, L_CL, R_inv_ys_CL, ys_CL); /* solve R x = ys */
 		solve_linear_system_by_Cholesky(U_CL, L_CL, R_inv_I_CL, I_CL);      /* solve R x = I */
 
 
-		double	beta0_CL = (1.0/dot(I,R_inv_I_CL)) * (dot(I_CL,R_inv_ys_CL));
-#if 0
-		printf("beta0_CL= %20.15f\n",beta0);
-#endif
+		double	beta0_CL = (1.0/dot(I_CL,R_inv_I_CL)) * (dot(I_CL,R_inv_ys_CL));
+
 
 		vec ys_min_betaI_CL = ys_CL-beta0_CL*I_CL;
 
-		vec R_inv_ys_min_beta_CL(number_of_data_points);
+		vec R_inv_ys_min_beta_CL(number_of_data_points_CL);
 
 
 
@@ -811,7 +876,10 @@ void su2_optimize(std::string python_dir){
 				reg_param,
 				R_CD,
 				X_CD);
-
+#if 0
+		printf("R_CD:\n");
+		R_CD.print();
+#endif
 
 		int cholesky_return_CD = chol(U_CD, R_CD);
 
@@ -822,8 +890,8 @@ void su2_optimize(std::string python_dir){
 
 		L_CD = trans(U_CD);
 
-		vec R_inv_ys_CD(number_of_data_points);
-		vec R_inv_I_CD(number_of_data_points);
+		vec R_inv_ys_CD(number_of_data_points_CD);
+		vec R_inv_I_CD(number_of_data_points_CD);
 
 
 
@@ -833,12 +901,12 @@ void su2_optimize(std::string python_dir){
 
 
 
-		double beta0_CD = (1.0/dot(I,R_inv_I_CD)) * (dot(I,R_inv_ys_CD));
+		double beta0_CD = (1.0/dot(I_CD,R_inv_I_CD)) * (dot(I_CD,R_inv_ys_CD));
 
 
-		vec ys_min_betaI_CD = ys_CD-beta0_CD*I;
+		vec ys_min_betaI_CD = ys_CD-beta0_CD*I_CD;
 
-		vec R_inv_ys_min_beta_CD(number_of_data_points);
+		vec R_inv_ys_min_beta_CD(number_of_data_points_CD);
 
 
 
@@ -846,53 +914,53 @@ void su2_optimize(std::string python_dir){
 		solve_linear_system_by_Cholesky(U_CD, L_CD, R_inv_ys_min_beta_CD, ys_min_betaI_CD);
 
 
-		double ssqr_CD = (1.0 / number_of_data_points) * dot(ys_min_betaI_CD, R_inv_ys_min_beta_CD);
+		double ssqr_CD = (1.0 / number_of_data_points_CD) * dot(ys_min_betaI_CD, R_inv_ys_min_beta_CD);
 
 #if 0
 		printf("computing R for area\n");
 #endif
-		compute_R_matrix(theta_S,
-				gamma_S,
+		compute_R_matrix(theta_area,
+				gamma_area,
 				reg_param,
-				R_S,
-				X);
+				R_area,
+				X_area);
 
 
 
-		int cholesky_return_S = chol(U_S, R_S);
+		int cholesky_return_area = chol(U_area, R_area);
 
-		if (cholesky_return_S == 0) {
+		if (cholesky_return_area == 0) {
 			printf("Error: Ill conditioned correlation matrix for S, Cholesky decomposition failed...\n");
 			exit(-1);
 		}
 
-		L_S = trans(U_S);
+		L_area = trans(U_area);
 
-		vec R_inv_ys_S(number_of_data_points);
-		vec R_inv_I_S(number_of_data_points);
-
-
-
-		solve_linear_system_by_Cholesky(U_S, L_S, R_inv_ys_S, ys_S); /* solve R x = ys */
-		solve_linear_system_by_Cholesky(U_S, L_S, R_inv_I_S, I);     /* solve R x = I */
-
-		double beta0_S = (1.0/dot(I,R_inv_I_S)) * (dot(I,R_inv_ys_S));
+		vec R_inv_ys_area(number_of_data_points_area);
+		vec R_inv_I_area(number_of_data_points_area);
 
 
-		vec ys_min_betaI_S = ys_S-beta0_S*I;
 
-		vec R_inv_ys_min_beta_S(number_of_data_points);
+		solve_linear_system_by_Cholesky(U_area, L_area, R_inv_ys_area, ys_area); /* solve R x = ys */
+		solve_linear_system_by_Cholesky(U_area, L_area, R_inv_I_area, I_area);     /* solve R x = I */
+
+		double beta0_area = (1.0/dot(I_area,R_inv_I_area)) * (dot(I_area,R_inv_ys_area));
+
+
+		vec ys_min_betaI_area = ys_area-beta0_area*I_area;
+
+		vec R_inv_ys_min_beta_area(number_of_data_points_area);
 
 
 
 		/* solve R x = ys-beta0*I */
-		solve_linear_system_by_Cholesky(U_S, L_S, R_inv_ys_min_beta_S, ys_min_betaI_S);
+		solve_linear_system_by_Cholesky(U_area, L_area, R_inv_ys_min_beta_area, ys_min_betaI_area);
 
 
 #if 0
 		printf("beta0 for CL : %15.10f\n",beta0_CL);
 		printf("beta0 for CD : %15.10f\n",beta0_CD);
-		printf("beta0 for Area : %15.10f\n",beta0_S);
+		printf("beta0 for Area : %15.10f\n",beta0_area);
 #endif
 
 
@@ -952,16 +1020,16 @@ void su2_optimize(std::string python_dir){
 #endif
 
 			/* Kriging estimate of the area */
-			double S_tilde = calculate_f_tilde(dvnorm,
-					X,
-					beta0_S,
-					regression_weights_S,
-					R_inv_ys_min_beta_S,
-					kriging_weights_S);
+			double area_tilde = calculate_f_tilde(dvnorm,
+					X_area,
+					beta0_area,
+					regression_weights_area,
+					R_inv_ys_min_beta_area,
+					kriging_weights_area);
 
 			/* Kriging estimate of the CL */
 			double CL_tilde = calculate_f_tilde(dvnorm,
-					X,
+					X_CL,
 					beta0_CL,
 					regression_weights_CL,
 					R_inv_ys_min_beta_CL,
@@ -973,13 +1041,13 @@ void su2_optimize(std::string python_dir){
 
 			calculate_f_tilde_and_ssqr(
 					dvnorm,
-					X,
+					X_CD,
 					beta0_CD,
 					ssqr_CD,
 					regression_weights_CD,
 					R_inv_ys_min_beta_CD,
 					R_inv_I_CD,
-					I,
+					I_CD,
 					kriging_weights_CD,
 					U_CD,
 					L_CD,
@@ -995,7 +1063,7 @@ void su2_optimize(std::string python_dir){
 
 			/* find the closest data point */
 
-			findKNeighbours(X,
+			findKNeighbours(X_CD,
 					dvnorm,
 					1,
 					&min_dist,
@@ -1004,7 +1072,7 @@ void su2_optimize(std::string python_dir){
 
 
 
-			rowvec sp =  X.row(indx);
+			rowvec sp =  X_CD.row(indx);
 			rowvec sp_not_normalized(number_of_design_variables);
 			sp_not_normalized.fill(0.0);
 
@@ -1034,8 +1102,8 @@ void su2_optimize(std::string python_dir){
 #endif
 
 			/* get the functional value from the data */
-			double func_val_CD = cd_kriging_data(indx,number_of_design_variables);
-			double func_val_CL = cl_kriging_data(indx,number_of_design_variables);
+			double func_val_CD = cd_data(indx,number_of_design_variables);
+			double func_val_CL = cl_data(indx,number_of_design_variables);
 #if 0
 			printf("CD value at the nearest point = %10.7e\n",func_val_CD);
 			printf("CL value at the nearest point = %10.7e\n",func_val_CL);
@@ -1046,14 +1114,14 @@ void su2_optimize(std::string python_dir){
 
 			for(int j=0; j<number_of_design_variables; j++) {
 
-				grad_CD(j)= cd_kriging_data(indx,j+number_of_design_variables+1);
+				grad_CD(j)= cd_data(indx,j+number_of_design_variables+1);
 			}
 
 			vec grad_CL(number_of_design_variables);
 
 			for(int j=0; j<number_of_design_variables; j++) {
 
-				grad_CL(j)= cl_kriging_data(indx,j+number_of_design_variables+1);
+				grad_CL(j)= cl_data(indx,j+number_of_design_variables+1);
 			}
 
 #if 0
@@ -1097,9 +1165,9 @@ void su2_optimize(std::string python_dir){
 				obj_fun += lift_penalty_param*(CL_constraint-fval_CL);
 			}
 
-			if(S_tilde < Area_constraint){
+			if(area_tilde < Area_constraint){
 
-				obj_fun += area_penalty_param*(Area_constraint-S_tilde);
+				obj_fun += area_penalty_param*(Area_constraint-area_tilde);
 			}
 
 
@@ -1144,7 +1212,7 @@ void su2_optimize(std::string python_dir){
 				printf("best EI values:\n");
 				trans(best_EI_values).print();
 				printf("worst EI index is now = %d\n",worst_EI_array_indx);
-				printf("area tilde = %10.7e:\n",S_tilde);
+				printf("area tilde = %10.7e:\n",area_tilde);
 				printf("CL tilde = %10.7e:\n",CL_tilde);
 				printf("CD tilde = %10.7e:\n",CD_tilde);
 				printf("factor_CD = %10.7e\n",factor_CD);
@@ -1197,10 +1265,10 @@ void su2_optimize(std::string python_dir){
 			printf("area = %10.7f\n",area_exact);
 			printf("cl = %10.7f\n",CL_exact);
 			printf("cd = %10.7f\n",CD_exact);
-			//		printf("gradient (drag):\n");
-			//		trans(gradient_cd).print();
-			//		printf("gradient (lift):\n");
-			//		trans(gradient_cl).print();
+			printf("gradient (drag):\n");
+			trans(gradient_cd).print();
+			printf("gradient (lift):\n");
+			trans(gradient_cl).print();
 #endif
 
 
@@ -1222,48 +1290,48 @@ void su2_optimize(std::string python_dir){
 
 
 				/* insert a row to the cl kriging data matrix*/
-				cl_kriging_data.insert_rows( number_of_data_points, 1 );
+				cl_data.insert_rows( number_of_data_points_CL, 1 );
 
 				for(int i=0;i<number_of_design_variables;i++){
 
-					cl_kriging_data(number_of_data_points,i) = dv(i);
+					cl_data(number_of_data_points_CL,i) = dv(i);
 				}
-				cl_kriging_data(number_of_data_points,number_of_design_variables) = CL_exact;
+				cl_data(number_of_data_points_CL,number_of_design_variables) = CL_exact;
 
 				for(int i=0;i<number_of_design_variables;i++){
 
-					cl_kriging_data(number_of_data_points,number_of_design_variables+1+i) = gradient_cl(i);
+					cl_data(number_of_data_points_CL,number_of_design_variables+1+i) = gradient_cl(i);
 				}
 
 
 
 
 				/* insert a row to the cd kriging data matrix*/
-				cd_kriging_data.insert_rows( number_of_data_points, 1 );
+				cd_data.insert_rows( number_of_data_points_CD, 1 );
 
 				for(int i=0;i<number_of_design_variables;i++){
 
-					cd_kriging_data(number_of_data_points,i) = dv(i);
+					cd_data(number_of_data_points_CD,i) = dv(i);
 				}
 
-				cd_kriging_data(number_of_data_points,number_of_design_variables) = CD_exact;
+				cd_data(number_of_data_points_CD,number_of_design_variables) = CD_exact;
 
 				for(int i=0;i<number_of_design_variables;i++){
 
-					cd_kriging_data(number_of_data_points,number_of_design_variables+1+i) = gradient_cd(i);
+					cd_data(number_of_data_points_CD,number_of_design_variables+1+i) = gradient_cd(i);
 				}
 
 
 
 
 				/* insert a row to the area kriging data matrix*/
-				area_kriging_data.insert_rows( number_of_data_points, 1 );
+				area_data.insert_rows( number_of_data_points_area, 1 );
 
 				for(int i=0;i<number_of_design_variables;i++){
 
-					area_kriging_data(number_of_data_points,i) = dv(i);
+					area_data(number_of_data_points_area,i) = dv(i);
 				}
-				area_kriging_data(number_of_data_points,number_of_design_variables) = area_exact;
+				area_data(number_of_data_points_area,number_of_design_variables) = area_exact;
 
 
 
@@ -1274,32 +1342,32 @@ void su2_optimize(std::string python_dir){
 
 		/* save updated data */
 		optimization_data.save(all_data_file.c_str(), csv_ascii);
-		cl_kriging_data.save(cl_kriging_input_file.c_str(), csv_ascii);
-		cd_kriging_data.save(cd_kriging_input_file.c_str(), csv_ascii);
-		area_kriging_data.save(area_kriging_input_file.c_str(), csv_ascii);
+		cl_data.save(cl_kriging_input_file.c_str(), csv_ascii);
+		cd_data.save(cd_kriging_input_file.c_str(), csv_ascii);
+		area_data.save(area_kriging_input_file.c_str(), csv_ascii);
 
 
 		if (number_of_function_evals > max_number_of_function_evaluations ){
 
 			vec ys_CL =   optimization_data.col(number_of_design_variables);
 			vec ys_CD =   optimization_data.col(number_of_design_variables+1);
-			vec ys_S = optimization_data.col(number_of_design_variables+2);
+			vec ys_area = optimization_data.col(number_of_design_variables+2);
 
 			/* now find the best sample point */
 
 			double best_sample_CD = LARGE;
 			double best_sample_CL = LARGE;
-			double best_sample_S = LARGE;
+			double best_sample_area = LARGE;
 			int sample_min_indx = -1;
 
 			for(unsigned int k=0; k<ys_CD.size(); k++){
 
-				if(ys_CD(k) < sample_min && ys_CL(k) >= CL_constraint && ys_S(k) >= Area_constraint){
+				if(ys_CD(k) < sample_min && ys_CL(k) >= CL_constraint && ys_area(k) >= Area_constraint){
 
 					sample_min_indx = k;
 					best_sample_CD = ys_CD(k);
 					best_sample_CL = ys_CL(k);
-					best_sample_S = ys_S(k);
+					best_sample_area = ys_area(k);
 
 				}
 
@@ -1310,7 +1378,7 @@ void su2_optimize(std::string python_dir){
 			optimization_data.row(sample_min_indx).print();
 			printf("CD = %10.7e\n",best_sample_CD);
 			printf("CL = %10.7e\n",best_sample_CL);
-			printf("S = %10.7e\n",best_sample_S);
+			printf("S = %10.7e\n",best_sample_area);
 
 #endif
 
