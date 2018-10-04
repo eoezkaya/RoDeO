@@ -9,7 +9,6 @@
 #include "test_functions.hpp"
 #include "kriging_training.hpp"
 #include "rbf.hpp"
-#include "svm.hpp"
 #include "trust_region_gek.hpp"
 
 

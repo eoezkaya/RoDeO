@@ -8,16 +8,12 @@
 #include "su2_optim.hpp"
 #include "test_functions.hpp"
 #include "rbf.hpp"
-#include "svm.hpp"
 #include "kd_tree.hpp"
 #include "binary_search_tree.hpp"
 #include "linear_regression.hpp"
 #include "kmeans_clustering.hpp"
-#include "interpolation.hpp"
 #include "Rodeo_macros.hpp"
 #include "auxilliary_functions.hpp"
-#include "bitmap_image.hpp"
-#include "mnist.hpp"
 #include "read_settings.hpp"
 
 
