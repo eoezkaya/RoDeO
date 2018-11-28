@@ -249,6 +249,15 @@ void generate_test_function_data(double (*test_function)(double *),
 		int sampling_method,
 		int problem_dimension);
 
+void perform_kernel_regression_test(double (*test_function)(double *),
+		double (*test_function_adj)(double *, double *),
+		double *bounds,
+		std::string function_name ,
+		int  number_of_samples_with_only_f_eval,
+		int number_of_samples_with_g_eval,
+		int sampling_method,
+		int dim,
+		std::string python_dir);
 
 void perform_rbf_test(double (*test_function)(double *),
         double *bounds,

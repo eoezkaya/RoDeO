@@ -389,22 +389,22 @@ double Rosenbrock3D_adj(double *x, double *xb) {
 	double Rosenbrock3Db = 1.0;
 	xb[0] = 0.0; xb[1] = 0.0; xb[2] = 0.0;
 
-    double term1 = (1.0-x[0])*(1.0-x[0]) + 100.0*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0]);
-    double term1b = 0.0;
-    double term2 = (1.0-x[1])*(1.0-x[1]) + 100.0*(x[2]-x[1]*x[1])*(x[2]-x[1]*x[1]);
-    double term2b = 0.0;
-    double tempb;
-    double tempb0;
+	double term1 = (1.0-x[0])*(1.0-x[0]) + 100.0*(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0]);
+	double term1b = 0.0;
+	double term2 = (1.0-x[1])*(1.0-x[1]) + 100.0*(x[2]-x[1]*x[1])*(x[2]-x[1]*x[1]);
+	double term2b = 0.0;
+	double tempb;
+	double tempb0;
 
-    term1b = Rosenbrock3Db;
-    term2b = Rosenbrock3Db;
-    tempb = 100.0*2*(x[2]-x[1]*x[1])*term2b;
-    xb[1] = xb[1] - 2*x[1]*tempb - 2*(1.0-x[1])*term2b;
-    xb[2] = xb[2] + tempb;
-    tempb0 = 100.0*2*(x[1]-x[0]*x[0])*term1b;
-    xb[0] = xb[0] - 2*x[0]*tempb0 - 2*(1.0-x[0])*term1b;
-    xb[1] = xb[1] + tempb0;
-    return term1+term2;
+	term1b = Rosenbrock3Db;
+	term2b = Rosenbrock3Db;
+	tempb = 100.0*2*(x[2]-x[1]*x[1])*term2b;
+	xb[1] = xb[1] - 2*x[1]*tempb - 2*(1.0-x[1])*term2b;
+	xb[2] = xb[2] + tempb;
+	tempb0 = 100.0*2*(x[1]-x[0]*x[0])*term1b;
+	xb[0] = xb[0] - 2*x[0]*tempb0 - 2*(1.0-x[0])*term1b;
+	xb[1] = xb[1] + tempb0;
+	return term1+term2;
 }
 
 double Rosenbrock4D(double *x){
@@ -420,32 +420,32 @@ double Rosenbrock4D(double *x){
 double Rosenbrock4D_adj(double *x, double *xb) {
 	double Rosenbrock4Db = 1.0;
 	xb[0] = 0.0; xb[1] = 0.0; xb[2] = 0.0; xb[3] = 0.0;
-    double term1 = (1.0-x[0])*(1.0-x[0]) + 100.0*(x[1]-x[0]*x[0])*(x[1]-x[0]*x
-    [0]);
-    double term1b = 0.0;
-    double term2 = (1.0-x[1])*(1.0-x[1]) + 100.0*(x[2]-x[1]*x[1])*(x[2]-x[1]*x
-    [1]);
-    double term2b = 0.0;
-    double term3 = (1.0-x[2])*(1.0-x[2]) + 100.0*(x[3]-x[2]*x[2])*(x[3]-x[2]*x
-    [2]);
-    double term3b = 0.0;
-    double tempb;
-    double tempb0;
-    double tempb1;
-    double Rosenbrock4D;
-    term1b = Rosenbrock4Db;
-    term2b = Rosenbrock4Db;
-    term3b = Rosenbrock4Db;
-    tempb = 100.0*2*(x[3]-x[2]*x[2])*term3b;
-    xb[2] = xb[2] - 2*x[2]*tempb - 2*(1.0-x[2])*term3b;
-    xb[3] = xb[3] + tempb;
-    tempb0 = 100.0*2*(x[2]-x[1]*x[1])*term2b;
-    xb[1] = xb[1] - 2*x[1]*tempb0 - 2*(1.0-x[1])*term2b;
-    xb[2] = xb[2] + tempb0;
-    tempb1 = 100.0*2*(x[1]-x[0]*x[0])*term1b;
-    xb[0] = xb[0] - 2*x[0]*tempb1 - 2*(1.0-x[0])*term1b;
-    xb[1] = xb[1] + tempb1;
-    return term1+term2+term3;
+	double term1 = (1.0-x[0])*(1.0-x[0]) + 100.0*(x[1]-x[0]*x[0])*(x[1]-x[0]*x
+			[0]);
+	double term1b = 0.0;
+	double term2 = (1.0-x[1])*(1.0-x[1]) + 100.0*(x[2]-x[1]*x[1])*(x[2]-x[1]*x
+			[1]);
+	double term2b = 0.0;
+	double term3 = (1.0-x[2])*(1.0-x[2]) + 100.0*(x[3]-x[2]*x[2])*(x[3]-x[2]*x
+			[2]);
+	double term3b = 0.0;
+	double tempb;
+	double tempb0;
+	double tempb1;
+	double Rosenbrock4D;
+	term1b = Rosenbrock4Db;
+	term2b = Rosenbrock4Db;
+	term3b = Rosenbrock4Db;
+	tempb = 100.0*2*(x[3]-x[2]*x[2])*term3b;
+	xb[2] = xb[2] - 2*x[2]*tempb - 2*(1.0-x[2])*term3b;
+	xb[3] = xb[3] + tempb;
+	tempb0 = 100.0*2*(x[2]-x[1]*x[1])*term2b;
+	xb[1] = xb[1] - 2*x[1]*tempb0 - 2*(1.0-x[1])*term2b;
+	xb[2] = xb[2] + tempb0;
+	tempb1 = 100.0*2*(x[1]-x[0]*x[0])*term1b;
+	xb[0] = xb[0] - 2*x[0]*tempb1 - 2*(1.0-x[0])*term1b;
+	xb[1] = xb[1] + tempb1;
+	return term1+term2+term3;
 }
 
 double Rosenbrock8D(double *x){
@@ -517,27 +517,27 @@ double Shubert(double *x){
 
 
 double Shubert_adj(double *x, double *xb) {
-    double term1 = 0.0;
-    double term1b = 0.0;
-    double term2 = 0.0;
-    double term2b = 0.0;
-    double Shubertb=1.0;
+	double term1 = 0.0;
+	double term1b = 0.0;
+	double term2 = 0.0;
+	double term2b = 0.0;
+	double Shubertb=1.0;
 
-    xb[0]=0.0;
-    xb[1]=0.0;
+	xb[0]=0.0;
+	xb[1]=0.0;
 
-    for (int i = 0; i < 5; ++i)
-        term1 = term1 + i*cos((i+1)*x[0]+i);
-    for (int j = 0; j < 5; ++j)
-        term2 = term2 + j*cos((j+1)*x[1]+j);
-    term1b = term2*Shubertb;
-    term2b = term1*Shubertb;
-    for (int j = 4; j > -1; --j)
-        xb[1] = xb[1] - sin(j+(j+1)*x[1])*j*(j+1)*term2b;
-    for (int i = 4; i > -1; --i)
-        xb[0] = xb[0] - sin(i+(i+1)*x[0])*i*(i+1)*term1b;
+	for (int i = 0; i < 5; ++i)
+		term1 = term1 + i*cos((i+1)*x[0]+i);
+	for (int j = 0; j < 5; ++j)
+		term2 = term2 + j*cos((j+1)*x[1]+j);
+	term1b = term2*Shubertb;
+	term2b = term1*Shubertb;
+	for (int j = 4; j > -1; --j)
+		xb[1] = xb[1] - sin(j+(j+1)*x[1])*j*(j+1)*term2b;
+	for (int i = 4; i > -1; --i)
+		xb[0] = xb[0] - sin(i+(i+1)*x[0])*i*(i+1)*term1b;
 
-    return term1*term2;
+	return term1*term2;
 
 }
 
@@ -2815,6 +2815,186 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 
 
 }
+
+
+void perform_kernel_regression_test(double (*test_function)(double *),
+		double (*test_function_adj)(double *, double *),
+		double *bounds,
+		std::string function_name ,
+		int  number_of_samples_with_only_f_eval,
+		int number_of_samples_with_g_eval,
+		int sampling_method,
+		int dim,
+		std::string python_dir){
+
+#if 1
+	printf("testing kernel regression for %s function...\n",function_name.c_str());
+	printf("number of samples with only functional value = %d\n",number_of_samples_with_only_f_eval);
+	printf("number of samples with gradients = %d\n",number_of_samples_with_g_eval);
+#endif
+
+	if(dim <= 0){
+		printf("Error: problem dimension must be greater than zero\n");
+		exit(-1);
+	}
+
+
+
+	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"+std::to_string(number_of_samples_with_g_eval)+ ".csv";
+
+	printf("input file name : %s\n",input_file_name.c_str());
+
+
+#if 1
+	if(dim ==2){
+		/* generate the contour_plot */
+		generate_contour_plot_2D_function_with_gradient(test_function_adj, bounds, function_name, python_dir);
+
+
+	}
+#endif
+
+
+	if(dim == 2){
+		printf("Generating inputs using %d points (%d gradient computations)...\n",number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval,number_of_samples_with_g_eval);
+
+
+		/* generate the input data for test	*/
+		generate_2D_test_function_data_GEK(test_function,
+				test_function_adj,
+				input_file_name,
+				bounds,
+				number_of_samples_with_only_f_eval,
+				number_of_samples_with_g_eval,
+				sampling_method,
+				python_dir);
+
+	}
+	else{
+
+		/* generate the input data for test	*/
+		generate_highdim_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,dim,
+				number_of_samples_with_only_f_eval,
+				number_of_samples_with_g_eval,
+				sampling_method );
+
+	}
+
+
+	mat X; /* data matrix */
+	X.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
+
+	int nrows = X.n_rows;
+	int ncols = X.n_cols;
+
+
+#if 1
+	printf("X = \n");
+	X.print();
+#endif
+
+	vec x_max(dim);
+	x_max.fill(0.0);
+
+	vec x_min(dim);
+	x_min.fill(0.0);
+
+	for (int i = 0; i < dim; i++) {
+
+		x_max(i) = X.col(i).max();
+		x_min(i) = X.col(i).min();
+
+	}
+
+#if 1
+	printf("maximum = \n");
+	x_max.print();
+
+	printf("minimum = \n");
+	x_min.print();
+#endif
+	/* normalize data */
+	for (int i = 0; i < nrows; i++) {
+		for (int j = 0; j < dim; j++) {
+
+			X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+		}
+	}
+
+
+
+	/* calculate the generalization error */
+	int resolution =100;
+
+	std::string kriging_response_surface_file_name = "Herbie2D_hybrid_response_surface.dat";
+
+	FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
+
+
+	double dx,dy; /* step sizes in x and y directions */
+	rowvec x(2);
+	rowvec xnorm(2);
+
+
+	dx = (bounds[1]-bounds[0])/(resolution-1);
+	dy = (bounds[3]-bounds[2])/(resolution-1);
+#if 1
+	printf("dx = %10.7f\n",dx);
+	printf("dy = %10.7f\n",dy);
+#endif
+
+	double out_sample_error=0.0;
+
+	double max_value = -LARGE;
+	double min_value =  LARGE;
+	double max_exactvalue = -LARGE;
+	double min_exactvalue =  LARGE;
+	rowvec pmin(dim);
+	rowvec pmax(dim);
+	rowvec pminex(dim);
+	rowvec pmaxex(dim);
+
+	x[0] = bounds[0];
+	for(int i=0;i<resolution;i++){
+		x[1] = bounds[2];
+		for(int j=0;j<resolution;j++){
+
+			/* normalize x */
+			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
+			xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
+
+
+
+			double min_dist=0.0;
+			int indx;
+
+			/* find the closest K neighbours */
+			//			findKNeighbours(X_func,
+			//					xnorm,
+			//					4,
+			//					&min_dist,
+			//					&indx,
+			//					dim);
+
+
+
+
+
+		}
+	}
+
+
+
+	exit(1);
+
+
+
+
+
+
+}
+
+
 
 
 void perform_rbf_test(double (*test_function)(double *),

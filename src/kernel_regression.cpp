@@ -22,7 +22,7 @@ double gaussianKernel(rowvec &xi,
 		double sigma,
 		mat &M){
 
-
+/* calculate distance between xi and xj with the matrix M */
 	double metricVal = calcMetric(xi,xj,M);
 
 	return (1.0/(sigma*datum::pi))*exp(-metricVal/(2*sigma*sigma));

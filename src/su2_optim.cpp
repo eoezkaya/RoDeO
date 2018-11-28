@@ -46,14 +46,14 @@ void SU2_CFD(std::string input_filename){
 	}
 
 
-	call_SU2_Adjoint_Solver(
-			dv,
-			grad,
-			CL,
-			CD,
-			area,
-			type,
-			area_constraint);
+	//	call_SU2_Adjoint_Solver(
+	//			dv,
+	//			grad,
+	//			CL,
+	//			CD,
+	//			area,
+	//			type,
+	//			area_constraint);
 
 
 }
@@ -96,8 +96,18 @@ void check_double_points_data(std::string filename, int nvars){
 	printf("checking double points for the file %s...\n",filename.c_str());
 #endif
 	mat data;
-	data.load(filename, csv_ascii);
-#if 1
+
+
+	bool ok = data.load(filename, csv_ascii);
+
+	if(ok == false){
+
+		printf("problem with loading: program will terminate\n");
+		exit(1);
+	}
+
+
+#if 0
 	data.print();
 #endif
 
@@ -268,7 +278,7 @@ void su2_optimize(std::string python_dir){
 
 	const int max_number_of_function_evaluations = 300;
 	int max_number_of_function_calculations_training = 10000;
-	int number_of_design_variables  = 38;
+	int number_of_design_variables  = 24;
 	const int number_of_function_evals_inner_iter = 5;
 
 	vec best_EI_values(number_of_function_evals_inner_iter);
@@ -280,16 +290,40 @@ void su2_optimize(std::string python_dir){
 
 
 	/* box constraints for the design variables */
-	const double upper_bound_dv =  0.003;
-	const double lower_bound_dv = -0.003;
+	double upper_bound_dv =  0.1;
+	double lower_bound_dv = -0.1;
 
 	const double lift_penalty_param = LARGE;
-	const double area_penalty_param = LARGE;
+	const double volume_penalty_param = LARGE;
 
 
-	/* constraints for cl and area */
-	double CL_constraint = 0.723;
-	double Area_constraint = 0.0778;
+	/* constraints for cl*/
+	double CL_constraint = 0.285;
+	double Volume_constraint = 0.027;
+
+
+	/* geometric constraints */
+	double max_thickness_sec1= 0.06;
+	double max_thickness_sec2= 0.06;
+	double max_thickness_sec3= 0.05;
+	double max_thickness_sec4= 0.05;
+	double max_thickness_sec5= 0.04;
+
+
+
+
+
+
+	vec geometric_constraints(6);
+	geometric_constraints(0) = Volume_constraint;
+	geometric_constraints(1) = max_thickness_sec1;
+	geometric_constraints(2) = max_thickness_sec2;
+	geometric_constraints(3) = max_thickness_sec3;
+	geometric_constraints(4) = max_thickness_sec4;
+	geometric_constraints(5) = max_thickness_sec5;
+
+
+	vec objectives(8);
 
 	/* regularization parameter for Kriging */
 	double reg_param = 10E-7;
@@ -302,36 +336,38 @@ void su2_optimize(std::string python_dir){
 	int number_of_function_evals = 0;
 
 	/* copy training data from the samples folder */
-	system("cp ./Samples/rae2822_optimization_history.csv ./");
-	system("cp ./Samples/CL_Kriging.csv ./");
-	system("cp ./Samples/CD_Kriging.csv ./");
-	system("cp ./Samples/Area_Kriging.csv ./");
+	system("cp ./samples/optimization_history.csv ./");
+	system("cp ./samples/CL_Kriging.csv ./");
+	system("cp ./samples/CD_Kriging.csv ./");
+	system("cp ./samples/Volume_Kriging.csv ./");
 
 
 
 	/* filenames for the Kriging input data */
 	std::string cl_kriging_input_file = "CL_Kriging.csv";
 	std::string cd_kriging_input_file = "CD_Kriging.csv";
-	std::string area_kriging_input_file = "Area_Kriging.csv";
+	std::string volume_kriging_input_file = "Volume_Kriging.csv";
+
+
+	/* file name for the optimization history */
+	std::string all_data_file = "optimization_history.csv";
+	check_double_points_data(all_data_file,number_of_design_variables);
 
 
 	/* check double points in the data */
-	check_double_points_data(area_kriging_input_file,number_of_design_variables);
+	check_double_points_data(volume_kriging_input_file,number_of_design_variables);
 	check_double_points_data(cd_kriging_input_file,number_of_design_variables);
 	check_double_points_data(cl_kriging_input_file,number_of_design_variables);
 
 
 
 
-	/* file names for the Kriging hyperparameters (for CD, CL and area) */
+
+	/* file names for the Kriging hyperparameters (for CD, CL and constraint) */
 	std::string cl_kriging_hyperparameters_file = "CL_Kriging_Hyperparameters.csv";
 	std::string cd_kriging_hyperparameters_file = "CD_Kriging_Hyperparameters.csv";
-	std::string area_kriging_hyperparameters_file = "Area_Kriging_Hyperparameters.csv";
+	std::string volume_kriging_hyperparameters_file = "Volume_Kriging_Hyperparameters.csv";
 
-
-	/* file name for the optimization history */
-	std::string all_data_file = "rae2822_optimization_history.csv";
-	check_double_points_data(all_data_file,number_of_design_variables);
 
 	/* obtain statistics from the existing data */
 	double EI_dist_tol = 0.0;
@@ -355,7 +391,7 @@ void su2_optimize(std::string python_dir){
 
 	}
 
-#if 1
+#if 0
 	printf("X_stat:\n");
 	X_stat.print();
 #endif
@@ -408,13 +444,13 @@ void su2_optimize(std::string python_dir){
 		mat optimization_data;
 		mat cl_data;
 		mat cd_data;
-		mat area_data;
+		mat volume_data;
 
 
 		optimization_data.load(all_data_file.c_str(), csv_ascii);
 		cl_data.load(cl_kriging_input_file.c_str(),csv_ascii );
 		cd_data.load(cd_kriging_input_file.c_str(),csv_ascii );
-		area_data.load(area_kriging_input_file.c_str(),csv_ascii );
+		volume_data.load(volume_kriging_input_file.c_str(),csv_ascii );
 
 #if 0
 		printf("optimization data:\n");
@@ -431,13 +467,13 @@ void su2_optimize(std::string python_dir){
 
 		int number_of_data_points_CL = cl_data.n_rows;
 		int number_of_data_points_CD = cd_data.n_rows;
-		int number_of_data_points_area = area_data.n_rows;
+		int number_of_data_points_volume = volume_data.n_rows;
 
 		/* normalized input variables */
 		mat X(number_of_data_points,number_of_design_variables);
 		mat X_CL(number_of_data_points_CL,number_of_design_variables);
 		mat X_CD(number_of_data_points_CD,number_of_design_variables);
-		mat X_area(number_of_data_points_area,number_of_design_variables);
+		mat X_volume(number_of_data_points_volume,number_of_design_variables);
 
 		if(it_count_outer_loop == 0) {
 
@@ -451,7 +487,7 @@ void su2_optimize(std::string python_dir){
 			X.col(i) = optimization_data.col(i);
 			X_CL.col(i) =   cl_data.col(i);
 			X_CD.col(i) =   cd_data.col(i);
-			X_area.col(i) = area_data.col(i);
+			X_volume.col(i) = volume_data.col(i);
 
 		}
 
@@ -508,11 +544,11 @@ void su2_optimize(std::string python_dir){
 			}
 		}
 
-		for (unsigned int i = 0; i < X_area.n_rows; i++) {
+		for (unsigned int i = 0; i < X_volume.n_rows; i++) {
 
 			for (int j = 0; j < number_of_design_variables; j++) {
 
-				X_area(i, j) = (1.0/number_of_design_variables)*(X_area(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+				X_volume(i, j) = (1.0/number_of_design_variables)*(X_volume(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 
 			}
 		}
@@ -521,15 +557,15 @@ void su2_optimize(std::string python_dir){
 		/* assign ys vectors for CL,CD and area */
 		vec ys_CL   =   optimization_data.col(number_of_design_variables);
 		vec ys_CD   =   optimization_data.col(number_of_design_variables+1);
-		vec ys_area =   optimization_data.col(number_of_design_variables+2);
+		vec ys_volume =   optimization_data.col(number_of_design_variables+2);
 
-#if 0
+#if 1
 		printf("ys_CL:\n");
 		trans(ys_CL).print();
 		printf("ys_CD:\n");
 		trans(ys_CD).print();
-		printf("ys_area:\n");
-		trans(ys_area).print();
+		printf("ys_volume:\n");
+		trans(ys_volume).print();
 #endif
 
 
@@ -538,7 +574,7 @@ void su2_optimize(std::string python_dir){
 		double sample_min = LARGE;
 		double best_sample_CD = 0.0;
 		double best_sample_CL= 0.0;
-		double best_sample_area = 0.0;
+		double best_sample_volume = 0.0;
 		int sample_min_indx = -1;
 
 		for(unsigned int k=0; k<ys_CD.size(); k++){
@@ -551,9 +587,9 @@ void su2_optimize(std::string python_dir){
 				obj_fun += lift_penalty_param*(CL_constraint-ys_CL(k));
 			}
 
-			if(ys_area(k) < Area_constraint){
+			if(ys_volume(k) < Volume_constraint){
 
-				obj_fun += area_penalty_param*(Area_constraint-ys_area(k));
+				obj_fun += volume_penalty_param*(Volume_constraint-ys_volume(k));
 			}
 
 			if(obj_fun < sample_min){
@@ -562,7 +598,7 @@ void su2_optimize(std::string python_dir){
 				sample_min_indx = k;
 				best_sample_CD = ys_CD(k);
 				best_sample_CL = ys_CL(k);
-				best_sample_area = ys_area(k);
+				best_sample_volume = ys_volume(k);
 
 			}
 
@@ -573,39 +609,40 @@ void su2_optimize(std::string python_dir){
 		printf("objective function value = %10.7e\n",sample_min);
 		printf("CD   = %10.7e\n",best_sample_CD);
 		printf("CL   = %10.7e\n",best_sample_CL);
-		printf("Area = %10.7e\n",best_sample_area);
+		printf("Volume = %10.7e\n",best_sample_volume);
 
 
 #endif
+
 
 
 		/* correlation matrices for cd,cl and area */
 
 		mat R_CL(number_of_data_points_CL,number_of_data_points_CL);
 		mat R_CD(number_of_data_points_CD,number_of_data_points_CD);
-		mat R_area(number_of_data_points_area,number_of_data_points_area);
+		mat R_volume(number_of_data_points_volume,number_of_data_points_volume);
 
 		/* lower and upper diagonal matrices for Cholesky decomposition */
 
 		mat U_CL(number_of_data_points_CL,number_of_data_points_CL);
 		mat U_CD(number_of_data_points_CD,number_of_data_points_CD);
-		mat U_area(number_of_data_points_area,number_of_data_points_area);
+		mat U_volume(number_of_data_points_volume,number_of_data_points_volume);
 
 
 		mat L_CL(number_of_data_points_CL,number_of_data_points_CL);
 		mat L_CD(number_of_data_points_CD,number_of_data_points_CD);
-		mat L_area(number_of_data_points_area,number_of_data_points_area);
+		mat L_volume(number_of_data_points_volume,number_of_data_points_volume);
 
 		/* vector of ones */
 		vec I_CL = ones(number_of_data_points_CL);
 		vec I_CD = ones(number_of_data_points_CD);
-		vec I_area = ones(number_of_data_points_area);
+		vec I_volume = ones(number_of_data_points_volume);
 
 
 		/* for the Kriging, update ys vectors */
 		ys_CL   =   cl_data.col(number_of_design_variables);
 		ys_CD   =   cd_data.col(number_of_design_variables);
-		ys_area =   area_data.col(number_of_design_variables);
+		ys_volume =   volume_data.col(number_of_design_variables);
 
 #if 0
 		cl_kriging_data.print();
@@ -616,7 +653,7 @@ void su2_optimize(std::string python_dir){
 		printf("number of samples (all data)  = %d\n",number_of_data_points);
 		printf("number of samples (CL data)   = %d\n",number_of_data_points_CL);
 		printf("number of samples (CD data)   = %d\n",number_of_data_points_CD);
-		printf("number of samples (area data) = %d\n",number_of_data_points_area);
+		printf("number of samples (volume data) = %d\n",number_of_data_points_volume);
 #endif
 
 		/* visualize the CL&CD of the samples */
@@ -629,6 +666,8 @@ void su2_optimize(std::string python_dir){
 
 		FILE* in = popen(python_command.c_str(), "r");
 		fprintf(in, "\n");
+
+
 
 
 		/* visualize the CL&CD of the samples */
@@ -649,14 +688,14 @@ void su2_optimize(std::string python_dir){
 		vec beta0_CL_tr(number_of_design_variables+1);
 
 
-		vec kriging_weights_area;
-		vec regression_weights_area;
+		vec kriging_weights_volume;
+		vec regression_weights_volume;
 
 
 
 		/* train response surface for CL */
 
-		r_CL = 9.76E-02;
+		r_CL = 4.395886;
 		train_TRGEK_response_surface(cl_kriging_input_file,
 				cl_kriging_hyperparameters_file,
 				LINEAR_REGRESSION_ON,
@@ -677,7 +716,7 @@ void su2_optimize(std::string python_dir){
 
 		/* train response surface for CD */
 
-		r_CD =  9.28E-01;
+		r_CD =  34.0;
 		train_TRGEK_response_surface(cd_kriging_input_file,
 				cd_kriging_hyperparameters_file,
 				LINEAR_REGRESSION_ON,
@@ -697,20 +736,21 @@ void su2_optimize(std::string python_dir){
 #endif
 		/* train response surface for area */
 
-		train_kriging_response_surface(area_kriging_input_file,
-				area_kriging_hyperparameters_file,
+
+		train_kriging_response_surface(volume_kriging_input_file,
+				volume_kriging_hyperparameters_file,
 				LINEAR_REGRESSION_ON,
-				regression_weights_area,
-				kriging_weights_area,
+				regression_weights_volume,
+				kriging_weights_volume,
 				reg_param,
 				max_number_of_function_calculations_training,
 				CSV_ASCII);
 
 #if 1
-		printf("kriging weights (area):\n");
-		trans(kriging_weights_area).print();
-		printf("regression weights (area):\n");
-		trans(regression_weights_area).print();
+		printf("kriging weights (volume):\n");
+		trans(kriging_weights_volume).print();
+		printf("regression weights (volume):\n");
+		trans(regression_weights_volume).print();
 #endif
 
 
@@ -722,7 +762,7 @@ void su2_optimize(std::string python_dir){
 
 		mat augmented_X_CL(number_of_data_points_CL, number_of_design_variables + 1);
 		mat augmented_X_CD(number_of_data_points_CD, number_of_design_variables + 1);
-		mat augmented_X_area(number_of_data_points_area, number_of_design_variables + 1);
+		mat augmented_X_volume(number_of_data_points_volume, number_of_design_variables + 1);
 
 		for (int i = 0; i < number_of_data_points_CL; i++) {
 
@@ -760,18 +800,18 @@ void su2_optimize(std::string python_dir){
 			}
 		}
 
-		for (int i = 0; i < number_of_data_points_area; i++) {
+		for (int i = 0; i < number_of_data_points_volume; i++) {
 
 			for (int j = 0; j <= number_of_design_variables; j++) {
 
 				if (j == 0){
 
-					augmented_X_area(i, j) = 1.0;
+					augmented_X_volume(i, j) = 1.0;
 
 				}
 				else{
 
-					augmented_X_area(i, j) = X_area(i, j - 1);
+					augmented_X_volume(i, j) = X_volume(i, j - 1);
 
 
 				}
@@ -780,20 +820,20 @@ void su2_optimize(std::string python_dir){
 
 		vec ys_reg_cl = augmented_X_CL * regression_weights_CL;
 		vec ys_reg_cd = augmented_X_CD * regression_weights_CD;
-		vec ys_reg_area = augmented_X_area * regression_weights_area;
+		vec ys_reg_volume = augmented_X_volume * regression_weights_volume;
 
 
 		ys_CL = ys_CL - ys_reg_cl;
 		ys_CD= ys_CD - ys_reg_cd;
-		ys_area = ys_area - ys_reg_area;
+		ys_volume = ys_volume - ys_reg_volume;
 
 #if 0
 		printf("ys_CL:\n");
 		trans(ys_CL).print();
 		printf("ys_CD:\n");
 		trans(ys_CD).print();
-		printf("ys_area:\n");
-		trans(ys_area).print();
+		printf("ys_volume:\n");
+		trans(ys_volume).print();
 #endif
 
 
@@ -804,8 +844,8 @@ void su2_optimize(std::string python_dir){
 		vec gamma_CD = kriging_weights_CD.col(0).tail(number_of_design_variables);
 
 
-		vec theta_area = kriging_weights_area.head(number_of_design_variables);
-		vec gamma_area = kriging_weights_area.tail(number_of_design_variables);
+		vec theta_volume = kriging_weights_volume.head(number_of_design_variables);
+		vec gamma_volume = kriging_weights_volume.tail(number_of_design_variables);
 
 
 #if 0
@@ -821,11 +861,11 @@ void su2_optimize(std::string python_dir){
 		printf("gamma CD:\n");
 		trans(gamma_CD).print();
 
-		printf("theta area:\n");
-		trans(theta_area).print();
+		printf("theta volume:\n");
+		trans(theta_volume).print();
 
-		printf("gamma area:\n");
-		trans(gamma_area).print();
+		printf("gamma volume:\n");
+		trans(gamma_volume).print();
 #endif
 
 
@@ -917,50 +957,50 @@ void su2_optimize(std::string python_dir){
 		double ssqr_CD = (1.0 / number_of_data_points_CD) * dot(ys_min_betaI_CD, R_inv_ys_min_beta_CD);
 
 #if 0
-		printf("computing R for area\n");
+		printf("computing R for volume\n");
 #endif
-		compute_R_matrix(theta_area,
-				gamma_area,
+		compute_R_matrix(theta_volume,
+				gamma_volume,
 				reg_param,
-				R_area,
-				X_area);
+				R_volume,
+				X_volume);
 
 
 
-		int cholesky_return_area = chol(U_area, R_area);
+		int cholesky_return_volume = chol(U_volume, R_volume);
 
-		if (cholesky_return_area == 0) {
-			printf("Error: Ill conditioned correlation matrix for S, Cholesky decomposition failed...\n");
+		if (cholesky_return_volume == 0) {
+			printf("Error: Ill conditioned correlation matrix for V, Cholesky decomposition failed...\n");
 			exit(-1);
 		}
 
-		L_area = trans(U_area);
+		L_volume = trans(U_volume);
 
-		vec R_inv_ys_area(number_of_data_points_area);
-		vec R_inv_I_area(number_of_data_points_area);
-
-
-
-		solve_linear_system_by_Cholesky(U_area, L_area, R_inv_ys_area, ys_area); /* solve R x = ys */
-		solve_linear_system_by_Cholesky(U_area, L_area, R_inv_I_area, I_area);     /* solve R x = I */
-
-		double beta0_area = (1.0/dot(I_area,R_inv_I_area)) * (dot(I_area,R_inv_ys_area));
+		vec R_inv_ys_volume(number_of_data_points_volume);
+		vec R_inv_I_volume(number_of_data_points_volume);
 
 
-		vec ys_min_betaI_area = ys_area-beta0_area*I_area;
 
-		vec R_inv_ys_min_beta_area(number_of_data_points_area);
+		solve_linear_system_by_Cholesky(U_volume, L_volume, R_inv_ys_volume, ys_volume); /* solve R x = ys */
+		solve_linear_system_by_Cholesky(U_volume, L_volume, R_inv_I_volume, I_volume);     /* solve R x = I */
+
+		double beta0_volume = (1.0/dot(I_volume,R_inv_I_volume)) * (dot(I_volume,R_inv_ys_volume));
+
+
+		vec ys_min_betaI_volume = ys_volume-beta0_volume*I_volume;
+
+		vec R_inv_ys_min_beta_volume(number_of_data_points_volume);
 
 
 
 		/* solve R x = ys-beta0*I */
-		solve_linear_system_by_Cholesky(U_area, L_area, R_inv_ys_min_beta_area, ys_min_betaI_area);
+		solve_linear_system_by_Cholesky(U_volume, L_volume, R_inv_ys_min_beta_volume, ys_min_betaI_volume);
 
 
 #if 0
 		printf("beta0 for CL : %15.10f\n",beta0_CL);
 		printf("beta0 for CD : %15.10f\n",beta0_CD);
-		printf("beta0 for Area : %15.10f\n",beta0_area);
+		printf("beta0 for Volume : %15.10f\n",beta0_volume);
 #endif
 
 
@@ -1020,12 +1060,12 @@ void su2_optimize(std::string python_dir){
 #endif
 
 			/* Kriging estimate of the area */
-			double area_tilde = calculate_f_tilde(dvnorm,
-					X_area,
-					beta0_area,
-					regression_weights_area,
-					R_inv_ys_min_beta_area,
-					kriging_weights_area);
+			double volume_tilde = calculate_f_tilde(dvnorm,
+					X_volume,
+					beta0_volume,
+					regression_weights_volume,
+					R_inv_ys_min_beta_volume,
+					kriging_weights_volume);
 
 			/* Kriging estimate of the CL */
 			double CL_tilde = calculate_f_tilde(dvnorm,
@@ -1165,9 +1205,9 @@ void su2_optimize(std::string python_dir){
 				obj_fun += lift_penalty_param*(CL_constraint-fval_CL);
 			}
 
-			if(area_tilde < Area_constraint){
+			if(volume_tilde < Volume_constraint){
 
-				obj_fun += area_penalty_param*(Area_constraint-area_tilde);
+				obj_fun += volume_penalty_param*(Volume_constraint-volume_tilde);
 			}
 
 
@@ -1212,7 +1252,7 @@ void su2_optimize(std::string python_dir){
 				printf("best EI values:\n");
 				trans(best_EI_values).print();
 				printf("worst EI index is now = %d\n",worst_EI_array_indx);
-				printf("area tilde = %10.7e:\n",area_tilde);
+				printf("volume tilde = %10.7e:\n",volume_tilde);
 				printf("CL tilde = %10.7e:\n",CL_tilde);
 				printf("CD tilde = %10.7e:\n",CD_tilde);
 				printf("factor_CD = %10.7e\n",factor_CD);
@@ -1242,7 +1282,7 @@ void su2_optimize(std::string python_dir){
 
 			double CD_exact=0.0;
 			double CL_exact=0.0;
-			double area_exact=0.0;
+			double volume_exact=0.0;
 
 			vec gradient_cd(number_of_design_variables);
 			vec gradient_cl(number_of_design_variables);
@@ -1254,15 +1294,21 @@ void su2_optimize(std::string python_dir){
 			trans(dv).print();
 #endif
 
-			printf("calling adjoint solver for drag...\n");
-			call_SU2_Adjoint_Solver(dv,gradient_cd,CL_exact,CD_exact,area_exact,1,Area_constraint);
-
 			printf("calling adjoint solver for lift...\n");
-			call_SU2_Adjoint_Solver(dv,gradient_cl,CL_exact,CD_exact,area_exact,2,Area_constraint);
+			call_SU2_Adjoint_Solver(dv,gradient_cl,objectives,2,geometric_constraints);
+
+			printf("calling adjoint solver for drag...\n");
+			call_SU2_Adjoint_Solver(dv,gradient_cd,objectives,1,geometric_constraints);
+
+
+
+			CL_exact = objectives(0);
+		    CD_exact = objectives(1);
+		    volume_exact = objectives(2);
 
 #if 1
 			printf("Simulation results:\n");
-			printf("area = %10.7f\n",area_exact);
+			printf("volume = %10.7f\n",volume_exact);
 			printf("cl = %10.7f\n",CL_exact);
 			printf("cd = %10.7f\n",CD_exact);
 			printf("gradient (drag):\n");
@@ -1286,7 +1332,7 @@ void su2_optimize(std::string python_dir){
 				}
 				optimization_data(number_of_data_points,number_of_design_variables)   = CL_exact;
 				optimization_data(number_of_data_points,number_of_design_variables+1) = CD_exact;
-				optimization_data(number_of_data_points,number_of_design_variables+2) = area_exact;
+				optimization_data(number_of_data_points,number_of_design_variables+2) = volume_exact;
 
 
 				/* insert a row to the cl kriging data matrix*/
@@ -1325,13 +1371,13 @@ void su2_optimize(std::string python_dir){
 
 
 				/* insert a row to the area kriging data matrix*/
-				area_data.insert_rows( number_of_data_points_area, 1 );
+				volume_data.insert_rows( number_of_data_points_volume, 1 );
 
 				for(int i=0;i<number_of_design_variables;i++){
 
-					area_data(number_of_data_points_area,i) = dv(i);
+					volume_data(number_of_data_points_volume,i) = dv(i);
 				}
-				area_data(number_of_data_points_area,number_of_design_variables) = area_exact;
+				volume_data(number_of_data_points_volume,number_of_design_variables) = volume_exact;
 
 
 
@@ -1344,30 +1390,30 @@ void su2_optimize(std::string python_dir){
 		optimization_data.save(all_data_file.c_str(), csv_ascii);
 		cl_data.save(cl_kriging_input_file.c_str(), csv_ascii);
 		cd_data.save(cd_kriging_input_file.c_str(), csv_ascii);
-		area_data.save(area_kriging_input_file.c_str(), csv_ascii);
+		volume_data.save(volume_kriging_input_file.c_str(), csv_ascii);
 
 
 		if (number_of_function_evals > max_number_of_function_evaluations ){
 
 			vec ys_CL =   optimization_data.col(number_of_design_variables);
 			vec ys_CD =   optimization_data.col(number_of_design_variables+1);
-			vec ys_area = optimization_data.col(number_of_design_variables+2);
+			vec ys_volume = optimization_data.col(number_of_design_variables+2);
 
 			/* now find the best sample point */
 
 			double best_sample_CD = LARGE;
 			double best_sample_CL = LARGE;
-			double best_sample_area = LARGE;
+			double best_sample_volume = LARGE;
 			int sample_min_indx = -1;
 
 			for(unsigned int k=0; k<ys_CD.size(); k++){
 
-				if(ys_CD(k) < sample_min && ys_CL(k) >= CL_constraint && ys_area(k) >= Area_constraint){
+				if(ys_CD(k) < sample_min && ys_CL(k) >= CL_constraint && ys_volume(k) >= Volume_constraint){
 
 					sample_min_indx = k;
 					best_sample_CD = ys_CD(k);
 					best_sample_CL = ys_CL(k);
-					best_sample_area = ys_area(k);
+					best_sample_volume = ys_volume(k);
 
 				}
 
@@ -1378,7 +1424,7 @@ void su2_optimize(std::string python_dir){
 			optimization_data.row(sample_min_indx).print();
 			printf("CD = %10.7e\n",best_sample_CD);
 			printf("CL = %10.7e\n",best_sample_CL);
-			printf("S = %10.7e\n",best_sample_area);
+			printf("Vol = %10.7e\n",best_sample_volume);
 
 #endif
 
@@ -2836,21 +2882,51 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 
 	FILE* CL_Kriging_data;
 	FILE* CD_Kriging_data;
-	FILE* Area_Kriging_data;
+	FILE* Volume_Kriging_data;
+	FILE* Thickness_Sec1_Kriging_data;
+	FILE* Thickness_Sec2_Kriging_data;
+	FILE* Thickness_Sec3_Kriging_data;
+	FILE* Thickness_Sec4_Kriging_data;
+	FILE* Thickness_Sec5_Kriging_data;
 	FILE* AllData;
 
 #if 1
-	printf("SU2 Initial Data Acqusition with adjoints...\n");
+	printf("SU2 Initial Data Acquisition with adjoints...\n");
 #endif
 
-	int number_of_design_variables = 38;
+	int number_of_design_variables = 24;
 	int number_of_function_evals = number_of_initial_samples;
 
-	double upper_bound_dv =  0.003;
-	double lower_bound_dv = -0.003;
+	double upper_bound_dv =  0.1;
+	double lower_bound_dv = -0.1;
 
 	//	double area_constraint= 0.0816;
-	double area_constraint= 0.0778;
+	//	double area_constraint= 0.0778;
+
+
+	/* geometric constraints */
+	double max_thickness_sec1= 0.06;
+	double max_thickness_sec2= 0.06;
+	double max_thickness_sec3= 0.05;
+	double max_thickness_sec4= 0.05;
+	double max_thickness_sec5= 0.04;
+	double Wing_volume = 0.027;
+
+
+
+
+
+	vec geometric_constraints(6);
+	geometric_constraints(0) = Wing_volume;
+	geometric_constraints(1) = max_thickness_sec1;
+	geometric_constraints(2) = max_thickness_sec2;
+	geometric_constraints(3) = max_thickness_sec3;
+	geometric_constraints(4) = max_thickness_sec4;
+	geometric_constraints(5) = max_thickness_sec5;
+
+
+	vec objectives(8);
+
 
 	double deltax = upper_bound_dv-lower_bound_dv;
 
@@ -2863,7 +2939,7 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 	std::string lhs_filename = "lhs_points.dat";
 
 	std::string python_command = "python -W ignore " + python_dir +
-			"/lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(2*number_of_function_evals)+ " center" ;
+			"/lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(5*number_of_function_evals)+ " center" ;
 
 #if 0
 	printf("%s\n",python_command.c_str());
@@ -2880,8 +2956,10 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 	dv_lhs+= lower_bound_dv;
 
 #if 0
+	printf("dv vectors\n");
 	dv_lhs.print();
 #endif
+
 
 	int doe_iter = 0;
 	int count=0;
@@ -2893,21 +2971,20 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 		printf("iter = %d\n",doe_iter);
 #endif
 
+		//		doe_iter = 2;
+		//		if(doe_iter == 0) {
 
-		if(doe_iter == 0) {
+		//			dv.fill(0.0);
+		//		}
+		//		else{
 
-			dv.fill(0.0);
-		}
-		else{
-
-			dv= trans(dv_lhs.row(count+1));
-		}
+		dv= trans(dv_lhs.row(count+1));
+		//		}
 
 		count++;
 
 		vec gradient_cd(number_of_design_variables);
 		vec gradient_cl(number_of_design_variables);
-		double CL,CD,area;
 
 #if 1
 		printf("design vector:\n");
@@ -2915,17 +2992,17 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 #endif
 
 		printf("calling adjoint solver for lift...\n");
-		call_SU2_Adjoint_Solver(dv,gradient_cl,CL,CD,area,2,area_constraint);
+		call_SU2_Adjoint_Solver(dv,gradient_cl,objectives,2,geometric_constraints);
 
 		printf("calling adjoint solver for drag...\n");
-		call_SU2_Adjoint_Solver(dv,gradient_cd,CL,CD,area,1,area_constraint);
+		call_SU2_Adjoint_Solver(dv,gradient_cd,objectives,1,geometric_constraints);
 
 
 
 #if 1
-		printf("area = %10.7f\n",area);
-		printf("cl = %10.7f\n",CL);
-		printf("cd = %10.7f\n",CD);
+		printf("Wing volume = %10.7f\n",objectives(2));
+		printf("cl = %10.7f\n",objectives(0));
+		printf("cd = %10.7f\n",objectives(1));
 		printf("gradient (drag):\n");
 		trans(gradient_cd).print();
 		printf("gradient (lift):\n");
@@ -2963,13 +3040,14 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 
 #endif
 
-		if(CL > 0 && CD > 0){
+		if(objectives(0) > 0 && objectives(1) > 0){
+
 			CL_Kriging_data = fopen("CL_Kriging.csv","a+");
 			for(int i=0;i<number_of_design_variables;i++){
 				fprintf(CL_Kriging_data, "%10.7f, ",dv[i]);
 
 			}
-			fprintf(CL_Kriging_data, "%10.7f, ",CL);
+			fprintf(CL_Kriging_data, "%10.7f, ",objectives(0));
 
 			for(int i=0;i<number_of_design_variables-1;i++){
 				fprintf(CL_Kriging_data, "%10.7f, ",gradient_cl(i));
@@ -2987,7 +3065,7 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 				fprintf(CD_Kriging_data, "%10.7f, ",dv[i]);
 
 			}
-			fprintf(CD_Kriging_data, "%10.7f, ",CD);
+			fprintf(CD_Kriging_data, "%10.7f, ",objectives(1));
 
 			for(int i=0;i<number_of_design_variables-1;i++){
 
@@ -3002,27 +3080,88 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 
 
 
-			Area_Kriging_data = fopen("Area_Kriging.csv","a+");
+			Volume_Kriging_data = fopen("Volume_Kriging.csv","a+");
 			for(int i=0;i<number_of_design_variables;i++){
-				fprintf(Area_Kriging_data, "%10.7f, ",dv[i]);
+				fprintf(Volume_Kriging_data, "%10.7f, ",dv[i]);
 
 			}
-			fprintf(Area_Kriging_data, "%10.7f\n",area);
+			fprintf(Volume_Kriging_data, "%10.7f\n",objectives(2));
 
 
-			fclose(Area_Kriging_data);
+			fclose(Volume_Kriging_data);
+
+
+			Thickness_Sec1_Kriging_data = fopen("Thickness_Sec1_Kriging.csv","a+");
+			for(int i=0;i<number_of_design_variables;i++){
+				fprintf(Thickness_Sec1_Kriging_data, "%10.7f, ",dv[i]);
+
+			}
+			fprintf(Thickness_Sec1_Kriging_data, "%10.7f\n",objectives(3));
+
+
+			fclose(Thickness_Sec1_Kriging_data);
+
+
+			Thickness_Sec2_Kriging_data = fopen("Thickness_Sec2_Kriging.csv","a+");
+			for(int i=0;i<number_of_design_variables;i++){
+				fprintf(Thickness_Sec2_Kriging_data, "%10.7f, ",dv[i]);
+
+			}
+			fprintf(Thickness_Sec2_Kriging_data, "%10.7f\n",objectives(4));
+
+
+			fclose(Thickness_Sec2_Kriging_data);
 
 
 
-			AllData = fopen("rae2822_optimization_history.csv","a+");
+			Thickness_Sec3_Kriging_data = fopen("Thickness_Sec3_Kriging.csv","a+");
+			for(int i=0;i<number_of_design_variables;i++){
+				fprintf(Thickness_Sec3_Kriging_data, "%10.7f, ",dv[i]);
+
+			}
+			fprintf(Thickness_Sec3_Kriging_data, "%10.7f\n",objectives(5));
+
+
+			fclose(Thickness_Sec3_Kriging_data);
+
+
+
+			Thickness_Sec4_Kriging_data = fopen("Thickness_Sec4_Kriging.csv","a+");
+			for(int i=0;i<number_of_design_variables;i++){
+				fprintf(Thickness_Sec4_Kriging_data, "%10.7f, ",dv[i]);
+
+			}
+			fprintf(Thickness_Sec4_Kriging_data, "%10.7f\n",objectives(6));
+
+
+			fclose(Thickness_Sec4_Kriging_data);
+
+
+
+			Thickness_Sec5_Kriging_data = fopen("Thickness_Sec5_Kriging.csv","a+");
+			for(int i=0;i<number_of_design_variables;i++){
+				fprintf(Thickness_Sec5_Kriging_data, "%10.7f, ",dv[i]);
+
+			}
+			fprintf(Thickness_Sec5_Kriging_data, "%10.7f\n",objectives(7));
+
+
+			fclose(Thickness_Sec5_Kriging_data);
+
+
+
+
+
+
+			AllData = fopen("oneram6_optimization_history.csv","a+");
 			for(int i=0;i<number_of_design_variables;i++){
 
 				fprintf(AllData, "%10.7f, ",dv[i]);
 
 			}
-			fprintf(AllData, "%10.7f, ",CL);
-			fprintf(AllData, "%10.7f, ",CD);
-			fprintf(AllData, "%10.7f\n",area);
+			fprintf(AllData, "%10.7f, ",objectives(0));
+			fprintf(AllData, "%10.7f, ",objectives(1));
+			fprintf(AllData, "%10.7f\n",objectives(2));
 
 
 			fclose(AllData);
@@ -3519,23 +3658,25 @@ int call_SU2_CFD_Solver(vec &dv,
 int call_SU2_Adjoint_Solver(
 		vec &dv,
 		vec &gradient,
-		double &CL,
-		double &CD,
-		double &area,
+		vec &objectives,
 		int type,
-		double area_constraint
+		vec &constraints
 ){
+
+#if 1
+	printf("calling SU2 adjoint solver...\n");
+	printf("constraints:\n");
+	constraints.print();
+#endif
 
 	/* initialize all variables to zero */
 
-	CD = 0.0;
-	CL = 0.0;
-	area = 0.0;
+	objectives.fill(0.0);
 	gradient.fill(0.0);
 
 	int number_of_design_variables=dv.size();
 
-	std::ifstream ifs("config_DEF.cfg");
+	std::ifstream ifs("base_config.cfg");
 	std::string basic_text;
 	getline (ifs, basic_text, (char) ifs.eof());
 
@@ -3546,36 +3687,88 @@ int call_SU2_Adjoint_Solver(
 	std::string dv_text = "DV_VALUE=";
 
 
-	for(int i=0;i<number_of_design_variables-1;i++){
+	for(int i=0;i<18;i++){
+
+		dv_text+= std::to_string(0.0)+",";
+
+	}
+
+	for(int i=0;i<12;i++){
 
 		dv_text+= std::to_string(dv[i])+",";
 
 	}
-	dv_text+= std::to_string(dv[number_of_design_variables-1])+"\n";
+	for(int i=0;i<18;i++){
+
+		dv_text+= std::to_string(0.0)+",";
+
+	}
+	for(int i=12;i<23;i++){
+
+		dv_text+= std::to_string(dv[i])+",";
+
+	}
+
+
+	dv_text+= std::to_string(dv[23])+"\n";
+
+
+
+	std::string dv_text2 = "DV_VALUE_NEW=";
+
+
+	for(int i=0;i<18;i++){
+
+		dv_text2+= std::to_string(0.0)+",";
+
+	}
+
+	for(int i=0;i<12;i++){
+
+		dv_text2+= std::to_string(dv[i])+",";
+
+	}
+	for(int i=0;i<18;i++){
+
+		dv_text2+= std::to_string(0.0)+",";
+
+	}
+	for(int i=12;i<23;i++){
+
+		dv_text2+= std::to_string(dv[i])+",";
+
+	}
+
+
+	dv_text2+= std::to_string(dv[23])+"\n";
 
 #if 0
 	cout<<dv_text;
+	cout<<dv_text2;
 #endif
+
+
 
 	std::ofstream su2_def_input_file;
 	su2_def_input_file.open ("config_DEF_new.cfg");
-	su2_def_input_file << basic_text+dv_text;
+	su2_def_input_file << basic_text+dv_text+dv_text2;
 	su2_def_input_file.close();
 
 	system("SU2_DEF config_DEF_new.cfg > su2def_output");
 
 
-	system("./plot_airfoil > junk");
+
+	//	system("./plot_airfoil > junk");
 
 
 
-	system("cp mesh_out.su2  mesh_airfoil.su2");
+	//	system("cp mesh_ONERAM6_inv_FFD_deform.su2  mesh_ONERAM6_inv_FFD.su2");
 
-	system("SU2_GEO config_AD_drag.cfg > su2geo_output");
+	system("SU2_GEO geo_base_config.cfg > su2geo_output");
 
 
 
-	double *geo_data = new double[10];
+	double *geo_data = new double[52];
 
 	std::ifstream geo_outstream("of_eval.dat");
 	std::string str;
@@ -3590,7 +3783,7 @@ int call_SU2_Adjoint_Solver(
 
 			str.erase(std::remove(str.begin(), str.end(), ','), str.end());
 			std::stringstream ss(str);
-			for(int i=0;i<10;i++){
+			for(int i=0;i<51;i++){
 
 				ss >> geo_data[i];
 
@@ -3600,32 +3793,54 @@ int call_SU2_Adjoint_Solver(
 
 	}
 
-	area = geo_data[6];
+	objectives(2) =  geo_data[0];
+	objectives(3) =  geo_data[7];
+	objectives(4) =  geo_data[8];
+	objectives(5) =  geo_data[9];
+	objectives(6) =  geo_data[10];
+	objectives(7) =  geo_data[11];
+
+
 
 #if 1
-	printf("Area of the airfoil = %10.7f\n", area);
+	printf("Volume of the wing = %10.7f\n", objectives(2));
+	printf("MAX_THICKNESS_SEC1 = %10.7f\n", objectives(3));
+	printf("MAX_THICKNESS_SEC2 = %10.7f\n", objectives(4));
+	printf("MAX_THICKNESS_SEC3 = %10.7f\n", objectives(5));
+	printf("MAX_THICKNESS_SEC4 = %10.7f\n", objectives(6));
+	printf("MAX_THICKNESS_SEC5 = %10.7f\n", objectives(7));
 #endif
 
 
+	int geo_constraint_flag = 1;
 
-	if(area < area_constraint) {
-#if 1
-		printf("Area is smaller than the constraint...\n");
-#endif
+	if(objectives(2) < constraints(0)) geo_constraint_flag = 0;
+	if(objectives(3) < constraints(1)) geo_constraint_flag = 0;
+	if(objectives(4) < constraints(2)) geo_constraint_flag = 0;
+	if(objectives(5) < constraints(3)) geo_constraint_flag = 0;
+	if(objectives(6) < constraints(4)) geo_constraint_flag = 0;
+	if(objectives(7) < constraints(5)) geo_constraint_flag = 0;
+
+
+	if(geo_constraint_flag == 0){
+
+		printf("One or more of the geometric constraints are not satisfied...\n");
 		return 0;
+
 	}
+
 
 	std::string solver_command;
 
 	if(type == 1){
 
-		solver_command = "discrete_adjoint.py -f config_AD_drag.cfg -n 2 > discrete_adjoint_cd_output";
+		solver_command = "discrete_adjoint.py -f inv_ONERAM6_adv_drag.cfg -n 2 > discrete_adjoint_cd_output";
 
 	}
 
 	if(type == 2){
 
-		solver_command = "discrete_adjoint.py -f config_AD_lift.cfg -n 2 > discrete_adjoint_cl_output";
+		solver_command = "discrete_adjoint.py -f inv_ONERAM6_adv_lift.cfg -n 2 > discrete_adjoint_cl_output";
 
 	}
 
@@ -3655,7 +3870,7 @@ int call_SU2_Adjoint_Solver(
 			std::string cl_value;
 			cl_value.assign(str,found+3,found2-found-3);
 
-			CL = std::stod (cl_value);
+			objectives(0) = std::stod (cl_value);
 
 			cl_found=1;
 
@@ -3672,7 +3887,7 @@ int call_SU2_Adjoint_Solver(
 			cd_value.assign(str,found+3,found2-found-3);
 
 
-			CD = std::stod (cd_value);
+			objectives(1) = std::stod (cd_value);
 
 			cd_found=1;
 
@@ -3682,8 +3897,8 @@ int call_SU2_Adjoint_Solver(
 
 	}
 #if 1
-	printf("cl = %10.7f\n",CL);
-	printf("cd = %10.7f\n",CD);
+	printf("cl = %10.7f\n",objectives(0));
+	printf("cd = %10.7f\n",objectives(1));
 #endif
 
 
@@ -3710,9 +3925,11 @@ int call_SU2_Adjoint_Solver(
 			std::string grad_value;
 			grad_value.assign(str,found2+1,found3-found2-1);
 
-			gradient(count) = std::stod(grad_value);
-			count++;
+			if (std::stod(grad_value) != 0){
 
+				gradient(count) = std::stod(grad_value);
+				count++;
+			}
 
 		}
 
@@ -3721,7 +3938,7 @@ int call_SU2_Adjoint_Solver(
 	} /* end of while */
 
 
-#if 0
+#if 1
 	printf("gradient:\n");
 	trans(gradient).print();
 #endif

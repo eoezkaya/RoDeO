@@ -584,6 +584,31 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
 
 }
 
+/** brute force KNeighbours search
+ *
+ * @param[in] data
+ * @param[in] p
+ * @param[in] K
+ * @param[out] min_dist
+ * @param[out] indices
+ * @param[in] metric
+ */
+
+void findKNeighbours(mat &data,
+		             rowvec &p,
+					 int K,
+					 double* min_dist,
+					 int *indices,
+					 double (*metric)(rowvec &,rowvec &, mat)){
+
+
+
+
+}
+
+
+
+
 /** brute force KNeighbours search with given index array for distance computation
  *
  * @param[in] data
@@ -647,6 +672,9 @@ void findKNeighbours(mat &data,
 	}
 
 }
+
+
+
 
 
 

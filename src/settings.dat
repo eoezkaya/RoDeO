@@ -1,11 +1,7 @@
 # current working directory
-cwd: /home/eoezkaya/RoDeO/Examples/Steady_RAE2822
-#cwd: /home/eoezkaya/RoDeO/Examples/Eggholder
-#cwd: /home/eoezkaya/RoDeO/Examples/Borehole
-#cwd: /home/eoezkaya/RoDeO/Examples/1DTest
-#cwd: /home/eoezkaya/RoDeO/Examples/Rosenbrock8D
+cwd: /home/emre/RoDeO/Tests/KernelRegression
 # directory for the python scripts
-python_dir: /home/eoezkaya/RoDeO/python
+python_dir: /home/emre/RoDeO/python
 # regularization parameter lambda for Kriging
 lambda: 10E-6
 # number of iterations for the EA based Kriging training

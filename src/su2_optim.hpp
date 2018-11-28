@@ -35,12 +35,9 @@ int call_SU2_CFD_Solver(vec &dv,
 int call_SU2_Adjoint_Solver(
 		vec &dv,
 		vec &gradient,
-		double &CL,
-		double &CD,
-		double &area,
+		vec &objective_functions,
 		int type,
-		double area_constraint
-);
+		vec &constraints);
 
 void initial_data_acquisition( int number_of_initial_samples );
 

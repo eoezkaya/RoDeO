@@ -1,6 +1,6 @@
 from pyDOE import *
 import sys
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 lhs_points_file = sys.argv[1]
 dimension = sys.argv[2]
@@ -18,9 +18,9 @@ x = design[:,0]
 y = design[:,1]
 #print x
 
-plt.plot(x, y, "o")
-figure_file = "lhs_points.png"
-plt.savefig(figure_file)
+#plt.plot(x, y, "o")
+#figure_file = "lhs_points.png"
+#plt.savefig(figure_file)
 
 f = open('lhs_points.dat', 'w')
 
