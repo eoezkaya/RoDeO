@@ -584,6 +584,47 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
 
 }
 
+double mixed12Norm(mat &M){
+
+	double mixedNorm=0.0;
+	for(int i=0; i<M.n_rows;i++){ /* for each row of the matrix */
+
+		double sum=0.0;
+
+		for(int j=0; j<M.n_cols; j++){
+
+			sum+= M(i,j)*M(i,j);
+
+		}
+
+		mixedNorm+= sqrt(sum);
+
+	}
+
+
+}
+
+
+double calcMetric(rowvec &xi,rowvec &xj, mat M){
+#if 0
+	printf("calling calcMetric...\n");
+	printf("M = \n");
+	M.print();
+#endif
+	rowvec diff= xi-xj;
+
+#if 0
+	printf("diff = \n");
+	diff.print();
+#endif
+
+	colvec diffT= trans(diff);
+
+	return dot(diff,M*diffT);
+
+}
+
+
 /** brute force KNeighbours search
  *
  * @param[in] data
@@ -591,16 +632,72 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
  * @param[in] K
  * @param[out] min_dist
  * @param[out] indices
- * @param[in] metric
+ * @param[in] M : metric matrix
  */
 
 void findKNeighbours(mat &data,
-		             rowvec &p,
-					 int K,
-					 double* min_dist,
-					 int *indices,
-					 double (*metric)(rowvec &,rowvec &, mat)){
+		rowvec &p,
+		int K,
+		vec &min_dist,
+		uvec &indices,
+		mat M){
 
+#if 0
+	printf("calling findKNeighbours...\n");
+	printf("point = \n");
+	p.print();
+#endif
+
+	int number_of_points= data.n_rows;
+	int dim= data.n_cols;
+
+	min_dist.fill(LARGE);
+	indices.fill(-1);
+
+
+
+	for(int i=0; i<number_of_points; i++){ /* for each data point */
+
+		rowvec x = data.row(i);
+		rowvec xdiff = x-p;
+
+#if 0
+		printf("xdiff = \n");
+		xdiff.print();
+#endif
+
+
+		double distance =  calcMetric(x,p, M);
+
+#if 0
+		printf("distance = %10.7f\n", distance);
+#endif
+
+		double worst_distance = -LARGE;
+		int worst_distance_index = -1;
+
+
+		find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
+
+
+		/* a better point is found */
+		if(distance < worst_distance){
+
+			min_dist[worst_distance_index]= distance;
+			indices[worst_distance_index] = i;
+
+		}
+
+	}
+
+#if 0
+	printf("%d nearest neighbors...\n",K);
+	for(int i=0;i<K;i++){
+
+		printf("index = %d\n",indices[i]);
+		data.row(indices[i]).print();
+	}
+#endif
 
 
 

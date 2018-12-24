@@ -1,6 +1,6 @@
 VERSION = 0.1
 CC      = g++
-CFLAGS  = -Wall -O2 -std=c++11 -fopenmp
+CFLAGS  = -Wall -O2 -std=c++11 -fopenmp -I /home/emre/CoDiPack-master/include
 LDFLAGS = -lm -larmadillo
 
 OBJ = Rodeo.o test_functions.o trust_region_gek.o kriging_training.o su2_optim.o \

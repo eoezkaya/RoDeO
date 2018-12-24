@@ -10,7 +10,7 @@
 #include "kriging_training.hpp"
 #include "rbf.hpp"
 #include "trust_region_gek.hpp"
-
+#include "kernel_regression.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -2827,6 +2827,10 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 		int dim,
 		std::string python_dir){
 
+
+
+	double sigma=0.1;
+
 #if 1
 	printf("testing kernel regression for %s function...\n",function_name.c_str());
 	printf("number of samples with only functional value = %d\n",number_of_samples_with_only_f_eval);
@@ -2845,7 +2849,7 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 	printf("input file name : %s\n",input_file_name.c_str());
 
 
-#if 1
+#if 0
 	if(dim ==2){
 		/* generate the contour_plot */
 		generate_contour_plot_2D_function_with_gradient(test_function_adj, bounds, function_name, python_dir);
@@ -2881,18 +2885,24 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 	}
 
 
-	mat X; /* data matrix */
-	X.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
+	mat data; /* data matrix */
+	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
 
-	int nrows = X.n_rows;
-	int ncols = X.n_cols;
+	int nrows = data.n_rows;
+	int ncols = data.n_cols;
 
 
 #if 1
+	printf("Data matrix = \n");
+	data.print();
+#endif
+
+	mat X = data.submat(0,0,nrows-1,dim-1);
+
+#if 0
 	printf("X = \n");
 	X.print();
 #endif
-
 	vec x_max(dim);
 	x_max.fill(0.0);
 
@@ -2915,18 +2925,24 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 #endif
 	/* normalize data */
 	for (int i = 0; i < nrows; i++) {
+
 		for (int j = 0; j < dim; j++) {
 
-			X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 		}
 	}
 
+#if 1
+	printf("X(normalized) = \n");
+	X.print();
+#endif
 
+	mat MetricM(dim,dim,fill::eye);
 
 	/* calculate the generalization error */
 	int resolution =100;
 
-	std::string kriging_response_surface_file_name = "Herbie2D_hybrid_response_surface.dat";
+	std::string kriging_response_surface_file_name = "kernel_regression_response_surface.dat";
 
 	FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
 
@@ -2938,12 +2954,16 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 
 	dx = (bounds[1]-bounds[0])/(resolution-1);
 	dy = (bounds[3]-bounds[2])/(resolution-1);
-#if 1
+#if 0
 	printf("dx = %10.7f\n",dx);
 	printf("dy = %10.7f\n",dy);
 #endif
 
 	double out_sample_error=0.0;
+
+	std::string response_surface_file_name = "kernel_regression_response_surface.dat";
+
+	FILE *response_surface_file = fopen(response_surface_file_name.c_str(),"w");
 
 	double max_value = -LARGE;
 	double min_value =  LARGE;
@@ -2954,41 +2974,134 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 	rowvec pminex(dim);
 	rowvec pmaxex(dim);
 
+
+	vec ftilde(nrows,fill::zeros);
+	vec kernelVal(nrows,fill::zeros);
+
+
+	vec grad(dim,fill::zeros);
+	rowvec xk(dim,fill::zeros);
+	rowvec xk_normalized(dim,fill::zeros);
+
+
+
+
+
 	x[0] = bounds[0];
 	for(int i=0;i<resolution;i++){
 		x[1] = bounds[2];
 		for(int j=0;j<resolution;j++){
+#if 0
+			printf("x = \n");
+			x.print();
+#endif
 
 			/* normalize x */
 			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
 			xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
-
-
-
-			double min_dist=0.0;
-			int indx;
-
-			/* find the closest K neighbours */
-			//			findKNeighbours(X_func,
-			//					xnorm,
-			//					4,
-			//					&min_dist,
-			//					&indx,
-			//					dim);
+#if 0
+			printf("xnorm = \n");
+			xnorm.print();
+#endif
 
 
 
 
+			double kernelSum=0.0;
+			for(int k=0; k<nrows; k++){
 
+				for(int l=0; l<dim; l++){
+
+					grad(l)=data(k,dim+1+l);
+					xk(l)=data(k,l);
+					xk_normalized(l)=X(k,l);
+				}
+
+				double fval= data(k,dim);
+
+				ftilde(k) = fval;
+				ftilde(k) += dot(grad,x-xk);
+
+				kernelVal(k)= gaussianKernel(xnorm,xk_normalized,sigma,MetricM);
+
+				kernelSum += kernelVal(k);
+
+
+
+#if 0
+				printf("\n\nk= %d\n",k);
+				printf("grad = \n");
+				grad.print();
+				printf("xk = \n");
+				xk.print();
+				printf("difference = \n");
+				(x-xk).print();
+				printf("xk (normalized)= \n");
+				xk_normalized.print();
+
+				printf("fval = %10.7f\n",fval);
+				printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
+				printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
+
+
+
+#endif
+
+
+			} /* end of k loop */
+
+
+			double Fapprox = 0.0;
+			for(int k=0; k<nrows; k++){
+
+				Fapprox += kernelVal(k)*ftilde(k);
+
+			}
+
+			Fapprox=Fapprox/kernelSum;
+
+			double Fvalexact = test_function(x.memptr());
+
+
+#if 0
+			printf("Fvalexact = %10.7f\n",Fvalexact);
+			printf("Fapprox = %10.7f\n",Fapprox);
+#endif
+		    fprintf(response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),Fapprox);
+			out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
+
+
+
+            x(1)+=dy;
 		}
+		x(0)+=dx;
 	}
 
+	out_sample_error=out_sample_error/(resolution*resolution);
+
+#if 1
+			printf("out_sample_error = %10.7f\n",out_sample_error);
+#endif
 
 
-	exit(1);
+#if 1
+		std::string file_name_for_plot = "kernel_regression_response_surface_";
+		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+		std::string title = "kernel regression";
+
+		std::string python_command = "python -W ignore "+python_dir+"/plot_2d_surface.py "
+				+ response_surface_file_name+ " "
+				+ file_name_for_plot +" "+ title;
+
+#if 0
+		printf("python_command = %s\n",python_command.c_str());
+#endif
+		FILE* in = popen(python_command.c_str(), "r");
 
 
-
+		fprintf(in, "\n");
+#endif
 
 
 
