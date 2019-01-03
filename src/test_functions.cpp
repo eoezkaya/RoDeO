@@ -2939,6 +2939,27 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 
 	mat MetricM(dim,dim,fill::eye);
 
+	vec ys;
+
+	ys=data.col(dim-1);
+
+#if 1
+	printf("Training the Mahalanobis distance... = \n");
+
+#endif
+	trainMahalanobisDistance(MetricM,X,ys,sigma);
+
+	exit(1);
+
+
+
+
+
+
+
+
+
+
 	/* calculate the generalization error */
 	int resolution =100;
 

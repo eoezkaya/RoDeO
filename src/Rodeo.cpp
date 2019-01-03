@@ -46,26 +46,26 @@ int main(void){
 
 
 
-	trainMahalanobisDistance();
 
 
 
 
-//	double parameter_bounds[4];
-//	parameter_bounds[0]=0.0;
-//	parameter_bounds[1]=200.0;
-//	parameter_bounds[2]=0.0;
-//	parameter_bounds[3]=200.0;
-//
-//	perform_kernel_regression_test(Eggholder,
-//			Eggholder_adj,
-//			parameter_bounds,
-//			"Eggholder",
-//			0,
-//			100,
-//			RANDOM_SAMPLING,
-//			2,
-//			settings.python_dir);
+
+	double parameter_bounds[4];
+	parameter_bounds[0]=0.0;
+	parameter_bounds[1]=200.0;
+	parameter_bounds[2]=0.0;
+	parameter_bounds[3]=200.0;
+
+	perform_kernel_regression_test(Eggholder,
+			Eggholder_adj,
+			parameter_bounds,
+			"Eggholder",
+			0,
+			100,
+			RANDOM_SAMPLING,
+			2,
+			settings.python_dir);
 
 
 //	su2_optimize(settings.python_dir);

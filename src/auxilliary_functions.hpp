@@ -161,12 +161,7 @@ double Lpnorm(T x, int p, int size,int *index=NULL){
 
 double calcMetric(rowvec &xi,rowvec &xj, mat M);
 
-void findKNeighbours(mat &data,
-		rowvec &p,
-		int K,
-		double* min_dist,
-		int *indices,
-		int norm=2);
+void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, unsigned int norm=2);
 
 
 void findKNeighbours(mat &data,

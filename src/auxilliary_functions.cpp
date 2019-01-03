@@ -34,7 +34,7 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
 
 		if( delta != 0 ){
 
-			for(int i=0; i<matrixIn.n_rows;i++){
+			for(unsigned int i=0; i<matrixIn.n_rows;i++){
 
 				matrixOut(i,j)  = (matrixIn(i,j)-xmin(j))/(delta);
 			}
@@ -496,7 +496,7 @@ bool file_exist(const char *fileName)
  * @param[out] indices
  */
 
-void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, int norm){
+void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, unsigned int norm){
 
 #if 0
 	printf("findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, int norm)...\n");
@@ -587,7 +587,7 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
 double mixed12Norm(mat &M){
 
 	double mixedNorm=0.0;
-	for(int i=0; i<M.n_rows;i++){ /* for each row of the matrix */
+	for(unsigned int i=0; i<M.n_rows;i++){ /* for each row of the matrix */
 
 		double sum=0.0;
 
