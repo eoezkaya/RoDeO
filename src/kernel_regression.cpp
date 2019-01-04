@@ -105,7 +105,7 @@ double calcMetric(double *xi,double *xj, double ** M, int dim){
  * @return distance
  *
  * */
-codi::RealReverse calcMetric(codi::RealReverse *xi,codi::RealReverse *xj, codi::RealReverse ** M, int dim){
+codi::RealReverse calcMetric(double *xi,double *xj, codi::RealReverse ** M, int dim){
 #if 0
 	printf("calling calcMetric...\n");
 #endif
@@ -163,7 +163,7 @@ codi::RealReverse calcMetric(codi::RealReverse *xi,codi::RealReverse *xj, codi::
  * @return distance
  *
  * */
-codi::RealForward calcMetric(codi::RealForward *xi,codi::RealForward *xj, codi::RealForward ** M, int dim){
+codi::RealForward calcMetric(double *xi,double *xj, codi::RealForward ** M, int dim){
 #if 0
 	printf("calling calcMetric...\n");
 #endif
@@ -267,8 +267,35 @@ double gaussianKernel(double *xi,
 
 }
 
-codi::RealForward gaussianKernel(codi::RealForward *xi,
-		codi::RealForward *xj,
+codi::RealReverse gaussianKernel(double *xi,
+		double *xj,
+		codi::RealReverse sigma,
+		codi::RealReverse **M,
+		int dim){
+
+#if 0
+	printf("calling gaussianKernel...\n");
+#endif
+
+	/* calculate distance between xi and xj with the matrix M */
+	codi::RealReverse metricVal = calcMetric(xi,xj,M,dim);
+#if 0
+	printf("metricVal = %10.7f\n",metricVal);
+#endif
+
+	double sqr_two_pi = sqrt(2.0*datum::pi);
+
+	codi::RealReverse kernelVal = (1.0/(sigma*sqr_two_pi))*exp(-metricVal/(2*sigma*sigma));
+#if 0
+	printf("kernelVal = %10.7f\n",kernelVal.getValue());
+#endif
+	return kernelVal;
+
+
+}
+
+codi::RealForward gaussianKernel(double *xi,
+		double *xj,
 		codi::RealForward sigma,
 		codi::RealForward **M,
 		int dim){
@@ -293,8 +320,6 @@ codi::RealForward gaussianKernel(codi::RealForward *xi,
 
 
 }
-
-
 
 double SIGN(double a, double b){
 
@@ -396,25 +421,6 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 	}
 
 
-	/* copy array for X */
-
-	double **Xin;
-	Xin=new double*[N];
-
-	for(i=0;i<N;i++){
-
-		Xin[i]= new double[dim];
-	}
-
-	for(i=0;i<N; i++){
-
-		for(j=0;j<dim; j++){
-
-			Xin[i][j]=X(i,j);
-
-		}
-	}
-
 	double **a;
 	a=new double*[n];
 
@@ -428,13 +434,6 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 
 			a[i][j]=M(i,j);
 		}
-	double *ysin;
-	ysin=new double[N];
-
-	for(i=0;i<N;i++){
-
-		ysin[i]=ys(i);
-	}
 
 
 	double *xp=new double[dim];
@@ -452,7 +451,7 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 #endif
 		for(k=0; k<dim; k++) {
 
-			xp[k]=Xin[i][k];
+			xp[k]=X(i,k);
 		}
 
 		double kernelSum=0.0;
@@ -462,7 +461,7 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 
 				for(k=0; k<dim; k++) {
 
-					xi[k]=Xin[j][k];
+					xi[k]=X(j,k);
 				}
 				kernelVal[j] = gaussianKernel(xi,xp,sigma,a,dim);
 				kernelSum+=kernelVal[j];
@@ -475,9 +474,9 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 		double fApprox = 0.0;
 		for(int j=0; j<N; j++){
 			if(i!=j){
-				fApprox += kernelVal[j]*ysin[j];
+				fApprox += kernelVal[j]*ys(j);
 #if 0
-				printf("kernelVal[%d] * ysin[j] = %10.7f\n",j,j,kernelVal[j]*ysin[j]);
+				printf("kernelVal[%d] * ys(j) = %10.7f\n",j,j,kernelVal[j]*ys(j));
 #endif
 
 			}
@@ -487,10 +486,10 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 
 #if 0
 		printf("fApprox = %10.7f\n",fApprox);
-		printf("fExact = %10.7f\n",ysin[i]);
+		printf("fExact = %10.7f\n",ys(i));
 #endif
 
-		lossFunc += (fApprox-ysin[i])*(fApprox-ysin[i]);
+		lossFunc += (fApprox-ys(i))*(fApprox-ys(i));
 
 	} // end of i loop
 
@@ -838,13 +837,7 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 	delete[] a;
 	delete[] v;
 	delete[] w;
-	delete[] ysin;
 
-	for(i=0;i<N;i++){
-		delete[] Xin[i];
-
-	}
-	delete[] Xin;
 	delete[] kernelVal;
 	delete[] xp;
 	delete[] xi;
@@ -900,24 +893,7 @@ codi::RealForward  dsvdTL(mat &M, mat&X, vec &ys,codi::RealForward  &sigma, int 
 	}
 
 
-	/* copy array for X */
 
-	codi::RealForward  **Xin;
-	Xin=new codi::RealForward *[N];
-
-	for(i=0;i<N;i++){
-
-		Xin[i]= new codi::RealForward [dim];
-	}
-
-	for(i=0;i<N; i++){
-
-		for(j=0;j<dim; j++){
-
-			Xin[i][j]=X(i,j);
-
-		}
-	}
 
 	codi::RealForward  **a;
 	a=new codi::RealForward *[n];
@@ -932,17 +908,28 @@ codi::RealForward  dsvdTL(mat &M, mat&X, vec &ys,codi::RealForward  &sigma, int 
 
 			a[i][j]=M(i,j);
 		}
-	codi::RealForward  *ysin;
-	ysin=new codi::RealForward [N];
 
-	for(i=0;i<N;i++){
+	if(indx1 ==-1 && indx2 ==-1){
 
-		ysin[i]=ys(i);
+		sigma.setGradient(1.0);
+
+	}
+
+	else if(indx1 >=0 && indx2 >=0){
+
+		a[indx1][indx2].setGradient(1.0);
+
+	}
+	else{
+
+		fprintf(stderr,"Error: invalid indexes indx1=%d, indx2=%d\n",indx1,indx2);
+
 	}
 
 
-	codi::RealForward  *xp=new codi::RealForward [dim];
-	codi::RealForward  *xi=new codi::RealForward [dim];
+
+	double  *xp=new double[dim];
+	double  *xi=new double[dim];
 
 	codi::RealForward  *kernelVal=new codi::RealForward [N];
 
@@ -956,7 +943,7 @@ codi::RealForward  dsvdTL(mat &M, mat&X, vec &ys,codi::RealForward  &sigma, int 
 #endif
 		for(k=0; k<dim; k++) {
 
-			xp[k]=Xin[i][k];
+			xp[k]=X(i,k);
 		}
 
 		codi::RealForward  kernelSum=0.0;
@@ -966,7 +953,7 @@ codi::RealForward  dsvdTL(mat &M, mat&X, vec &ys,codi::RealForward  &sigma, int 
 
 				for(k=0; k<dim; k++) {
 
-					xi[k]=Xin[j][k];
+					xi[k]=X(j,k);
 				}
 				kernelVal[j] = gaussianKernel(xi,xp,sigma,a,dim);
 				kernelSum+=kernelVal[j];
@@ -979,9 +966,9 @@ codi::RealForward  dsvdTL(mat &M, mat&X, vec &ys,codi::RealForward  &sigma, int 
 		codi::RealForward  fApprox = 0.0;
 		for(int j=0; j<N; j++){
 			if(i!=j){
-				fApprox += kernelVal[j]*ysin[j];
+				fApprox += kernelVal[j]*ys(j);
 #if 0
-				printf("kernelVal[%d] * ysin[j] = %10.7f\n",j,j,kernelVal[j]*ysin[j]);
+				printf("kernelVal[%d] * ys(%d) = %10.7f\n",j,j,kernelVal[j]*ys(j));
 #endif
 
 			}
@@ -991,10 +978,10 @@ codi::RealForward  dsvdTL(mat &M, mat&X, vec &ys,codi::RealForward  &sigma, int 
 
 #if 0
 		printf("fApprox = %10.7f\n",fApprox);
-		printf("fExact = %10.7f\n",ysin[i]);
+		printf("fExact = %10.7f\n",ys(i));
 #endif
 
-		lossFunc += (fApprox-ysin[i])*(fApprox-ysin[i]);
+		lossFunc += (fApprox-ys(i))*(fApprox-ys(i));
 
 	} // end of i loop
 
@@ -1342,13 +1329,8 @@ codi::RealForward  dsvdTL(mat &M, mat&X, vec &ys,codi::RealForward  &sigma, int 
 	delete[] a;
 	delete[] v;
 	delete[] w;
-	delete[] ysin;
 
-	for(i=0;i<N;i++){
-		delete[] Xin[i];
 
-	}
-	delete[] Xin;
 	delete[] kernelVal;
 	delete[] xp;
 	delete[] xi;
@@ -1362,29 +1344,53 @@ codi::RealForward  dsvdTL(mat &M, mat&X, vec &ys,codi::RealForward  &sigma, int 
 	printf("result = %10.7f\n",result.getValue());
 #endif
 
-    *sensVal = result.getGradient();
+	*sensVal = result.getGradient();
 	return(result.getValue());
 
 }
 
 
-
-double dsvdAdj(mat &M, mat &gradient)
+double dsvdAdj(mat &M, mat&X, vec &ys,double &sigma, vec &gradient)
 {
 	int flag, i, its, j, jj, k, l=0, nm;
 	codi::RealReverse c, f, h, s, x, y, z;
 	codi::RealReverse anorm = 0.0, g = 0.0, scale = 0.0;
+#if 1
+	printf("M = \n");
+	M.print();
+	printf("X = \n");
+	X.print();
+	printf("ys = \n");
+	ys.print();
+#endif
 
 
+	codi::RealReverse sigmain = sigma;
 
 	int m = M.n_rows;
 	int n = M.n_cols;
 
+	int dim= X.n_cols;
+	int N= X.n_rows;
+#if 0
+	printf("m = %d, n = %d, N= %d, dim= %d\n",m,n,N,dim);
+#endif
+
+	if(m != n){
+
+		fprintf(stderr,"Error: The matrix M is not square!\n");
+		exit(-1);
+
+	}
+
 	if (m < n)
 	{
 		fprintf(stderr, "#rows must be > #cols \n");
-		return(0);
+		exit(-1);
 	}
+
+
+	/* copy array for X */
 
 	codi::RealReverse **Min;
 	Min=new codi::RealReverse*[n];
@@ -1393,11 +1399,26 @@ double dsvdAdj(mat &M, mat &gradient)
 
 		Min[i]= new codi::RealReverse[n];
 	}
+
 	for(i=0;i<n;i++)
-		for(j=0;j<n;j++)
+		for(j=0;j<n;j++){
+
 			Min[i][j]=M(i,j);
+		}
+
+	// activate tape and register input
+
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
 
 
+	for(i=0; i<n; i++){
+		for(j=0; j<n; j++){
+
+			tape.registerInput(Min[i][j]);
+		}
+	}
+	tape.registerInput(sigmain);
 
 	codi::RealReverse **a;
 	a=new codi::RealReverse*[n];
@@ -1406,6 +1427,78 @@ double dsvdAdj(mat &M, mat &gradient)
 
 		a[i]= new codi::RealReverse[n];
 	}
+
+	for(i=0;i<n;i++)
+		for(j=0;j<n;j++){
+
+			a[i][j]=Min[i][j];
+		}
+
+
+
+	double *xp=new double[dim];
+	double *xi=new double[dim];
+
+	codi::RealReverse *kernelVal=new codi::RealReverse[N];
+
+
+	codi::RealReverse lossFunc=0.0;
+	for(i=0; i<N; i++){
+
+#if 0
+		printf("kernel regression for the sample number %d\n",i);
+
+#endif
+		for(k=0; k<dim; k++) {
+
+			xp[k]=X(i,k);
+		}
+
+		codi::RealReverse kernelSum=0.0;
+		for(j=0; j<N; j++){
+
+			if(i!=j){
+
+				for(k=0; k<dim; k++) {
+
+					xi[k]=X(j,k);
+				}
+				kernelVal[j] = gaussianKernel(xi,xp,sigma,a,dim);
+				kernelSum+=kernelVal[j];
+#if 0
+				printf("kernelVal[%d]=%10.7f\n",j,kernelVal[j].getValue());
+#endif
+			}
+		}
+
+		codi::RealReverse fApprox = 0.0;
+		for(int j=0; j<N; j++){
+			if(i!=j){
+				fApprox += kernelVal[j]*ys(j);
+#if 0
+				printf("kernelVal[%d] * ys(%d) = %10.7f\n",j,j,kernelVal[j].getValue()*ys(j));
+#endif
+
+			}
+		}
+
+		fApprox=fApprox/kernelSum;
+
+#if 0
+		printf("fApprox = %10.7f\n",fApprox.getValue());
+		printf("fExact = %10.7f\n",ys[i]);
+#endif
+
+		lossFunc += (fApprox-ys(i))*(fApprox-ys(i));
+
+	} // end of i loop
+
+	lossFunc = lossFunc/N;
+
+#if 1
+	printf("lossFunc = %10.7f\n",lossFunc.getValue());
+#endif
+
 
 	codi::RealReverse **v;
 	v=new codi::RealReverse*[n];
@@ -1418,21 +1511,6 @@ double dsvdAdj(mat &M, mat &gradient)
 
 
 
-	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-	tape.setActive();
-
-
-	for(i=0; i<n; i++){
-		for(j=0; j<n; j++){
-
-			tape.registerInput(Min[i][j]);
-		}
-	}
-
-
-	for(i=0;i<n;i++)
-		for(j=0;j<n;j++)
-			a[i][j]=Min[i][j];
 
 	codi::RealReverse* rv1 = (codi::RealReverse *)malloc((unsigned int) n*sizeof(codi::RealReverse));
 
@@ -1447,7 +1525,7 @@ double dsvdAdj(mat &M, mat &gradient)
 		{
 			for (k = i; k < m; k++)
 				scale += fabs(a[k][i]);
-			if (scale!=0.0)
+			if (scale != 0.0)
 			{
 				for (k = i; k < m; k++)
 				{
@@ -1481,7 +1559,7 @@ double dsvdAdj(mat &M, mat &gradient)
 		{
 			for (k = l; k < n; k++)
 				scale += fabs(a[i][k]);
-			if (scale!=0.0)
+			if (scale != 0.0)
 			{
 				for (k = l; k < n; k++)
 				{
@@ -1516,7 +1594,7 @@ double dsvdAdj(mat &M, mat &gradient)
 	{
 		if (i < n - 1)
 		{
-			if (g!=0.0)
+			if (g != 0.0)
 			{
 				for (j = l; j < n; j++)
 					v[j][i] = ((a[i][j] / a[i][l]) / g);
@@ -1545,7 +1623,7 @@ double dsvdAdj(mat &M, mat &gradient)
 		if (i < n - 1)
 			for (j = l; j < n; j++)
 				a[i][j] = 0.0;
-		if (g!=0.0)
+		if (g != 0.0)
 		{
 			g = 1.0 / g;
 			if (i != n - 1)
@@ -1665,419 +1743,7 @@ double dsvdAdj(mat &M, mat &gradient)
 				}
 				z = PYTHAG(f, h);
 				w[j] = z;
-				if (z!=0.0)
-				{
-					z = 1.0 / z;
-					c = f * z;
-					s = h * z;
-				}
-				f = (c * g) + (s * y);
-				x = (c * y) - (s * g);
-				for (jj = 0; jj < m; jj++)
-				{
-					y = a[jj][j];
-					z = a[jj][i];
-					a[jj][j] = (y * c + z * s);
-					a[jj][i] = (z * c - y * s);
-				}
-			}
-			rv1[l] = 0.0;
-			rv1[k] = f;
-			w[k] = x;
-		}
-	}
-	free((void*) rv1);
-
-
-#if 0
-	printf("singular values of M=\n");
-
-	for (i = 0; i < n; i++){
-
-		printf("%10.7f\n",w[i].getValue());
-	}
-#endif
-
-	codi::RealReverse temp,sum;
-	for (i = 0; i < n; ++i)
-	{
-		for (j = i + 1; j < n; ++j)
-		{
-
-			if (w[i] < w[j])
-
-			{
-				temp =  w[i];
-				w[i] = w[j];
-				w[j] = temp;
-			}
-		}
-	}
-
-#if 0
-	printf("singular values of M=\n");
-
-	for (i = 0; i < n; i++){
-
-		printf("%10.7f\n",w[i].getValue());
-	}
-#endif
-	sum=0.0;
-
-	for (i = 0; i < n; i++)
-	{
-#if 0
-		printf("%d * %10.7f = %10.7f\n",i+1,w[i],(i+1)*w[i]);
-#endif
-		sum = sum+(i+1)*w[i];
-	}
-#if 0
-	printf("sum = %10.7f\n",sum.getValue());
-#endif
-
-
-	for(i=0; i<n; i++)
-		for(j=0; j<n; j++) sum+=fabs(Min[i][j]);
-
-	tape.registerOutput(sum);
-
-	tape.setPassive();
-	sum.setGradient(1.0);
-	tape.evaluate();
-
-#if 0
-	printf("matb=\n");
-
-	for(i=0; i<n; i++){
-		for(j=0; j<n; j++){
-
-			gradient(i,j)=Min[i][j].getGradient();
-
-			printf("%15.7f ",Min[i][j].getGradient());
-		}
-
-		printf("\n");
-	}
-#endif
-	for(i=0; i<n; i++){
-		for(j=0; j<n; j++){
-
-			gradient(i,j)=Min[i][j].getGradient();
-
-		}
-
-	}
-
-
-	tape.reset();
-
-	for(i=0;i<n;i++){
-		delete[] v[i];
-		delete[] a[i];
-		delete[] Min[i];
-	}
-	delete[] a;
-	delete[] Min;
-	delete[] v;
-	delete[] w;
-	return(sum.getValue());
-
-
-
-}
-
-
-
-double dsvdTl(mat &M, int indx1, int indx2, double *sensVal)
-{
-	int flag, i, its, j, jj, k, l=0, nm;
-	codi::RealForward c, f, h, s, x, y, z;
-	codi::RealForward anorm = 0.0, g = 0.0, scale = 0.0;
-
-
-
-	int m = M.n_rows;
-	int n = M.n_cols;
-
-	if (m < n)
-	{
-		fprintf(stderr, "#rows must be > #cols \n");
-		return(0);
-	}
-
-	codi::RealForward **Min;
-	Min=new codi::RealForward*[n];
-
-	for(i=0;i<n;i++){
-
-		Min[i]= new codi::RealForward[n];
-	}
-	for(i=0;i<n;i++)
-		for(j=0;j<n;j++)
-			Min[i][j]=M(i,j);
-
-	Min[indx1][indx2].setGradient(1.0);
-
-
-
-	codi::RealForward **a;
-	a=new codi::RealForward*[n];
-
-	for(i=0;i<n;i++){
-
-		a[i]= new codi::RealForward[n];
-	}
-
-	codi::RealForward **v;
-	v=new codi::RealForward*[n];
-
-	for(i=0;i<n;i++){
-
-		v[i]= new codi::RealForward[n];
-	}
-	codi::RealForward *w=new codi::RealForward[n];
-
-
-
-
-
-
-	for(i=0;i<n;i++)
-		for(j=0;j<n;j++)
-			a[i][j]=Min[i][j];
-
-	codi::RealForward* rv1 = (codi::RealForward *)malloc((unsigned int) n*sizeof(codi::RealForward));
-
-	/* Householder reduction to bidiagonal form */
-	for (i = 0; i < n; i++)
-	{
-		/* left-hand reduction */
-		l = i + 1;
-		rv1[i] = scale * g;
-		g = s = scale = 0.0;
-		if (i < m)
-		{
-			for (k = i; k < m; k++)
-				scale += fabs(a[k][i]);
-			if (scale!=0.0)
-			{
-				for (k = i; k < m; k++)
-				{
-					a[k][i] = (a[k][i]/scale);
-					s += (a[k][i] * a[k][i]);
-				}
-				f = a[i][i];
-				g = -SIGN(sqrt(s), f);
-				h = f * g - s;
-				a[i][i] = (f - g);
-				if (i != n - 1)
-				{
-					for (j = l; j < n; j++)
-					{
-						for (s = 0.0, k = i; k < m; k++)
-							s += (a[k][i] * a[k][j]);
-						f = s / h;
-						for (k = i; k < m; k++)
-							a[k][j] += (f * a[k][i]);
-					}
-				}
-				for (k = i; k < m; k++)
-					a[k][i] = (a[k][i]*scale);
-			}
-		}
-		w[i] = (scale * g);
-
-		/* right-hand reduction */
-		g = s = scale = 0.0;
-		if (i < m && i != n - 1)
-		{
-			for (k = l; k < n; k++)
-				scale += fabs(a[i][k]);
-			if (scale!=0.0)
-			{
-				for (k = l; k < n; k++)
-				{
-					a[i][k] = (a[i][k]/scale);
-					s += (a[i][k] * a[i][k]);
-				}
-				f = a[i][l];
-				g = -SIGN(sqrt(s), f);
-				h = f * g - s;
-				a[i][l] = (f - g);
-				for (k = l; k < n; k++)
-					rv1[k] = a[i][k] / h;
-				if (i != m - 1)
-				{
-					for (j = l; j < m; j++)
-					{
-						for (s = 0.0, k = l; k < n; k++)
-							s += (a[j][k] * a[i][k]);
-						for (k = l; k < n; k++)
-							a[j][k] += (s * rv1[k]);
-					}
-				}
-				for (k = l; k < n; k++)
-					a[i][k] = (a[i][k]*scale);
-			}
-		}
-		anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
-	}
-
-	/* accumulate the right-hand transformation */
-	for (i = n - 1; i >= 0; i--)
-	{
-		if (i < n - 1)
-		{
-			if (g!=0.0)
-			{
-				for (j = l; j < n; j++)
-					v[j][i] = ((a[i][j] / a[i][l]) / g);
-				/* double division to avoid underflow */
-				for (j = l; j < n; j++)
-				{
-					for (s = 0.0, k = l; k < n; k++)
-						s += (a[i][k] * v[k][j]);
-					for (k = l; k < n; k++)
-						v[k][j] += (s * v[k][i]);
-				}
-			}
-			for (j = l; j < n; j++)
-				v[i][j] = v[j][i] = 0.0;
-		}
-		v[i][i] = 1.0;
-		g = rv1[i];
-		l = i;
-	}
-
-	/* accumulate the left-hand transformation */
-	for (i = n - 1; i >= 0; i--)
-	{
-		l = i + 1;
-		g = w[i];
-		if (i < n - 1)
-			for (j = l; j < n; j++)
-				a[i][j] = 0.0;
-		if (g!=0.0)
-		{
-			g = 1.0 / g;
-			if (i != n - 1)
-			{
-				for (j = l; j < n; j++)
-				{
-					for (s = 0.0, k = l; k < m; k++)
-						s += (a[k][i] * a[k][j]);
-					f = (s / a[i][i]) * g;
-					for (k = i; k < m; k++)
-						a[k][j] += (f * a[k][i]);
-				}
-			}
-			for (j = i; j < m; j++)
-				a[j][i] = (a[j][i]*g);
-		}
-		else
-		{
-			for (j = i; j < m; j++)
-				a[j][i] = 0.0;
-		}
-		++a[i][i];
-	}
-
-	/* diagonalize the bidiagonal form */
-	for (k = n - 1; k >= 0; k--)
-	{                             /* loop over singular values */
-		for (its = 0; its < 30; its++)
-		{                         /* loop over allowed iterations */
-			flag = 1;
-			for (l = k; l >= 0; l--)
-			{                     /* test for splitting */
-				nm = l - 1;
-				if (fabs(rv1[l]) + anorm == anorm)
-				{
-					flag = 0;
-					break;
-				}
-				if (fabs(w[nm]) + anorm == anorm)
-					break;
-			}
-			if (flag)
-			{
-				c = 0.0;
-				s = 1.0;
-				for (i = l; i <= k; i++)
-				{
-					f = s * rv1[i];
-					if (fabs(f) + anorm != anorm)
-					{
-						g = w[i];
-						h = PYTHAG(f, g);
-						w[i] = h;
-						h = 1.0 / h;
-						c = g * h;
-						s = (- f * h);
-						for (j = 0; j < m; j++)
-						{
-							y = a[j][nm];
-							z = a[j][i];
-							a[j][nm] = (y * c + z * s);
-							a[j][i] = (z * c - y * s);
-						}
-					}
-				}
-			}
-			z = w[k];
-			if (l == k)
-			{                  /* convergence */
-				if (z < 0.0)
-				{              /* make singular value nonnegative */
-					w[k] = (-z);
-					for (j = 0; j < n; j++)
-						v[j][k] = (-v[j][k]);
-				}
-				break;
-			}
-			if (its >= 30) {
-				free((void*) rv1);
-				fprintf(stderr, "No convergence after 30,000! iterations \n");
-				return(0);
-			}
-
-			/* shift from bottom 2 x 2 minor */
-			x = w[l];
-			nm = k - 1;
-			y = w[nm];
-			g = rv1[nm];
-			h = rv1[k];
-			f = ((y - z) * (y + z) + (g - h) * (g + h)) / (2.0 * h * y);
-			g = PYTHAG(f, 1.0);
-			f = ((x - z) * (x + z) + h * ((y / (f + SIGN(g, f))) - h)) / x;
-
-			/* next QR transformation */
-			c = s = 1.0;
-			for (j = l; j <= nm; j++)
-			{
-				i = j + 1;
-				g = rv1[i];
-				y = w[i];
-				h = s * g;
-				g = c * g;
-				z = PYTHAG(f, h);
-				rv1[j] = z;
-				c = f / z;
-				s = h / z;
-				f = x * c + g * s;
-				g = g * c - x * s;
-				h = y * s;
-				y = y * c;
-				for (jj = 0; jj < n; jj++)
-				{
-					x = v[jj][j];
-					z = v[jj][i];
-					v[jj][j] = (x * c + z * s);
-					v[jj][i] = (z * c - x * s);
-				}
-				z = PYTHAG(f, h);
-				w[j] = z;
-				if (z!=0.0)
+				if (z!= 0.0)
 				{
 					z = 1.0 / z;
 					c = f * z;
@@ -2110,7 +1776,7 @@ double dsvdTl(mat &M, int indx1, int indx2, double *sensVal)
 	}
 #endif
 
-	codi::RealForward temp,sum;
+	codi::RealReverse  temp;
 	for (i = 0; i < n; ++i)
 	{
 		for (j = i + 1; j < n; ++j)
@@ -2134,47 +1800,73 @@ double dsvdTl(mat &M, int indx1, int indx2, double *sensVal)
 		printf("%10.7f\n",w[i].getValue());
 	}
 #endif
-	sum=0.0;
+	codi::RealReverse  reg_term_svd=0.0;
+
 
 	for (i = 0; i < n; i++)
 	{
 #if 1
 		printf("%d * %10.7f = %10.7f\n",i+1,w[i].getValue(),(i+1)*w[i].getValue());
 #endif
-		sum = sum+(i+1)*w[i];
+		reg_term_svd = reg_term_svd+(i+1)*w[i];
 	}
 #if 1
-	printf("sumd = %10.7f\n",sum.getGradient());
-	printf("sum = %10.7f\n",sum.getValue());
+	printf("reg_term_svd = %10.7f\n",reg_term_svd.getValue());
+#endif
+	codi::RealReverse  reg_term_L1=0.0;
+
+
+	for (i = 0; i < n; i++)
+		for (j = 0; j < n; j++)
+		{
+
+			reg_term_L1 = reg_term_L1+fabs(a[i][j]+a[i][j]);
+		}
+#if 1
+	printf("reg_term_L1 = %10.7f\n",reg_term_L1.getValue());
 #endif
 
 
+
+
+
+
+	double weight_svd=1.0;
+	double weight_L1=1.0;
+
+	codi::RealReverse result=lossFunc+weight_svd*reg_term_svd+weight_L1*reg_term_L1;
+
+#if 1
+	printf("result = %10.7f\n",result.getValue());
+#endif
+
+	tape.registerOutput(result);
+
+	tape.setPassive();
+	result.setGradient(1.0);
+	tape.evaluate();
+
+
+
 	for(i=0;i<n;i++){
-		delete[] v[i];
-		delete[] a[i];
-		delete[] Min[i];
-	}
-	delete[] a;
-	delete[] Min;
-	delete[] v;
-	delete[] w;
+			delete[] v[i];
+			delete[] a[i];
 
-	*sensVal = sum.getGradient();
-	return(sum.getValue());
+		}
+		delete[] a;
+		delete[] v;
+		delete[] w;
 
 
+		delete[] kernelVal;
+		delete[] xp;
+		delete[] xi;
+
+		tape.reset();
+
+	return(result.getValue());
 
 }
-
-
-
-
-
-
-
-
-
-
 
 
 int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma){
@@ -2266,7 +1958,7 @@ int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma){
 
 	exit(1);
 
-	fStep = dsvdAdj(M,gradient);
+//	fStep = dsvdAdj(M,gradient);
 
 
 
@@ -2291,7 +1983,7 @@ int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma){
 #endif
 
 
-		fStep = dsvdAdj(M,gradient);
+//		fStep = dsvdAdj(M,gradient);
 
 
 
