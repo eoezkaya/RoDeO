@@ -2944,7 +2944,7 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 	ys=data.col(dim-1);
 
 #if 1
-	printf("Training the Mahalanobis distance... = \n");
+	printf("Training the Mahalanobis distance...\n");
 
 #endif
 	trainMahalanobisDistance(MetricM,X,ys,sigma);
