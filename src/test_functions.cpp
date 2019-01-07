@@ -2949,11 +2949,6 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 #endif
 	trainMahalanobisDistance(MetricM,X,ys,sigma);
 
-	exit(1);
-
-
-
-
 
 
 

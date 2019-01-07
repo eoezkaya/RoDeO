@@ -846,10 +846,13 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 	delete[] xp;
 	delete[] xi;
 
-	double weight_svd=1.0;
-	double weight_L1=1.0;
+	double weight_svd=10.0;
+	double weight_L1=10.0;
 
 	double result=lossFunc+weight_svd*reg_term_svd+weight_L1*reg_term_L1;
+#if 1
+	printf("lossFunc = %10.7f, svd part = %10.7f, L1 reg. part = %10.7f\n",lossFunc,weight_svd*reg_term_svd,weight_L1*reg_term_L1);
+#endif
 
 #if 0
 	printf("result = %10.7f\n",result);
@@ -991,7 +994,7 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 
 					xi[k]=X(j,k);
 				}
-				kernelVal[j] = gaussianKernel(xi,xp,sigma,a,dim);
+				kernelVal[j] = gaussianKernel(xi,xp,sigmain,a,dim);
 				kernelSum+=kernelVal[j];
 #if 0
 				printf("kernelVal[%d]=%10.7f\n",j,kernelVal[j]);
@@ -1040,7 +1043,7 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 
 
 
-//	codi::RealForward * rv1 = (codi::RealForward  *)malloc((unsigned int) n*sizeof(codi::RealForward ));
+	//	codi::RealForward * rv1 = (codi::RealForward  *)malloc((unsigned int) n*sizeof(codi::RealForward ));
 
 
 	codi::RealForward * rv1 = new codi::RealForward[m];
@@ -1294,7 +1297,7 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 			w[k] = x;
 		}
 	}
-//	free((void*) rv1);
+	//	free((void*) rv1);
 	delete[] rv1;
 
 #if 1
@@ -1522,7 +1525,7 @@ double dsvdAdj(mat &M, mat&X, vec &ys,double &sigma, mat &Mgradient, double &sig
 
 					xi[k]=X(j,k);
 				}
-				kernelVal[j] = gaussianKernel(xi,xp,sigma,a,dim);
+				kernelVal[j] = gaussianKernel(xi,xp,sigmain,a,dim);
 				kernelSum+=kernelVal[j];
 #if 0
 				printf("kernelVal[%d]=%10.7f\n",j,kernelVal[j].getValue());
@@ -1890,8 +1893,8 @@ double dsvdAdj(mat &M, mat&X, vec &ys,double &sigma, mat &Mgradient, double &sig
 
 
 
-	double weight_svd=1.0;
-	double weight_L1=1.0;
+	double weight_svd=10.0;
+	double weight_L1=10.0;
 
 	codi::RealReverse result=lossFunc+weight_svd*reg_term_svd+weight_L1*reg_term_L1;
 
@@ -1914,7 +1917,7 @@ double dsvdAdj(mat &M, mat&X, vec &ys,double &sigma, mat &Mgradient, double &sig
 			Mgradient(i,j)= Min[i][j].getGradient();
 		}
 	}
-
+	sigmab=sigmain.getGradient();
 
 	for(i=0;i<n;i++){
 		delete[] v[i];
@@ -1961,7 +1964,7 @@ int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma){
 		exit(-1);
 	}
 
-#if 1
+#if 0
 
 	// consistency check
 
@@ -2024,79 +2027,111 @@ int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma){
 	mat errorRevAD = forward_res-adjoint_res;
 	errorRevAD.print();
 
-#endif
+	printf("derivative of sigma (adjoint) = %10.7f\n",sigma_derivative);
 
-	exit(1);
+	double sigma_derivative_forward_mode;
 
-	/* optimization stage */
+	resultTl = dsvdTL(M,X, ys, sigma, -1, -1, &sigma_derivative_forward_mode);
 
-	int maxoOptIter = 10000;
-	int optIter=0;
-	mat gradient(n,n);
-	double stepSizeInit= 0.0001;
-	double stepSize= stepSizeInit;
-	double fStep,fpreviousIter;
+	printf("derivative of sigma (forward) = %10.7f\n",sigma_derivative_forward_mode);
 
-	fpreviousIter = dsvd(M,X,ys,sigma);
+	result = dsvd(M, X, ys,sigma);
 
-	exit(1);
+	sigma+=perturbation_param;
+	resultpert = dsvd(M, X, ys,sigma);
 
-	//	fStep = dsvdAdj(M,gradient);
+	double fd_sigma= (resultpert-result)/perturbation_param;
 
-
-
-	mat Msave(n,n);
-
-	while(1){
-
-
-
-		Msave = M;
-		M = M-stepSize*gradient;
-
-		for(unsigned int i=0;i<n;i++)
-			for(unsigned int j=0;j<n;j++){
-
-				if(M(i,j) < 0.0) M(i,j)=0.0;
-			}
-#if 0
-		printf("stepSize = %10.7f\n",stepSize);
-		printf("evaluating gradient vector...\n");
-		M.print();
+	printf("derivative of sigma (fd) = %10.7f\n",fd_sigma);
 #endif
 
 
-		//		fStep = dsvdAdj(M,gradient);
+
+/* optimization stage */
+
+int maxoOptIter = 10000;
+int optIter=0;
+mat gradient(n,n);
+double stepSizeInit= 0.0000001;
+double stepSize= stepSizeInit;
+double fStep,fpreviousIter;
+double sigmab=0.0;
+
+
+/* compute the initial gradient and objective function value */
+fpreviousIter = dsvdAdj(M, X, ys,sigma, gradient, sigmab);
+
+mat Msave(n,n);
+Msave.fill(0.0);
+double sigmaSave;
+while(1){
 
 
 
-#if 1
-		printf("fStep= %10.7f\n",fStep);
+	Msave = M;
+	sigmaSave = sigma;
 
-		//		printf("gradient=\n");
-		//		gradient.print();
-#endif
+	M = M-stepSize*gradient;
+//	sigma = sigma-stepSize*sigmab;
 
+/* avoid negative entries in M */
 
-		fpreviousIter = fStep;
+	for(unsigned int i=0;i<n;i++)
+		for(unsigned int j=0;j<n;j++){
 
-
-
-
-		optIter++;
-		if(optIter > maxoOptIter || stepSize < 10E-10) {
-#if 1
-			printf("optimization prcedure is terminating with iter =%d...\n",optIter);
-#endif
-			break;
-
+			if(M(i,j) < 0.0) M(i,j)=0.0;
 		}
-	}
-
+#if 0
+	printf("stepSize = %10.7f\n",stepSize);
+	printf("evaluating gradient vector...\n");
 	M.print();
-	dsvd(M,X,ys,sigma);
+#endif
 
-	return 0;
+
+	fStep = dsvd(M, X, ys,sigma);
+
+#if 1
+	printf("fStep= %10.7f\n",fStep);
+
+	//		printf("gradient=\n");
+	//		gradient.print();
+#endif
+
+
+#if 1
+	if(fStep > fpreviousIter){
+
+		M = Msave;
+		sigma = sigmaSave;
+
+		stepSize = stepSize/2.0;
+
+	}
+	else{
+
+
+	}
+#endif
+
+	fpreviousIter = fStep;
+
+
+
+
+	optIter++;
+	if(optIter > maxoOptIter || stepSize < 10E-10) {
+#if 1
+		printf("optimization prcedure is terminating with iter =%d...\n",optIter);
+#endif
+		break;
+
+	}
+}
+
+M.print();
+
+
+return 0;
 }
 
 
