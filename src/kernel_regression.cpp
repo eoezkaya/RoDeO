@@ -19,6 +19,10 @@ using namespace arma;
  * @return distance
  *
  * */
+
+
+
+
 double calcMetric(double *xi,double *xj, double ** M, int dim){
 #if 0
 	printf("calling calcMetric...\n");
@@ -810,7 +814,7 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 #endif
 		reg_term_svd = reg_term_svd+(i+1)*w[i];
 	}
-#if 1
+#if 0
 	printf("reg_term_svd = %10.7f\n",reg_term_svd);
 #endif
 	double reg_term_L1=0.0;
@@ -820,7 +824,7 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 		for (j = 0; j < n; j++)
 		{
 
-			reg_term_L1 = reg_term_L1+fabs(a[i][j]+a[i][j]);
+			reg_term_L1 = reg_term_L1+fabs(M(i,j)+M(i,j));
 		}
 #if 0
 	printf("reg_term_L1 = %10.7f\n",reg_term_L1);
@@ -846,7 +850,7 @@ double dsvd(mat &M, mat&X, vec &ys,double &sigma)
 	double weight_L1=1.0;
 
 	double result=lossFunc+weight_svd*reg_term_svd+weight_L1*reg_term_L1;
-	       result=lossFunc;
+
 #if 0
 	printf("result = %10.7f\n",result);
 #endif
@@ -903,12 +907,22 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 		a[i]= new codi::RealForward [n];
 	}
 
-	for(i=0;i<n;i++)
+	codi::RealForward  **Min;
+	Min=new codi::RealForward *[n];
+
+	for(i=0;i<n;i++){
+
+		Min[i]= new codi::RealForward [n];
+	}
+
+	for(i=0;i<n;i++){
 		for(j=0;j<n;j++){
 
-			a[i][j]=M(i,j);
-			a[i][j].setGradient(0.0);
+			Min[i][j]=M(i,j);
 		}
+	}
+
+
 
 	sigmain.setGradient(0.0);
 
@@ -920,7 +934,7 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 
 	else if(indx1 >=0 && indx2 >=0){
 
-		a[indx1][indx2].setGradient(1.0);
+		Min[indx1][indx2].setGradient(1.0);
 
 	}
 	else{
@@ -929,6 +943,25 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 
 	}
 
+	for(i=0;i<n;i++){
+		for(j=0;j<n;j++){
+
+			a[i][j]=Min[i][j];
+
+		}
+	}
+
+
+#if 0
+	for(i=0;i<n;i++){
+		for(j=0;j<n;j++){
+
+			printf("%10.7f ",Min[i][j].getGradient());
+
+		}
+		printf("\n");
+	}
+#endif
 
 
 	double  *xp=new double[dim];
@@ -1007,8 +1040,10 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 
 
 
-	codi::RealForward * rv1 = (codi::RealForward  *)malloc((unsigned int) n*sizeof(codi::RealForward ));
+//	codi::RealForward * rv1 = (codi::RealForward  *)malloc((unsigned int) n*sizeof(codi::RealForward ));
 
+
+	codi::RealForward * rv1 = new codi::RealForward[m];
 	/* Householder reduction to bidiagonal form */
 	for (i = 0; i < n; i++)
 	{
@@ -1197,7 +1232,7 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 				break;
 			}
 			if (its >= 30) {
-				free((void*) rv1);
+				delete[] rv1;
 				fprintf(stderr, "No convergence after 30,000! iterations \n");
 				return(0);
 			}
@@ -1259,15 +1294,15 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 			w[k] = x;
 		}
 	}
-	free((void*) rv1);
+//	free((void*) rv1);
+	delete[] rv1;
 
-
-#if 0
+#if 1
 	printf("singular values of M=\n");
 
 	for (i = 0; i < n; i++){
 
-		printf("%10.7f\n",w[i].getValue());
+		printf("%10.7f %10.7f\n",w[i].getValue(),w[i].getGradient() );
 	}
 #endif
 
@@ -1287,12 +1322,12 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 		}
 	}
 
-#if 0
+#if 1
 	printf("singular values of M=\n");
 
 	for (i = 0; i < n; i++){
 
-		printf("%10.7f\n",w[i].getValue());
+		printf("%10.7f %10.7f\n",w[i].getValue(),w[i].getGradient() );
 	}
 #endif
 	codi::RealForward  reg_term_svd=0.0;
@@ -1310,13 +1345,30 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 #endif
 	codi::RealForward  reg_term_L1=0.0;
 
+#if 1
 
-	for (i = 0; i < n; i++)
+	printf("Min.getGradient = \n");
+	for(i=0;i<n;i++){
+		for(j=0;j<n;j++){
+
+			printf("%10.7f ",Min[i][j].getGradient());
+
+		}
+		printf("\n");
+	}
+#endif
+	for (i = 0; i < n; i++){
 		for (j = 0; j < n; j++)
 		{
 
-			reg_term_L1 = reg_term_L1+fabs(a[i][j]+a[i][j]);
+			reg_term_L1 = reg_term_L1+fabs(Min[i][j]+Min[i][j]);
+
+#if 1
+			printf("i=%d j=%d Min[%d][%d] = %10.7f Mind[%d][%d] = %10.7f reg_term_L1d = %10.7f\n",i,j,i,j,Min[i][j].getValue(), i,j,Min[i][j].getGradient(),reg_term_L1.getGradient());
+#endif
+
 		}
+	}
 #if 0
 	printf("reg_term_L1 = %10.7f\n",reg_term_L1.getValue());
 #endif
@@ -1327,9 +1379,11 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 	for(i=0;i<n;i++){
 		delete[] v[i];
 		delete[] a[i];
+		delete[] Min[i];
 
 	}
 	delete[] a;
+	delete[] Min;
 	delete[] v;
 	delete[] w;
 
@@ -1342,10 +1396,11 @@ double  dsvdTL(mat &M, mat&X, vec &ys,double sigma, int indx1, int indx2, double
 	double weight_L1=1.0;
 
 	codi::RealForward  result=lossFunc+weight_svd*reg_term_svd+weight_L1*reg_term_L1;
-	 result=lossFunc;
 
-#if 0
+
+#if 1
 	printf("result = %10.7f\n",result.getValue());
+	printf("resultd = %10.7f\n",result.getGradient());
 #endif
 
 	*sensVal = result.getGradient();
@@ -1824,7 +1879,7 @@ double dsvdAdj(mat &M, mat&X, vec &ys,double &sigma, mat &Mgradient, double &sig
 		for (j = 0; j < n; j++)
 		{
 
-			reg_term_L1 = reg_term_L1+fabs(a[i][j]+a[i][j]);
+			reg_term_L1 = reg_term_L1+fabs(Min[i][j]+Min[i][j]);
 		}
 #if 0
 	printf("reg_term_L1 = %10.7f\n",reg_term_L1.getValue());
@@ -1839,7 +1894,7 @@ double dsvdAdj(mat &M, mat&X, vec &ys,double &sigma, mat &Mgradient, double &sig
 	double weight_L1=1.0;
 
 	codi::RealReverse result=lossFunc+weight_svd*reg_term_svd+weight_L1*reg_term_L1;
-	 result=lossFunc;
+
 #if 0
 	printf("result = %10.7f\n",result.getValue());
 #endif
@@ -1884,6 +1939,9 @@ double dsvdAdj(mat &M, mat&X, vec &ys,double &sigma, mat &Mgradient, double &sig
 
 int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma){
 
+	M.randu();
+
+
 #if 0
 	printf("M= \n");
 	M.print();
@@ -1905,22 +1963,22 @@ int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma){
 
 #if 1
 
-// consistency check
+	// consistency check
 
 	double sigma_derivative;
 	mat adjoint_res(n,n);
 	adjoint_res.fill(0.0);
-	double resultPrimal = dsvd(M, X, ys,sigma);
+	double result = dsvd(M, X, ys,sigma);
 	double resultAdj = dsvdAdj(M, X, ys,sigma, adjoint_res, sigma_derivative);
 	double resultTl  = dsvdTL(M,X, ys, sigma, 0, 0, &sigma_derivative);
 
-	printf("output (primal) = %10.7f\n",resultPrimal);
+	printf("output (primal) = %10.7f\n",result);
 	printf("output (reverse) = %10.7f\n",resultAdj);
 	printf("output (forward) = %10.7f\n",resultTl);
 
 
 
-	double resultTlpert;
+	double resultpert;
 	mat fd(n,n);
 	fd.fill(0.0);
 	mat forward_res(n,n);
@@ -1936,14 +1994,13 @@ int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma){
 		for(int j=0;j<n;j++){
 			printf("i = %d, j= %d\n",i,j);
 			resultTl = dsvdTL(M,X, ys, sigma, i, j, &forward_res(i,j));
-			printf("resultTl = %10.7f\n",resultTl);
+			result = dsvd(M, X, ys,sigma);
+			printf("result = %10.7f\n",resultTl);
 			Mcopy=M;
 			M(i,j)+=perturbation_param;
-			resultTlpert = dsvdTL(M,X, ys, sigma, i, j, &temp);
-			resultPrimal = dsvd(M, X, ys,sigma);
-			printf("resultTlpert = %10.7f\n",resultTlpert);
-			printf("resultPrimal = %10.7f\n",resultPrimal);
-			fd(i,j)= (resultTlpert-resultTl)/perturbation_param;
+			resultpert = dsvd(M, X, ys,sigma);
+
+			fd(i,j)= (resultpert-result)/perturbation_param;
 			M=Mcopy;
 
 
@@ -1969,7 +2026,7 @@ int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma){
 
 #endif
 
-exit(1);
+	exit(1);
 
 	/* optimization stage */
 
