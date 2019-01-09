@@ -5,7 +5,7 @@ using namespace arma;
 
 
 
-int trainMahalanobisDistance(mat &M,mat &X,vec &ys,double &sigma);
+int trainMahalanobisDistance(mat &M,mat &data,double &sigma);
 
 
 double gaussianKernel(rowvec &xi,

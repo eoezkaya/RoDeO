@@ -48,23 +48,41 @@ int main(void){
 
 
 
+	/*
+	 *  Sw: Wing Area (ft^2) (150,200)
+	 *  Wfw: Weight of fuel in the wing (lb) (220,300)
+	 *  A: Aspect ratio (6,10)
+	 *  Lambda: quarter chord sweep (deg) (-10,10)
+	 *  q: dynamic pressure at cruise (lb/ft^2)  (16,45)
+	 *  lambda: taper ratio (0.5,1)
+	 *  tc: aerofoil thickness to chord ratio (0.08,0.18)
+	 *  Nz: ultimate load factor (2.5,6)
+	 *  Wdg: flight design gross weight (lb)  (1700,2500)
+	 *  Wp: paint weight (lb/ft^2) (0.025, 0.08)
+	 *
+	 */
 
 
+	double parameter_bounds[20];
+	parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
+	parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
+	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
+	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
+	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
+	parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
+	parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
+	parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
+	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
+	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
 
-	double parameter_bounds[4];
-	parameter_bounds[0]=0.0;
-	parameter_bounds[1]=200.0;
-	parameter_bounds[2]=0.0;
-	parameter_bounds[3]=200.0;
-
-	perform_kernel_regression_test(Eggholder,
-			Eggholder_adj,
+	perform_kernel_regression_test(Wingweight,
+			WingweightAdj,
 			parameter_bounds,
-			"Eggholder",
+			"Wingweight",
 			0,
 			100,
 			RANDOM_SAMPLING,
-			2,
+			10,
 			settings.python_dir);
 
 

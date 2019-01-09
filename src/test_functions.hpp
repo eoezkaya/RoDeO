@@ -113,7 +113,8 @@ double simple_2D_linear_test_function1_adj(double *x, double *xb);
 
 
 double Eggholder(double *x);
-double Eggholder_adj(double *x, double *xb);
+double EggholderAdj(double *x, double *xb);
+
 
 double Waves2D(double *x);
 double Waves2D_adj(double *x,double *xb);
@@ -154,6 +155,9 @@ double Himmelblau_adj(double *x, double *xb);
 double Borehole(double *x);
 double Borehole_adj(double *x, double *xb);
 
+
+double Wingweight(double *x);
+double WingweightAdj(double *xin, double *xb);
 
 /* regression test functions */
 

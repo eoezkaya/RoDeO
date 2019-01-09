@@ -11,6 +11,7 @@
 #include "rbf.hpp"
 #include "trust_region_gek.hpp"
 #include "kernel_regression.hpp"
+#include <codi.hpp>
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -170,71 +171,50 @@ double Eggholder(double *x){
 }
 
 
-double Eggholder_adj(double *x, double *xb) {
-	double fabs0;
-	double fabs0b;
-	double fabs1;
-	double fabs1b;
-	double temp;
-	double temp0;
-	int branch;
+double EggholderAdj(double *xin, double *xb){
 
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+	codi::RealReverse *x = new codi::RealReverse[2];
+	x[0]= xin[0];
+	x[1]= xin[1];
+	tape.registerInput(x[0]);
+	tape.registerInput(x[1]);
 
-	std::stack<char> pushcontrol1b;
+	codi::RealReverse result = -(x[1]+47.0)*sin(sqrt(fabs(x[1]+0.5*x[0]+47.0)))-x[0]*sin(sqrt(fabs(x[0]-(x[1]+47.0) )));
 
-	if (x[1] + 0.5*x[0] + 47.0 >= 0.0) {
-		fabs0 = x[1] + 0.5*x[0] + 47.0;
-		pushcontrol1b.push(1);
-		//        pushcontrol1b(1);
-	} else {
-		fabs0 = -(x[1]+0.5*x[0]+47.0);
-		pushcontrol1b.push(0);
-		//        pushcontrol1b(0);
-	}
-	if (x[0] - (x[1] + 47.0) >= 0.0) {
-		fabs1 = x[0] - (x[1] + 47.0);
-		pushcontrol1b.push(0);
-		//        pushcontrol1b(0);
-	} else {
-		fabs1 = -(x[0]-(x[1]+47.0));
-		pushcontrol1b.push(1);
-		//        pushcontrol1b(1);
-	}
-	temp0 = sqrt(fabs0);
-	temp = sqrt(fabs1);
-	xb[1] = xb[1] - sin(temp0);
-	if (fabs0 == 0.0)
-		fabs0b = 0.0;
-	else
-		fabs0b = -(cos(temp0)*(x[1]+47.0)/(2.0*temp0));
-	xb[0] = xb[0] - sin(temp);
-	if (fabs1 == 0.0)
-		fabs1b = 0.0;
-	else
-		fabs1b = -(cos(temp)*x[0]/(2.0*temp));
+	tape.registerOutput(result);
 
-	branch = pushcontrol1b.top();
-	pushcontrol1b.pop();
-	//    popcontrol1b(&branch);
-	if (branch == 0) {
-		xb[0] = xb[0] + fabs1b;
-		xb[1] = xb[1] - fabs1b;
-	} else {
-		xb[1] = xb[1] + fabs1b;
-		xb[0] = xb[0] - fabs1b;
-	}
-	//    popcontrol1b(&branch);
-	branch = pushcontrol1b.top();
-	pushcontrol1b.pop();
-	if (branch == 0) {
-		xb[0] = xb[0] - 0.5*fabs0b;
-		xb[1] = xb[1] - fabs0b;
-	} else {
-		xb[1] = xb[1] + fabs0b;
-		xb[0] = xb[0] + 0.5*fabs0b;
-	}
+	tape.setPassive();
+	result.setGradient(1.0);
+	tape.evaluate();
 
-	return -(x[1]+47.0)*sin(sqrt(fabs(x[1]+0.5*x[0]+47.0)))-x[0]*sin(sqrt(fabs(x[0]-(x[1]+47.0) )));
+	xb[0]=x[0].getGradient();
+	xb[1]=x[1].getGradient();
+
+#if 0
+	double fdres[2];
+	double epsilon = 0.0001;
+	double xsave;
+	double f0 = Eggholder(xin);
+	xsave = xin[0];
+	xin[0]+=epsilon;
+	double fp = Eggholder(xin);
+	xin[0] = xsave;
+	fdres[0] = (fp-f0)/epsilon;
+	xsave = xin[1];
+	xin[1]+=epsilon;
+	fp = Eggholder(xin);
+	xin[1] = xsave;
+	fdres[1] = (fp-f0)/epsilon;
+	printf("fd results = \n");
+	printf("%10.7f %10.7f\n",fdres[0],fdres[1]);
+
+	printf("ad results = \n");
+	printf("%10.7f %10.7f\n",xb[0],xb[1]);
+#endif
+	tape.reset();
+	return result.getValue();
 
 }
 
@@ -671,7 +651,16 @@ double Borehole_adj(double *x, double *xb) {
  *  Wp: paint weight (lb/ft^2) (0.025, 0.08)
  *
  */
-double Forrester_wingweight(double *x){
+double Wingweight(double *x){
+#if 1
+	printf("x = \n");
+	for(int i=0; i<10; i++) {
+
+		printf("%10.7f ",x[i]);
+
+	}
+	printf("\n");
+#endif
 
 	double Sw=x[0];
 	double Wfw=x[1];
@@ -685,13 +674,98 @@ double Forrester_wingweight(double *x){
 	double Wp=x[9];
 
 
-	double deg = (Lambda*3.14159265359)/180.0;
+	double deg = (Lambda*datum::pi)/180.0;
 
 	double W = 0.036*pow(Sw,0.758)*pow(Wfw,0.0035)*pow((A/(cos(deg)*cos(deg))),0.6) *
 			pow(q,0.006)*pow(lambda,0.04)*pow( (100.0*tc/cos(deg)), -0.3) *pow( (Nz*Wdg),0.49) + Sw*Wp;
 
 
 }
+
+double WingweightAdj(double *xin, double *xb){
+
+
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+	codi::RealReverse *x = new codi::RealReverse[10];
+
+	for(int i=0; i<10; i++) {
+
+		x[i] = xin[i];
+		tape.registerInput(x[i]);
+	}
+
+
+	codi::RealReverse Sw=x[0];
+	codi::RealReverse Wfw=x[1];
+	codi::RealReverse A=x[2];
+	codi::RealReverse Lambda=x[3];
+	codi::RealReverse q=x[4];
+	codi::RealReverse lambda=x[5];
+	codi::RealReverse tc=x[6];
+	codi::RealReverse Nz=x[7];
+	codi::RealReverse Wdg=x[8];
+	codi::RealReverse Wp=x[9];
+
+
+	codi::RealReverse deg = (Lambda*datum::pi)/180.0;
+
+	codi::RealReverse result = 0.036*pow(Sw,0.758)*pow(Wfw,0.0035)*pow((A/(cos(deg)*cos(deg))),0.6) *
+			pow(q,0.006)*pow(lambda,0.04)*pow( (100.0*tc/cos(deg)), -0.3) *pow( (Nz*Wdg),0.49) + Sw*Wp;
+
+	tape.registerOutput(result);
+
+	tape.setPassive();
+	result.setGradient(1.0);
+	tape.evaluate();
+
+	for(int i=0; i<10; i++) {
+
+		xb[i]=x[i].getGradient();
+	}
+
+
+#if 1
+	double fdres[10];
+	double epsilon = 0.0;
+	double xsave;
+	double fp = 0.0;
+
+	double f0 = Wingweight(xin);
+	for(int i=0; i<10; i++){
+
+		epsilon = xin[i]*100.1;
+		xsave = xin[i];
+		printf("xin[%d] = %20.15f\n",i,xin[i]);
+		xin[i]+=epsilon;
+		printf("xin[%d] = %20.15f\n",i,xin[i]);
+		fp =  Wingweight(xin);
+		xin[i] = xsave;
+		printf("fp = %20.15f f0 = %20.15f\n",fp,f0);
+
+		fdres[i] = (fp-f0)/epsilon;
+	}
+
+	printf("fd results = \n");
+	for(int i=0; i<10; i++) {
+		printf("%10.7f ",fdres[i]);
+	}
+	printf("\n");
+	printf("ad results = \n");
+	for(int i=0; i<10; i++) {
+		printf("%10.7f ",xb[i]);
+	}
+	printf("\n");
+
+#endif
+	tape.reset();
+	exit(-1);
+	return result.getValue();
+
+
+
+}
+
 
 
 
@@ -2947,12 +3021,7 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 	printf("Training the Mahalanobis distance...\n");
 
 #endif
-	trainMahalanobisDistance(MetricM,X,ys,sigma);
-
-
-
-
-
+	trainMahalanobisDistance(MetricM,data,sigma);
 
 
 	/* calculate the generalization error */
@@ -3083,12 +3152,12 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 			printf("Fvalexact = %10.7f\n",Fvalexact);
 			printf("Fapprox = %10.7f\n",Fapprox);
 #endif
-		    fprintf(response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),Fapprox);
+			fprintf(response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),Fapprox);
 			out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
 
 
 
-            x(1)+=dy;
+			x(1)+=dy;
 		}
 		x(0)+=dx;
 	}
@@ -3096,28 +3165,173 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 	out_sample_error=out_sample_error/(resolution*resolution);
 
 #if 1
-			printf("out_sample_error = %10.7f\n",out_sample_error);
+	printf("out_sample_error = %10.7f\n",out_sample_error);
 #endif
+
+	fclose(response_surface_file);
 
 
 #if 1
-		std::string file_name_for_plot = "kernel_regression_response_surface_";
-		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+	std::string file_name_for_plot = "kernel_regression_response_surface_";
+	file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
 
-		std::string title = "kernel regression";
+	std::string title = "kernel regression";
 
-		std::string python_command = "python -W ignore "+python_dir+"/plot_2d_surface.py "
-				+ response_surface_file_name+ " "
-				+ file_name_for_plot +" "+ title;
+	std::string python_command = "python -W ignore "+python_dir+"/plot_2d_surface.py "
+			+ response_surface_file_name+ " "
+			+ file_name_for_plot +" "+ title;
 
 #if 0
-		printf("python_command = %s\n",python_command.c_str());
+	printf("python_command = %s\n",python_command.c_str());
 #endif
-		FILE* in = popen(python_command.c_str(), "r");
+	FILE* in = popen(python_command.c_str(), "r");
 
 
-		fprintf(in, "\n");
+	fprintf(in, "\n");
 #endif
+
+
+	MetricM.eye();
+
+	out_sample_error=0.0;
+
+	response_surface_file_name = "kernel_regressionM1_response_surface.dat";
+
+	response_surface_file = fopen(response_surface_file_name.c_str(),"w");
+
+	max_value = -LARGE;
+	min_value =  LARGE;
+	max_exactvalue = -LARGE;
+	min_exactvalue =  LARGE;
+
+
+	ftilde.fill(0.0);
+	kernelVal.fill(0.0);
+
+
+	grad.fill(0.0);
+	xk.fill(0.0);
+	xk_normalized.fill(0.0);
+
+
+	x[0] = bounds[0];
+	for(int i=0;i<resolution;i++){
+		x[1] = bounds[2];
+		for(int j=0;j<resolution;j++){
+#if 0
+			printf("x = \n");
+			x.print();
+#endif
+
+			/* normalize x */
+			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
+			xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
+#if 0
+			printf("xnorm = \n");
+			xnorm.print();
+#endif
+
+
+
+
+			double kernelSum=0.0;
+			for(int k=0; k<nrows; k++){
+
+				for(int l=0; l<dim; l++){
+
+					grad(l)=data(k,dim+1+l);
+					xk(l)=data(k,l);
+					xk_normalized(l)=X(k,l);
+				}
+
+				double fval= data(k,dim);
+
+				ftilde(k) = fval;
+				ftilde(k) += dot(grad,x-xk);
+
+				kernelVal(k)= gaussianKernel(xnorm,xk_normalized,sigma,MetricM);
+
+				kernelSum += kernelVal(k);
+
+
+
+#if 0
+				printf("\n\nk= %d\n",k);
+				printf("grad = \n");
+				grad.print();
+				printf("xk = \n");
+				xk.print();
+				printf("difference = \n");
+				(x-xk).print();
+				printf("xk (normalized)= \n");
+				xk_normalized.print();
+
+				printf("fval = %10.7f\n",fval);
+				printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
+				printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
+
+
+
+#endif
+
+
+			} /* end of k loop */
+
+
+			double Fapprox = 0.0;
+			for(int k=0; k<nrows; k++){
+
+				Fapprox += kernelVal(k)*ftilde(k);
+
+			}
+
+			Fapprox=Fapprox/kernelSum;
+
+			double Fvalexact = test_function(x.memptr());
+
+
+#if 0
+			printf("Fvalexact = %10.7f\n",Fvalexact);
+			printf("Fapprox = %10.7f\n",Fapprox);
+#endif
+			fprintf(response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),Fapprox);
+			out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
+
+
+
+			x(1)+=dy;
+		}
+		x(0)+=dx;
+	}
+
+	out_sample_error=out_sample_error/(resolution*resolution);
+
+#if 1
+	printf("out_sample_error (M identity) = %10.7f\n",out_sample_error);
+#endif
+
+
+	fclose(response_surface_file);
+
+#if 1
+	file_name_for_plot = "kernel_regressionM1_response_surface_";
+	file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+	title = "kernel regression";
+
+	python_command = "python -W ignore "+python_dir+"/plot_2d_surface.py "
+			+ response_surface_file_name+ " "
+			+ file_name_for_plot +" "+ title;
+
+#if 0
+	printf("python_command = %s\n",python_command.c_str());
+#endif
+	in = popen(python_command.c_str(), "r");
+
+
+	fprintf(in, "\n");
+#endif
+
 
 
 
