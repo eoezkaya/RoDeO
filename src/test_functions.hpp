@@ -108,6 +108,11 @@ void classification_test2(double *x, double *label, double *y);
 double test_function1D(double *x);
 double test_function1D_adj(double *x, double *xb);
 
+double test_function1KernelReg(double *x);
+double test_function1KernelRegAdj(double *xin, double *xb);
+
+
+
 double simple_2D_linear_test_function1(double *x);
 double simple_2D_linear_test_function1_adj(double *x, double *xb);
 

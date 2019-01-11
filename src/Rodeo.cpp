@@ -45,8 +45,20 @@ int main(void){
 	int ret = chdir (settings.cwd.c_str());
 
 
+	double parameter_bounds[5];
+		parameter_bounds[0]=0.0; parameter_bounds[1]=5.0;
+		parameter_bounds[2]=0.0; parameter_bounds[3]=5.0;
 
 
+		perform_kernel_regression_test(test_function1KernelReg,
+				test_function1KernelRegAdj,
+				parameter_bounds,
+				"test_function1KernelReg",
+				0,
+				10,
+				RANDOM_SAMPLING,
+				2,
+				settings.python_dir);
 
 	/*
 	 *  Sw: Wing Area (ft^2) (150,200)
@@ -63,27 +75,27 @@ int main(void){
 	 */
 
 
-	double parameter_bounds[20];
-	parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
-	parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
-	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
-	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
-	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
-	parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
-	parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
-	parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
-	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
-	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
-
-	perform_kernel_regression_test(Wingweight,
-			WingweightAdj,
-			parameter_bounds,
-			"Wingweight",
-			0,
-			100,
-			RANDOM_SAMPLING,
-			10,
-			settings.python_dir);
+//	double parameter_bounds[20];
+//	parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
+//	parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
+//	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
+//	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
+//	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
+//	parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
+//	parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
+//	parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
+//	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
+//	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
+//
+//	perform_kernel_regression_test(Wingweight,
+//			WingweightAdj,
+//			parameter_bounds,
+//			"Wingweight",
+//			0,
+//			100,
+//			RANDOM_SAMPLING,
+//			10,
+//			settings.python_dir);
 
 
 //	su2_optimize(settings.python_dir);
