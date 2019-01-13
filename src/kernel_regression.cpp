@@ -282,9 +282,11 @@ codi::RealForward calcMetric(double *xi, double *xj, codi::RealForward ** M,
 	delete[] diff;
 	delete[] tempVec;
 
+
+	sum = -1;
 	if (sum < 0.0) {
 
-		fprintf(stderr, "Error: metric is negative!\n");
+		fprintf(stderr, "Error: metric is negative! at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
