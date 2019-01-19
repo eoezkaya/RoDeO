@@ -30,6 +30,7 @@ void find_max_with_index(T vec, int size, double *max_val, int *indx){
 }
 
 
+
 template<class T>
 void find_min_with_index(T vec, int size, double *min_val, int *indx){
 

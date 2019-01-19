@@ -20,7 +20,7 @@ xi = np.linspace(min(x), max(x))
 yi = np.linspace(min(y), max(y))
 
 X, Y = np.meshgrid(xi, yi)
-Z = griddata(x, y, z, xi, yi)
+Z = griddata(x, y, z, xi, yi,interp='linear')
 
 title = sys.argv[3]
 

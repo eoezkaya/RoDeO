@@ -45,17 +45,17 @@ int main(void){
 	int ret = chdir (settings.cwd.c_str());
 
 
-	double parameter_bounds[5];
-		parameter_bounds[0]=0.0; parameter_bounds[1]=5.0;
-		parameter_bounds[2]=0.0; parameter_bounds[3]=5.0;
+	double parameter_bounds[4];
+		parameter_bounds[0]=0.0; parameter_bounds[1]=400.0;
+		parameter_bounds[2]=0.0; parameter_bounds[3]=400.0;
 
 
-		perform_kernel_regression_test(test_function1KernelReg,
-				test_function1KernelRegAdj,
+		perform_kernel_regression_test(Eggholder,
+				EggholderAdj,
 				parameter_bounds,
-				"test_function1KernelReg",
+				"Eggholder",
 				0,
-				10,
+				50,
 				RANDOM_SAMPLING,
 				2,
 				settings.python_dir);
