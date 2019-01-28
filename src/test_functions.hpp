@@ -111,6 +111,8 @@ double test_function1D_adj(double *x, double *xb);
 double test_function1KernelReg(double *x);
 double test_function1KernelRegAdj(double *xin, double *xb);
 
+double test_function2KernelReg(double *x);
+double test_function2KernelRegAdj(double *x,double *xb);
 
 
 double simple_2D_linear_test_function1(double *x);

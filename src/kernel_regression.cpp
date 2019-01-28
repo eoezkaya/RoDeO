@@ -325,6 +325,9 @@ double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
 	double sqr_two_pi = sqrt(2.0 * datum::pi);
 
 	double kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
+
+	kernelVal += 10E-14;
+
 #if 0
 	printf("kernelVal = %10.7f\n",kernelVal);
 
@@ -366,6 +369,9 @@ double gaussianKernel(double *xi, double *xj, double sigma, double **M,
 		exit(-1);
 	}
 
+	kernelVal += 10E-14;
+
+
 	return kernelVal;
 
 }
@@ -380,31 +386,55 @@ codi::RealReverse gaussianKernel(double *xi, double *xj,
 	/* calculate distance between xi and xj with the matrix M */
 	codi::RealReverse metricVal = calcMetric(xi, xj, M, dim);
 #if 0
-	printf("metricVal = %10.7f\n",metricVal);
+	printf("metricVal = %10.7f\n",metricVal.getValue());
 #endif
 
 	double sqr_two_pi = sqrt(2.0 * datum::pi);
 
 	codi::RealReverse kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
 
-	if(isnan(kernelVal)){
+	if(isnan(kernelVal.getValue())){
 
 		fprintf(stderr, "Error: kernel value is NaN! at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
-	}
 
-	if(kernelVal < 0.0){
-
-		fprintf(stderr, "Error: kernel value is negative! at %s, line %d.\n",__FILE__, __LINE__);
-		fprintf(stderr, "metric val = %10.7f\n",metricVal);
-		fprintf(stderr, "sigma = %10.7f\n",sigma);
+		printf("sigma = %10.7f\n",sigma.getValue());
 
 		printf("M = \n");
 
 		for (int i = 0; i < dim; i++) {
 			for (int j = 0; j < dim; j++) {
 
-				printf("%10.7f ", M[i][j]);
+				printf("%10.7f ", M[i][j].getValue());
+
+			}
+			printf("\n");
+		}
+
+
+		exit(-1);
+	}
+
+
+
+	kernelVal += 10E-14;
+	//	printf("EPSILON = %10.7f ", EPSILON);
+
+	if(kernelVal.getValue() < 0.0){
+
+		fprintf(stderr, "Error: kernel value is negative or zero! at %s, line %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "kernelVal = %20.15f\n",kernelVal.getValue() );
+		fprintf(stderr, "metric val = %20.15f\n",metricVal.getValue());
+		fprintf(stderr, "sigma = %20.15f\n",sigma.getValue());
+		fprintf(stderr, "exp(-metricVal / (2 * sigma * sigma)) = %20.15f\n",exp(-metricVal / (2 * sigma * sigma)).getValue());
+
+
+
+		printf("M = \n");
+
+		for (int i = 0; i < dim; i++) {
+			for (int j = 0; j < dim; j++) {
+
+				printf("%10.7f ", M[i][j].getValue());
 
 			}
 			printf("\n");
@@ -439,7 +469,7 @@ codi::RealForward gaussianKernel(double *xi, double *xj,
 	double sqr_two_pi = sqrt(2.0 * datum::pi);
 
 	codi::RealForward kernelVal = (1.0 / (sigma * sqr_two_pi))
-																																															* exp(-metricVal / (2 * sigma * sigma));
+																																																																																									* exp(-metricVal / (2 * sigma * sigma));
 #if 0
 	printf("kernelVal = %10.7f\n",kernelVal);
 #endif
@@ -517,7 +547,11 @@ codi::RealForward PYTHAG(codi::RealForward a, codi::RealForward b) {
 	return (result);
 }
 
-double dsvd(mat &Lin, mat& data, double &sigma, double wSvd, double w12) {
+
+
+
+
+double dsvd(mat &Lin, mat& data, double &sigma, double wLoss,double wSvd, double w12) {
 	int flag, i, its, j, jj, k, l = 0, nm;
 	double c, f, h, s, x, y, z;
 	double anorm = 0.0, g = 0.0, scale = 0.0;
@@ -559,6 +593,12 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wSvd, double w12) {
 		LT[i] = new double[dim];
 
 	}
+
+	for (int i = 0; i < dim; i++)
+		for (int j = 0; j < dim; j++) LT[i][j]=0.0;
+
+
+
 
 	for (int i = 0; i < dim; i++) {
 		for (int j = 0; j <= i; j++){
@@ -669,7 +709,7 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wSvd, double w12) {
 		for (int j = 0; j < dim; j++) {
 
 			X(i, j) = (1.0 / dim) * (X(i, j) - x_min(j))
-																																																	/ (x_max(j) - x_min(j));
+																																																																																											/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -795,7 +835,7 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wSvd, double w12) {
 	}
 	double *w = new double[n];
 
-	double* rv1 = new double[n];
+	double *rv1 = new double[n];
 
 	/* Householder reduction to bidiagonal form */
 	for (i = 0; i < n; i++) {
@@ -1037,7 +1077,7 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wSvd, double w12) {
 		}
 	}
 
-#if 0
+#if 1
 	printf("singular values of a=\n");
 
 
@@ -1060,21 +1100,27 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wSvd, double w12) {
 
 	}
 
-#if 0
-	printf("singular values of a (normalized)=\n");
+#if 1
+	printf("singular values of a (normalized) with wsum =%10.7f\n",wsum);
 
 
 	for (i = 0; i < n; i++) {
 
-		printf("%10.7f\n",w[i]);
+		printf("%15.10f\n",w[i]);
 	}
 #endif
 
 
+	double svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
+
+	svd_multiplier = 1.0/svd_multiplier;
+#if 0
+	printf("svd_multiplier = %10.7f\n",svd_multiplier);
+#endif
 	double reg_term_svd = 0.0;
 
 	for (i = 0; i < n; i++) {
-#if 0
+#if 1
 		printf("%d * %10.7f = %10.7f\n",i+1,w[i],(i+1)*w[i]);
 #endif
 		reg_term_svd = reg_term_svd + (i + 1) * w[i];
@@ -1116,10 +1162,10 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wSvd, double w12) {
 	delete[] xp;
 	delete[] xi;
 
-	double result = lossFunc + wSvd * reg_term_svd + w12 * reg_term_L1;
-#if 1
+	double result = wLoss*lossFunc + wSvd * svd_multiplier *reg_term_svd + w12 * reg_term_L1;
+#if 0
 	printf("lossFunc = %10.7f, svd part = %10.7f, L1 reg. part = %10.7f\n",
-			lossFunc, wSvd * reg_term_svd, w12 * reg_term_L1);
+			wLoss*lossFunc, wSvd *  svd_multiplier * reg_term_svd, w12 * reg_term_L1);
 #endif
 
 #if 0
@@ -1131,7 +1177,7 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wSvd, double w12) {
 }
 
 double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
-		double *sensVal, double wSvd, double w12) {
+		double *sensVal, double wLoss,double wSvd, double w12) {
 	int flag, i, its, j, jj, k, l = 0, nm;
 	codi::RealForward c, f, h, s, x, y, z, sigmain = sigma;
 	codi::RealForward anorm = 0.0, g = 0.0, scale = 0.0;
@@ -1198,6 +1244,9 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 
 	}
 
+	for (int i = 0; i < dim; i++)
+		for (int j = 0; j < dim; j++) LT[i][j]=0.0;
+
 	for (int i = 0; i < dim; i++) {
 		for (int j = 0; j <= i; j++){
 
@@ -1259,7 +1308,7 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 		for (int j = 0; j < dim; j++) {
 
 			X(i, j) = (1.0 / dim) * (X(i, j) - x_min(j))
-																																																	/ (x_max(j) - x_min(j));
+																																																																																											/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -1641,6 +1690,9 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 
 	}
 
+	double svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
+
+	svd_multiplier = 1.0/svd_multiplier;
 
 	codi::RealForward reg_term_svd = 0.0;
 
@@ -1703,7 +1755,7 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 	delete[] xi;
 
 
-	codi::RealForward result = lossFunc + wSvd * reg_term_svd
+	codi::RealForward result = wLoss*lossFunc + wSvd * svd_multiplier *reg_term_svd
 			+ w12 * reg_term_L1;
 
 #if 1
@@ -1717,16 +1769,19 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 }
 
 double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigmab,
-		double wSvd, double w12) {
+		double wLoss,double wSvd, double w12) {
 	int flag, i, its, j, jj, k, l = 0, nm;
 	codi::RealReverse c, f, h, s, x, y, z;
 	codi::RealReverse anorm = 0.0, g = 0.0, scale = 0.0;
+
+	codi::RealReverse sigmain = sigma;
+
 #if 0
 	printf("Lin = \n");
 	Lin.print();
 #endif
 
-	codi::RealReverse sigmain = sigma;
+
 
 	int m = Lin.n_rows;
 	int n = Lin.n_cols;
@@ -1774,7 +1829,7 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 		for (int j = 0; j < dim; j++) {
 
 			X(i, j) = (1.0 / dim) * (X(i, j) - x_min(j))
-																																																	/ (x_max(j) - x_min(j));
+																																																																																											/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -1791,6 +1846,8 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 	printf("ys = \n");
 	ys.print();
 #endif
+
+	/* normalize the entries of ys such that maximum value will be 1 */
 
 	double maxys = max(ys);
 	for (unsigned int i = 0; i < ys.size(); i++) {
@@ -1839,22 +1896,28 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 		a[i] = new codi::RealReverse[n];
 	}
 
-	codi::RealReverse **a0;
-	a0 = new codi::RealReverse*[n];
 
-	for (i = 0; i < n; i++) {
-
-		a0[i] = new codi::RealReverse[n];
-	}
-
-
-
-	for (int i = 0; i < dim; i++)
+	for (int i = 0; i < dim; i++){
 		for (int j = 0; j < dim; j++) {
 			L[i][j]=Lin(i,j);
 			tape.registerInput(L[i][j]);
 
 		}
+	}
+#if 0
+	printf("L = \n");
+
+	for (int i = 0; i < dim; i++) {
+		for (int j = 0; j < dim; j++) {
+
+			printf("%10.7f ", L[i][j].getValue());
+
+		}
+		printf("\n");
+	}
+#endif
+
+
 	tape.registerInput(sigmain);
 
 
@@ -1865,6 +1928,9 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 
 	}
 
+	for (int i = 0; i < dim; i++)
+		for (int j = 0; j < dim; j++) LT[i][j]=0.0;
+
 	for (int i = 0; i < dim; i++) {
 		for (int j = 0; j <= i; j++){
 
@@ -1873,6 +1939,21 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 
 
 	}
+
+
+#if 0
+	printf("LT = \n");
+
+	for (int i = 0; i < dim; i++) {
+		for (int j = 0; j < dim; j++) {
+
+			printf("%10.7f ", LT[i][j].getValue());
+
+		}
+		printf("\n");
+	}
+#endif
+
 
 	for(int i = 0; i < dim; ++i)
 		for(int j = 0; j < dim; ++j)
@@ -1888,17 +1969,18 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 				a[i][j] += L[i][k] * LT[k][j];
 			}
 
-	for(int i = 0; i < dim; ++i)
-		for(int j = 0; j < dim; ++j)
-		{
-			a0[i][j]= a[i][j];
+#if 0
+	printf("a = \n");
+
+	for (int i = 0; i < dim; i++) {
+		for (int j = 0; j < dim; j++) {
+
+			printf("%10.7f ", a[i][j].getValue());
+
 		}
-
-
-
-
-
-
+		printf("\n");
+	}
+#endif
 
 
 	double *xp = new double[dim];
@@ -1930,9 +2012,18 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 				kernelVal[j] = gaussianKernel(xi, xp, sigmain, a, dim);
 				kernelSum += kernelVal[j];
 #if 0
-				printf("kernelVal[%d]=%10.7f\n",j,kernelVal[j].getValue());
+				printf("kernelVal[%d]=%20.15f\n",j,kernelVal[j].getValue());
 #endif
 			}
+		}
+
+
+		if(kernelSum.getValue() == 0.0){
+
+			fprintf(stderr, "Error: kernelSum is zero! at %s, line %d.\n",__FILE__, __LINE__);
+			exit(-1);
+
+
 		}
 
 		codi::RealReverse fApprox = 0.0;
@@ -1940,7 +2031,8 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 			if (i != j) {
 				fApprox += kernelVal[j] * ys(j);
 #if 0
-				printf("kernelVal[%d] * ys(%d) = %10.7f\n",j,j,kernelVal[j].getValue()*ys(j));
+				printf("kernelVal[%d] * ys(%d) = %20.15f\n",j,j,kernelVal[j].getValue()*ys(j));
+				printf("fApprox = %10.7f\n",fApprox.getValue());
 #endif
 
 			}
@@ -1962,6 +2054,9 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 #if 0
 	printf("lossFunc = %10.7f\n",lossFunc.getValue());
 #endif
+
+
+
 
 	codi::RealReverse **v;
 	v = new codi::RealReverse*[n];
@@ -2237,6 +2332,11 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 
 	}
 
+
+	double svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
+
+	svd_multiplier = 1.0/svd_multiplier;
+
 	codi::RealReverse reg_term_svd = 0.0;
 
 	for (i = 0; i < n; i++) {
@@ -2259,13 +2359,15 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 	printf("reg_term_L1 = %10.7f\n",reg_term_L1.getValue());
 #endif
 
+	reg_term_L1 = reg_term_L1/(n*n);
 
-	codi::RealReverse result = lossFunc + wSvd * reg_term_svd
+
+	codi::RealReverse result = wLoss*lossFunc + wSvd * svd_multiplier*reg_term_svd
 			+ w12 * reg_term_L1;
 
 #if 1
 	printf("objFun = %10.7f, lossFunc = %10.7f, svd part = %10.7f, L1 reg. part = %10.7f\n",
-			result.getValue(),lossFunc.getValue(), wSvd * reg_term_svd.getValue(), w12 * reg_term_L1.getValue());
+			result.getValue(),wLoss*lossFunc.getValue(), wSvd * svd_multiplier*reg_term_svd.getValue(), w12 * reg_term_L1.getValue());
 #endif
 
 
@@ -2279,6 +2381,8 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 	result.setGradient(1.0);
 	tape.evaluate();
 
+
+
 	sigmab = sigmain.getGradient();
 
 	Mgradient.fill(0.0);
@@ -2289,7 +2393,30 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 			Mgradient(i, j) = L[i][j].getGradient();
 		}
 	}
-	sigmab = sigmain.getGradient();
+
+
+	if(isnan(result.getValue())){
+
+		fprintf(stderr, "Error: result value is NaN! at %s, line %d.\n",__FILE__, __LINE__);
+
+
+
+		printf("L = \n");
+
+		for (int i = 0; i < dim; i++) {
+			for (int j = 0; j < dim; j++) {
+
+				printf("%10.7f ", L[i][j].getValue());
+
+			}
+			printf("\n");
+		}
+
+		exit(-1);
+	}
+
+
+
 
 	for (i = 0; i < n; i++) {
 		delete[] v[i];
@@ -2310,11 +2437,18 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 
 	tape.reset();
 
+
+
+
+
 	return (result.getValue());
 
 }
 
-int trainMahalanobisDistance(mat &M, mat &data, double &sigma) {
+int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, double &w12) {
+
+
+	double wLoss = 1.0;
 
 
 	if(M.n_cols != M.n_rows){
@@ -2325,20 +2459,64 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma) {
 
 	unsigned int n = M.n_cols;
 
-	mat L(n,n);
 
-	L.randu();
-	L = symmatu(L);
+	/* divide the data set into training and validation sets */
+
+	unsigned int N = data.n_rows;
+
+	unsigned int NvalSet = N/5;
+
+	uvec indicesvalset(NvalSet);
+	generate_validation_set(indicesvalset, N);
+
+#if 1
+	printf("indices of the validation set =\n");
+	indicesvalset.print();
+#endif
 
 
-	/* set upper halt to zero */
-	for (unsigned int i = 0; i < n; i++){
-		for (unsigned int j = i+1; j < n; j++){
+	mat dataValidation(NvalSet,data.n_cols );
+	mat dataTraning(N-NvalSet,data.n_cols );
 
-			L(i,j) = 0.0;
+
+	unsigned int added_rowsTraining=0.0;
+	unsigned int added_rowsValidation=0.0;
+	for(unsigned int j=0; j<N; j++){ /* for each row in the data matrix */
+
+		/* if j is not a validation point */
+		if ( is_in_the_list(int(j), indicesvalset) == -1){
+
+#if 0
+			printf("%dth point is not a validation point\n",j);
+#endif
+			dataTraning.row(added_rowsTraining)=data.row(j);
+			added_rowsTraining++;
 
 		}
+		else{
+#if 0
+			printf("%dth point is a validation point\n",j);
+#endif
+			dataValidation.row(added_rowsValidation)=data.row(j);
+			added_rowsValidation++;
+
+		}
+
+
 	}
+
+#if 1
+
+	printf("Training data set = \n");
+	dataTraning.print();
+
+	printf("Validation data set = \n");
+	dataValidation.print();
+
+#endif
+	exit(1);
+
+
 
 #if 0
 
@@ -2347,11 +2525,16 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma) {
 	double sigma_derivative;
 	mat adjoint_res(n,n);
 	adjoint_res.fill(0.0);
-	double result = dsvd(L,data,sigma,wSvd,w12);
-	double resultAdj = dsvdAdj(L, data,sigma, adjoint_res, sigma_derivative,wSvd,w12);
-	double resultTl = dsvdTL(L,data, sigma, 0, 0, &sigma_derivative,wSvd,w12);
 
+	L.print();
+
+	double result = dsvd(L,data,sigma,wLoss,wSvd,w12);
 	printf("output (primal) = %10.7f\n",result);
+
+	double resultAdj = dsvdAdj(L, data,sigma, adjoint_res, sigma_derivative,wLoss,wSvd,w12);
+	double resultTl = dsvdTL(L,data, sigma, 0, 0, &sigma_derivative,wLoss, wSvd,w12);
+
+
 	printf("output (reverse) = %10.7f\n",resultAdj);
 	printf("output (forward) = %10.7f\n",resultTl);
 
@@ -2363,25 +2546,31 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma) {
 	mat Lcopy(n,n);
 
 	double temp;
-	const double perturbation_param = 0.0000001;
+	const double perturbation_param = 0.000001;
 	double adot_save;
 
 	for(int i=0;i<n;i++)
 		for(int j=0;j<=i;j++) {
 			printf("i = %d, j= %d\n",i,j);
-			resultTl = dsvdTL(L,data, sigma, i, j, &forward_res(i,j),wSvd,w12);
-			result = dsvd(L, data,sigma,wSvd,w12);
+			resultTl = dsvdTL(L,data, sigma, i, j, &forward_res(i,j),wLoss,wSvd,w12);
+			result = dsvd(L, data,sigma,wLoss,wSvd,w12);
 			printf("result = %10.7f\n",resultTl);
 			Lcopy=L;
 			L(i,j)+=perturbation_param;
-			resultpert = dsvd(L, data,sigma,wSvd,w12);
+			cout.precision(12);
+			printf("L perturbed = \n");
+			L.print();
+			resultpert = dsvd(L, data,sigma,wLoss,wSvd,w12);
+			printf("resultpert = %10.7f\n",resultpert);
 
 			fd(i,j)= (resultpert-result)/perturbation_param;
 			L=Lcopy;
 
+
+
 		}
 
-	resultAdj = dsvdAdj(L, data,sigma, adjoint_res, sigma_derivative,wSvd,w12);
+	resultAdj = dsvdAdj(L, data,sigma, adjoint_res, sigma_derivative,wLoss,wSvd,w12);
 
 	printf("fd results =\n");
 	fd.print();
@@ -2401,137 +2590,179 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma) {
 
 	double sigma_derivative_forward_mode;
 
-	resultTl = dsvdTL(L,data, sigma, -1, -1, &sigma_derivative_forward_mode,wSvd,w12);
+	resultTl = dsvdTL(L,data, sigma, -1, -1, &sigma_derivative_forward_mode,wLoss,wSvd,w12);
 
 	printf("derivative of sigma (forward) = %10.7f\n",sigma_derivative_forward_mode);
 
-	result = dsvd(L, data,sigma,wSvd,w12);
+	result = dsvd(L, data,sigma,wLoss,wSvd,w12);
 
 	sigma+=perturbation_param;
-	resultpert = dsvd(L, data,sigma,wSvd,w12);
+	resultpert = dsvd(L, data,sigma,wLoss,wSvd,w12);
 
 	double fd_sigma= (resultpert-result)/perturbation_param;
 
 	printf("derivative of sigma (fd) = %10.7f\n",fd_sigma);
 #endif
 
+	int max_cv_iter = 1;
 
-	/* optimization stage */
+	for(int iter_cv;iter_cv< max_cv_iter; iter_cv++){
 
-	int maxoOptIter = 50000;
-	int optIter = 0;
-	mat gradient(n, n);
-	double stepSizeInit = 0.001;
-	double stepSize = stepSizeInit;
-	double fStep, fpreviousIter;
-	double sigmab = 0.0;
-	double wSvd = 0.0;
-	double w12 = 0.0;
-
-
-
-	/* compute the initial gradient and objective function value */
-	fpreviousIter = dsvdAdj(L, data, sigma, gradient, sigmab, wSvd, w12);
-
-#if 0
-	printf("initial gradient = \n");
-	gradient.print();
+#if 1
+		printf("cv iteration = %d\n",iter_cv);
 #endif
+		/* initialize the L matrix (lower diagonal) */
 
-	mat Lsave(n, n);
-	Lsave.fill(0.0);
-	double sigmaSave;
-	while (1) {
+		mat L(n,n);
+		L.fill(0.0);
 
-		Lsave = L;
-		sigmaSave = sigma;
+		for(int i=0;i<n;i++)
+			for(int j=0;j<=i;j++) {
 
-		/* update the lower triangular matrix L */
-		for (unsigned int i = 0; i < n; i++)
-			for (unsigned int j = 0; j <= i; j++) {
+				if (i==j) {
 
-				L(i, j) = L(i, j) - stepSize * gradient(i, j);
+					L(i,j)=1.0;
+				}
+				else{
+
+					L(i,j)=0.001;
+				}
 
 			}
 
-		sigma = sigma - stepSize*sigmab;
-#if 0
-		printf("gradient = \n");
-		gradient.print();
-		printf("L = \n");
+
 		L.print();
+
+		/* optimization stage */
+
+		int maxoOptIter = 100000;
+		int optIter = 0;
+		mat gradient(n, n);
+		double stepSizeInit = 0.001;
+		double stepSize = stepSizeInit;
+		double fStep, fpreviousIter;
+		double sigmab = 0.0;
+
+		/* compute the initial gradient and objective function value */
+		fpreviousIter = dsvdAdj(L, dataTraning, sigma, gradient, sigmab, wLoss,wSvd,w12);
+
+#if 0
+		printf("initial gradient = \n");
+		gradient.print();
 #endif
-		//			sigma = sigma-stepSize*sigmab;
+
+		mat Lsave(n, n);
+		Lsave.fill(0.0);
+		double sigmaSave;
+		while (1) {
+
+			Lsave = L;
+			sigmaSave = sigma;
+
+#if 0
+			printf("gradient = \n");
+			gradient.print();
+			printf("L (before) = \n");
+			L.print();
+			printf("sigma (before) = %10.7f\n",sigma);
+#endif
+
+			/* update the lower triangular matrix L */
+			for (unsigned int i = 0; i < n; i++)
+				for (unsigned int j = 0; j <= i; j++) {
+
+					L(i, j) = L(i, j) - stepSize * gradient(i, j);
+
+				}
+
+			/* update the bandwidth */
+
+			sigma = sigma - stepSize*sigmab;
+
+			if(sigma <= 0.0) sigma = 10E-6;
+
+#if 0
+			printf("L = \n");
+			L.print();
+			printf("sigma = %10.7f\n",sigma);
+#endif
+			//			sigma = sigma-stepSize*sigmab;
 
 
 #if 0
-		printf("stepSize = %10.7f\n",stepSize);
-		printf("evaluating gradient vector...\n");
+			printf("stepSize = %10.7f\n",stepSize);
+			printf("evaluating gradient vector...\n");
+			M.print();
+#endif
+
+
+			fStep = dsvdAdj(L, dataTraning, sigma, gradient, sigmab, wLoss,wSvd,w12);
+
+
+#if 0
+			printf("fStep= %10.7f\n", fStep);
+
+			//		printf("gradient=\n");
+			//		gradient.print();
+#endif
+
+#if 0
+			if (fStep > fpreviousIter) {
+
+				L = Lsave;
+				sigma = sigmaSave;
+
+				stepSize = stepSize / 2.0;
+
+			} else {
+
+			}
+#endif
+
+			fpreviousIter = fStep;
+
+			optIter++;
+			if (optIter > maxoOptIter || stepSize < 10E-10) {
+#if 0
+				printf("optimization prcedure is terminating with iter =%d...\n",
+						optIter);
+#endif
+				break;
+
+			}
+		}
+#if 0
+
+		printf("optimal sigma = %10.7f\n",sigma);
+		printf("sigma derivative= %10.7f\n",sigmab);
+#endif
+
+#if 1
+		printf("optimal M =\n");
+		M = L*trans(L);
 		M.print();
+		printf("gradient w.r.t to M =\n");
+		gradient.print();
+
+
+#endif
+#if 1
+		mat U;
+		vec s;
+		mat V;
+
+
+
+
+		svd(U, s, V, M);
+
+		printf("singular values of M = \n");
+		s.print();
 #endif
 
-		fStep = dsvdAdj(L, data, sigma, gradient, sigmab, wSvd, w12);
 
-#if 0
-		printf("fStep= %10.7f\n", fStep);
-
-		//		printf("gradient=\n");
-		//		gradient.print();
-#endif
-
-#if 0
-		if (fStep > fpreviousIter) {
-
-			L = Lsave;
-			sigma = sigmaSave;
-
-			stepSize = stepSize / 2.0;
-
-		} else {
-
-		}
-#endif
-
-		fpreviousIter = fStep;
-
-		optIter++;
-		if (optIter > maxoOptIter || stepSize < 10E-10) {
-#if 0
-			printf("optimization prcedure is terminating with iter =%d...\n",
-					optIter);
-#endif
-			break;
-
-		}
 	}
-#if 0
 
-	printf("optimal sigma = %10.7f\n",sigma);
-	printf("sigma derivative= %10.7f\n",sigmab);
-#endif
-
-#if 1
-	printf("optimal M =\n");
-	M = L*trans(L);
-	M.print();
-	printf("gradient w.r.t to M =\n");
-	gradient.print();
-
-
-#endif
-#if 1
-	mat U;
-	vec s;
-	mat V;
-
-
-
-
-	svd(U, s, V, M);
-
-	printf("singular values of M = \n");
-	s.print();
-#endif
 	return 0;
 }
 

@@ -57,7 +57,7 @@ void classification_test2(double *x, double *label, double *y){
 
 double test_function1KernelReg(double *x){
 
-	return sin(x[0])+ 0.0*cos(x[1]);
+	return 0.001*sin(x[0])+ 1.0*cos(x[1]);
 
 }
 
@@ -71,7 +71,7 @@ double test_function1KernelRegAdj(double *xin, double *xb){
 	tape.registerInput(x[0]);
 	tape.registerInput(x[1]);
 
-	codi::RealReverse result = sin(x[0])+ 0.0*cos(x[1]);
+	codi::RealReverse result = 0.001*sin(x[0])+ 1.0*cos(x[1]);
 
 	tape.registerOutput(result);
 
@@ -83,10 +83,44 @@ double test_function1KernelRegAdj(double *xin, double *xb){
 	xb[1]=x[1].getGradient();
 
 	tape.reset();
+	delete[] x;
 	return result.getValue();
 
 }
 
+
+double test_function2KernelReg(double *x){
+
+	return sin(x[1]+x[2])+ pow( (x[1]-x[2]),2.0)-1.5*x[1]+2.5*x[2]+1.0;
+
+}
+
+double test_function2KernelRegAdj(double *xin,double *xb){
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+	codi::RealReverse *x = new codi::RealReverse[5];
+
+	for(int i=0; i<5;i++){
+
+		x[i]= xin[i];
+		tape.registerInput(x[i]);
+	}
+	codi::RealReverse result = sin(x[1]+x[2])+ pow( (x[1]-x[2]),2.0)-1.5*x[1]+2.5*x[2]+1.0;
+	tape.registerOutput(result);
+
+	tape.setPassive();
+	result.setGradient(1.0);
+	tape.evaluate();
+
+	for(int i=0; i<5;i++){
+		xb[i]=x[i].getGradient();
+
+	}
+	delete[] x;
+	tape.reset();
+	return result.getValue();
+
+}
 
 
 
@@ -247,6 +281,7 @@ double EggholderAdj(double *xin, double *xb){
 	printf("ad results = \n");
 	printf("%10.7f %10.7f\n",xb[0],xb[1]);
 #endif
+	delete[] x;
 	tape.reset();
 	return result.getValue();
 
@@ -622,54 +657,77 @@ double Borehole(double *x){
 }
 
 
-double Borehole_adj(double *x, double *xb) {
-	double pi = 3.14159265359;
-	double ln_r_div_rw;
-	double ln_r_div_rwb;
-	double temp;
-	double temp0;
-	double temp1;
-	double tempb;
-	double tempb0;
-	double tempb1;
-	double tempb2;
-	double tempb3;
-	double tempb4;
+double BoreholeAdj(double *xin, double *xb){
 
-	ln_r_div_rw = log(x[1]/x[0]);
-	// ln(r/rw)
-	double num = 2*pi*x[2]*(x[3]-x[5]);
-	double numb;
-	// 2pi*Tu*(Hu-Hl)
-	double two_L_Tu = 2.0*x[6]*x[2];
-	double two_L_Tub;
-	double den = ln_r_div_rw*(1.0+two_L_Tu/(ln_r_div_rw*x[0]*x[0]*x[7])+x[2]/x[4]);
-	double denb;
-	numb = 1.0/den;
-	denb = -(num*1.0/(den*den));
-	temp1 = x[2]/x[4];
-	temp0 = x[0]*x[0]*ln_r_div_rw*x[7];
-	tempb = ln_r_div_rw*denb;
-	tempb0 = -(two_L_Tu*tempb/(temp0*temp0));
-	tempb1 = x[0]*x[0]*tempb0;
-	tempb2 = tempb/x[4];
-	ln_r_div_rwb = x[7]*tempb1 + (two_L_Tu/temp0+temp1+1.0)*denb;
-	two_L_Tub = tempb/temp0;
-	xb[0] = xb[0] + ln_r_div_rw*x[7]*2*x[0]*tempb0;
-	xb[7] = xb[7] + ln_r_div_rw*tempb1;
-	xb[2] = xb[2] + tempb2;
-	xb[4] = xb[4] - temp1*tempb2;
-	xb[6] = xb[6] + 2.0*x[2]*two_L_Tub;
-	xb[2] = xb[2] + 2.0*x[6]*two_L_Tub;
-	tempb3 = pi*2*numb;
-	xb[2] = xb[2] + (x[3]-x[5])*tempb3;
-	xb[3] = xb[3] + x[2]*tempb3;
-	xb[5] = xb[5] - x[2]*tempb3;
-	temp = x[1]/x[0];
-	tempb4 = ln_r_div_rwb/(temp*x[0]);
-	xb[1] = xb[1] + tempb4;
-	xb[0] = xb[0] - temp*tempb4;
-	return num/den;
+
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+	codi::RealReverse *x = new codi::RealReverse[10];
+
+	for(int i=0; i<10; i++) {
+
+		x[i] = xin[i];
+		tape.registerInput(x[i]);
+	}
+
+	codi::RealReverse ln_r_div_rw = log(x[1]/x[0]);  // ln(r/rw)
+	codi::RealReverse num = 2.0*datum::pi* x[2]*(x[3]- x[5]); // 2pi*Tu*(Hu-Hl)
+	codi::RealReverse two_L_Tu = 2.0* x[6]*x[2];
+	codi::RealReverse den = ln_r_div_rw * (1.0 + two_L_Tu /( ( ln_r_div_rw )* x[0]*x[0]*x[7])+ x[2]/x[4] );
+	codi::RealReverse result = num/den;
+
+	tape.registerOutput(result);
+
+	tape.setPassive();
+	result.setGradient(1.0);
+	tape.evaluate();
+
+	for(int i=0; i<8; i++) {
+
+		xb[i]=x[i].getGradient();
+	}
+
+
+#if 0
+	double fdres[8];
+	double epsilon = 0.0;
+	double xsave;
+	double fp = 0.0;
+
+	double f0 = Borehole(xin);
+	for(int i=0; i<8; i++){
+
+		epsilon = xin[i]*0.001;
+		xsave = xin[i];
+		//		printf("xin[%d] = %20.15f\n",i,xin[i]);
+		xin[i]+=epsilon;
+		//		printf("xin[%d] = %20.15f\n",i,xin[i]);
+		fp =  Wingweight(xin);
+		xin[i] = xsave;
+		printf("fp = %20.15f f0 = %20.15f\n",fp,f0);
+
+		fdres[i] = (fp-f0)/epsilon;
+	}
+
+	printf("fd results = \n");
+	for(int i=0; i<10; i++) {
+		printf("%10.7f ",fdres[i]);
+	}
+	printf("\n");
+	printf("ad results = \n");
+	for(int i=0; i<10; i++) {
+		printf("%10.7f ",xb[i]);
+	}
+	printf("\n");
+
+#endif
+	delete[] x;
+	tape.reset();
+
+	return result.getValue();
+
+
+
 }
 
 /*
@@ -792,6 +850,7 @@ double WingweightAdj(double *xin, double *xb){
 	printf("\n");
 
 #endif
+	delete[] x;
 	tape.reset();
 
 	return result.getValue();
@@ -2156,6 +2215,11 @@ void generate_2D_test_function_data(double (*test_function)(double *),
 		int number_of_function_evals,
 		int sampling_method){
 
+	if(sampling_method == EXISTING_FILE){
+		/* do nothing */
+
+
+	}
 
 
 	if(sampling_method == RANDOM_SAMPLING){
@@ -2963,9 +3027,14 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 	vec generelaziation_errorM1(number_of_trials);
 	generelaziation_errorM1.fill(0.0);
 
+	/* initialize bandwidth */
+	double sigma=0.1;
+
+	/* trial loop */
+
 	for(int trial = 0; trial <number_of_trials; trial ++ ){
 
-		double sigma=0.1;
+
 
 
 
@@ -3075,7 +3144,11 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 		printf("Training the Mahalanobis distance...\n");
 
 #endif
-		trainMahalanobisDistance(metricM,data,sigma);
+
+		double wSvd = 1.0;
+		double w12 = 1.0;
+
+		trainMahalanobisDistance(metricM,data,sigma, wSvd, w12);
 
 
 
@@ -3262,10 +3335,6 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 
 			metricM.eye();
 
-			metricM(0,0) = 1.0;
-			metricM(0,1) = 0.0;
-			metricM(1,0) = 0.0;
-			metricM(1,1) = 1.0;
 
 			out_sample_error=0.0;
 
@@ -3469,21 +3538,113 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 
 
 #if 0
-					printf("\n\nk= %d\n",k);
-					printf("grad = \n");
-					grad.print();
-					printf("xk = \n");
-					xk.print();
-					printf("difference = \n");
-					(x-xk).print();
-					printf("xk (normalized)= \n");
-					xk_normalized.print();
+					if(i == 23414){
 
-					printf("fval = %10.7f\n",fval);
-					printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
-					printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
+						printf("\n\nk= %d\n",k);
+						printf("grad = \n");
+						grad.print();
+						printf("xk = \n");
+						xk.print();
+						printf("difference = \n");
+						(x-xk).print();
+						printf("xk (normalized)= \n");
+						xk_normalized.print();
+
+						printf("fval = %10.7f\n",fval);
+						printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
+						printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
+
+					}
+
+#endif
 
 
+				} /* end of k loop */
+
+
+				double Fapprox = 0.0;
+				for(int k=0; k<nrows; k++){
+
+					Fapprox += kernelVal(k)*ftilde(k);
+
+				}
+
+				Fapprox=Fapprox/kernelSum;
+
+				double Fvalexact = test_function(x.memptr());
+
+
+				if(i == 23414){
+
+					printf("\nFvalexact = %10.7f\n",Fvalexact);
+					printf("Fapprox = %10.7f\n",Fapprox);
+				}
+
+				out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
+
+			} /* end of for */
+
+			out_sample_error = out_sample_error/(number_of_samples);
+
+
+			printf("out of sample error = %10.7f\n",out_sample_error);
+
+			metricM.eye();
+
+
+			out_sample_error=0.0;
+
+
+			for(int i=0; i<number_of_samples; i++){
+
+				/* generate a random input vector and normalize it */
+
+				for(int j=0; j<dim;j++){
+
+					x(j) = RandomDouble(bounds[j*2], bounds[j*2+1]);
+					xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
+
+				}
+
+
+				double kernelSum=0.0;
+				for(int k=0; k<nrows; k++){
+
+					for(int l=0; l<dim; l++){
+
+						grad(l)=data(k,dim+1+l);
+						xk(l)=data(k,l);
+						xk_normalized(l)=X(k,l);
+					}
+
+					double fval= data(k,dim);
+
+					ftilde(k) = fval;
+					//				ftilde(k) += dot(grad,x-xk);
+
+					kernelVal(k)= gaussianKernel(xnorm,xk_normalized,sigma,metricM);
+
+					kernelSum += kernelVal(k);
+
+
+
+#if 0
+					if(i == 23414){
+						printf("\n\nk= %d\n",k);
+						//					printf("grad = \n");
+						//					grad.print();
+						printf("xk = \n");
+						xk.print();
+						printf("difference = \n");
+						(x-xk).print();
+						printf("xk (normalized)= \n");
+						xk_normalized.print();
+
+						printf("fval = %10.7f\n",fval);
+						printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
+						printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
+
+					}
 
 #endif
 
@@ -3501,9 +3662,12 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 				double Fvalexact = test_function(x.memptr());
 
 
-#if 0
-				printf("Fvalexact = %10.7f\n",Fvalexact);
-				printf("Fapprox = %10.7f\n",Fapprox);
+#if 1
+				if(i == 23414){
+
+					printf("\nFvalexact = %10.7f\n",Fvalexact);
+					printf("Fapprox = %10.7f\n",Fapprox);
+				}
 #endif
 
 				out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
@@ -3513,9 +3677,102 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 			out_sample_error = out_sample_error/(number_of_samples);
 
 
-			printf("out of sample error (hybrid model) = %10.7f\n",out_sample_error);
+			printf("out of sample error (M identity)= %10.7f\n",out_sample_error);
+			metricM.print();
+
+#if 0
+			metricM(0,0)=0.0;
+			metricM(3,3)=0.0;
+			metricM(4,4)=0.0;
+
+			out_sample_error=0.0;
 
 
+			for(int i=0; i<number_of_samples; i++){
+
+				/* generate a random input vector and normalize it */
+
+				for(int j=0; j<dim;j++){
+
+					x(j) = RandomDouble(bounds[j*2], bounds[j*2+1]);
+					xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
+
+				}
+
+
+				double kernelSum=0.0;
+				for(int k=0; k<nrows; k++){
+
+					for(int l=0; l<dim; l++){
+
+						grad(l)=data(k,dim+1+l);
+						xk(l)=data(k,l);
+						xk_normalized(l)=X(k,l);
+					}
+
+					double fval= data(k,dim);
+
+					ftilde(k) = fval;
+					//				ftilde(k) += dot(grad,x-xk);
+
+					kernelVal(k)= gaussianKernel(xnorm,xk_normalized,sigma,metricM);
+
+					kernelSum += kernelVal(k);
+
+
+
+#if 0
+					if(i == 23414){
+						printf("\n\nk= %d\n",k);
+						//					printf("grad = \n");
+						//					grad.print();
+						printf("xk = \n");
+						xk.print();
+						printf("difference = \n");
+						(x-xk).print();
+						printf("xk (normalized)= \n");
+						xk_normalized.print();
+
+						printf("fval = %10.7f\n",fval);
+						printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
+						printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
+
+					}
+
+#endif
+
+
+				} /* end of k loop */
+				double Fapprox = 0.0;
+				for(int k=0; k<nrows; k++){
+
+					Fapprox += kernelVal(k)*ftilde(k);
+
+				}
+
+				Fapprox=Fapprox/kernelSum;
+
+				double Fvalexact = test_function(x.memptr());
+
+
+#if 1
+				if(i == 23414){
+
+					printf("\nFvalexact = %10.7f\n",Fvalexact);
+					printf("Fapprox = %10.7f\n",Fapprox);
+				}
+#endif
+
+				out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
+
+			} /* end of for */
+
+			out_sample_error = out_sample_error/(number_of_samples);
+
+
+			printf("out of sample error = %10.7f\n",out_sample_error);
+			metricM.print();
+#endif
 
 
 
@@ -3527,6 +3784,10 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 	} /* end of trial loop */
 
 
+#if 1
+	printf("mean generalization error = %10.7f\n", mean(generelaziation_error));
+	printf("mean generalization error (M Identity)= %10.7f\n", mean(generelaziation_errorM1));
+#endif
 }
 
 
