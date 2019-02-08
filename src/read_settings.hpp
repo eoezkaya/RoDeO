@@ -1,6 +1,6 @@
 #ifndef READ_SETTINGS
 #define READ_SETTINGS
-
+#include <algorithm>
 class Rodeo_settings {
 public:
 	unsigned int number_of_independents;
@@ -70,7 +70,7 @@ public:
 						printf("found the keyword: %s\n", keywords[key].c_str());
 						printf("found = %d\n",found);
 #endif
-						str.erase(remove_if(str.begin(), str.end(), isspace), str.end());
+						str.erase(std::remove_if(str.begin(), str.end(), isspace), str.end());
 						std::string sub_str = str.substr(found+keywords[key].length());
 #if 0
 						printf("keyword:%s\n", sub_str.c_str());

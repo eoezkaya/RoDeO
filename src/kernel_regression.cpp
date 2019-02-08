@@ -1,6 +1,7 @@
 #include "kernel_regression.hpp"
 #include "auxilliary_functions.hpp"
 #include "Rodeo_macros.hpp"
+#include "test_functions.hpp"
 
 #include <armadillo>
 #include <codi.hpp>
@@ -469,7 +470,7 @@ codi::RealForward gaussianKernel(double *xi, double *xj,
 	double sqr_two_pi = sqrt(2.0 * datum::pi);
 
 	codi::RealForward kernelVal = (1.0 / (sigma * sqr_two_pi))
-																																																																																									* exp(-metricVal / (2 * sigma * sigma));
+																																																																																																							* exp(-metricVal / (2 * sigma * sigma));
 #if 0
 	printf("kernelVal = %10.7f\n",kernelVal);
 #endif
@@ -709,7 +710,7 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wLoss,double wSvd, double
 		for (int j = 0; j < dim; j++) {
 
 			X(i, j) = (1.0 / dim) * (X(i, j) - x_min(j))
-																																																																																											/ (x_max(j) - x_min(j));
+																																																																																																									/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -1308,7 +1309,7 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 		for (int j = 0; j < dim; j++) {
 
 			X(i, j) = (1.0 / dim) * (X(i, j) - x_min(j))
-																																																																																											/ (x_max(j) - x_min(j));
+																																																																																																									/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -1768,7 +1769,7 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 
 }
 
-double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigmab,
+double dsvdAdj(int iteration,mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigmab,
 		double wLoss,double wSvd, double w12) {
 	int flag, i, its, j, jj, k, l = 0, nm;
 	codi::RealReverse c, f, h, s, x, y, z;
@@ -1829,7 +1830,7 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 		for (int j = 0; j < dim; j++) {
 
 			X(i, j) = (1.0 / dim) * (X(i, j) - x_min(j))
-																																																																																											/ (x_max(j) - x_min(j));
+																																																																																																									/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -2366,8 +2367,10 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 			+ w12 * reg_term_L1;
 
 #if 1
-	printf("objFun = %10.7f, lossFunc = %10.7f, svd part = %10.7f, L1 reg. part = %10.7f\n",
-			result.getValue(),wLoss*lossFunc.getValue(), wSvd * svd_multiplier*reg_term_svd.getValue(), w12 * reg_term_L1.getValue());
+	if(iteration %1000 == 0){
+		printf("iteration = %d, objFun = %10.7f, lossFunc = %10.7f, svd part = %10.7f, L1 reg. part = %10.7f\n",
+				iteration,result.getValue(),wLoss*lossFunc.getValue(), wSvd * svd_multiplier*reg_term_svd.getValue(), w12 * reg_term_L1.getValue());
+	}
 #endif
 
 
@@ -2448,7 +2451,11 @@ double dsvdAdj(mat &Lin, mat &data, double &sigma, mat &Mgradient, double &sigma
 int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, double &w12) {
 
 
+
+
 	double wLoss = 1.0;
+
+
 
 
 	if(M.n_cols != M.n_rows){
@@ -2459,12 +2466,17 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 
 	unsigned int n = M.n_cols;
 
+	mat bestM(n,n);
+	bestM.fill(0.0);
+
 
 	/* divide the data set into training and validation sets */
 
 	unsigned int N = data.n_rows;
 
 	unsigned int NvalSet = N/5;
+	unsigned int Ntra = N - NvalSet;
+
 
 	uvec indicesvalset(NvalSet);
 	generate_validation_set(indicesvalset, N);
@@ -2476,7 +2488,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 
 
 	mat dataValidation(NvalSet,data.n_cols );
-	mat dataTraning(N-NvalSet,data.n_cols );
+	mat dataTraining(N-NvalSet,data.n_cols );
 
 
 	unsigned int added_rowsTraining=0.0;
@@ -2489,7 +2501,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 #if 0
 			printf("%dth point is not a validation point\n",j);
 #endif
-			dataTraning.row(added_rowsTraining)=data.row(j);
+			dataTraining.row(added_rowsTraining)=data.row(j);
 			added_rowsTraining++;
 
 		}
@@ -2508,14 +2520,92 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 #if 1
 
 	printf("Training data set = \n");
-	dataTraning.print();
+	dataTraining.print();
 
 	printf("Validation data set = \n");
 	dataValidation.print();
 
+#if 0
+	printf("Data matrix = \n");
+	data.print();
 #endif
-	exit(1);
 
+	mat XTraining = dataTraining.submat(0, 0, Ntra - 1, n - 1);
+	mat XValidation = dataValidation.submat(0, 0, NvalSet - 1, n - 1);
+#if 1
+	printf("XTraining = \n");
+	XTraining.print();
+
+	printf("XValidation = \n");
+	XValidation.print();
+#endif
+	vec x_max(n);
+	x_max.fill(0.0);
+
+	vec x_min(n);
+	x_min.fill(n);
+
+	for (int i = 0; i < n; i++) {
+
+		x_max(i) = data.col(i).max();
+		x_min(i) = data.col(i).min();
+
+	}
+
+#if 0
+	printf("maximum = \n");
+	x_max.print();
+
+	printf("minimum = \n");
+	x_min.print();
+#endif
+	/* normalize training and validation data */
+	for (unsigned int i = 0; i < NvalSet; i++) {
+
+		for (unsigned int j = 0; j < n; j++) {
+
+			XValidation(i, j) = (1.0 / n) * (XValidation(i, j) - x_min(j))
+																																																																																																									/ (x_max(j) - x_min(j));
+		}
+	}
+
+	for (unsigned int i = 0; i < Ntra; i++) {
+
+		for (unsigned int j = 0; j < n; j++) {
+
+			XTraining (i, j) = (1.0 / n) * (XTraining (i, j) - x_min(j))
+																																																																																																										/ (x_max(j) - x_min(j));
+		}
+	}
+
+
+
+#if 1
+	printf("XTraining  (normalized) = \n");
+	XTraining.print();
+
+	printf("XValidation (normalized) = \n");
+	XValidation.print();
+
+#endif
+
+	vec ysTraining;
+
+	ysTraining = dataTraining.col(n);
+	vec ysValidation;
+
+	ysValidation = dataTraining.col(n);
+
+
+
+#if 0
+	printf("ys (training data) = \n");
+	ysTraining .print();
+#endif
+
+
+
+#endif
 
 
 #if 0
@@ -2604,20 +2694,37 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 	printf("derivative of sigma (fd) = %10.7f\n",fd_sigma);
 #endif
 
-	int max_cv_iter = 1;
+	int max_cv_iter = 20;
+
+	vec wSvdtrial(max_cv_iter);
+	wSvdtrial.randu();
+
+	vec w12trial(max_cv_iter);
+	w12trial.randu();
+
+
+	double bestValidationError = 10E14;
+	double bestwSvd = 0.0;
+	double bestw12 = 0.0;
 
 	for(int iter_cv;iter_cv< max_cv_iter; iter_cv++){
 
+		wSvd = wSvdtrial(iter_cv)*0.1;
+		w12 =  w12trial(iter_cv)*0.1;
+
+
 #if 1
-		printf("cv iteration = %d\n",iter_cv);
+		printf("cv iteration = %d, wSvd = %10.7f, w12 = %10.7f\n",iter_cv,wSvd,w12);
 #endif
 		/* initialize the L matrix (lower diagonal) */
 
 		mat L(n,n);
+
+
 		L.fill(0.0);
 
-		for(int i=0;i<n;i++)
-			for(int j=0;j<=i;j++) {
+		for(unsigned int i=0;i<n;i++)
+			for(unsigned int j=0;j<=i;j++) {
 
 				if (i==j) {
 
@@ -2630,13 +2737,13 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 
 			}
 
-
+#if 0
 		L.print();
-
+#endif
 		/* optimization stage */
 
 		int maxoOptIter = 100000;
-		int optIter = 0;
+		int optIter = 1;
 		mat gradient(n, n);
 		double stepSizeInit = 0.001;
 		double stepSize = stepSizeInit;
@@ -2644,7 +2751,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 		double sigmab = 0.0;
 
 		/* compute the initial gradient and objective function value */
-		fpreviousIter = dsvdAdj(L, dataTraning, sigma, gradient, sigmab, wLoss,wSvd,w12);
+		fpreviousIter = dsvdAdj(optIter,L, dataTraining, sigma, gradient, sigmab, wLoss,wSvd,w12);
 
 #if 0
 		printf("initial gradient = \n");
@@ -2696,7 +2803,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 #endif
 
 
-			fStep = dsvdAdj(L, dataTraning, sigma, gradient, sigmab, wLoss,wSvd,w12);
+			fStep = dsvdAdj(optIter,L, dataTraining, sigma, gradient, sigmab, wLoss,wSvd,w12);
 
 
 #if 0
@@ -2744,8 +2851,9 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 		printf("gradient w.r.t to M =\n");
 		gradient.print();
 
-
 #endif
+
+
 #if 1
 		mat U;
 		vec s;
@@ -2761,7 +2869,46 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 #endif
 
 
+		double ErrorValidation=0.0;
+
+		for(int j=0; j<NvalSet;j++){
+
+			rowvec xp = XValidation.row(j);
+			double yApprox = kernelRegressor(XTraining, ysTraining, xp, M, sigma);
+			double yExact = ysValidation(j);
+			ErrorValidation += (yApprox-yExact)*(yApprox-yExact);
+
+#if 0
+			printf("xp = \n");
+			xp.print();
+			printf("yApprox = %10.7f\n",yApprox );
+			printf("yExact  = %10.7f\n",yExact  );
+			printf("Validation Error = %10.7f\n",ErrorValidation );
+
+#endif
+		}
+
+		ErrorValidation = ErrorValidation/NvalSet;
+		printf("Validation Error = %10.7f\n",ErrorValidation );
+
+		if (ErrorValidation  < bestValidationError){
+
+			bestM = M;
+			bestwSvd = wSvd;
+			bestw12 = w12;
+			bestValidationError = ErrorValidation;
+		}
+
+
 	}
+
+#if 1
+	printf("Best weights wSvd = %10.7f, w12 = %10.7f\n",bestwSvd,bestw12);
+	printf("Best M = \n");
+	bestM.print();
+#endif
+
+	M = bestM;
 
 	return 0;
 }
@@ -2775,6 +2922,8 @@ double kernelRegressor(mat &X, vec &y, rowvec &xp, mat &M, double sigma) {
 	double kernelSum = 0.0;
 	double yhat = 0.0;
 
+
+
 	for (int i = 0; i < d; i++) {
 
 		rowvec xi = X.row(i);
@@ -2785,7 +2934,10 @@ double kernelRegressor(mat &X, vec &y, rowvec &xp, mat &M, double sigma) {
 	for (int i = 0; i < d; i++) {
 
 		weight(i) = kernelVal(i) / kernelSum;
-		yhat = y(i) * weight(i);
+		yhat += y(i) * weight(i);
+#if 0
+		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
+#endif
 	}
 
 	return yhat;

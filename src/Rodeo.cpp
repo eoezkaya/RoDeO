@@ -13,9 +13,12 @@
 #include "linear_regression.hpp"
 #include "kmeans_clustering.hpp"
 #include "Rodeo_macros.hpp"
+#include "Rodeo_globals.hpp"
 #include "auxilliary_functions.hpp"
 #include "read_settings.hpp"
 #include "kernel_regression.hpp"
+
+Rodeo_settings settings;
 
 int main(void){
 
@@ -39,28 +42,29 @@ int main(void){
 	srand (time(NULL));
 	arma_rng::set_seed_random();
 
-	Rodeo_settings settings;
+
 	settings.read();
+
 
 	int ret = chdir (settings.cwd.c_str());
 
 
-	double parameter_bounds[10];
-		parameter_bounds[0]=0.0; parameter_bounds[1]=10.0;
-		parameter_bounds[2]=0.0; parameter_bounds[3]=10.0;
-		parameter_bounds[4]=0.0; parameter_bounds[5]=10.0;
-		parameter_bounds[6]=0.0; parameter_bounds[7]=10.0;
-		parameter_bounds[8]=0.0; parameter_bounds[9]=10.0;
-
-		perform_kernel_regression_test(test_function2KernelReg,
-				test_function2KernelRegAdj,
-				parameter_bounds,
-				"test_function2KernelReg",
-				0,
-				100,
-				RANDOM_SAMPLING,
-				5,
-				settings.python_dir);
+//	double parameter_bounds[10];
+//		parameter_bounds[0]=0.0; parameter_bounds[1]=10.0;
+//		parameter_bounds[2]=0.0; parameter_bounds[3]=10.0;
+//		parameter_bounds[4]=0.0; parameter_bounds[5]=10.0;
+//		parameter_bounds[6]=0.0; parameter_bounds[7]=10.0;
+//		parameter_bounds[8]=0.0; parameter_bounds[9]=10.0;
+//
+//		perform_kernel_regression_test(test_function2KernelReg,
+//				test_function2KernelRegAdj,
+//				parameter_bounds,
+//				"test_function2KernelReg",
+//				0,
+//				100,
+//				RANDOM_SAMPLING,
+//				5,
+//				settings.python_dir);
 
 	/*
 	 *  Sw: Wing Area (ft^2) (150,200)
@@ -89,12 +93,22 @@ int main(void){
 //	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
 //	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
 //
+//
+//	perform_NNregression_test(Wingweight,
+//			parameter_bounds,
+//			"Wingweight",
+//			1000,
+//			RANDOM_SAMPLING,
+//			10,
+//			100);
+
+
 //	perform_kernel_regression_test(Wingweight,
 //			WingweightAdj,
 //			parameter_bounds,
 //			"Wingweight",
 //			0,
-//			100,
+//			200,
 //			RANDOM_SAMPLING,
 //			10,
 //			settings.python_dir);
