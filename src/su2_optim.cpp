@@ -8,6 +8,7 @@
 #include "kriging_training.hpp"
 #include "trust_region_gek.hpp"
 #include "Rodeo_macros.hpp"
+#include "Rodeo_globals.hpp"
 #include "su2_optim.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -1294,11 +1295,11 @@ void su2_optimize(std::string python_dir){
 			trans(dv).print();
 #endif
 
-			printf("calling adjoint solver for lift...\n");
-			call_SU2_Adjoint_Solver(dv,gradient_cl,objectives,2,geometric_constraints);
-
-			printf("calling adjoint solver for drag...\n");
-			call_SU2_Adjoint_Solver(dv,gradient_cd,objectives,1,geometric_constraints);
+//			printf("calling adjoint solver for lift...\n");
+//			call_SU2_Adjoint_Solver(dv,gradient_cl,objectives,2,geometric_constraints);
+//
+//			printf("calling adjoint solver for drag...\n");
+//			call_SU2_Adjoint_Solver(dv,gradient_cd,objectives,1,geometric_constraints);
 
 
 
@@ -1306,7 +1307,7 @@ void su2_optimize(std::string python_dir){
 			CD_exact = objectives(1);
 			volume_exact = objectives(2);
 
-#if 1
+#if 0
 			printf("Simulation results:\n");
 			printf("volume = %10.7f\n",volume_exact);
 			printf("cl = %10.7f\n",CL_exact);
@@ -1449,12 +1450,23 @@ void su2_optimize(std::string python_dir){
 
 }
 
-void su2_robustoptimize_naca0012(void){
 
-	const int max_number_of_function_evaluations = 300;
+
+void su2_robustoptimize_naca0012(OptimizationData &optimization_plan){
+
+#if 0
+	optimization_plan.print();
+#endif
+
+	const int max_number_of_function_evaluations = optimization_plan.max_number_of_samples;
 	int max_number_of_function_calculations_training = 10000;
-	int number_of_design_variables  = 38;
+	int number_of_design_variables  = optimization_plan.size_of_dv;
 	const int number_of_function_evals_inner_iter = 5;
+
+
+	const double gaussian_noise_level = 0.0001;
+	std::default_random_engine generator;
+	std::normal_distribution<double> distribution(0.0,1.0);
 
 	vec best_EI_values(number_of_function_evals_inner_iter);
 	best_EI_values.fill(-LARGE);
@@ -1518,8 +1530,8 @@ void su2_robustoptimize_naca0012(void){
 	stat_data.load(all_data_file.c_str(), csv_ascii);
 
 #if 0
-	printf("optimization data:\n");
-	optimization_data.print();
+	printf("stat_data:\n");
+	stat_data.print();
 
 #endif
 
@@ -1580,7 +1592,12 @@ void su2_robustoptimize_naca0012(void){
 
 	int it_count_outer_loop = 0;
 	int number_of_initial_samples = 0;
-	/* start optimization loop */
+
+
+
+
+
+//	/* start optimization loop */
 
 	while(1){
 
@@ -1588,7 +1605,7 @@ void su2_robustoptimize_naca0012(void){
 		mat optimization_data;
 		optimization_data.load(all_data_file.c_str(), csv_ascii);
 
-#if 0
+#if 1
 		printf("optimization data:\n");
 		optimization_data.print();
 
@@ -1614,7 +1631,7 @@ void su2_robustoptimize_naca0012(void){
 
 		}
 
-#if 0
+#if 1
 		printf("X:\n");
 		X.print();
 #endif
@@ -1633,7 +1650,7 @@ void su2_robustoptimize_naca0012(void){
 			x_min(i) = X.col(i).min();
 
 		}
-#if 0
+#if 1
 		printf("maximum = \n");
 		x_max.print();
 
@@ -1649,7 +1666,6 @@ void su2_robustoptimize_naca0012(void){
 				X(i, j) = (1.0/number_of_design_variables)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 			}
 		}
-
 
 
 		/* data matrices for surrogate model training (cl,cd,S) */
@@ -1708,7 +1724,7 @@ void su2_robustoptimize_naca0012(void){
 
 		}
 #if 1
-		printf("Best sample in the data set is the %dth entry :\n",sample_min_indx);
+		printf("Best sample in the data set is the %dth entry (without robustness criteria) :\n",sample_min_indx);
 		optimization_data.row(sample_min_indx).print();
 		printf("objective function value = %10.7e\n",sample_min);
 		printf("CD = %10.7e\n",best_sample_CD);
@@ -1717,6 +1733,8 @@ void su2_robustoptimize_naca0012(void){
 
 
 #endif
+
+
 
 		/* correlation matrices for cd,cl and area */
 
@@ -1751,12 +1769,17 @@ void su2_robustoptimize_naca0012(void){
 
 		std::string file_name_for_plot = "samples.png";
 
-		std::string python_command = "python -W ignore "+python_dir+"/plot_cdcl.py "+ all_data_file+ " "+
+		std::string python_command = "python -W ignore "+settings.python_dir+"/plot_cdcl.py "+ all_data_file+ " "+
 				std::to_string(number_of_initial_samples)+ " " +
 				file_name_for_plot;
 
 		FILE* in = popen(python_command.c_str(), "r");
 		fprintf(in, "\n");
+
+
+
+
+
 
 
 		mat kriging_weights_CD;
@@ -2032,452 +2055,465 @@ void su2_robustoptimize_naca0012(void){
 		solve_linear_system_by_Cholesky(U_S, L_S, R_inv_ys_min_beta_S, ys_min_betaI_S);
 
 
-#if 0
+#if 1
 		printf("beta0 for CL : %15.10f\n",beta0_CL);
 		printf("beta0 for CD : %15.10f\n",beta0_CD);
 		printf("beta0 for Area : %15.10f\n",beta0_S);
 #endif
 
 
-		best_EI_values.fill(-LARGE);
-		dv_best_EI.fill(0.0);
-		worst_EI_array_indx = 0;
 
-
-		number_of_EI_iter = number_of_EI_iter_local+number_of_EI_iter_global;
-
-		rowvec dp_best = optimization_data.row(sample_min_indx);
-
-		for(int iter_EI=0; iter_EI<number_of_EI_iter; iter_EI++){
-
-
-			rowvec dv(number_of_design_variables);
-			rowvec dvnorm(number_of_design_variables);
-
-
-			if(iter_EI < number_of_EI_iter_local){
-
-
-				for(int k=0; k<number_of_design_variables; k++){
-
-
-					double perturbation = RandomDouble(lower_bound_dv/100, upper_bound_dv/100);
-
-					dv(k)= dp_best(k)+perturbation;
-					dvnorm(k) = (1.0/number_of_design_variables)*(dv(k)-x_min(k)) / (x_max(k)-x_min(k));
-				}
-
-#if 0
-				printf("data point entry:\n");
-				dp.print();
-				printf("perturbed design:\n");
-				dv.print();
-#endif
-
-			}
-
-			else{
-
-				for(int iter_MC=0; iter_MC <number_of_MC_iter; iter_MC ++){
-
-
-					/* Generate a random design vector */
-					for(int k=0; k<number_of_design_variables; k++){
-
-						dv(k)= RandomDouble(lower_bound_dv, upper_bound_dv);
-						dvnorm(k) = (1.0/number_of_design_variables)*(dv(k)-x_min(k)) / (x_max(k)-x_min(k));
-					}
-
-				}
-
-
-
-#if 0
-				printf("dv:\n");
-				dv.print();
-#endif
-
-				/* Kriging estimate of the area */
-				double S_tilde = calculate_f_tilde(dvnorm,
-						X,
-						beta0_S,
-						regression_weights_S,
-						R_inv_ys_min_beta_S,
-						kriging_weights_S);
-
-				/* Kriging estimate of the CL */
-				double CL_tilde = calculate_f_tilde(dvnorm,
-						X,
-						beta0_CL,
-						regression_weights_CL,
-						R_inv_ys_min_beta_CL,
-						kriging_weights_CL);
-
-
-				double CD_tilde = 0.0;
-				double CD_tilde_ssqr = 0.0;
-
-				calculate_f_tilde_and_ssqr(
-						dvnorm,
-						X,
-						beta0_CD,
-						ssqr_CD,
-						regression_weights_CD,
-						R_inv_ys_min_beta_CD,
-						R_inv_I_CD,
-						I,
-						kriging_weights_CD,
-						U_CD,
-						L_CD,
-						&CD_tilde,
-						&CD_tilde_ssqr);
-
-
-				double	standart_error = sqrt(CD_tilde_ssqr);
-
-
-				double min_dist=0;
-				int indx = -1;
-
-				/* find the closest data point */
-
-				findKNeighbours(X,
-						dvnorm,
-						1,
-						&min_dist,
-						&indx,
-						1);
-
-
-
-				rowvec sp =  X.row(indx);
-				rowvec sp_not_normalized(number_of_design_variables);
-				sp_not_normalized.fill(0.0);
-
-				for(int j=0; j<number_of_design_variables;j++) {
-
-					sp_not_normalized(j) = number_of_design_variables*sp(j)* (x_max(j) - x_min(j))+x_min(j);
-				}
-#if 0
-				printf("closest point           point:\n");
-
-				for(int k=0; k<number_of_design_variables; k++){
-
-					printf("%10.7e  %10.7e\n",dv(k),sp_not_normalized(k));
-
-				}
-
-				printf("grad data entry (CD):\n");
-				cd_kriging_data.row(indx).print();
-				printf("grad data entry (CL):\n");
-				cd_kriging_data.row(indx).print();
-
-#endif
-				rowvec xdiff = dvnorm-sp;
-				double distance = L1norm(xdiff, number_of_design_variables);
-#if 0
-				printf("distance = %10.7e\n",distance);
-#endif
-
-				/* get the functional value from the data */
-				double func_val_CD = cd_kriging_data(indx,number_of_design_variables);
-				double func_val_CL = cl_kriging_data(indx,number_of_design_variables);
-#if 0
-				printf("CD value at the nearest point = %10.7e\n",func_val_CD);
-				printf("CL value at the nearest point = %10.7e\n",func_val_CL);
-#endif
-
-
-				vec grad_CD(number_of_design_variables);
-
-				for(int j=0; j<number_of_design_variables; j++) {
-
-					grad_CD(j)= cd_kriging_data(indx,j+number_of_design_variables+1);
-				}
-
-				vec grad_CL(number_of_design_variables);
-
-				for(int j=0; j<number_of_design_variables; j++) {
-
-					grad_CL(j)= cl_kriging_data(indx,j+number_of_design_variables+1);
-				}
-
-#if 0
-				printf("gradient vector (CD):\n");
-				trans(grad_CD).print();
-				printf("gradient vector (CL):\n");
-				trans(grad_CL).print();
-#endif
-
-
-
-
-
-				double normgrad_CD= L1norm(grad_CD, number_of_design_variables);
-				double normgrad_CL= L1norm(grad_CL, number_of_design_variables);
-
-#if 0
-				printf("norm of the gradient vector (CD) = %10.7e\n",normgrad_CD);
-				printf("norm of the gradient vector (CL) = %10.7e\n",normgrad_CL);
-#endif
-
-
-				double factor_CD = exp(-r_CD*distance*normgrad_CD);
-				double factor_CL = exp(-r_CL*distance*normgrad_CL);
-
-				double fval_linmodel_CD= func_val_CD + dot((dv-sp_not_normalized),grad_CD);
-				double fval_linmodel_CL= func_val_CL + dot((dv-sp_not_normalized),grad_CL);
-
-				double fval_CD = factor_CD*fval_linmodel_CD + (1.0-factor_CD)*CD_tilde;
-				double fval_CL = factor_CL*fval_linmodel_CL + (1.0-factor_CL)*CL_tilde;
-
-				double	standart_error_CD = sqrt(CD_tilde_ssqr)	;
-
-				double EI_CD = 0.0;
-
-				double obj_fun = fval_CD;
-
-				/* add penalties for lift and area */
-				if(fval_CL < CL_constraint){
-
-					obj_fun += lift_penalty_param*(CL_constraint-fval_CL);
-				}
-
-				if(S_tilde < Area_constraint){
-
-					obj_fun += area_penalty_param*(Area_constraint-S_tilde);
-				}
-
-
-				if(standart_error_CD!=0.0){
-
-					double	EIfac = (sample_min - obj_fun)/standart_error_CD;
-
-					/* calculate the Expected Improvement value */
-					EI_CD = (sample_min - obj_fun)*cdf(EIfac,0.0,1.0)+standart_error*pdf(EIfac,0.0,1.0);
-				}
-				else{
-
-					EI_CD =0.0;
-
-				}
-
-
-
-			} /* end of MC loop */
-
-			/* find the closest point to dv in the current best EI designs */
-
-			double min_dist_EI = LARGE;
-			int    min_EI_indx = -1;
-			findKNeighbours(dv_best_EI, dv, 1, &min_dist_EI, &min_EI_indx , 1);
-
-			if(EI_CD > best_EI_values(worst_EI_array_indx && min_dist_EI > EI_dist_tol)){
-
-
-				best_EI_values(worst_EI_array_indx) = EI_CD;
-
-				for(int k=0;k<number_of_design_variables;k++) {
-
-					dv_best_EI(worst_EI_array_indx,k) = dv(k);
-				}
-
-
-				double worst_EI_value = 0.0;
-				find_min_with_index(best_EI_values,
-						number_of_function_evals_inner_iter,
-						&worst_EI_value ,
-						&worst_EI_array_indx);
-#if 1
-				printf("found a better EI value with EI = %10.7e\n",EI_CD);
-				printf("best EI values:\n");
-				trans(best_EI_values).print();
-				printf("worst EI index is now = %d\n",worst_EI_array_indx);
-				printf("area tilde = %10.7e:\n",S_tilde);
-				printf("CL tilde = %10.7e:\n",CL_tilde);
-				printf("CD tilde = %10.7e:\n",CD_tilde);
-				printf("factor_CD = %10.7e\n",factor_CD);
-				printf("fval_linmodel_CD = %10.7e\n",fval_linmodel_CD);
-				printf("fval_CD = %10.7e\n",fval_CD);
-				printf("factor_CL = %10.7e\n",factor_CL);
-				printf("fval_linmodel_CL = %10.7e\n",fval_linmodel_CL);
-				printf("fval_CL = %10.7e\n",fval_CL);
-				printf("EI value = %10.7e\n",EI_CD);
-#endif
-
-			} /* end of if */
-
-
-
-
-
-
-		} /* end of the EI loop */
-
-
-#if 1
-		printf("the most promising designs have been found...\n");
-#endif
-
-		for(int k=0; k<number_of_function_evals_inner_iter; k++ ){
-
-			double CD_exact=0.0;
-			double CL_exact=0.0;
-			double area_exact=0.0;
-
-			vec gradient_cd(number_of_design_variables);
-			vec gradient_cl(number_of_design_variables);
-
-			vec dv = trans(dv_best_EI.row(k));
-
-#if 1
-			printf("design vector:\n");
-			trans(dv).print();
-#endif
-
-			printf("calling adjoint solver for drag...\n");
-			call_SU2_Adjoint_Solver(dv,gradient_cd,CL_exact,CD_exact,area_exact,1,Area_constraint);
-
-			printf("calling adjoint solver for lift...\n");
-			call_SU2_Adjoint_Solver(dv,gradient_cl,CL_exact,CD_exact,area_exact,2,Area_constraint);
-
-#if 1
-			printf("Simulation results:\n");
-			printf("area = %10.7f\n",area_exact);
-			printf("cl = %10.7f\n",CL_exact);
-			printf("cd = %10.7f\n",CD_exact);
-			//		printf("gradient (drag):\n");
-			//		trans(gradient_cd).print();
-			//		printf("gradient (lift):\n");
-			//		trans(gradient_cl).print();
-#endif
-
-
-
-			/* insert a row to the data matrix*/
-
-			if(CD_exact > 0  && CL_exact > 0){
-
-				number_of_function_evals++;
-
-				optimization_data.insert_rows( number_of_data_points, 1 );
-				for(int i=0;i<number_of_design_variables;i++){
-
-					optimization_data(number_of_data_points,i) = dv(i);
-				}
-				optimization_data(number_of_data_points,number_of_design_variables)   = CL_exact;
-				optimization_data(number_of_data_points,number_of_design_variables+1) = CD_exact;
-				optimization_data(number_of_data_points,number_of_design_variables+2) = area_exact;
-
-
-				/* insert a row to the cl kriging data matrix*/
-				cl_kriging_data.insert_rows( number_of_data_points, 1 );
-
-				for(int i=0;i<number_of_design_variables;i++){
-
-					cl_kriging_data(number_of_data_points,i) = dv(i);
-				}
-				cl_kriging_data(number_of_data_points,number_of_design_variables) = CL_exact;
-
-				for(int i=0;i<number_of_design_variables;i++){
-
-					cl_kriging_data(number_of_data_points,number_of_design_variables+1+i) = gradient_cl(i);
-				}
-
-
-
-
-				/* insert a row to the cd kriging data matrix*/
-				cd_kriging_data.insert_rows( number_of_data_points, 1 );
-
-				for(int i=0;i<number_of_design_variables;i++){
-
-					cd_kriging_data(number_of_data_points,i) = dv(i);
-				}
-
-				cd_kriging_data(number_of_data_points,number_of_design_variables) = CD_exact;
-
-				for(int i=0;i<number_of_design_variables;i++){
-
-					cd_kriging_data(number_of_data_points,number_of_design_variables+1+i) = gradient_cd(i);
-				}
-
-
-
-
-				/* insert a row to the area kriging data matrix*/
-				area_kriging_data.insert_rows( number_of_data_points, 1 );
-
-				for(int i=0;i<number_of_design_variables;i++){
-
-					area_kriging_data(number_of_data_points,i) = dv(i);
-				}
-				area_kriging_data(number_of_data_points,number_of_design_variables) = area_exact;
-
-
-
-			}
-
-
-		} /* end of the simulation loop */
-
-		/* save updated data */
-		optimization_data.save(all_data_file.c_str(), csv_ascii);
-		cl_kriging_data.save(cl_kriging_input_file.c_str(), csv_ascii);
-		cd_kriging_data.save(cd_kriging_input_file.c_str(), csv_ascii);
-		area_kriging_data.save(area_kriging_input_file.c_str(), csv_ascii);
-
-
-		if (number_of_function_evals > max_number_of_function_evaluations ){
-
-			vec ys_CL =   optimization_data.col(number_of_design_variables);
-			vec ys_CD =   optimization_data.col(number_of_design_variables+1);
-			vec ys_S = optimization_data.col(number_of_design_variables+2);
-
-			/* now find the best sample point */
-
-			double best_sample_CD = LARGE;
-			double best_sample_CL = LARGE;
-			double best_sample_S = LARGE;
-			int sample_min_indx = -1;
-
-			for(unsigned int k=0; k<ys_CD.size(); k++){
-
-				if(ys_CD(k) < sample_min && ys_CL(k) >= CL_constraint && ys_S(k) >= Area_constraint){
-
-					sample_min_indx = k;
-					best_sample_CD = ys_CD(k);
-					best_sample_CL = ys_CL(k);
-					best_sample_S = ys_S(k);
-
-				}
-
-			}
-#if 1
-			printf("Optimization is finished...\n");
-			printf("Best sample in the data set is the %dth entry :\n",sample_min_indx);
-			optimization_data.row(sample_min_indx).print();
-			printf("CD = %10.7e\n",best_sample_CD);
-			printf("CL = %10.7e\n",best_sample_CL);
-			printf("S = %10.7e\n",best_sample_S);
-
-#endif
-
-			break;
-
-
-
-
-
-		}
-
-		number_of_EI_iter_global = number_of_EI_iter_global/2;
-
-		it_count_outer_loop++;
-
-
+		exit(1);
+
+
+
+
+//
+//		best_EI_values.fill(-LARGE);
+//		dv_best_EI.fill(0.0);
+//		worst_EI_array_indx = 0;
+//
+//
+//		number_of_EI_iter = number_of_EI_iter_local+number_of_EI_iter_global;
+//
+//		rowvec dp_best = optimization_data.row(sample_min_indx);
+//
+//		for(int iter_EI=0; iter_EI<number_of_EI_iter; iter_EI++){
+//
+//
+//			rowvec dv(number_of_design_variables);
+//			rowvec dvnorm(number_of_design_variables);
+//
+//
+//			if(iter_EI < number_of_EI_iter_local){
+//
+//
+//				for(int k=0; k<number_of_design_variables; k++){
+//
+//
+//					double perturbation = RandomDouble(lower_bound_dv/100, upper_bound_dv/100);
+//
+//					dv(k)= dp_best(k)+perturbation;
+//					dvnorm(k) = (1.0/number_of_design_variables)*(dv(k)-x_min(k)) / (x_max(k)-x_min(k));
+//				}
+//
+//#if 0
+//				printf("data point entry:\n");
+//				dp.print();
+//				printf("perturbed design:\n");
+//				dv.print();
+//#endif
+//
+//			}
+//
+//			else{
+//
+//				for(int iter_MC=0; iter_MC <number_of_MC_iter; iter_MC ++){
+//
+//
+//					/* Generate a random design vector and add a random perturbation to it*/
+//					for(int k=0; k<number_of_design_variables; k++){
+//
+//						dv(k)= RandomDouble(lower_bound_dv, upper_bound_dv);
+//						double number = distribution(generator);
+//						double perturbation  = gaussian_noise_level* number;
+//
+//						dv(k) = dv(k) + perturbation;
+//
+//						/* normalized design vector	*/
+//						dvnorm(k) = (1.0/number_of_design_variables)*(dv(k)-x_min(k)) / (x_max(k)-x_min(k));
+//					}
+//
+//				}
+//
+//
+//
+//#if 0
+//				printf("dv:\n");
+//				dv.print();
+//#endif
+//
+//				/* Kriging estimate of the area */
+//				double S_tilde = calculate_f_tilde(dvnorm,
+//						X,
+//						beta0_S,
+//						regression_weights_S,
+//						R_inv_ys_min_beta_S,
+//						kriging_weights_S);
+//
+//				/* Kriging estimate of the CL */
+//				double CL_tilde = calculate_f_tilde(dvnorm,
+//						X,
+//						beta0_CL,
+//						regression_weights_CL,
+//						R_inv_ys_min_beta_CL,
+//						kriging_weights_CL);
+//
+//
+//				double CD_tilde = 0.0;
+//				double CD_tilde_ssqr = 0.0;
+//
+//				calculate_f_tilde_and_ssqr(
+//						dvnorm,
+//						X,
+//						beta0_CD,
+//						ssqr_CD,
+//						regression_weights_CD,
+//						R_inv_ys_min_beta_CD,
+//						R_inv_I_CD,
+//						I,
+//						kriging_weights_CD,
+//						U_CD,
+//						L_CD,
+//						&CD_tilde,
+//						&CD_tilde_ssqr);
+//
+//
+//				double	standart_error = sqrt(CD_tilde_ssqr);
+//
+//
+//				double min_dist=0;
+//				int indx = -1;
+//
+//				/* find the closest data point */
+//
+//				findKNeighbours(X,
+//						dvnorm,
+//						1,
+//						&min_dist,
+//						&indx,
+//						1);
+//
+//
+//
+//				rowvec sp =  X.row(indx);
+//				rowvec sp_not_normalized(number_of_design_variables);
+//				sp_not_normalized.fill(0.0);
+//
+//				for(int j=0; j<number_of_design_variables;j++) {
+//
+//					sp_not_normalized(j) = number_of_design_variables*sp(j)* (x_max(j) - x_min(j))+x_min(j);
+//				}
+//#if 0
+//				printf("closest point           point:\n");
+//
+//				for(int k=0; k<number_of_design_variables; k++){
+//
+//					printf("%10.7e  %10.7e\n",dv(k),sp_not_normalized(k));
+//
+//				}
+//
+//				printf("grad data entry (CD):\n");
+//				cd_kriging_data.row(indx).print();
+//				printf("grad data entry (CL):\n");
+//				cd_kriging_data.row(indx).print();
+//
+//#endif
+//				rowvec xdiff = dvnorm-sp;
+//				double distance = L1norm(xdiff, number_of_design_variables);
+//#if 0
+//				printf("distance = %10.7e\n",distance);
+//#endif
+//
+//				/* get the functional value from the data */
+//				double func_val_CD = cd_kriging_data(indx,number_of_design_variables);
+//				double func_val_CL = cl_kriging_data(indx,number_of_design_variables);
+//#if 0
+//				printf("CD value at the nearest point = %10.7e\n",func_val_CD);
+//				printf("CL value at the nearest point = %10.7e\n",func_val_CL);
+//#endif
+//
+//
+//				vec grad_CD(number_of_design_variables);
+//
+//				for(int j=0; j<number_of_design_variables; j++) {
+//
+//					grad_CD(j)= cd_kriging_data(indx,j+number_of_design_variables+1);
+//				}
+//
+//				vec grad_CL(number_of_design_variables);
+//
+//				for(int j=0; j<number_of_design_variables; j++) {
+//
+//					grad_CL(j)= cl_kriging_data(indx,j+number_of_design_variables+1);
+//				}
+//
+//#if 0
+//				printf("gradient vector (CD):\n");
+//				trans(grad_CD).print();
+//				printf("gradient vector (CL):\n");
+//				trans(grad_CL).print();
+//#endif
+//
+//
+//
+//
+//
+//				double normgrad_CD= L1norm(grad_CD, number_of_design_variables);
+//				double normgrad_CL= L1norm(grad_CL, number_of_design_variables);
+//
+//#if 0
+//				printf("norm of the gradient vector (CD) = %10.7e\n",normgrad_CD);
+//				printf("norm of the gradient vector (CL) = %10.7e\n",normgrad_CL);
+//#endif
+//
+//
+//				double factor_CD = exp(-r_CD*distance*normgrad_CD);
+//				double factor_CL = exp(-r_CL*distance*normgrad_CL);
+//
+//				double fval_linmodel_CD= func_val_CD + dot((dv-sp_not_normalized),grad_CD);
+//				double fval_linmodel_CL= func_val_CL + dot((dv-sp_not_normalized),grad_CL);
+//
+//				double fval_CD = factor_CD*fval_linmodel_CD + (1.0-factor_CD)*CD_tilde;
+//				double fval_CL = factor_CL*fval_linmodel_CL + (1.0-factor_CL)*CL_tilde;
+//
+//				double	standart_error_CD = sqrt(CD_tilde_ssqr)	;
+//
+//				double EI_CD = 0.0;
+//
+//				double obj_fun = fval_CD;
+//
+//				/* add penalties for lift and area */
+//				if(fval_CL < CL_constraint){
+//
+//					obj_fun += lift_penalty_param*(CL_constraint-fval_CL);
+//				}
+//
+//				if(S_tilde < Area_constraint){
+//
+//					obj_fun += area_penalty_param*(Area_constraint-S_tilde);
+//				}
+//
+//
+//				if(standart_error_CD!=0.0){
+//
+//					double	EIfac = (sample_min - obj_fun)/standart_error_CD;
+//
+//					/* calculate the Expected Improvement value */
+//					EI_CD = (sample_min - obj_fun)*cdf(EIfac,0.0,1.0)+standart_error*pdf(EIfac,0.0,1.0);
+//				}
+//				else{
+//
+//					EI_CD =0.0;
+//
+//				}
+//
+//
+//
+//			} /* end of MC loop */
+//
+//			/* find the closest point to dv in the current best EI designs */
+//
+//			double min_dist_EI = LARGE;
+//			int    min_EI_indx = -1;
+//			findKNeighbours(dv_best_EI, dv, 1, &min_dist_EI, &min_EI_indx , 1);
+//
+//			if(EI_CD > best_EI_values(worst_EI_array_indx && min_dist_EI > EI_dist_tol)){
+//
+//
+//				best_EI_values(worst_EI_array_indx) = EI_CD;
+//
+//				for(int k=0;k<number_of_design_variables;k++) {
+//
+//					dv_best_EI(worst_EI_array_indx,k) = dv(k);
+//				}
+//
+//
+//				double worst_EI_value = 0.0;
+//				find_min_with_index(best_EI_values,
+//						number_of_function_evals_inner_iter,
+//						&worst_EI_value ,
+//						&worst_EI_array_indx);
+//#if 1
+//				printf("found a better EI value with EI = %10.7e\n",EI_CD);
+//				printf("best EI values:\n");
+//				trans(best_EI_values).print();
+//				printf("worst EI index is now = %d\n",worst_EI_array_indx);
+//				printf("area tilde = %10.7e:\n",S_tilde);
+//				printf("CL tilde = %10.7e:\n",CL_tilde);
+//				printf("CD tilde = %10.7e:\n",CD_tilde);
+//				printf("factor_CD = %10.7e\n",factor_CD);
+//				printf("fval_linmodel_CD = %10.7e\n",fval_linmodel_CD);
+//				printf("fval_CD = %10.7e\n",fval_CD);
+//				printf("factor_CL = %10.7e\n",factor_CL);
+//				printf("fval_linmodel_CL = %10.7e\n",fval_linmodel_CL);
+//				printf("fval_CL = %10.7e\n",fval_CL);
+//				printf("EI value = %10.7e\n",EI_CD);
+//#endif
+//
+//			} /* end of if */
+//
+//
+//
+//
+//
+//
+//		} /* end of the EI loop */
+//
+//
+//#if 1
+//		printf("the most promising designs have been found...\n");
+//#endif
+//
+//		for(int k=0; k<number_of_function_evals_inner_iter; k++ ){
+//
+//			double CD_exact=0.0;
+//			double CL_exact=0.0;
+//			double area_exact=0.0;
+//
+//			vec gradient_cd(number_of_design_variables);
+//			vec gradient_cl(number_of_design_variables);
+//
+//			vec dv = trans(dv_best_EI.row(k));
+//
+//#if 1
+//			printf("design vector:\n");
+//			trans(dv).print();
+//#endif
+//
+//			printf("calling adjoint solver for drag...\n");
+////			call_SU2_Adjoint_Solver(dv,gradient_cd,CL_exact,CD_exact,area_exact,1,Area_constraint);
+//
+//			printf("calling adjoint solver for lift...\n");
+////			call_SU2_Adjoint_Solver(dv,gradient_cl,CL_exact,CD_exact,area_exact,2,Area_constraint);
+//
+//#if 1
+//			printf("Simulation results:\n");
+//			printf("area = %10.7f\n",area_exact);
+//			printf("cl = %10.7f\n",CL_exact);
+//			printf("cd = %10.7f\n",CD_exact);
+//			//		printf("gradient (drag):\n");
+//			//		trans(gradient_cd).print();
+//			//		printf("gradient (lift):\n");
+//			//		trans(gradient_cl).print();
+//#endif
+//
+//
+//
+//			/* insert a row to the data matrix*/
+//
+//			if(CD_exact > 0  && CL_exact > 0){
+//
+//				number_of_function_evals++;
+//
+//				optimization_data.insert_rows( number_of_data_points, 1 );
+//				for(int i=0;i<number_of_design_variables;i++){
+//
+//					optimization_data(number_of_data_points,i) = dv(i);
+//				}
+//				optimization_data(number_of_data_points,number_of_design_variables)   = CL_exact;
+//				optimization_data(number_of_data_points,number_of_design_variables+1) = CD_exact;
+//				optimization_data(number_of_data_points,number_of_design_variables+2) = area_exact;
+//
+//
+//				/* insert a row to the cl kriging data matrix*/
+//				cl_kriging_data.insert_rows( number_of_data_points, 1 );
+//
+//				for(int i=0;i<number_of_design_variables;i++){
+//
+//					cl_kriging_data(number_of_data_points,i) = dv(i);
+//				}
+//				cl_kriging_data(number_of_data_points,number_of_design_variables) = CL_exact;
+//
+//				for(int i=0;i<number_of_design_variables;i++){
+//
+//					cl_kriging_data(number_of_data_points,number_of_design_variables+1+i) = gradient_cl(i);
+//				}
+//
+//
+//
+//
+//				/* insert a row to the cd kriging data matrix*/
+//				cd_kriging_data.insert_rows( number_of_data_points, 1 );
+//
+//				for(int i=0;i<number_of_design_variables;i++){
+//
+//					cd_kriging_data(number_of_data_points,i) = dv(i);
+//				}
+//
+//				cd_kriging_data(number_of_data_points,number_of_design_variables) = CD_exact;
+//
+//				for(int i=0;i<number_of_design_variables;i++){
+//
+//					cd_kriging_data(number_of_data_points,number_of_design_variables+1+i) = gradient_cd(i);
+//				}
+//
+//
+//
+//
+//				/* insert a row to the area kriging data matrix*/
+//				area_kriging_data.insert_rows( number_of_data_points, 1 );
+//
+//				for(int i=0;i<number_of_design_variables;i++){
+//
+//					area_kriging_data(number_of_data_points,i) = dv(i);
+//				}
+//				area_kriging_data(number_of_data_points,number_of_design_variables) = area_exact;
+//
+//
+//
+//			}
+//
+//
+//		} /* end of the simulation loop */
+//
+//		/* save updated data */
+//		optimization_data.save(all_data_file.c_str(), csv_ascii);
+//		cl_kriging_data.save(cl_kriging_input_file.c_str(), csv_ascii);
+//		cd_kriging_data.save(cd_kriging_input_file.c_str(), csv_ascii);
+//		area_kriging_data.save(area_kriging_input_file.c_str(), csv_ascii);
+//
+//
+//		if (number_of_function_evals > max_number_of_function_evaluations ){
+//
+//			vec ys_CL =   optimization_data.col(number_of_design_variables);
+//			vec ys_CD =   optimization_data.col(number_of_design_variables+1);
+//			vec ys_S = optimization_data.col(number_of_design_variables+2);
+//
+//			/* now find the best sample point */
+//
+//			double best_sample_CD = LARGE;
+//			double best_sample_CL = LARGE;
+//			double best_sample_S = LARGE;
+//			int sample_min_indx = -1;
+//
+//			for(unsigned int k=0; k<ys_CD.size(); k++){
+//
+//				if(ys_CD(k) < sample_min && ys_CL(k) >= CL_constraint && ys_S(k) >= Area_constraint){
+//
+//					sample_min_indx = k;
+//					best_sample_CD = ys_CD(k);
+//					best_sample_CL = ys_CL(k);
+//					best_sample_S = ys_S(k);
+//
+//				}
+//
+//			}
+//#if 1
+//			printf("Optimization is finished...\n");
+//			printf("Best sample in the data set is the %dth entry :\n",sample_min_indx);
+//			optimization_data.row(sample_min_indx).print();
+//			printf("CD = %10.7e\n",best_sample_CD);
+//			printf("CL = %10.7e\n",best_sample_CL);
+//			printf("S = %10.7e\n",best_sample_S);
+//
+//#endif
+//
+//			break;
+//
+//
+//
+//
+//
+//		}
+//
+//		number_of_EI_iter_global = number_of_EI_iter_global/2;
+//
+//		it_count_outer_loop++;
+//
+//
 	} /* end of while(1) */
-
+//
 
 
 
@@ -3910,68 +3946,65 @@ void su2_robustoptimize_naca0012(void){
 //
 //}
 
-void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_samples ){
+
+/** RInitial Data Acquisition using the adjoint solver.
+ *
+ * @param[in] number_of_initial_samples
+ * @param[in] number_of_design_variables
+ * @param[in] variable_activity
+ *
+ *
+ */
 
 
-	FILE* CL_Kriging_data;
-	FILE* CD_Kriging_data;
-	FILE* Volume_Kriging_data;
-	FILE* Thickness_Sec1_Kriging_data;
-	FILE* Thickness_Sec2_Kriging_data;
-	FILE* Thickness_Sec3_Kriging_data;
-	FILE* Thickness_Sec4_Kriging_data;
-	FILE* Thickness_Sec5_Kriging_data;
-	FILE* AllData;
+
+void initial_data_acquisitionGEK(GEKSamplingData &sampling_plan){
+
+
+	unsigned int number_of_design_variables = sampling_plan.size_of_dv;
+
+	unsigned int number_of_active_design_variables =0;
 
 #if 1
-	printf("SU2 Initial Data Acquisition with adjoints...\n");
+	sampling_plan.print();
 #endif
 
-	int number_of_design_variables = 24;
-	int number_of_function_evals = number_of_initial_samples;
-
-	double upper_bound_dv =  0.1;
-	double lower_bound_dv = -0.1;
-
-	//	double area_constraint= 0.0816;
-	//	double area_constraint= 0.0778;
 
 
-	/* geometric constraints */
-	double max_thickness_sec1= 0.06;
-	double max_thickness_sec2= 0.06;
-	double max_thickness_sec3= 0.05;
-	double max_thickness_sec4= 0.05;
-	double max_thickness_sec5= 0.04;
-	double Wing_volume = 0.027;
+	//	FILE* CL_Kriging_data;
+	//	FILE* CD_Kriging_data;
+	//	FILE* Volume_Kriging_data;
+	//	FILE* Thickness_Sec1_Kriging_data;
+	//	FILE* Thickness_Sec2_Kriging_data;
+	//	FILE* Thickness_Sec3_Kriging_data;
+	//	FILE* Thickness_Sec4_Kriging_data;
+	//	FILE* Thickness_Sec5_Kriging_data;
+	//	FILE* AllData;
+
+	int number_of_function_evals = sampling_plan.number_of_samples;
+
+	/* state outputs plus geometric constraints */
+	vec objectives(sampling_plan.number_of_outputs+sampling_plan.geometric_constraints.size());
 
 
+	vec deltax(number_of_design_variables);
 
+	for(unsigned int i=0; i<number_of_design_variables; i++){
 
+		deltax(i) = sampling_plan.upper_bound_dv(i)-sampling_plan.lower_bound_dv(i);
 
-	vec geometric_constraints(6);
-	geometric_constraints(0) = Wing_volume;
-	geometric_constraints(1) = max_thickness_sec1;
-	geometric_constraints(2) = max_thickness_sec2;
-	geometric_constraints(3) = max_thickness_sec3;
-	geometric_constraints(4) = max_thickness_sec4;
-	geometric_constraints(5) = max_thickness_sec5;
+	}
 
-
-	vec objectives(8);
-
-
-	double deltax = upper_bound_dv-lower_bound_dv;
 
 	vec dv(number_of_design_variables);
-	mat dv_lhs(number_of_function_evals,number_of_design_variables);
+	mat dv_lhs(5*number_of_function_evals,number_of_design_variables);
 
 	/* generate lhs designs */
 
 	std::string str_problem_dim = std::to_string(number_of_design_variables);
 	std::string lhs_filename = "lhs_points.dat";
 
-	std::string python_command = "python -W ignore " + python_dir +
+	std::string python_command = "python -W ignore " + settings.python_dir +
 			"/lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(5*number_of_function_evals)+ " center" ;
 
 #if 0
@@ -3985,18 +4018,37 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 	/* shuffle samples */
 	dv_lhs = shuffle(dv_lhs);
 
-	dv_lhs*= deltax;
-	dv_lhs+= lower_bound_dv;
+	for(unsigned int i=0; i<dv_lhs.n_rows;i++){
+		for(unsigned int j=0; j<dv_lhs.n_cols;j++){
+
+			dv_lhs(i,j)*= deltax(j);
+			dv_lhs(i,j)+= sampling_plan.lower_bound_dv(j);
+		}
+
+	}
+
+	if(sampling_plan.include_initial_design == true){
+
+		for(unsigned int j=0; j<dv_lhs.n_cols;j++){
+
+			dv_lhs(0,j)= 0.0;
+		}
+	}
+
+
 
 #if 0
-	printf("dv vectors\n");
+	printf("sampling plan = \n");
 	dv_lhs.print();
 #endif
 
 
+
 	int doe_iter = 0;
 	int count=0;
-	while(doe_iter< number_of_initial_samples){
+
+
+	while(1){
 
 
 
@@ -4004,42 +4056,34 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 		printf("iter = %d\n",doe_iter);
 #endif
 
-		//		doe_iter = 2;
-		//		if(doe_iter == 0) {
 
-		//			dv.fill(0.0);
-		//		}
-		//		else{
 
-		dv= trans(dv_lhs.row(count+1));
-		//		}
-
+		dv= trans(dv_lhs.row(count));
 		count++;
 
-		vec gradient_cd(number_of_design_variables);
-		vec gradient_cl(number_of_design_variables);
+		mat gradient_information(number_of_design_variables,sampling_plan.number_outputs_with_gradients);
+
+		vec gradient_out(number_of_design_variables);
+
 
 #if 1
 		printf("design vector:\n");
 		trans(dv).print();
 #endif
 
-		printf("calling adjoint solver for lift...\n");
-		call_SU2_Adjoint_Solver(dv,gradient_cl,objectives,2,geometric_constraints);
-
-		printf("calling adjoint solver for drag...\n");
-		call_SU2_Adjoint_Solver(dv,gradient_cd,objectives,1,geometric_constraints);
+		for(int i=0; i<sampling_plan.number_outputs_with_gradients;i++){
 
 
+			printf("calling adjoint solver for %s...\n",sampling_plan.output_names[i].c_str());
+			call_SU2_Adjoint_Solver(i,dv,gradient_out,objectives,sampling_plan);
+
+
+		}
 
 #if 1
-		printf("Wing volume = %10.7f\n",objectives(2));
+		printf("Area = %10.7f\n",objectives(2));
 		printf("cl = %10.7f\n",objectives(0));
 		printf("cd = %10.7f\n",objectives(1));
-		printf("gradient (drag):\n");
-		trans(gradient_cd).print();
-		printf("gradient (lift):\n");
-		trans(gradient_cl).print();
 #endif
 
 
@@ -4073,135 +4117,135 @@ void initial_data_acquisitionGEK(std::string python_dir, int number_of_initial_s
 
 #endif
 
-		if(objectives(0) > 0 && objectives(1) > 0){
-
-			CL_Kriging_data = fopen("CL_Kriging.csv","a+");
-			for(int i=0;i<number_of_design_variables;i++){
-				fprintf(CL_Kriging_data, "%10.7f, ",dv[i]);
-
-			}
-			fprintf(CL_Kriging_data, "%10.7f, ",objectives(0));
-
-			for(int i=0;i<number_of_design_variables-1;i++){
-				fprintf(CL_Kriging_data, "%10.7f, ",gradient_cl(i));
-
-			}
-			fprintf(CL_Kriging_data, "%10.7f\n",gradient_cl(number_of_design_variables-1));
-
-
-
-			fclose(CL_Kriging_data);
-
-			CD_Kriging_data = fopen("CD_Kriging.csv","a+");
-			for(int i=0;i<number_of_design_variables;i++){
-
-				fprintf(CD_Kriging_data, "%10.7f, ",dv[i]);
-
-			}
-			fprintf(CD_Kriging_data, "%10.7f, ",objectives(1));
-
-			for(int i=0;i<number_of_design_variables-1;i++){
-
-				fprintf(CD_Kriging_data, "%10.7f, ",gradient_cd(i));
-
-			}
-			fprintf(CD_Kriging_data, "%10.7f\n",gradient_cd(number_of_design_variables-1));
-
-
-
-			fclose(CD_Kriging_data);
-
-
-
-			Volume_Kriging_data = fopen("Volume_Kriging.csv","a+");
-			for(int i=0;i<number_of_design_variables;i++){
-				fprintf(Volume_Kriging_data, "%10.7f, ",dv[i]);
-
-			}
-			fprintf(Volume_Kriging_data, "%10.7f\n",objectives(2));
-
-
-			fclose(Volume_Kriging_data);
-
-
-			Thickness_Sec1_Kriging_data = fopen("Thickness_Sec1_Kriging.csv","a+");
-			for(int i=0;i<number_of_design_variables;i++){
-				fprintf(Thickness_Sec1_Kriging_data, "%10.7f, ",dv[i]);
-
-			}
-			fprintf(Thickness_Sec1_Kriging_data, "%10.7f\n",objectives(3));
-
-
-			fclose(Thickness_Sec1_Kriging_data);
-
-
-			Thickness_Sec2_Kriging_data = fopen("Thickness_Sec2_Kriging.csv","a+");
-			for(int i=0;i<number_of_design_variables;i++){
-				fprintf(Thickness_Sec2_Kriging_data, "%10.7f, ",dv[i]);
-
-			}
-			fprintf(Thickness_Sec2_Kriging_data, "%10.7f\n",objectives(4));
-
-
-			fclose(Thickness_Sec2_Kriging_data);
-
-
-
-			Thickness_Sec3_Kriging_data = fopen("Thickness_Sec3_Kriging.csv","a+");
-			for(int i=0;i<number_of_design_variables;i++){
-				fprintf(Thickness_Sec3_Kriging_data, "%10.7f, ",dv[i]);
-
-			}
-			fprintf(Thickness_Sec3_Kriging_data, "%10.7f\n",objectives(5));
-
-
-			fclose(Thickness_Sec3_Kriging_data);
-
-
-
-			Thickness_Sec4_Kriging_data = fopen("Thickness_Sec4_Kriging.csv","a+");
-			for(int i=0;i<number_of_design_variables;i++){
-				fprintf(Thickness_Sec4_Kriging_data, "%10.7f, ",dv[i]);
-
-			}
-			fprintf(Thickness_Sec4_Kriging_data, "%10.7f\n",objectives(6));
-
-
-			fclose(Thickness_Sec4_Kriging_data);
-
-
-
-			Thickness_Sec5_Kriging_data = fopen("Thickness_Sec5_Kriging.csv","a+");
-			for(int i=0;i<number_of_design_variables;i++){
-				fprintf(Thickness_Sec5_Kriging_data, "%10.7f, ",dv[i]);
-
-			}
-			fprintf(Thickness_Sec5_Kriging_data, "%10.7f\n",objectives(7));
-
-
-			fclose(Thickness_Sec5_Kriging_data);
-
-
-
-
-
-
-			AllData = fopen("oneram6_optimization_history.csv","a+");
-			for(int i=0;i<number_of_design_variables;i++){
-
-				fprintf(AllData, "%10.7f, ",dv[i]);
-
-			}
-			fprintf(AllData, "%10.7f, ",objectives(0));
-			fprintf(AllData, "%10.7f, ",objectives(1));
-			fprintf(AllData, "%10.7f\n",objectives(2));
-
-
-			fclose(AllData);
-
-			doe_iter++;
-
-		}
+		//		if(objectives(0) > 0 && objectives(1) > 0){
+		//
+		//			CL_Kriging_data = fopen("CL_Kriging.csv","a+");
+		//			for(int i=0;i<number_of_design_variables;i++){
+		//				fprintf(CL_Kriging_data, "%10.7f, ",dv[i]);
+		//
+		//			}
+		//			fprintf(CL_Kriging_data, "%10.7f, ",objectives(0));
+		//
+		//			for(int i=0;i<number_of_design_variables-1;i++){
+		//				fprintf(CL_Kriging_data, "%10.7f, ",gradient_cl(i));
+		//
+		//			}
+		//			fprintf(CL_Kriging_data, "%10.7f\n",gradient_cl(number_of_design_variables-1));
+		//
+		//
+		//
+		//			fclose(CL_Kriging_data);
+		//
+		//			CD_Kriging_data = fopen("CD_Kriging.csv","a+");
+		//			for(int i=0;i<number_of_design_variables;i++){
+		//
+		//				fprintf(CD_Kriging_data, "%10.7f, ",dv[i]);
+		//
+		//			}
+		//			fprintf(CD_Kriging_data, "%10.7f, ",objectives(1));
+		//
+		//			for(int i=0;i<number_of_design_variables-1;i++){
+		//
+		//				fprintf(CD_Kriging_data, "%10.7f, ",gradient_cd(i));
+		//
+		//			}
+		//			fprintf(CD_Kriging_data, "%10.7f\n",gradient_cd(number_of_design_variables-1));
+		//
+		//
+		//
+		//			fclose(CD_Kriging_data);
+		//
+		//
+		//
+		//			Volume_Kriging_data = fopen("Volume_Kriging.csv","a+");
+		//			for(int i=0;i<number_of_design_variables;i++){
+		//				fprintf(Volume_Kriging_data, "%10.7f, ",dv[i]);
+		//
+		//			}
+		//			fprintf(Volume_Kriging_data, "%10.7f\n",objectives(2));
+		//
+		//
+		//			fclose(Volume_Kriging_data);
+		//
+		//
+		//			Thickness_Sec1_Kriging_data = fopen("Thickness_Sec1_Kriging.csv","a+");
+		//			for(int i=0;i<number_of_design_variables;i++){
+		//				fprintf(Thickness_Sec1_Kriging_data, "%10.7f, ",dv[i]);
+		//
+		//			}
+		//			fprintf(Thickness_Sec1_Kriging_data, "%10.7f\n",objectives(3));
+		//
+		//
+		//			fclose(Thickness_Sec1_Kriging_data);
+		//
+		//
+		//			Thickness_Sec2_Kriging_data = fopen("Thickness_Sec2_Kriging.csv","a+");
+		//			for(int i=0;i<number_of_design_variables;i++){
+		//				fprintf(Thickness_Sec2_Kriging_data, "%10.7f, ",dv[i]);
+		//
+		//			}
+		//			fprintf(Thickness_Sec2_Kriging_data, "%10.7f\n",objectives(4));
+		//
+		//
+		//			fclose(Thickness_Sec2_Kriging_data);
+		//
+		//
+		//
+		//			Thickness_Sec3_Kriging_data = fopen("Thickness_Sec3_Kriging.csv","a+");
+		//			for(int i=0;i<number_of_design_variables;i++){
+		//				fprintf(Thickness_Sec3_Kriging_data, "%10.7f, ",dv[i]);
+		//
+		//			}
+		//			fprintf(Thickness_Sec3_Kriging_data, "%10.7f\n",objectives(5));
+		//
+		//
+		//			fclose(Thickness_Sec3_Kriging_data);
+		//
+		//
+		//
+		//			Thickness_Sec4_Kriging_data = fopen("Thickness_Sec4_Kriging.csv","a+");
+		//			for(int i=0;i<number_of_design_variables;i++){
+		//				fprintf(Thickness_Sec4_Kriging_data, "%10.7f, ",dv[i]);
+		//
+		//			}
+		//			fprintf(Thickness_Sec4_Kriging_data, "%10.7f\n",objectives(6));
+		//
+		//
+		//			fclose(Thickness_Sec4_Kriging_data);
+		//
+		//
+		//
+		//			Thickness_Sec5_Kriging_data = fopen("Thickness_Sec5_Kriging.csv","a+");
+		//			for(int i=0;i<number_of_design_variables;i++){
+		//				fprintf(Thickness_Sec5_Kriging_data, "%10.7f, ",dv[i]);
+		//
+		//			}
+		//			fprintf(Thickness_Sec5_Kriging_data, "%10.7f\n",objectives(7));
+		//
+		//
+		//			fclose(Thickness_Sec5_Kriging_data);
+		//
+		//
+		//
+		//
+		//
+		//
+		//			AllData = fopen("oneram6_optimization_history.csv","a+");
+		//			for(int i=0;i<number_of_design_variables;i++){
+		//
+		//				fprintf(AllData, "%10.7f, ",dv[i]);
+		//
+		//			}
+		//			fprintf(AllData, "%10.7f, ",objectives(0));
+		//			fprintf(AllData, "%10.7f, ",objectives(1));
+		//			fprintf(AllData, "%10.7f\n",objectives(2));
+		//
+		//
+		//			fclose(AllData);
+		//
+		//			doe_iter++;
+		//
+		//		}
 
 
 		if( doe_iter >= number_of_function_evals ) break;
@@ -4689,17 +4733,16 @@ int call_SU2_CFD_Solver(vec &dv,
 
 /* calls the SU2_CFD_AD for a given vector of dv */
 int call_SU2_Adjoint_Solver(
+		int i,
 		vec &dv,
 		vec &gradient,
 		vec &objectives,
-		int type,
-		vec &constraints
+		GEKSamplingData &sampling_plan
 ){
 
 #if 1
 	printf("calling SU2 adjoint solver...\n");
-	printf("constraints:\n");
-	constraints.print();
+	printf("base config file = %s\n",sampling_plan.base_config_file_name.c_str());
 #endif
 
 	/* initialize all variables to zero */
@@ -4709,71 +4752,39 @@ int call_SU2_Adjoint_Solver(
 
 	int number_of_design_variables=dv.size();
 
-	std::ifstream ifs("base_config.cfg");
+	std::ifstream ifs(sampling_plan.base_config_file_name);
 	std::string basic_text;
 	getline (ifs, basic_text, (char) ifs.eof());
 
-#if 0
+#if 1
+	printf("base config =\n");
 	cout<<basic_text;
 #endif
+
 
 	std::string dv_text = "DV_VALUE=";
 
 
-	for(int i=0;i<18;i++){
+	for(int i=0;i<dv.size()-1;i++){
 
-		dv_text+= std::to_string(0.0)+",";
-
-	}
-
-	for(int i=0;i<12;i++){
-
-		dv_text+= std::to_string(dv[i])+",";
-
-	}
-	for(int i=0;i<18;i++){
-
-		dv_text+= std::to_string(0.0)+",";
-
-	}
-	for(int i=12;i<23;i++){
-
-		dv_text+= std::to_string(dv[i])+",";
+		dv_text+= std::to_string(dv(i))+",";
 
 	}
 
-
-	dv_text+= std::to_string(dv[23])+"\n";
+	dv_text+= std::to_string(dv[dv.size()-1])+"\n";
 
 
 
 	std::string dv_text2 = "DV_VALUE_NEW=";
 
 
-	for(int i=0;i<18;i++){
+	for(int i=0;i<dv.size()-1;i++){
 
-		dv_text2+= std::to_string(0.0)+",";
-
-	}
-
-	for(int i=0;i<12;i++){
-
-		dv_text2+= std::to_string(dv[i])+",";
-
-	}
-	for(int i=0;i<18;i++){
-
-		dv_text2+= std::to_string(0.0)+",";
-
-	}
-	for(int i=12;i<23;i++){
-
-		dv_text2+= std::to_string(dv[i])+",";
+		dv_text2+= std::to_string(dv(i))+",";
 
 	}
 
-
-	dv_text2+= std::to_string(dv[23])+"\n";
+	dv_text2+= std::to_string(dv[dv.size()-1])+"\n";
 
 #if 0
 	cout<<dv_text;
@@ -4789,96 +4800,94 @@ int call_SU2_Adjoint_Solver(
 
 	system("SU2_DEF config_DEF_new.cfg > su2def_output");
 
-
-
-	//	system("./plot_airfoil > junk");
-
-
-
 	//	system("cp mesh_ONERAM6_inv_FFD_deform.su2  mesh_ONERAM6_inv_FFD.su2");
 
-	system("SU2_GEO geo_base_config.cfg > su2geo_output");
+	system("SU2_GEO config_DEF_new.cfg > su2geo_output");
 
 
 
-	double *geo_data = new double[52];
 
-	std::ifstream geo_outstream("of_eval.dat");
+    vec geo_input(sampling_plan.number_of_geometric_features);
+
+	std::ifstream geo_outstream("of_func.dat");
 	std::string str;
 	int count=0;
 	while (std::getline(geo_outstream, str))
 	{
-
+#if 0
+			printf("str = %s\n", str.c_str());
+#endif
 		count++;
 
 		if(count == 4){
 
-
+#if 0
+			printf("str = %s\n", str.c_str());
+#endif
 			str.erase(std::remove(str.begin(), str.end(), ','), str.end());
 			std::stringstream ss(str);
-			for(int i=0;i<51;i++){
 
-				ss >> geo_data[i];
+
+
+			for(int i=0;i<sampling_plan.number_of_geometric_features;i++){
+
+				ss >> geo_input(i);
 
 			}
 
 		}
 
 	}
-
-	objectives(2) =  geo_data[0];
-	objectives(3) =  geo_data[7];
-	objectives(4) =  geo_data[8];
-	objectives(5) =  geo_data[9];
-	objectives(6) =  geo_data[10];
-	objectives(7) =  geo_data[11];
-
-
-
 #if 1
-	printf("Volume of the wing = %10.7f\n", objectives(2));
-	printf("MAX_THICKNESS_SEC1 = %10.7f\n", objectives(3));
-	printf("MAX_THICKNESS_SEC2 = %10.7f\n", objectives(4));
-	printf("MAX_THICKNESS_SEC3 = %10.7f\n", objectives(5));
-	printf("MAX_THICKNESS_SEC4 = %10.7f\n", objectives(6));
-	printf("MAX_THICKNESS_SEC5 = %10.7f\n", objectives(7));
+	for(int i=0;i<sampling_plan.number_of_geometric_features;i++){
+
+		printf("geo data[%d] = %10.7f\n",i,geo_input(i));
+
+
+	}
 #endif
 
 
+
+
+
+	objectives(2) =  geo_input[6];
+
+
+#if 1
+	printf("Area = %10.7f\n", objectives(2));
+#endif
+//
+//
 	int geo_constraint_flag = 1;
-
-	if(objectives(2) < constraints(0)) geo_constraint_flag = 0;
-	if(objectives(3) < constraints(1)) geo_constraint_flag = 0;
-	if(objectives(4) < constraints(2)) geo_constraint_flag = 0;
-	if(objectives(5) < constraints(3)) geo_constraint_flag = 0;
-	if(objectives(6) < constraints(4)) geo_constraint_flag = 0;
-	if(objectives(7) < constraints(5)) geo_constraint_flag = 0;
-
-
+//
+	if(objectives(2) < sampling_plan.geometric_constraints(0)) geo_constraint_flag = 0;
+//	if(objectives(3) < constraints(1)) geo_constraint_flag = 0;
+//	if(objectives(4) < constraints(2)) geo_constraint_flag = 0;
+//	if(objectives(5) < constraints(3)) geo_constraint_flag = 0;
+//	if(objectives(6) < constraints(4)) geo_constraint_flag = 0;
+//	if(objectives(7) < constraints(5)) geo_constraint_flag = 0;
+//
+//
 	if(geo_constraint_flag == 0){
-
+//
 		printf("One or more of the geometric constraints are not satisfied...\n");
 		return 0;
 
 	}
 
 
+
 	std::string solver_command;
 
-	if(type == 1){
+	solver_command = "discrete_adjoint.py -f " + sampling_plan.config_file_names[i]
+			       + " -n 2 discrete_adjoint_"+ sampling_plan.output_names[i]+"_output";
 
-		solver_command = "discrete_adjoint.py -f inv_ONERAM6_adv_drag.cfg -n 2 > discrete_adjoint_cd_output";
-
-	}
-
-	if(type == 2){
-
-		solver_command = "discrete_adjoint.py -f inv_ONERAM6_adv_lift.cfg -n 2 > discrete_adjoint_cl_output";
-
-	}
+#if 1
+	printf("solver_command = %s\n",solver_command.c_str());
+#endif
 
 	system(solver_command.c_str());
-
 
 
 	int cl_found=0;
@@ -4937,8 +4946,8 @@ int call_SU2_Adjoint_Solver(
 
 	std::string of_filename;
 
-	if(type == 1) of_filename = "of_grad_cd.dat";
-	if(type == 2) of_filename = "of_grad_cl.dat";
+	if(i == 0) of_filename = "of_grad_cl.dat";
+	if(i == 1) of_filename = "of_grad_cd.dat";
 
 	std::ifstream grad_outstream(of_filename);
 
@@ -4975,6 +4984,8 @@ int call_SU2_Adjoint_Solver(
 	printf("gradient:\n");
 	trans(gradient).print();
 #endif
+
+
 
 	return 0;
 }
