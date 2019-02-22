@@ -203,14 +203,14 @@ typedef struct {
 	double Area;
 } MC_design;
 
-
+void plot_airfoil(std::string initial_airfoil_file, std::string deformed_mesh_file);
 void SU2_CFD(std::string input_filename);
 
 void check_double_points_data(std::string filename);
 
 void su2_optimize(std::string python_dir);
 
-void su2_robustoptimize_naca0012(OptimizationData &optimization_plan);
+int su2_robustoptimize_naca0012(OptimizationData &optimization_plan);
 
 
 int call_SU2_CFD_Solver(vec &dv,
@@ -226,10 +226,19 @@ int call_SU2_Adjoint_Solver(
 		vec &objectives,
 		GEKSamplingData &sampling_plan);
 
+int call_SU2_Adjoint_Solver(
+		int i,
+		vec &dv,
+		vec &gradient,
+		vec &objectives,
+		OptimizationData &optimization_plan
+);
+
+
 void initial_data_acquisition(int number_of_initial_samples );
 
 void initial_data_acquisitionGEK(GEKSamplingData &sampling_plan);
 
-void su2_try_NACA0012_classic_solution(void);
+void su2_statistics_around_solution(int number_of_samples, std::string output_file_name,std::string input_file_name);
 
 #endif

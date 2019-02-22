@@ -55,6 +55,9 @@ int main(void){
 	}
 
 
+	su2_statistics_around_solution(500, "su2optimal_stat.dat","su2optimal.csv");
+
+	exit(1);
 
 	OptimizationData optimization_naca0012;
 
