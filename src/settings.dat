@@ -1,5 +1,5 @@
 # current working directory
-cwd: /home/emre/RoDeO/Tests/Steady_NACA0012_Robust
+cwd: /home/emre/RoDeO/Tests/KernelRegression
 # directory for the python scripts
 python_dir: /home/emre/RoDeO/python
 # regularization parameter lambda for Kriging
