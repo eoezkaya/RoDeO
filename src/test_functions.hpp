@@ -181,8 +181,13 @@ void perform_kriging_test(double (*test_function)(double *),
 		int training_method =0);
 
 
-
-
+void perform_NNregression_test(double (*test_function)(double *),
+		double *bounds,
+		std::string function_name ,
+		int  number_of_samples,
+		int sampling_method,
+		int problem_dimension,
+		int number_of_trials);
 
 void perform_GEK_test(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),

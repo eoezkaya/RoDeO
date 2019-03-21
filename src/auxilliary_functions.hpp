@@ -90,14 +90,14 @@ double L1norm(T x, int p, int* index=NULL){
 	double sum=0.0;
 	if(index == NULL){
 
-		for(unsigned int i=0;i<p;i++){
+		for(int i=0;i<p;i++){
 
 			sum+=fabs(x(i));
 		}
 	}
 	else{
 
-		for(unsigned int i=0;i<p;i++){
+		for(int i=0;i<p;i++){
 
 			sum+=fabs(x(index[i]));
 		}
@@ -115,7 +115,7 @@ double L2norm(T x, int p, int* index=NULL){
 	if(index == NULL){
 		sum=0.0;
 
-		for(unsigned int i=0;i<p;i++){
+		for(int i=0;i<p;i++){
 
 			sum+=x(i)*x(i);
 		}
@@ -125,7 +125,7 @@ double L2norm(T x, int p, int* index=NULL){
 
 		sum=0.0;
 
-		for(unsigned int i=0;i<p;i++){
+		for(int i=0;i<p;i++){
 
 			sum+=x(index[i])*x(index[i]);
 		}
@@ -142,7 +142,7 @@ double Lpnorm(T x, int p, int size,int *index=NULL){
 
 	if(index == NULL){
 
-		for(unsigned int i=0;i<size;i++){
+		for(int i=0;i<size;i++){
 
 			sum+=pow(fabs(x(i)),p);
 		}
@@ -150,7 +150,7 @@ double Lpnorm(T x, int p, int size,int *index=NULL){
 	}
 	else{
 
-		for(unsigned int i=0;i<size;i++){
+		for(int i=0;i<size;i++){
 
 			sum+=pow(fabs(x(index[i])),p);
 		}

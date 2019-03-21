@@ -1566,8 +1566,9 @@ int train_kriging_response_surface(std::string input_file_name,
 
 			if (total_number_of_function_evals % 100 == 0){
 
-				printf("# of function calculations =  %d\n",
+				printf("\r# of function calculations =  %d\n",
 						total_number_of_function_evals);
+				fflush(stdout);
 
 			}
 

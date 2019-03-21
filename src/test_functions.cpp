@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stack>
 #include "Rodeo_macros.hpp"
+#include "Rodeo_globals.hpp"
 #include "auxilliary_functions.hpp"
 #include "test_functions.hpp"
 #include "kriging_training.hpp"
@@ -1503,6 +1504,67 @@ void perform_kriging_test(double (*test_function)(double *),
 }
 
 
+void perform_NNregression_test(double (*test_function)(double *),
+		double *bounds,
+		std::string function_name ,
+		int  number_of_samples,
+		int sampling_method,
+		int problem_dimension,
+		int number_of_trials){
+
+	FILE *NNinput;
+
+	vec meanError(number_of_trials);
+	vec stdError(number_of_trials);
+
+
+	for(int trial=0; trial <number_of_trials; trial ++ ){
+
+	/* file name for data points in csv (comma separated values) format */
+	std::string input_file_name = function_name+"_"
+			+ std::to_string(number_of_samples )
+	+".csv";
+
+	printf("input file name : %s\n",input_file_name.c_str());
+	printf("Generating inputs using %d sample points...\n",number_of_samples );
+
+
+	/* generate the input data for test	*/
+	generate_test_function_data(test_function,
+			input_file_name,
+			bounds,
+			number_of_samples,
+			sampling_method,
+			problem_dimension);
+
+
+		/* run Neural Network Regression */
+
+		std::string python_command = "python -W ignore "+settings.python_dir+"/NeuralNetworkReg.py "+ input_file_name+ " > python.out";
+#if 0
+		printf("python_command : %s\n",python_command.c_str());
+#endif
+
+		system(python_command.c_str());
+
+		NNinput = fopen("NNoutput.dat", "r");
+
+		fscanf(NNinput,"%lf",&stdError(trial));
+		fscanf(NNinput,"%lf",&meanError(trial));
+
+        fclose(NNinput);
+
+        printf("it = %d, squared error = %10.7f\n",trial,meanError(trial));
+
+	}
+
+
+	printf("mean squared error = %10.7f\n",mean(meanError));
+
+
+}
+
+
 
 
 
@@ -2349,8 +2411,9 @@ void generate_test_function_data(double (*test_function)(double *),
 	if(sampling_method == RANDOM_SAMPLING){
 
 		FILE *outp;
-
-		//	printf("opening file %s for input...\n",filename.c_str() );
+#if 0
+		printf("opening file %s for input...\n",filename.c_str() );
+#endif
 		outp = fopen(filename.c_str(), "w");
 
 
@@ -3145,8 +3208,8 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 
 #endif
 
-		double wSvd = 1.0;
-		double w12 = 1.0;
+		double wSvd = 0.1;
+		double w12 = 0.1;
 
 		trainMahalanobisDistance(metricM,data,sigma, wSvd, w12);
 
@@ -3573,13 +3636,13 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 
 				double Fvalexact = test_function(x.memptr());
 
-
-				if(i == 23414){
+#if 0
+				if(i % 100 == 0){
 
 					printf("\nFvalexact = %10.7f\n",Fvalexact);
 					printf("Fapprox = %10.7f\n",Fapprox);
 				}
-
+#endif
 				out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
 
 			} /* end of for */
@@ -3662,8 +3725,8 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 				double Fvalexact = test_function(x.memptr());
 
 
-#if 1
-				if(i == 23414){
+#if 0
+				if(i % 100 == 0){
 
 					printf("\nFvalexact = %10.7f\n",Fvalexact);
 					printf("Fapprox = %10.7f\n",Fapprox);

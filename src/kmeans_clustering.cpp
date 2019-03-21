@@ -57,7 +57,7 @@ int find_which_cluster(mat cluster_means, rowvec x){
 
 void visualize_clusters(mat &data, mat &cluster_means, std::vector<int> *cluster_indices, int K){
 
-    int number_of_data_points = data.n_rows;
+
     int dim = data.n_cols;
 
     if(dim != 2){
@@ -88,7 +88,7 @@ void visualize_clusters(mat &data, mat &cluster_means, std::vector<int> *cluster
 
             fprintf(visualization_output,"%d\n",cluster_indices[i].size());
 
-            for(int j=0; j<cluster_indices[i].size();j++){
+            for(unsigned int j=0; j<cluster_indices[i].size();j++){
 
                 int indx = cluster_indices[i][j];
 
@@ -301,7 +301,7 @@ int kMeansClustering(mat &data,
         /* for each cluster in the table */
         for(int i=0;i<K;i++){
 
-            int cluster_size = cluster_indices[i].size();
+            unsigned int cluster_size = cluster_indices[i].size();
 #if 0
             printf("Cluster %d has %d points\n", i,cluster_size );
 #endif
