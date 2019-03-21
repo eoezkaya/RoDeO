@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <stack>
 #include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
+//#include "Rodeo_globals.hpp"
 #include "auxilliary_functions.hpp"
 #include "test_functions.hpp"
 #include "kriging_training.hpp"
@@ -13,6 +13,7 @@
 #include "trust_region_gek.hpp"
 #include "kernel_regression.hpp"
 #include <codi.hpp>
+#include "read_settings.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -1538,6 +1539,8 @@ void perform_NNregression_test(double (*test_function)(double *),
 			problem_dimension);
 
 
+#if 0
+
 		/* run Neural Network Regression */
 
 		std::string python_command = "python -W ignore "+settings.python_dir+"/NeuralNetworkReg.py "+ input_file_name+ " > python.out";
@@ -1556,13 +1559,17 @@ void perform_NNregression_test(double (*test_function)(double *),
 
         printf("it = %d, squared error = %10.7f\n",trial,meanError(trial));
 
+        #endif
+
 	}
 
 
-	printf("mean squared error = %10.7f\n",mean(meanError));
+//	printf("mean squared error = %10.7f\n",mean(meanError));
 
 
 }
+
+
 
 
 

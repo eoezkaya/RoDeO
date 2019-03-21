@@ -2441,8 +2441,8 @@ double dsvdAdj(int iteration,mat &Lin, mat &data, double &sigma, mat &Mgradient,
 	tape.reset();
 
 
-
-
+	if(iteration%1000 == 0)
+		printf("Wanna see the # of times \n");
 
 	return (result.getValue());
 

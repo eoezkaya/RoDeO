@@ -1,6 +1,7 @@
 #ifndef TEST_FUNCTIONS_HPP
 #define TEST_FUNCTIONS_HPP
 #include "Rodeo_macros.hpp"
+#include "read_settings.hpp"
 #include <string>
 
 class Function_param {

@@ -1,6 +1,6 @@
 VERSION = 0.1
 CC      = g++
-AD_PATH = /home/emre/CoDiPack-master/include
+AD_PATH = /home/tourist/Hari/CoDiPack-master/include
 CFLAGS  = -Wall -O2 -std=c++11 -fopenmp -I $(AD_PATH)
 LDFLAGS = -lm -larmadillo
 

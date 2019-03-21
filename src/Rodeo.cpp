@@ -13,7 +13,7 @@
 #include "linear_regression.hpp"
 #include "kmeans_clustering.hpp"
 #include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
+//#include "Rodeo_globals.hpp"
 #include "auxilliary_functions.hpp"
 #include "read_settings.hpp"
 #include "kernel_regression.hpp"

@@ -1,7 +1,7 @@
 # current working directory
-cwd: /home/emre/RoDeO/Tests/KernelRegression
+cwd: /home/tourist/Hari/TESTS/RoDeO/src
 # directory for the python scripts
-python_dir: /home/emre/RoDeO/python
+python_dir: /home/tourist/Hari/TESTS/RoDeO/python
 # regularization parameter lambda for Kriging
 lambda: 10E-6
 # number of iterations for the EA based Kriging training

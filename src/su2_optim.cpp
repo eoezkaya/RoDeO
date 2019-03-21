@@ -8,8 +8,9 @@
 #include "kriging_training.hpp"
 #include "trust_region_gek.hpp"
 #include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
+//#include "Rodeo_globals.hpp"
 #include "su2_optim.hpp"
+#include "read_settings.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -146,16 +147,16 @@ void plot_airfoil(std::string initial_airfoil_file, std::string deformed_mesh_fi
 
 	std::string file_name_for_plot = "deformed_airfoil.png";
 
-	std::string python_command = "python -W ignore "+settings.python_dir+"/plot_airfoil.py deformed_airfoil_geometry.dat "+initial_airfoil_file+ " " +
-			file_name_for_plot;
+	/* std::string python_command = "python -W ignore "+settings.python_dir+"/plot_airfoil.py deformed_airfoil_geometry.dat "+initial_airfoil_file+ " " +
+			file_name_for_plot; */
 
 #if 0
 	printf("python_command = %s\n",python_command.c_str());
 #endif
 
 
-	FILE* in = popen(python_command.c_str(), "r");
-	fprintf(in, "\n");
+	//FILE* in = popen(python_command.c_str(), "r");
+	//fprintf(in, "\n");
 
 
 	delete[] deformed_airfoil.xcor;
@@ -1925,12 +1926,12 @@ int su2_robustoptimize_naca0012(OptimizationData &optimization_plan){
 
 		std::string file_name_for_plot = "samples.png";
 
-		std::string python_command = "python -W ignore "+settings.python_dir+"/plot_cdcl.py "+ all_data_file+ " "+
+	/*	std::string python_command = "python -W ignore "+settings.python_dir+"/plot_cdcl.py "+ all_data_file+ " "+
 				std::to_string(number_of_initial_samples)+ " " +
-				file_name_for_plot;
+				file_name_for_plot; */
 
-		FILE* in = popen(python_command.c_str(), "r");
-		fprintf(in, "\n");
+		//FILE* in = popen(python_command.c_str(), "r");
+		//fprintf(in, "\n");
 
 
 
@@ -4429,14 +4430,14 @@ void initial_data_acquisitionGEK(GEKSamplingData &sampling_plan){
 	std::string str_problem_dim = std::to_string(number_of_design_variables);
 	std::string lhs_filename = "lhs_points.dat";
 
-	std::string python_command = "python -W ignore " + settings.python_dir +
-			"/lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(5*number_of_function_evals)+ " center" ;
+/*	std::string python_command = "python -W ignore " + settings.python_dir +
+			"/lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(5*number_of_function_evals)+ " center" ; */
 
 #if 0
 	printf("%s\n",python_command.c_str());
 #endif
 
-	system(python_command.c_str());
+	//system(python_command.c_str());
 
 	dv_lhs.load("lhs_points.dat", raw_ascii);
 
