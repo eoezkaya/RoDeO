@@ -2696,7 +2696,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 	printf("derivative of sigma (fd) = %10.7f\n",fd_sigma);
 #endif
 
-	int max_cv_iter = 10;
+	int max_cv_iter = 20;
 
 	vec wSvdtrial(max_cv_iter);
 	wSvdtrial.randu();
@@ -2744,7 +2744,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 #endif
 		/* optimization stage */
 
-		int maxoOptIter = 1000;
+		int maxoOptIter = 100000;
 		int optIter = 1;
 		mat gradient(n, n);
 		double stepSizeInit = 0.001;
