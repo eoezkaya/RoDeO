@@ -4,6 +4,6 @@ cwd: /home/tourist/Hari/TESTS/RoDeO/src
 python_dir: /home/tourist/Hari/TESTS/RoDeO/python
 # regularization parameter lambda for Kriging
 lambda: 10E-6
-# number of iterations for the EA based Kriging training
+# number of iterations for the EA (Evolutionary Algorithm) based Kriging training
 num_iter_EA_Kriging: 10000
 

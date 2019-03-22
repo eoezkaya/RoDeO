@@ -1082,11 +1082,13 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wLoss,double wSvd, double
 	printf("singular values of a=\n");
 
 
+
 	for (i = 0; i < n; i++) {
 
 		printf("%10.7f\n",w[i]);
 	}
 #endif
+
 
 	double wsum = 0.0;
 	for (i = 0; i < n; i++) {
@@ -2694,7 +2696,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 	printf("derivative of sigma (fd) = %10.7f\n",fd_sigma);
 #endif
 
-	int max_cv_iter = 20;
+	int max_cv_iter = 10;
 
 	vec wSvdtrial(max_cv_iter);
 	wSvdtrial.randu();
@@ -2742,7 +2744,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 #endif
 		/* optimization stage */
 
-		int maxoOptIter = 100000;
+		int maxoOptIter = 1000;
 		int optIter = 1;
 		mat gradient(n, n);
 		double stepSizeInit = 0.001;
