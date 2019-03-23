@@ -6,7 +6,14 @@
 #include <armadillo>
 #include <codi.hpp>
 
+#include<iostream>
+#include<fstream>
+
+
 using namespace arma;
+
+
+
 
 /*
  * calculates the generalized Mahalanobis distance between two points
@@ -2453,7 +2460,8 @@ double dsvdAdj(int iteration,mat &Lin, mat &data, double &sigma, mat &Mgradient,
 int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, double &w12) {
 
 
-
+	std::ofstream fout;
+	fout.open("Regularization Weights.txt");
 
 	double wLoss = 1.0;
 
@@ -2696,14 +2704,22 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 	printf("derivative of sigma (fd) = %10.7f\n",fd_sigma);
 #endif
 
-	int max_cv_iter = 10;
+	int max_cv_iter = 3;
 
 	vec wSvdtrial(max_cv_iter);
 	wSvdtrial.randu();
 
+
 	vec w12trial(max_cv_iter);
 	w12trial.randu();
 
+
+#if 1
+	//Printing the weights into a text file
+	for(int iter_cv;iter_cv< max_cv_iter; iter_cv++) 
+		fout<<" "<<wSvdtrial(iter_cv)<<" \t "<< w12trial(iter_cv)<<"\n";
+	fout<<"Now, iterating through the different combinations: \n";
+#endif
 
 	double bestValidationError = 10E14;
 	double bestwSvd = 0.0;
@@ -2712,11 +2728,17 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 	for(int iter_cv;iter_cv< max_cv_iter; iter_cv++){
 
 		wSvd = wSvdtrial(iter_cv)*0.1;
-		w12 =  w12trial(iter_cv)*0.1;
+		//w12 =  w12trial(iter_cv)*0.1;
+		//fout<<" "<<wSvd<<" \t "<< w12<<"\n";
+		
+		for(int iter_cv_2=0;iter_cv_2< max_cv_iter; iter_cv_2++)
+		{
+			w12 =  w12trial(iter_cv_2)*0.1;
+			fout<<" "<<wSvd<<" \t "<< w12<<"\n";
 
-
+			int cv_curr_iteration = iter_cv*max_cv_iter + iter_cv_2;
 #if 1
-		printf("cv iteration = %d, wSvd = %10.7f, w12 = %10.7f\n",iter_cv,wSvd,w12);
+		printf("cv iteration = %d, wSvd = %10.7f, w12 = %10.7f\n",cv_curr_iteration,wSvd,w12);
 #endif
 		/* initialize the L matrix (lower diagonal) */
 
@@ -2901,18 +2923,23 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 			bestValidationError = ErrorValidation;
 		}
 
+	}
 
 	}
+
 
 #if 1
 	printf("Best weights wSvd = %10.7f, w12 = %10.7f\n",bestwSvd,bestw12);
 	printf("Best M = \n");
 	bestM.print();
+	fout<<"Best weights wSvd: "<<wSvd<<" \t w12: "<< w12<<"\n";
 #endif
 
 	M = bestM;
 
 	return 0;
+
+	fout.close();
 }
 
 double kernelRegressor(mat &X, vec &y, rowvec &xp, mat &M, double sigma) {
@@ -2944,5 +2971,8 @@ double kernelRegressor(mat &X, vec &y, rowvec &xp, mat &M, double sigma) {
 
 	return yhat;
 
+
+
 }
 
+	
