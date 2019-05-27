@@ -602,9 +602,9 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wLoss,double wSvd, double
 
 
 	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j <= i; j++){
+		for (int j = 0; j <dim; j++){
 
-			LT[i][j] = L[i][j];
+			LT[j][i] = L[i][j];
 		}
 
 
