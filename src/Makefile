@@ -1,9 +1,11 @@
 VERSION = 0.1
 #CC      = nvcc -arch compute_61 
 CC      = nvcc -arch=sm_52
-AD_PATH = /home/hari/Work/CoDiPack/include 
-CUDA_PATH = /home/hari/Work/Common
+CPP     = g++
+AD_PATH = /home/emre/CoDiPack-master/include
+CUDA_PATH = ~/NVIDIA_CUDA-10.0_Samples/common/inc/ 
 CFLAGS  = -std=c++11 -Xcompiler -fopenmp -I $(AD_PATH) -I $(CUDA_PATH)
+CPPFLAGS  = -Wall -O2 -std=c++11 -fopenmp -I $(AD_PATH) -I $(CUDA_PATH)
 LDFLAGS = -lm -larmadillo -rdc=true -lcudadevrt -lgomp
 
 
@@ -15,7 +17,7 @@ make: $(OBJ)
 	$(CC) $(CFLAGS) -o rodeo $(OBJ) $(LDFLAGS)
 
 %.o: %.cpp
-	$(CC) $(CFLAGS) -c $<
+	$(CPP) $(CPPFLAGS) -c $<
 
 %.o: %.cu
 	$(CC) $(CFLAGS) -c $<
