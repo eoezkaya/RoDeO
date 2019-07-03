@@ -12,6 +12,7 @@
 #include "rbf.hpp"
 #include "trust_region_gek.hpp"
 #include "kernel_regression.hpp"
+#include "kernel_regression_cuda.h"
 #include <codi.hpp>
 
 #define ARMA_DONT_PRINT_ERRORS
@@ -2638,6 +2639,127 @@ void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
 }
 
 
+void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
+		double (*test_function_adj)(double *, double *),
+		std::string filename,
+		double *bounds,
+		int dim,
+		int number_of_samples_with_only_f_eval,
+		int number_of_samples_with_g_eval,
+		int sampling_method){
+
+#if 0
+	printf("generate_highdim_test_function_data_cuda...\n");
+	printf("dim = %d\n",dim);
+#endif
+
+	int number_of_function_evals  =  number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval;
+
+
+	if(sampling_method == EXISTING_FILE){
+
+		/* do nothing */
+
+	}
+
+	if(sampling_method == RANDOM_SAMPLING){
+
+		FILE *outp;
+
+		printf("opening file %s for input...\n",filename.c_str() );
+		outp = fopen(filename.c_str(), "w");
+
+		double *x = new double[dim];
+		double *xb = new double[dim];
+
+		/* write functional values to the output file */
+		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
+
+			for(int j=0; j<dim;j++){
+#if 0
+				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
+				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
+#endif
+				x[i] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+			}
+
+			double f_val = test_function(x);
+
+			for(int j=0; j<dim;j++){
+				printf("%10.7f, ",x[j]);
+				fprintf(outp,"%10.7f, ",x[j]);
+			}
+			printf("%10.7f\n",f_val);
+			fprintf(outp,"%10.7f\n",f_val);
+
+
+		}
+
+
+		/* write functional values and the gradient sensitivities to the output file */
+
+		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
+
+			for(int j=0; j<dim;j++){
+#if 0
+				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
+				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
+#endif
+
+				x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+				xb[j]=0.0;
+			}
+
+			double f_val = test_function_adj(x,xb);
+
+#if 0
+			double f_val_original = test_function(x);
+
+			printf("fval = %10.7f\n",f_val);
+			printf("fval(original) = %10.7f\n",f_val_original);
+
+			for(int j=0; j<dim;j++){
+				double eps = x[j]*0.0001;
+				x[j]+= eps;
+				double fplus = test_function(x);
+				x[j]-= eps;
+
+				double fdval = (fplus-f_val_original)/eps;
+				printf("fd = %10.7f\n",fdval);
+				printf("adj = %10.7f\n",xb[j]);
+
+
+			}
+#endif
+
+
+
+			for(int j=0; j<dim;j++){
+				printf("%10.7f, ",x[j]);
+				fprintf(outp,"%10.7f, ",x[j]);
+			}
+			printf("%10.7f, ",f_val);
+			fprintf(outp,"%10.7f, ",f_val);
+
+			for(int j=0; j<dim-1;j++){
+				printf("%10.7f, ",xb[j]);
+				fprintf(outp,"%10.7f, ",xb[j]);
+			}
+			printf("%10.7f\n",xb[dim-1]);
+			fprintf(outp,"%10.7f\n",xb[dim-1]);
+
+
+		}
+
+		fclose(outp);
+
+		delete[] x;
+		delete[] xb;
+
+	}
+
+
+}
 
 
 
@@ -3172,6 +3294,318 @@ void perform_kernel_regression_test_highdim(double (*test_function)(double *),
 }
 
 
+void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
+		double (*test_function_adj)(double *, double *),
+		double *bounds,
+		std::string function_name ,
+		int  number_of_samples_with_only_f_eval,
+		int number_of_samples_with_g_eval,
+		int sampling_method,
+		int dim){
+
+	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
+			+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
+
+	std::string datafilename = input_file_name; 
+
+	double sigma = 0.01;
+	double wSvd = 1.0;
+	double w12 = 1.0;
+	int max_cv_iter = 20;
+
+
+
+
+	double partition[2] = {0.9,0.1};
+
+	srand (time(NULL));
+	printf("GPU test for kernel regression\n");
+
+#if 0	
+	cudaDeviceProp prop;
+	int count;
+	cudaGetDeviceCount( &count ) ;
+	for (int i=0; i< count; i++) {
+		cudaGetDeviceProperties( &prop, i);
+		printf( "--- General Information for device %d ---\n", i );
+		printf( "Name:%s\n", prop.name );
+		printf( "Compute capability:%d.%d\n", prop.major, prop.minor );
+		printf( "Total global mem:%ld\n", prop.totalGlobalMem );
+		printf( "Total amount of constant memory: %lu bytes\n",
+				prop.totalConstMem);
+
+
+		printf( "Threads in warp:%d\n", prop.warpSize );
+		printf( "Max threads per block:%d\n",prop.maxThreadsPerBlock );
+		printf( "Max thread dimensions:(%d, %d, %d)\n",prop.maxThreadsDim[0], prop.maxThreadsDim[1],prop.maxThreadsDim[2] );
+		printf( "Max grid dimensions:(%d, %d, %d)\n",prop.maxGridSize[0], prop.maxGridSize[1],prop.maxGridSize[2] );		
+
+	}
+#endif
+	mat data;
+
+
+	/* generate sample points (may or may not include gradient information) */
+	generate_highdim_test_function_data_cuda(test_function,test_function_adj, input_file_name, bounds,dim,
+			number_of_samples_with_only_f_eval,
+			number_of_samples_with_g_eval,
+			sampling_method );
+
+
+	data.load(datafilename);
+	int number_of_data_points = data.n_rows;
+
+
+	if(numVar != data.n_cols-1){
+
+		printf("Number of columns in the input file does not match with numVar = %d\n",numVar);
+		exit(-1);
+
+	}
+
+	printf("Kernel regression with the input data: %s\n",datafilename.c_str());
+	printf("Data has %d samples with %d variables\n",number_of_data_points,numVar);
+
+
+	printf("Original data:\n");
+	data.print();
+
+
+	data = shuffle(data);
+#if 0
+	printf("Original data (shuffled):\n");
+	data.print();
+#endif		
+
+	int number_of_training_samples = number_of_data_points*partition[0];
+	int number_of_test_samples = number_of_data_points - number_of_training_samples;
+
+
+	printf("number of training samples = %d\n",number_of_training_samples);
+	printf("number of test samples = %d\n",number_of_test_samples);
+
+
+
+	mat dataTraining = data.submat( 0, 0, number_of_training_samples-1, numVar );
+	mat dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, numVar );
+
+	data.reset();
+
+#if 1
+	printf("Training data:\n");
+	dataTraining.print();
+
+	printf("Test data:\n");
+	dataTest.print();	
+#endif	
+
+
+
+	vec x_maxTraining(numVar);
+	x_maxTraining.fill(0.0);
+
+	vec x_minTraining(numVar);
+	x_minTraining.fill(0.0);
+
+	for (int i = 0; i < numVar; i++) {
+
+		x_maxTraining(i) = dataTraining.col(i).max();
+		x_minTraining(i) = dataTraining.col(i).min();
+
+	}
+
+#if 1
+	printf("maximum = \n");
+	x_maxTraining.print();
+
+	printf("minimum = \n");
+	x_minTraining.print();
+#endif
+	/* normalize training data */
+	for (int i = 0; i < number_of_training_samples; i++) {
+
+		for (int j = 0; j < numVar; j++) {
+
+			dataTraining(i, j) = (1.0/numVar)*(dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
+		}
+	}
+
+
+	double yTrainingMax = dataTraining.col(numVar).max();
+
+	for (int i = 0; i < number_of_training_samples; i++) {
+
+		dataTraining(i, numVar) = dataTraining(i, numVar)/yTrainingMax ;
+
+	}
+
+
+
+#if 1
+	printf("Training data (normalized) = \n");
+	dataTraining.print();
+#endif	
+
+	vec x_maxTest(numVar);
+	x_maxTest.fill(0.0);
+
+	vec x_minTest(numVar);
+	x_minTest.fill(0.0);
+
+	for (int i = 0; i < numVar; i++) {
+
+		x_maxTest(i) = dataTest.col(i).max();
+		x_minTest(i) = dataTest.col(i).min();
+
+	}
+
+#if 1
+	printf("maximum = \n");
+	x_maxTest.print();
+
+	printf("minimum = \n");
+	x_minTest.print();
+#endif
+	/* normalize test data */
+	for (int i = 0; i < number_of_test_samples; i++) {
+
+		for (int j = 0; j < numVar; j++) {
+
+			dataTest(i, j) = (1.0/numVar)*(dataTest(i, j) - x_minTest(j)) / (x_maxTest(j) - x_minTest(j));
+		}
+	}
+
+#if 1
+	printf("Test data (normalized) = \n");
+	dataTest.print();
+#endif	
+
+
+
+	mat L(numVar,numVar);
+	L.fill(0.0);
+
+
+
+
+
+
+	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter);
+
+
+	mat M = L*trans(L);
+
+	mat U;
+	vec s;
+	mat V;
+
+	svd(U,s,V,M);
+
+#if 1
+	printf("singular values of M = \n");
+	s.print();
+#endif	
+
+	/* compute generalization error */
+
+
+
+	mat XTest = dataTest.submat(0,0,number_of_test_samples-1,numVar-1);
+	vec yTest = dataTest.col(numVar);
+	mat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
+	vec yTraining = dataTraining.col(numVar);
+
+	double genError = 0.0;
+
+	for(int i=0;i <number_of_test_samples; i++){
+
+		rowvec xp = XTest.row(i);
+		double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+		double yexact = yTest(i);
+
+#if 1
+		printf("x:\n");
+		xp.print();
+		printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
+#endif
+
+
+		genError += (yexact-ytilde)*(yexact-ytilde);
+
+
+	}
+
+	genError = genError/number_of_test_samples;
+
+	printf("genError = %10.7f\n",genError );
+
+#if 0
+
+	wSvd = 0.0;
+	w12 = 1.0;
+
+
+	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12,max_cv_iter);
+
+
+	M = L*trans(L);
+
+
+
+	genError = 0.0;
+
+	for(int i=0;i <number_of_test_samples; i++){
+
+		rowvec xp = XTest.row(i);
+		double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
+		double yexact = yTest(i);
+
+#if 0
+		printf("x:\n");
+		xp.print();
+		printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
+#endif
+
+
+		genError += (yexact-ytilde)*(yexact-ytilde);
+
+
+	}
+
+	genError = genError/number_of_test_samples;
+
+	printf("genError = %10.7f\n",genError );
+
+#endif	
+
+	M = eye<mat>(numVar,numVar); 
+	sigma = 0.1;
+
+	genError = 0.0;
+
+	for(int i=0;i <number_of_test_samples; i++){
+
+		rowvec xp = XTest.row(i);
+		double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
+		double yexact = yTest(i);
+
+#if 0
+		printf("x:\n");
+		xp.print();
+		printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
+#endif
+
+
+		genError += (yexact-ytilde)*(yexact-ytilde);
+
+
+	}
+
+	genError = genError/number_of_test_samples;
+
+	printf("genError = %10.7f\n",genError );
+
+}
 
 
 
