@@ -27,21 +27,18 @@ __device__ double atomicDAdd(double* address, double val);
 
 __device__ double atomicDAdd(double* address, double val)
 {
- unsigned long long int* address_as_ull =
- (unsigned long long int*)address;
- unsigned long long int old = *address_as_ull, assumed;
- do {
- assumed = old;
- old = atomicCAS(address_as_ull, assumed,
- __double_as_longlong(val +
- __longlong_as_double(assumed)));
- } while (assumed != old);
- return __longlong_as_double(old);
+	unsigned long long int* address_as_ull =
+			(unsigned long long int*)address;
+	unsigned long long int old = *address_as_ull, assumed;
+	do {
+		assumed = old;
+		old = atomicCAS(address_as_ull, assumed,
+				__double_as_longlong(val +
+						__longlong_as_double(assumed)));
+	} while (assumed != old);
+	return __longlong_as_double(old);
 }
 
-
-#define numVar 10
-#define number_of_threads_per_block 32
 
 //__managed__ double MDevice[numVar*numVar+1];
 __constant__ double MDevice[numVar*numVar+1];
@@ -2404,7 +2401,7 @@ void calcLossFunCPU(codi::RealReverse *result, codi::RealReverse *input, double 
 
 
 
-#if 1
+#if 0
 	printf("M = \n");
 	for (int i = 0; i < numVar; ++i){
 		for (int j = 0; j < numVar; ++j){
@@ -2819,70 +2816,74 @@ __global__ void calculateKernelValues_b(double *ab, double *X, double *kernelVal
 		double sqr_two_pi;
 		sqr_two_pi = sqrt(2.0*3.14159265359);
 		double kernelVal = 1.0/(sigma*sqr_two_pi)*exp(-sum/(2*sigma*sigma))+10E-12;
-		
-		
-#if 1									
-			if (isnan ( kernelVal) || isinf ( kernelVal) ){
-
-				printf("diff[k] is NaN or inf!\n");
-				assert(0);
 
 
-			}
+#if 0
+		if (isnan ( kernelVal) || isinf ( kernelVal) ){
+
+			printf("diff[k] is NaN or inf!\n");
+			assert(0);
+
+
+		}
 #endif					
 
 
 		kernelValb = kernelValTableb[indx1*N + indx2];
-		
-#if 1									
-			if (isnan ( kernelValb) || isinf ( kernelValb) ){
 
-				printf("kernelValb is NaN or inf!\n");
-				assert(0);
+#if 0
+		if (isnan ( kernelValb) || isinf ( kernelValb) ){
+
+			printf("kernelValb is NaN or inf!\n");
+			assert(0);
 
 
-			}
+		}
 #endif				
-		
-		
-		
-		
+
+
+
+
 		kernelValTableb[indx1*N + indx2] = 0.0;
 		tempb = kernelValb/(sqr_two_pi*sigma);
-		
-#if 1									
-			if (isnan ( tempb) || isinf ( tempb) ){
 
-				printf("tempb is NaN or inf!\n");
-				assert(0);
+#if 0
+		if (isnan ( tempb) || isinf ( tempb) ){
+
+			printf("tempb is NaN or inf!\n");
+			assert(0);
 
 
-			}
+		}
 #endif				
-		
-		
-		
+
+
+
 		temp = 2*(sigma*sigma);
 		temp0 = sum/temp; // temp0 = sum/2*(sigma*sigma)
 		tempb0 = -(exp(-temp0)*tempb/temp); // -(exp(-sum/2*(sigma*sigma))*kernelValb/(sqr_two_pi*sigma)/temp) 
 		sumb = tempb0;
 		sigmab = -(exp(-temp0)*tempb/sigma) - 2*2*temp0*sigma*tempb0;
-		
-#if 1									
-			if (isnan ( sigmab) || isinf ( sigmab) ){
 
-				printf("sigmab is NaN or inf!\n");
-				assert(0);
+#if 0
+		if (isnan ( sigmab) || isinf ( sigmab) ){
+
+			printf("sigmab is NaN or inf!\n");
+			assert(0);
 
 
-			}
+		}
 #endif					
-		
+
 		//		printf("sigmab = %10.7f\n",sigmab);
 
 
-		for (int ii1 = 0; ii1 < 11; ++ii1)
+		for (int ii1 = 0; ii1 < numVar; ++ii1){
+
 			tempVecb[ii1] = 0.0;
+
+		}
+
 		for (int i = numVar-1; i > -1; --i)
 			tempVecb[i] = tempVecb[i] + diff[i]*sumb;
 
@@ -2893,16 +2894,18 @@ __global__ void calculateKernelValues_b(double *ab, double *X, double *kernelVal
 			for (int j = numVar-1; j > -1; --j){
 
 				double addTerm = diff[j]*sumb;
-#if 1									
-			if (isnan ( addTerm) || isinf ( addTerm) ){
+#if 0
+				if (isnan ( addTerm) || isinf ( addTerm) ){
 
-				printf("addTerm is NaN or inf!\n");
-				assert(0);
+					printf("addTerm is NaN or inf!\n");
+					assert(0);
 
 
-			}
+				}
 #endif			
-
+				if(i*numVar + j == 147){
+					printf("addTerm = %10.7f, index = %d tid = %d\n", addTerm, i*numVar + j, tid);
+				}
 				atomicDAdd( &ab[i*numVar + j],addTerm );
 
 			}
@@ -2940,7 +2943,7 @@ __global__ void calculateKernelValues(double *X, double *kernelValTable, int N){
 		for (int k = 0; k < numVar; k++) {
 
 			diff[k] = X[off1+k] - X[off2+k];
-#if 1									
+#if 0
 			if (isnan ( diff[k]) || isinf ( diff[k]) ){
 
 				printf("diff[k] is NaN or inf!\n");
@@ -2974,18 +2977,18 @@ __global__ void calculateKernelValues(double *X, double *kernelValTable, int N){
 			sum = sum + tempVec[i] * diff[i];
 		}
 
-		
-#if 1									
-			if (isnan ( sum) || isinf ( sum) ){
 
-				printf("sum is NaN or inf!\n");
-				assert(0);
+#if 0
+		if (isnan ( sum) || isinf ( sum) ){
+
+			printf("sum is NaN or inf!\n");
+			assert(0);
 
 
-			}
+		}
 #endif			
-		
-		
+
+
 
 		if (sum < 0){
 
@@ -3000,14 +3003,14 @@ __global__ void calculateKernelValues(double *X, double *kernelValTable, int N){
 		double kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-sum / (2 * sigma * sigma)) + 10E-12;
 
 
-#if 1									
-			if (isnan ( kernelVal) || isinf ( kernelVal) ){
+#if 0
+		if (isnan ( kernelVal) || isinf ( kernelVal) ){
 
-				printf("diff[k] is NaN or inf!\n");
-				assert(0);
+			printf("diff[k] is NaN or inf!\n");
+			assert(0);
 
 
-			}
+		}
 #endif			
 
 		kernelValTable[indx1*N+indx2]= kernelVal;
@@ -3121,17 +3124,17 @@ __global__  void calculateLossKernel_b(double *X, double *kernelValTable, double
 
 			} 
 		}
-				
-#if 1									
-			if (isnan (kernelSum ) || isinf (kernelSum) ){
 
-				printf("kernelSum  is NaN or inf!\n");
-				assert(0);
+#if 0
+		if (isnan (kernelSum ) || isinf (kernelSum) ){
+
+			printf("kernelSum  is NaN or inf!\n");
+			assert(0);
 
 
-			}
+		}
 #endif			
-		
+
 
 		double fapprox = 0.0;
 		for (int i = 0; i < N; ++i){
@@ -3143,56 +3146,56 @@ __global__  void calculateLossKernel_b(double *X, double *kernelValTable, double
 					indxKernelValTable = tid*N + i;
 				fapprox = fapprox + kernelValTable[indxKernelValTable]/
 						kernelSum*X[i*(numVar+1)+numVar];
-#if 1									
-			if (isnan (fapprox ) || isinf (fapprox) ){
+#if 0
+				if (isnan (fapprox ) || isinf (fapprox) ){
 
-				printf("fapprox  is NaN or inf %10.7f\n",kernelSum);
-				
-				assert(0);
+					printf("fapprox  is NaN or inf %10.7f\n",kernelSum);
 
-			}
+					assert(0);
+
+				}
 #endif			
 
 			} 
 		}
 
 
-		
-		
+
+
 		lossFunc = (fapprox - X[tid*(numVar+1)+numVar]) * (fapprox - X[tid*(numVar+1)+numVar]);
 		sum[tid] = lossFunc;
 
 		lossFuncb = sumb[tid];
-#if 1									
-			if (isnan (sumb[tid] ) || isinf (sumb[tid]) ){
+#if 0
+		if (isnan (sumb[tid] ) || isinf (sumb[tid]) ){
 
-				printf("sumb[tid]  is NaN or inf!\n");
-				
+			printf("sumb[tid]  is NaN or inf!\n");
 
 
-			}
+
+		}
 #endif				
-		
-		
-		
+
+
+
 		//		printf("sumb[%d] = %10.7f\n",tid,sumb[tid]);
 		sumb[tid] = 0.0;
 		fapproxb = 2*(fapprox-X[tid*(numVar+1)+numVar])*lossFuncb;
-#if 1									
-			if (isnan ( fapproxb) || isinf (fapproxb) ){
-				
-				printf("X[tid*(numVar+1)+numVar] = %10.7f\n",X[tid*(numVar+1)+numVar]);
-				printf("2*(fapprox-X[tid*(numVar+1)+numVar]) = %10.7f\n",2*(fapprox-X[tid*(numVar+1)+numVar]));
-				
-				printf("lossFuncb = %10.7f\n",lossFuncb);
-				printf("fapproxb  is NaN or inf!\n");
-				
+#if 0
+		if (isnan ( fapproxb) || isinf (fapproxb) ){
+
+			printf("X[tid*(numVar+1)+numVar] = %10.7f\n",X[tid*(numVar+1)+numVar]);
+			printf("2*(fapprox-X[tid*(numVar+1)+numVar]) = %10.7f\n",2*(fapprox-X[tid*(numVar+1)+numVar]));
+
+			printf("lossFuncb = %10.7f\n",lossFuncb);
+			printf("fapproxb  is NaN or inf!\n");
 
 
-			}
+
+		}
 #endif					
-		
-		
+
+
 		//		printf("fapproxb = %10.7f, fapprox = %10.7f\n",fapproxb,fapprox);
 		kernelSumb = 0.0;
 		for (int i = N-1; i > -1; --i) {
@@ -3208,17 +3211,17 @@ __global__  void calculateLossKernel_b(double *X, double *kernelValTable, double
 
 
 				tempb = X[i*(numVar+1)+numVar]*fapproxb/kernelSum;
-#if 1									
-			if (isnan ( tempb ) || isinf (tempb) ){
+#if 0
+				if (isnan ( tempb ) || isinf (tempb) ){
 
-				printf("tempb (calculateLossKernel_b) is NaN or inf!\n");
-				
+					printf("tempb (calculateLossKernel_b) is NaN or inf!\n");
 
 
-			}
+
+				}
 #endif						
-				
-				
+
+
 				kernelValTableb[indxKernelValTable] = kernelValTableb[indxKernelValTable] + tempb;
 				kernelSumb = kernelSumb - kernelValTable[indxKernelValTable]*
 						tempb/kernelSum;
@@ -3235,17 +3238,21 @@ __global__  void calculateLossKernel_b(double *X, double *kernelValTable, double
 					indxKernelValTable = tid*N + i;
 
 				kernelValTableb[indxKernelValTable] = kernelValTableb[indxKernelValTable] + kernelSumb;
-#if 1									
-			if (isnan ( kernelValTableb[indxKernelValTable] ) || isinf ( kernelValTableb[indxKernelValTable] ) ){
+#if 0
+				printf("kernelValTableb[%d] = %10.7f\n", indxKernelValTable,kernelValTableb[indxKernelValTable] );
 
-				printf("kernelValTableb[indxKernelValTable]  is NaN or inf!\n");
-				assert(0);
+#endif
+#if 0
+				if (isnan ( kernelValTableb[indxKernelValTable] ) || isinf ( kernelValTableb[indxKernelValTable] ) ){
+
+					printf("kernelValTableb[indxKernelValTable]  is NaN or inf!\n");
+					assert(0);
 
 
-			}
+				}
 #endif											
-				
-				
+
+
 			}
 		}
 
@@ -4373,7 +4380,7 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 			}
 			printf("\n");
 		}
-		printf("sigma sensitivity = %10.7f ", inputVecb[Ldim]);
+		printf("sigma sensitivity = %10.7f\n", inputVecb[Ldim]);
 #endif
 
 
@@ -4386,7 +4393,7 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 		}
 
 
-#if 0	
+#if 1
 
 		/* call the CodiPack version for validation */
 
@@ -4422,6 +4429,9 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 
 
 #endif
+
+		exit(1);
+
 #if 0
 		printf("calculating regularization term...\n");
 #endif
