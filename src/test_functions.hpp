@@ -248,6 +248,12 @@ void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
 		int number_of_samples_with_g_eval,
 		int sampling_method);
 
+void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
+		std::string filename,
+		double *bounds,
+		int number_of_samples,
+		int dim);
+
 void generate_1D_test_function_data_GEK(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		std::string filename,
@@ -275,7 +281,6 @@ void perform_kernel_regression_test(double (*test_function)(double *),
 		int dim,
 		std::string python_dir);
 
-
 void perform_kernel_regression_test_highdim(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		double *bounds,
@@ -285,7 +290,14 @@ void perform_kernel_regression_test_highdim(double (*test_function)(double *),
 		int sampling_method,
 		int dim);
 
-
+void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
+		double (*test_function_adj)(double *, double *),
+		double *bounds,
+		std::string function_name ,
+		int  number_of_samples_with_only_f_eval,
+		int number_of_samples_with_g_eval,
+		int sampling_method,
+		int dim);
 
 void perform_rbf_test(double (*test_function)(double *),
         double *bounds,
