@@ -19,29 +19,11 @@
 
 using namespace arma;
 
-#define numVar 10
+#define numVar 20
 #define number_of_threads_per_block 32
 
 __constant__ double MDevice[numVar*numVar+1];
 
-double calcMetric(rowvec &xi,rowvec &xj, mat M){
-#if 0
-	printf("calling calcMetric...\n");
-	printf("M = \n");
-	M.print();
-#endif
-	rowvec diff= xi-xj;
-
-#if 0
-	printf("diff = \n");
-	diff.print();
-#endif
-
-	colvec diffT= trans(diff);
-
-	return dot(diff,M*diffT);
-
-}
 
 double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
 #if 0
@@ -4703,11 +4685,3 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 }
 
 
-
-
-
-int main(void){
-
-
-
-}

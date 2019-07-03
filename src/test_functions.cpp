@@ -3180,118 +3180,118 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 
 }
 
-void perform_kernel_regression_test_highdim(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		double *bounds,
-		std::string function_name ,
-		int  number_of_samples_with_only_f_eval,
-		int number_of_samples_with_g_eval,
-		int sampling_method,
-		int dim){
+// void perform_kernel_regression_test_highdim(double (*test_function)(double *),
+// 		double (*test_function_adj)(double *, double *),
+// 		double *bounds,
+// 		std::string function_name ,
+// 		int  number_of_samples_with_only_f_eval,
+// 		int number_of_samples_with_g_eval,
+// 		int sampling_method,
+// 		int dim){
 
-	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
-			+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
-
-
-	if(dim <= 2){
-		printf("Error: problem dimension must be greater than 2!\n");
-		exit(-1);
-	}
+// 	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
+// 			+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
 
 
-	/* generate sample points (may or may not include gradient information) */
-	generate_highdim_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,dim,
-			number_of_samples_with_only_f_eval,
-			number_of_samples_with_g_eval,
-			sampling_method );
-
-	mat data; /* data matrix */
-	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
-
-	int nrows = data.n_rows;
-	int ncols = data.n_cols;
+// 	if(dim <= 2){
+// 		printf("Error: problem dimension must be greater than 2!\n");
+// 		exit(-1);
+// 	}
 
 
-#if 1
-	printf("Data matrix = \n");
-	data.print();
-#endif
+// 	/* generate sample points (may or may not include gradient information) */
+// 	generate_highdim_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,dim,
+// 			number_of_samples_with_only_f_eval,
+// 			number_of_samples_with_g_eval,
+// 			sampling_method );
 
-	mat X = data.submat(0,0,nrows-1,dim-1);
+// 	mat data; /* data matrix */
+// 	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
 
-#if 1
-	printf("X = \n");
-	X.print();
-#endif
-	vec x_max(dim);
-	x_max.fill(0.0);
-
-	vec x_min(dim);
-	x_min.fill(0.0);
-
-	for (int i = 0; i < dim; i++) {
-
-		x_max(i) = X.col(i).max();
-		x_min(i) = X.col(i).min();
-
-	}
-
-#if 0
-	printf("maximum = \n");
-	x_max.print();
-
-	printf("minimum = \n");
-	x_min.print();
-#endif
-	/* normalize data */
-	for (int i = 0; i < nrows; i++) {
-
-		for (int j = 0; j < dim; j++) {
-
-			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-		}
-	}
-
-#if 1
-	printf("X(normalized) = \n");
-	X.print();
-#endif
-
-	mat metricM(dim,dim);
-
-	vec ys=data.col(dim);
+// 	int nrows = data.n_rows;
+// 	int ncols = data.n_cols;
 
 
+// #if 1
+// 	printf("Data matrix = \n");
+// 	data.print();
+// #endif
 
-#if 0
-	printf("Training the Mahalanobis distance...\n");
+// 	mat X = data.submat(0,0,nrows-1,dim-1);
 
-#endif
+// #if 1
+// 	printf("X = \n");
+// 	X.print();
+// #endif
+// 	vec x_max(dim);
+// 	x_max.fill(0.0);
+
+// 	vec x_min(dim);
+// 	x_min.fill(0.0);
+
+// 	for (int i = 0; i < dim; i++) {
+
+// 		x_max(i) = X.col(i).max();
+// 		x_min(i) = X.col(i).min();
+
+// 	}
+
+// #if 0
+// 	printf("maximum = \n");
+// 	x_max.print();
+
+// 	printf("minimum = \n");
+// 	x_min.print();
+// #endif
+// 	/* normalize data */
+// 	for (int i = 0; i < nrows; i++) {
+
+// 		for (int j = 0; j < dim; j++) {
+
+// 			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+// 		}
+// 	}
+
+// #if 1
+// 	printf("X(normalized) = \n");
+// 	X.print();
+// #endif
+
+// 	mat metricM(dim,dim);
+
+// 	vec ys=data.col(dim);
 
 
-	/* initialize values for regularization terms */
-	double wSvd = 0.1;
-	double w12 = 0.1;
 
-	/* initialize bandwidth for the Gaussian kernel*/
-	double sigma=0.1;
+// #if 0
+// 	printf("Training the Mahalanobis distance...\n");
 
-	trainMahalanobisDistance(metricM,data,sigma, wSvd, w12, 20);
+// #endif
 
 
-	double out_sample_error = computeGenErrorKernelReg(test_function,bounds,dim,50000,X,ys,metricM,x_min,x_max,sigma);
+// 	/* initialize values for regularization terms */
+// 	double wSvd = 0.1;
+// 	double w12 = 0.1;
 
-	printf("out of sample error = %10.7f\n",out_sample_error);
+// 	/* initialize bandwidth for the Gaussian kernel*/
+// 	double sigma=0.1;
 
-	metricM.eye();
-
-	out_sample_error = computeGenErrorKernelReg(test_function,bounds,dim,50000,X,ys,metricM,x_min,x_max,sigma);
-
-	printf("out of sample error (M identity)= %10.7f\n",out_sample_error);
-	metricM.print();
+// 	trainMahalanobisDistance(metricM,data,sigma, wSvd, w12, 20);
 
 
-}
+// 	double out_sample_error = computeGenErrorKernelReg(test_function,bounds,dim,50000,X,ys,metricM,x_min,x_max,sigma);
+
+// 	printf("out of sample error = %10.7f\n",out_sample_error);
+
+// 	metricM.eye();
+
+// 	out_sample_error = computeGenErrorKernelReg(test_function,bounds,dim,50000,X,ys,metricM,x_min,x_max,sigma);
+
+// 	printf("out of sample error (M identity)= %10.7f\n",out_sample_error);
+// 	metricM.print();
+
+
+// }
 
 
 void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
@@ -3358,6 +3358,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 	if(numVar != data.n_cols-1){
 
+		printf("Number of columns in the input file is %d\n",data.n_cols-1);
 		printf("Number of columns in the input file does not match with numVar = %d\n",numVar);
 		exit(-1);
 
