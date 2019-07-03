@@ -1,3 +1,4 @@
+
 #include "kernel_regression_cuda.h"
 #include "auxilliary_functions.hpp"
 #include "Rodeo_macros.hpp"
@@ -19,9 +20,30 @@
 
 using namespace arma;
 
-#define numVar 20
+
+//This implementation using CAS incurs a non-trivial cost though.
+//Had to use this because compute < 600 doesn't support atomic add with double and > 600 throws up some MemCpy - invalid code error
+__device__ double atomicDAdd(double* address, double val);
+
+__device__ double atomicDAdd(double* address, double val)
+{
+ unsigned long long int* address_as_ull =
+ (unsigned long long int*)address;
+ unsigned long long int old = *address_as_ull, assumed;
+ do {
+ assumed = old;
+ old = atomicCAS(address_as_ull, assumed,
+ __double_as_longlong(val +
+ __longlong_as_double(assumed)));
+ } while (assumed != old);
+ return __longlong_as_double(old);
+}
+
+
+#define numVar 10
 #define number_of_threads_per_block 32
 
+//__managed__ double MDevice[numVar*numVar+1];
 __constant__ double MDevice[numVar*numVar+1];
 
 
@@ -2881,13 +2903,13 @@ __global__ void calculateKernelValues_b(double *ab, double *X, double *kernelVal
 			}
 #endif			
 
-				atomicAdd( &ab[i*numVar + j],addTerm );
+				atomicDAdd( &ab[i*numVar + j],addTerm );
 
 			}
 			//				ab[i*numVar + j] = ab[i*numVar + j] + diff[j]*sumb;
 		}
 	} 
-	atomicAdd( &ab[numVar*numVar],sigmab );
+	atomicDAdd( &ab[numVar*numVar],sigmab );
 	//	ab[numVar*numVar] = ab[numVar*numVar] + sigmab;
 	//	printf("sigmab = %10.7f\n",sigmab);
 
@@ -3359,7 +3381,7 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 	/* copy the values of M to the constant memory */
 
 	err= cudaMemcpyToSymbol(MDevice,M, (numVar*numVar+1)*sizeof(double));
-
+	//for(int i=0; i<numVar*numVar+1; i++)MDevice[i] = M[i];
 
 	if (err != cudaSuccess)
 	{
@@ -3734,7 +3756,9 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 
 
 	/* copy the values of M to the constant memory "MDevice"*/
+
 	err= cudaMemcpyToSymbol(MDevice,M, (numVar*numVar+1)*sizeof(double));
+	//for(int i=0; i<numVar*numVar+1; i++)MDevice[i] = M[i];
 
 
 	if (err != cudaSuccess)
@@ -4135,6 +4159,7 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 
 	if(m != n || m!=numVar || n!=numVar){
 
+		fprintf(stderr,"Cols: %d and Rows: %d\n",n, m);
 		fprintf(stderr,"Error: The Mahalanobis matrix is not square!\n");
 		exit(-1);
 	}

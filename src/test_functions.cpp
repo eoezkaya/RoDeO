@@ -2640,124 +2640,50 @@ void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
 
 
 void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
 		std::string filename,
 		double *bounds,
-		int dim,
-		int number_of_samples_with_only_f_eval,
-		int number_of_samples_with_g_eval,
-		int sampling_method){
+		int number_of_samples,
+		int dim){
 
 #if 0
-	printf("generate_highdim_test_function_data_cuda...\n");
+	printf("generate_highdim_test_function_data...\n");
 	printf("dim = %d\n",dim);
 #endif
 
-	int number_of_function_evals  =  number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval;
+	FILE *outp;
+
+	printf("opening file %s for input...\n",filename.c_str() );
+	outp = fopen(filename.c_str(), "w");
+
+	double *x = new double[dim];
 
 
-	if(sampling_method == EXISTING_FILE){
+	/* write functional values to the output file */
+	for(int i=0; i<number_of_samples;i++ ){
 
-		/* do nothing */
+		for(int j=0; j<dim;j++){
+#if 0
+			printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
+			printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
+#endif
+			x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+		}
+
+		double f_val = test_function(x);
+
+		for(int j=0; j<dim;j++){
+			printf("%10.7f, ",x[j]);
+			fprintf(outp,"%10.7f, ",x[j]);
+		}
+		printf("%10.7f\n",f_val);
+		fprintf(outp,"%10.7f\n",f_val);
+
 
 	}
 
-	if(sampling_method == RANDOM_SAMPLING){
+	fclose(outp);
 
-		FILE *outp;
-
-		printf("opening file %s for input...\n",filename.c_str() );
-		outp = fopen(filename.c_str(), "w");
-
-		double *x = new double[dim];
-		double *xb = new double[dim];
-
-		/* write functional values to the output file */
-		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
-
-			for(int j=0; j<dim;j++){
-#if 0
-				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
-				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
-#endif
-				x[i] = RandomDouble(bounds[j*2], bounds[j*2+1]);
-			}
-
-			double f_val = test_function(x);
-
-			for(int j=0; j<dim;j++){
-				printf("%10.7f, ",x[j]);
-				fprintf(outp,"%10.7f, ",x[j]);
-			}
-			printf("%10.7f\n",f_val);
-			fprintf(outp,"%10.7f\n",f_val);
-
-
-		}
-
-
-		/* write functional values and the gradient sensitivities to the output file */
-
-		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
-
-			for(int j=0; j<dim;j++){
-#if 0
-				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
-				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
-#endif
-
-				x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
-				xb[j]=0.0;
-			}
-
-			double f_val = test_function_adj(x,xb);
-
-#if 0
-			double f_val_original = test_function(x);
-
-			printf("fval = %10.7f\n",f_val);
-			printf("fval(original) = %10.7f\n",f_val_original);
-
-			for(int j=0; j<dim;j++){
-				double eps = x[j]*0.0001;
-				x[j]+= eps;
-				double fplus = test_function(x);
-				x[j]-= eps;
-
-				double fdval = (fplus-f_val_original)/eps;
-				printf("fd = %10.7f\n",fdval);
-				printf("adj = %10.7f\n",xb[j]);
-
-
-			}
-#endif
-
-
-
-			for(int j=0; j<dim;j++){
-				printf("%10.7f, ",x[j]);
-				fprintf(outp,"%10.7f, ",x[j]);
-			}
-			printf("%10.7f, ",f_val);
-			fprintf(outp,"%10.7f, ",f_val);
-
-			for(int j=0; j<dim-1;j++){
-				printf("%10.7f, ",xb[j]);
-				fprintf(outp,"%10.7f, ",xb[j]);
-			}
-			printf("%10.7f\n",xb[dim-1]);
-			fprintf(outp,"%10.7f\n",xb[dim-1]);
-
-
-		}
-
-		fclose(outp);
-
-		delete[] x;
-		delete[] xb;
-
-	}
-
+	delete[] x;
 
 }
 
@@ -3293,7 +3219,6 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 
 // }
 
-
 void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		double *bounds,
@@ -3303,10 +3228,11 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 		int sampling_method,
 		int dim){
 
+    
 	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
-			+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
-
-	std::string datafilename = input_file_name; 
+		+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
+    
+    std::string datafilename = input_file_name; 
 
 	double sigma = 0.01;
 	double wSvd = 1.0;
@@ -3316,7 +3242,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	double partition[2] = {0.9,0.1};
+	float partition[2] = {0.9,0.1};
 
 	srand (time(NULL));
 	printf("GPU test for kernel regression\n");
@@ -3345,12 +3271,29 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	mat data;
 
 
-	/* generate sample points (may or may not include gradient information) */
-	generate_highdim_test_function_data_cuda(test_function,test_function_adj, input_file_name, bounds,dim,
-			number_of_samples_with_only_f_eval,
-			number_of_samples_with_g_eval,
-			sampling_method );
+	// float *bounds = new float[2*numVar];
+	// for(int i=0;i<2*numVar;i++){
 
+	// 	if(i%2 == 0) bounds[i]=0.0;
+	// 	else bounds[i]=1.0;
+	// 	//		printf("%10.7f\n", bounds[i]);
+	// }
+
+	int number_of_samples_to_generate = number_of_samples_with_g_eval;
+
+	if(numVar!=dim) {printf("Mismatch between numVar and dim");
+		exit(-1);}
+
+	generate_highdim_test_function_data_cuda(test_function,
+			datafilename,
+			bounds,
+			number_of_samples_to_generate,
+			numVar);
+
+	// generate_highdim_test_function_data_cuda(test_function,test_function_adj, input_file_name, bounds,dim,
+	// 		number_of_samples_with_only_f_eval,
+	// 		number_of_samples_with_g_eval,
+	// 		sampling_method);
 
 	data.load(datafilename);
 	int number_of_data_points = data.n_rows;
@@ -3358,7 +3301,6 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 	if(numVar != data.n_cols-1){
 
-		printf("Number of columns in the input file is %d\n",data.n_cols-1);
 		printf("Number of columns in the input file does not match with numVar = %d\n",numVar);
 		exit(-1);
 
@@ -3432,7 +3374,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	}
 
 
-	double yTrainingMax = dataTraining.col(numVar).max();
+	float yTrainingMax = dataTraining.col(numVar).max();
 
 	for (int i = 0; i < number_of_training_samples; i++) {
 
@@ -3516,13 +3458,13 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	mat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
 	vec yTraining = dataTraining.col(numVar);
 
-	double genError = 0.0;
+	float genError = 0.0;
 
 	for(int i=0;i <number_of_test_samples; i++){
 
 		rowvec xp = XTest.row(i);
-		double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
-		double yexact = yTest(i);
+		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+		float yexact = yTest(i);
 
 #if 1
 		printf("x:\n");
@@ -3558,8 +3500,8 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	for(int i=0;i <number_of_test_samples; i++){
 
 		rowvec xp = XTest.row(i);
-		double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
-		double yexact = yTest(i);
+		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
+		float yexact = yTest(i);
 
 #if 0
 		printf("x:\n");
@@ -3587,8 +3529,8 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	for(int i=0;i <number_of_test_samples; i++){
 
 		rowvec xp = XTest.row(i);
-		double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
-		double yexact = yTest(i);
+		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
+		float yexact = yTest(i);
 
 #if 0
 		printf("x:\n");
@@ -3605,6 +3547,12 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	genError = genError/number_of_test_samples;
 
 	printf("genError = %10.7f\n",genError );
+
+
+
+
+
+//	delete[] bounds;
 
 }
 

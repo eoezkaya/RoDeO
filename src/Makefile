@@ -1,5 +1,6 @@
 VERSION = 0.1
-CC      = nvcc -arch compute_61
+#CC      = nvcc -arch compute_61 
+CC      = nvcc -arch=sm_52
 AD_PATH = /home/hari/Work/CoDiPack/include 
 CUDA_PATH = /home/hari/Work/Common
 CFLAGS  = -std=c++11 -Xcompiler -fopenmp -I $(AD_PATH) -I $(CUDA_PATH)
@@ -21,3 +22,15 @@ make: $(OBJ)
 
 clean:
 	rm *.o rodeo
+
+# For an independent file
+# nvcc -arch compute_61 -std=c++11 New-version-double.cu -Xcompiler -fopenmp 
+# -I /home/hari/Work/CoDiPack/include -I /home/hari/Work/Common -lm -larmadillo -rdc=true -lcudadevrt -lgomp -o double.out
+
+# For an independent file (alternate, works with atomicAdd having arguments of type double, surprisingly)
+# nvcc -arch=sm_52 -std=c++11 New-version-double.cu -Xcompiler -fopenmp 
+# -I /home/hari/Work/CoDiPack/include -I /home/hari/Work/Common -lm -larmadillo -rdc=true -lcudadevrt -lgomp -o double.out
+
+# Old Version 
+# nvcc -arch compute_52 -std=c++11 New-version.cu 
+# -I /home/hari/Work/CoDiPack/include -I /home/hari/Work/Common -lm -larmadillo -rdc=true -lcudadevrt -o double.out
