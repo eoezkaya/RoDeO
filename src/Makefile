@@ -1,5 +1,5 @@
 VERSION = 0.1
-CC      = nvcc -arch compute_52
+CC      = nvcc -arch compute_61
 AD_PATH = /home/hari/Work/CoDiPack/include 
 CUDA_PATH = /home/hari/Work/Common
 CFLAGS  = -std=c++11 -Xcompiler -fopenmp -I $(AD_PATH) -I $(CUDA_PATH)

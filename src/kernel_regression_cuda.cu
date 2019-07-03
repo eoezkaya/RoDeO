@@ -2899,7 +2899,6 @@ __global__ void calculateKernelValues_b(double *ab, double *X, double *kernelVal
 			}
 #endif			
 
-
 				atomicAdd( &ab[i*numVar + j],addTerm );
 
 			}
@@ -3623,7 +3622,7 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 
 	cudaEventRecord( stop, 0 ) ;
 	cudaEventSynchronize( stop ) ;
-	double elapsedTime;
+	float elapsedTime;
 	cudaEventElapsedTime( &elapsedTime,start, stop ) ;
 	printf( "Time to generate:%3.1f ms\n", elapsedTime );
 
