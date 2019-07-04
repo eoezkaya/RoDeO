@@ -3122,21 +3122,31 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		double *bounds,
-		std::string function_name ,
+		std::string function_name,
 		int  number_of_samples_with_only_f_eval,
 		int number_of_samples_with_g_eval,
 		int sampling_method,
 		int dim){
 
+	std::string datafilename;
 
-	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
-			+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
+	if (sampling_method == EXISTING_FILE){
 
-	std::string datafilename = "housing.csv";
+		datafilename = function_name + ".csv";
 
-	double sigma = 0.01;
-	double wSvd = 1.0;
-	double w12 = 1.0;
+
+	}
+	else{
+
+		datafilename = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
+				+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
+
+
+	}
+
+	float sigma = 0.01;
+	float wSvd = 1.0;
+	float w12 = 1.0;
 	int max_cv_iter = 20;
 
 
@@ -3170,13 +3180,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 #endif
 
 
-	// float *bounds = new float[2*numVar];
-	// for(int i=0;i<2*numVar;i++){
 
-	// 	if(i%2 == 0) bounds[i]=0.0;
-	// 	else bounds[i]=1.0;
-	// 	//		printf("%10.7f\n", bounds[i]);
-	// }
 
 
 
@@ -3205,7 +3209,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	}
 
 
-	mat data;
+	fmat data;
 	bool load_ok = data.load(datafilename);
 	data.print();
 
@@ -3250,8 +3254,8 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	mat dataTraining = data.submat( 0, 0, number_of_training_samples-1, numVar );
-	mat dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, numVar );
+	fmat dataTraining = data.submat( 0, 0, number_of_training_samples-1, numVar );
+	fmat dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, numVar );
 
 	data.reset();
 
@@ -3265,10 +3269,10 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	vec x_maxTraining(numVar);
+	fvec x_maxTraining(numVar);
 	x_maxTraining.fill(0.0);
 
-	vec x_minTraining(numVar);
+	fvec x_minTraining(numVar);
 	x_minTraining.fill(0.0);
 
 	for (int i = 0; i < numVar; i++) {
@@ -3310,10 +3314,10 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	dataTraining.print();
 #endif	
 
-	vec x_maxTest(numVar);
+	fvec x_maxTest(numVar);
 	x_maxTest.fill(0.0);
 
-	vec x_minTest(numVar);
+	fvec x_minTest(numVar);
 	x_minTest.fill(0.0);
 
 	for (int i = 0; i < numVar; i++) {
@@ -3346,7 +3350,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	mat L(numVar,numVar);
+	fmat L(numVar,numVar);
 	L.fill(0.0);
 
 
@@ -3357,11 +3361,11 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter);
 
 
-	mat M = L*trans(L);
+	fmat M = L*trans(L);
 
-	mat U;
-	vec s;
-	mat V;
+	fmat U;
+	fvec s;
+	fmat V;
 
 	svd(U,s,V,M);
 
@@ -3374,16 +3378,16 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	mat XTest = dataTest.submat(0,0,number_of_test_samples-1,numVar-1);
-	vec yTest = dataTest.col(numVar);
-	mat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
-	vec yTraining = dataTraining.col(numVar);
+	fmat XTest = dataTest.submat(0,0,number_of_test_samples-1,numVar-1);
+	fvec yTest = dataTest.col(numVar);
+	fmat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
+	fvec yTraining = dataTraining.col(numVar);
 
 	float genError = 0.0;
 
 	for(int i=0;i <number_of_test_samples; i++){
 
-		rowvec xp = XTest.row(i);
+		frowvec xp = XTest.row(i);
 		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
 		float yexact = yTest(i);
 
@@ -3442,14 +3446,14 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 #endif	
 
-	M = eye<mat>(numVar,numVar); 
+	M = eye<fmat>(numVar,numVar);
 	sigma = 0.1;
 
 	genError = 0.0;
 
 	for(int i=0;i <number_of_test_samples; i++){
 
-		rowvec xp = XTest.row(i);
+		frowvec xp = XTest.row(i);
 		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
 		float yexact = yTest(i);
 

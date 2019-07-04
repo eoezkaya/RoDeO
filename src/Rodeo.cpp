@@ -135,8 +135,8 @@ int main(void){
 	perform_kernel_regression_test_highdim_cuda(empty,
 			empty,
 			parameter_bounds,
-			"Housing",
-			400,
+			"housing",
+			0,
 			0,
 			EXISTING_FILE,
 			13);

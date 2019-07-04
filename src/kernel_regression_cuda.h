@@ -13,18 +13,11 @@ using namespace arma;
 #define numVar 13
 #define number_of_threads_per_block 64
 
-int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, double &w12, int max_cv_iter);
+int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12, int max_cv_iter);
 
-double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M);
+float gaussianKernel(frowvec &xi, frowvec &xj, float sigma, fmat &M);
 
-double kernelRegressor(mat &X, vec &y, rowvec &xp, mat &M, double sigma);
+float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma);
 
-int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim);
-
-double calcKernelValCPU(rowvec &xi, rowvec &xj, mat &M, double sigma);
-
-void calcLossFunCPU(double *result, double *input, double *data, int N);
-
-void calcLossFunGPU(double *result, double *input, double *data,int N);
 
 #endif

@@ -22,29 +22,29 @@ using namespace arma;
 
 
 //This implementation using CAS incurs a non-trivial cost though.
-//Had to use this because compute < 600 doesn't support atomic add with double and > 600 throws up some MemCpy - invalid code error
-__device__ double atomicDAdd(double* address, double val);
-
-__device__ double atomicDAdd(double* address, double val)
-{
-	unsigned long long int* address_as_ull =
-			(unsigned long long int*)address;
-	unsigned long long int old = *address_as_ull, assumed;
-	do {
-		assumed = old;
-		old = atomicCAS(address_as_ull, assumed,
-				__double_as_longlong(val +
-						__longlong_as_double(assumed)));
-	} while (assumed != old);
-	return __longlong_as_double(old);
-}
-
-
-//__managed__ double MDevice[numVar*numVar+1];
-__constant__ double MDevice[numVar*numVar+1];
+//Had to use this because compute < 600 doesn't support atomic add with float and > 600 throws up some MemCpy - invalid code error
+//__device__ float atomicDAdd(float* address, float val);
+//
+//__device__ float atomicDAdd(float* address, float val)
+//{
+//	unsigned long long int* address_as_ull =
+//			(unsigned long long int*)address;
+//	unsigned long long int old = *address_as_ull, assumed;
+//	do {
+//		assumed = old;
+//		old = atomicCAS(address_as_ull, assumed,
+//				__float_as_longlong(val +
+//						__longlong_as_float(assumed)));
+//	} while (assumed != old);
+//	return __longlong_as_float(old);
+//}
 
 
-double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
+//__managed__ float MDevice[numVar*numVar+1];
+__constant__ float MDevice[numVar*numVar+1];
+
+
+float gaussianKernel(frowvec &xi, frowvec &xj, float sigma, fmat &M) {
 #if 0
 	printf("calling gaussianKernel...\n");
 	xi.print();
@@ -52,14 +52,14 @@ double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
 #endif
 
 	/* calculate distance between xi and xj with the matrix M */
-	double metricVal = calcMetric(xi, xj, M);
+	float metricVal = calcMetric(xi, xj, M);
 #if 0
 	printf("metricVal = %10.7f\n",metricVal);
 #endif
 
-	double sqr_two_pi = sqrt(2.0 * datum::pi);
+	float sqr_two_pi = sqrt(2.0 * datum::pi);
 
-	double kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
+	float kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
 
 	kernelVal += 10E-14;
 
@@ -74,7 +74,7 @@ double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
 
 
 
-double SIGN(double a, double b) {
+float SIGN(float a, float b) {
 
 	if (b >= 0.0) {
 		return fabs(a);
@@ -103,8 +103,8 @@ codi::RealForward SIGN(codi::RealForward a, codi::RealForward b) {
 	}
 }
 
-double PYTHAG(double a, double b) {
-	double at = fabs(a), bt = fabs(b), ct, result;
+float PYTHAG(float a, float b) {
+	float at = fabs(a), bt = fabs(b), ct, result;
 
 	if (at > bt) {
 		ct = bt / at;
@@ -153,37 +153,37 @@ codi::RealForward PYTHAG(codi::RealForward a, codi::RealForward b) {
  *
  */
 
-int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
+int calcRegTerms(float *L, float *regTerm, float wSvd, float w12, int dim) {
 	int flag, i, its, j, jj, k, l = 0, nm;
-	double c, f, h, s, x, y, z;
-	double anorm = 0.0, g = 0.0, scale = 0.0;
+	float c, f, h, s, x, y, z;
+	float anorm = 0.0, g = 0.0, scale = 0.0;
 
 
 	int m = dim;
 	int n = dim;
 
 
-	double **a;
-	a = new double*[dim];
+	float **a;
+	a = new float*[dim];
 
 	for (i = 0; i < dim; i++) {
 
-		a[i] = new double[dim];
+		a[i] = new float[dim];
 	}
 
-	double **M;
-	M= new double*[dim];
+	float **M;
+	M= new float*[dim];
 
 	for (i = 0; i < dim; i++) {
 
-		M[i] = new double[dim];
+		M[i] = new float[dim];
 	}
 
 
-	double **LT;
-	LT = new double*[dim];
+	float **LT;
+	LT = new float*[dim];
 	for (int i = 0; i < dim; i++) {
-		LT[i] = new double[dim];
+		LT[i] = new float[dim];
 
 	}
 
@@ -292,16 +292,16 @@ int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
 
 	/* SVD part */
 
-	double **v;
-	v = new double*[n];
+	float **v;
+	v = new float*[n];
 
 	for (i = 0; i < n; i++) {
 
-		v[i] = new double[n];
+		v[i] = new float[n];
 	}
-	double *w = new double[n];
+	float *w = new float[n];
 
-	double *rv1 = new double[n];
+	float *rv1 = new float[n];
 
 	/* Householder reduction to bidiagonal form */
 	for (i = 0; i < n; i++) {
@@ -373,7 +373,7 @@ int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
 			if (g) {
 				for (j = l; j < n; j++)
 					v[j][i] = ((a[i][j] / a[i][l]) / g);
-				/* double division to avoid underflow */
+				/* float division to avoid underflow */
 				for (j = l; j < n; j++) {
 					for (s = 0.0, k = l; k < n; k++)
 						s += (a[i][k] * v[k][j]);
@@ -531,7 +531,7 @@ int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
 
 	/* sort the singular values */
 
-	double temp;
+	float temp;
 	for (i = 0; i < n; ++i) {
 		for (j = i + 1; j < n; ++j) {
 
@@ -556,7 +556,7 @@ int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
 #endif
 
 	/* normalization */
-	double wsum = 0.0;
+	float wsum = 0.0;
 	for (i = 0; i < n; i++) {
 
 		wsum += w[i];
@@ -580,13 +580,13 @@ int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
 #endif
 
 
-	double svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
+	float svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
 
 	svd_multiplier = 1.0/svd_multiplier;
 #if 0
 	printf("svd_multiplier = %10.7f\n",svd_multiplier);
 #endif
-	double reg_term_svd = 0.0;
+	float reg_term_svd = 0.0;
 
 	for (i = 0; i < n; i++) {
 #if 0
@@ -599,7 +599,7 @@ int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
 #endif
 
 
-	double reg_term_L1 = 0.0;
+	float reg_term_L1 = 0.0;
 
 	for (i = 0; i < n; i++)
 		for (j = 0; j < n; j++) {
@@ -642,7 +642,7 @@ int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
 
 /* forward mode */
 
-int calcRegTerms(double *L, double *regTerm,double *regTermd, double wSvd, double w12, int dim, int derIndx) {
+int calcRegTerms(float *L, float *regTerm,float *regTermd, float wSvd, float w12, int dim, int derIndx) {
 	int flag, i, its, j, jj, k, l = 0, nm;
 	codi::RealForward c, f, h, s, x, y, z;
 	codi::RealForward anorm = 0.0, g = 0.0, scale = 0.0;
@@ -841,7 +841,7 @@ int calcRegTerms(double *L, double *regTerm,double *regTermd, double wSvd, doubl
 			if (g!=0) {
 				for (j = l; j < n; j++)
 					v[j][i] = ((a[i][j] / a[i][l]) / g);
-				/* double division to avoid underflow */
+				/* float division to avoid underflow */
 				for (j = l; j < n; j++) {
 					for (s = 0.0, k = l; k < n; k++)
 						s += (a[i][k] * v[k][j]);
@@ -1048,7 +1048,7 @@ int calcRegTerms(double *L, double *regTerm,double *regTermd, double wSvd, doubl
 #endif
 
 
-	double svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
+	float svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
 
 	svd_multiplier = 1.0/svd_multiplier;
 #if 0
@@ -1107,7 +1107,7 @@ int calcRegTerms(double *L, double *regTerm,double *regTermd, double wSvd, doubl
 
 
 
-int calcRegTerms(double *L, double *Lb,double *result , double wSvd, double w12, int dim) {
+int calcRegTerms(float *L, float *Lb,float *result , float wSvd, float w12, int dim) {
 	int flag, i, its, j, jj, k, l = 0, nm;
 
 
@@ -1334,7 +1334,7 @@ int calcRegTerms(double *L, double *Lb,double *result , double wSvd, double w12,
 			if (g !=0) {
 				for (j = l; j < n; j++)
 					v[j][i] = ((a[i][j] / a[i][l]) / g);
-				/* double division to avoid underflow */
+				/* float division to avoid underflow */
 				for (j = l; j < n; j++) {
 					for (s = 0.0, k = l; k < n; k++)
 						s += (a[i][k] * v[k][j]);
@@ -1628,7 +1628,7 @@ int calcRegTerms(double *L, double *Lb,double *result , double wSvd, double w12,
 
 
 
-double calcKernelValCPU(rowvec &xi, rowvec &xj, mat &M, double sigma){
+float calcKernelValCPU(rowvec &xi, rowvec &xj, mat &M, float sigma){
 
 	rowvec diff = xi - xj;
 	colvec diffT = trans(diff);
@@ -1637,11 +1637,11 @@ double calcKernelValCPU(rowvec &xi, rowvec &xj, mat &M, double sigma){
 	//	printf("M * xdiff = \n");
 	//	matVecProd.print();
 
-	double metricVal = dot(diff, M * diffT);
+	float metricVal = dot(diff, M * diffT);
 
-	double sqr_two_pi = sqrt(2.0 * 3.14159265359);
+	float sqr_two_pi = sqrt(2.0 * 3.14159265359);
 
-	double kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
+	float kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
 
 
 	return (kernelVal);
@@ -1660,7 +1660,7 @@ double calcKernelValCPU(rowvec &xi, rowvec &xj, mat &M, double sigma){
  *
  * */
 
-double calcMetric(double *xi, double *xj, double *M, int dim) {
+float calcMetric(float *xi, float *xj, float *M, int dim) {
 
 #if 0
 	printf("calling calcMetric (primal)...\n");
@@ -1678,7 +1678,7 @@ double calcMetric(double *xi, double *xj, double *M, int dim) {
 
 
 
-	double *diff = new double[dim];
+	float *diff = new float[dim];
 
 	for (int i = 0; i < dim; i++) {
 
@@ -1710,14 +1710,14 @@ double calcMetric(double *xi, double *xj, double *M, int dim) {
 	printf("M * xdiff = \n");
 	matVecProd.print();
 
-	double metric_val = dot(diff_val, M_val * diffT);
+	float metric_val = dot(diff_val, M_val * diffT);
 
 	printf("metric_val = %10.7f\n", metric_val);
 #endif
 
-	double *tempVec = new double[dim];
+	float *tempVec = new float[dim];
 
-	double sum = 0.0;
+	float sum = 0.0;
 
 	for (int i = 0; i < dim; i++) {
 		for (int j = 0; j < dim; j++) {
@@ -1772,7 +1772,7 @@ double calcMetric(double *xi, double *xj, double *M, int dim) {
  *
  * */
 
-codi::RealReverse calcMetric(double *xi, double *xj, codi::RealReverse *M,
+codi::RealReverse calcMetric(float *xi, float *xj, codi::RealReverse *M,
 		int dim) {
 
 #if 0
@@ -1823,7 +1823,7 @@ codi::RealReverse calcMetric(double *xi, double *xj, codi::RealReverse *M,
 	printf("M * xdiff = \n");
 	matVecProd.print();
 
-	double metric_val = dot(diff_val, M_val * diffT);
+	float metric_val = dot(diff_val, M_val * diffT);
 
 	printf("metric_val = %10.7f\n", metric_val);
 #endif
@@ -1889,7 +1889,7 @@ codi::RealReverse calcMetric(double *xi, double *xj, codi::RealReverse *M,
 
 }
 
-codi::RealForward calcMetric(double *xi, double *xj, codi::RealForward *M,
+codi::RealForward calcMetric(float *xi, float *xj, codi::RealForward *M,
 		int dim) {
 
 #if 0
@@ -1940,7 +1940,7 @@ codi::RealForward calcMetric(double *xi, double *xj, codi::RealForward *M,
 	printf("M * xdiff = \n");
 	matVecProd.print();
 
-	double metric_val = dot(diff_val, M_val * diffT);
+	float metric_val = dot(diff_val, M_val * diffT);
 
 	printf("metric_val = %10.7f\n", metric_val);
 #endif
@@ -2007,7 +2007,7 @@ codi::RealForward calcMetric(double *xi, double *xj, codi::RealForward *M,
 }
 
 
-double gaussianKernel(double *xi, double *xj, double sigma, double *M,
+float gaussianKernel(float *xi, float *xj, float sigma, float *M,
 		int dim) {
 
 #if 0
@@ -2015,14 +2015,14 @@ double gaussianKernel(double *xi, double *xj, double sigma, double *M,
 #endif
 
 	/* calculate distance between xi and xj with the matrix M */
-	double metricVal = calcMetric(xi, xj, M, dim);
+	float metricVal = calcMetric(xi, xj, M, dim);
 #if 0
 	printf("metricVal = %10.7f\n",metricVal);
 #endif
 
-	double sqr_two_pi = sqrt(2.0 * datum::pi);
+	float sqr_two_pi = sqrt(2.0 * datum::pi);
 
-	double kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
+	float kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
 #if 0
 	printf("kernelVal = %10.7f\n",kernelVal);
 
@@ -2047,7 +2047,7 @@ double gaussianKernel(double *xi, double *xj, double sigma, double *M,
 
 }
 
-codi::RealReverse gaussianKernel(double *xi, double *xj,
+codi::RealReverse gaussianKernel(float *xi, float *xj,
 		codi::RealReverse sigma, codi::RealReverse *M, int dim) {
 
 #if 0
@@ -2060,7 +2060,7 @@ codi::RealReverse gaussianKernel(double *xi, double *xj,
 	printf("metricVal = %10.7f\n",metricVal.getValue());
 #endif
 
-	double sqr_two_pi = sqrt(2.0 * datum::pi);
+	float sqr_two_pi = sqrt(2.0 * datum::pi);
 
 	codi::RealReverse kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
 
@@ -2125,14 +2125,14 @@ codi::RealReverse gaussianKernel(double *xi, double *xj,
 }
 
 
-codi::RealForward gaussianKernel(double *xi, double *xj,
+codi::RealForward gaussianKernel(float *xi, float *xj,
 		codi::RealForward sigma, codi::RealForward *M, int dim) {
 
 
 	/* calculate distance between xi and xj with the matrix M */
 	codi::RealForward metricVal = calcMetric(xi, xj, M, dim);
 
-	double sqr_two_pi = sqrt(2.0 * datum::pi);
+	float sqr_two_pi = sqrt(2.0 * datum::pi);
 
 	codi::RealForward kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
 
@@ -2196,11 +2196,11 @@ codi::RealForward gaussianKernel(double *xi, double *xj,
 
 }
 
-void calcLossFunCPU(double *result, double *input, double *data,int N){
+void calcLossFunCPU(float *result, float *input, float *data,int N){
 
-	double LT[numVar][numVar];
-	double L[numVar][numVar];
-	double M[numVar*numVar+1];
+	float LT[numVar][numVar];
+	float L[numVar][numVar];
+	float M[numVar*numVar+1];
 
 	for (int i = 0; i < numVar; ++i)
 		for (int j = 0; j < numVar; ++j)
@@ -2237,14 +2237,14 @@ void calcLossFunCPU(double *result, double *input, double *data,int N){
 
 	M[numVar*numVar] = input[numVar*numVar];
 
-	double sigma = M[numVar*numVar]; 
+	float sigma = M[numVar*numVar];
 
-	double *xp = new double[numVar];
-	double *xi = new double[numVar];
+	float *xp = new float[numVar];
+	float *xi = new float[numVar];
 
-	double *kernelVal = new double[N];
+	float *kernelVal = new float[N];
 
-	double lossFunc = 0.0;
+	float lossFunc = 0.0;
 
 	for (int i = 0; i < N; i++) {
 
@@ -2257,7 +2257,7 @@ void calcLossFunCPU(double *result, double *input, double *data,int N){
 			xp[k] = data[i*(numVar+1)+k];
 		}
 
-		double kernelSum = 0.0;
+		float kernelSum = 0.0;
 		for (int j = 0; j < N; j++) {
 
 			if (i != j) {
@@ -2274,7 +2274,7 @@ void calcLossFunCPU(double *result, double *input, double *data,int N){
 			}
 		}
 
-		double fApprox = 0.0;
+		float fApprox = 0.0;
 		for (int j = 0; j < N; j++) {
 			if (i != j) {
 				fApprox += kernelVal[j] * data[j*(numVar+1)+numVar];
@@ -2306,7 +2306,7 @@ void calcLossFunCPU(double *result, double *input, double *data,int N){
 
 
 
-void calcLossFunCPU(codi::RealReverse *result, codi::RealReverse *input, double *inputb,double *data,int N){
+void calcLossFunCPU(codi::RealReverse *result, codi::RealReverse *input, float *inputb,float *data,int N){
 
 
 	/* activate tape and register input */
@@ -2421,8 +2421,8 @@ void calcLossFunCPU(codi::RealReverse *result, codi::RealReverse *input, double 
 
 	codi::RealReverse sigma = M[numVar*numVar]; 
 
-	double *xi = new double[numVar];
-	double *xj = new double[numVar];
+	float *xi = new float[numVar];
+	float *xj = new float[numVar];
 
 	codi::RealReverse **kernelValTable = new codi::RealReverse*[N];
 
@@ -2563,7 +2563,7 @@ void calcLossFunCPU(codi::RealReverse *result, codi::RealReverse *input, double 
 
 }
 
-void calcLossFunCPU(codi::RealForward *result, codi::RealForward *input,int tldIndx, double *data,int N){
+void calcLossFunCPU(codi::RealForward *result, codi::RealForward *input,int tldIndx, float *data,int N){
 
 	input[tldIndx].setGradient(1.0);
 
@@ -2657,8 +2657,8 @@ void calcLossFunCPU(codi::RealForward *result, codi::RealForward *input,int tldI
 
 	codi::RealForward sigma = M[numVar*numVar]; 
 
-	double *xi = new double[numVar];
-	double *xj = new double[numVar];
+	float *xi = new float[numVar];
+	float *xj = new float[numVar];
 
 	codi::RealForward **kernelValTable = new codi::RealForward*[N];
 
@@ -2768,13 +2768,13 @@ void calcLossFunCPU(codi::RealForward *result, codi::RealForward *input,int tldI
 
 
 
-__global__ void calculateKernelValues_b(double *ab, double *X, double *kernelValTable, double *kernelValTableb, int N) {
+__global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTable, float *kernelValTableb, int N) {
 
 
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 	//	printf("tid = %d\n",tid);
-	double sigma = MDevice[numVar*numVar];
-	double sigmab = 0.0;
+	float sigma = MDevice[numVar*numVar];
+	float sigmab = 0.0;
 	/* calculate column index */
 	int indx2 = tid%N;
 	/* calculate row index */
@@ -2786,23 +2786,23 @@ __global__ void calculateKernelValues_b(double *ab, double *X, double *kernelVal
 		int off1 = indx1*(numVar+1);
 		int off2 = indx2*(numVar+1);
 
-		double diff[numVar];
+		float diff[numVar];
 
-		double tempVec[numVar];
-		double tempVecb[numVar];
+		float tempVec[numVar];
+		float tempVecb[numVar];
 
-		double sumb = 0.0;
+		float sumb = 0.0;
 
 
-		double kernelValb = 0.0;
-		double temp;
-		double temp0;
-		double tempb;
-		double tempb0;
+		float kernelValb = 0.0;
+		float temp;
+		float temp0;
+		float tempb;
+		float tempb0;
 		for (int k = 0; k < numVar; ++k)
 			diff[k] = X[off1 + k] - X[off2 + k];
 
-		double sum = 0.0;
+		float sum = 0.0;
 		for (int i = 0; i < numVar; ++i) {
 			for (int j = 0; j < numVar; ++j)
 				sum = sum + MDevice[i*numVar+j]*diff[j];
@@ -2813,9 +2813,9 @@ __global__ void calculateKernelValues_b(double *ab, double *X, double *kernelVal
 		for (int i = 0; i < numVar; ++i)
 			sum = sum + tempVec[i]*diff[i];
 
-		double sqr_two_pi;
+		float sqr_two_pi;
 		sqr_two_pi = sqrt(2.0*3.14159265359);
-		double kernelVal = 1.0/(sigma*sqr_two_pi)*exp(-sum/(2*sigma*sigma))+10E-12;
+		float kernelVal = 1.0/(sigma*sqr_two_pi)*exp(-sum/(2*sigma*sigma))+10E-12;
 
 
 #if 0
@@ -2878,22 +2878,23 @@ __global__ void calculateKernelValues_b(double *ab, double *X, double *kernelVal
 		//		printf("sigmab = %10.7f\n",sigmab);
 
 
-		for (int ii1 = 0; ii1 < numVar; ++ii1){
+		for (int i = 0; i < numVar; ++i){
 
-			tempVecb[ii1] = 0.0;
+			tempVecb[i] = 0.0;
 
 		}
 
-		for (int i = numVar-1; i > -1; --i)
-			tempVecb[i] = tempVecb[i] + diff[i]*sumb;
+		for (int i = numVar-1; i > -1; --i){
 
+			tempVecb[i] = tempVecb[i] + diff[i]*sumb;
+		}
 
 		for (int i = numVar-1; i > -1; --i) {
 			sumb = tempVecb[i];
 			tempVecb[i] = 0.0;
 			for (int j = numVar-1; j > -1; --j){
 
-				double addTerm = diff[j]*sumb;
+				float addTerm = diff[j]*sumb;
 #if 0
 				if (isnan ( addTerm) || isinf ( addTerm) ){
 
@@ -2903,16 +2904,14 @@ __global__ void calculateKernelValues_b(double *ab, double *X, double *kernelVal
 
 				}
 #endif			
-				if(i*numVar + j == 147){
-					printf("addTerm = %10.7f, index = %d tid = %d\n", addTerm, i*numVar + j, tid);
-				}
-				atomicDAdd( &ab[i*numVar + j],addTerm );
+
+				atomicAdd( &ab[i*numVar + j],addTerm );
 
 			}
 			//				ab[i*numVar + j] = ab[i*numVar + j] + diff[j]*sumb;
 		}
 	} 
-	atomicDAdd( &ab[numVar*numVar],sigmab );
+	atomicAdd( &ab[numVar*numVar],sigmab );
 	//	ab[numVar*numVar] = ab[numVar*numVar] + sigmab;
 	//	printf("sigmab = %10.7f\n",sigmab);
 
@@ -2920,12 +2919,12 @@ __global__ void calculateKernelValues_b(double *ab, double *X, double *kernelVal
 
 
 
-__global__ void calculateKernelValues(double *X, double *kernelValTable, int N){
+__global__ void calculateKernelValues(float *X, float *kernelValTable, int N){
 
 
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
-	double sigma = MDevice[numVar*numVar];
+	float sigma = MDevice[numVar*numVar];
 
 	/* calculate column index */
 	int indx2 = tid%N;
@@ -2938,7 +2937,7 @@ __global__ void calculateKernelValues(double *X, double *kernelValTable, int N){
 		int off1 = indx1*(numVar+1);
 		int off2 = indx2*(numVar+1);
 
-		double diff[numVar];
+		float diff[numVar];
 
 		for (int k = 0; k < numVar; k++) {
 
@@ -2955,8 +2954,8 @@ __global__ void calculateKernelValues(double *X, double *kernelValTable, int N){
 		}
 
 
-		double tempVec[numVar];
-		double sum = 0.0;
+		float tempVec[numVar];
+		float sum = 0.0;
 
 		for (int i = 0; i < numVar; i++) {
 			for (int j = 0; j < numVar; j++) {
@@ -2989,18 +2988,18 @@ __global__ void calculateKernelValues(double *X, double *kernelValTable, int N){
 #endif			
 
 
-
+#if 0
 		if (sum < 0){
 
 			printf("Error: Metric is negative!");
 			assert(0);
 
 		}
+#endif
 
+		float sqr_two_pi = sqrt(2.0 * 3.14159265359);
 
-		double sqr_two_pi = sqrt(2.0 * 3.14159265359);
-
-		double kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-sum / (2 * sigma * sigma)) + 10E-12;
+		float kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-sum / (2 * sigma * sigma)) + 10E-12;
 
 
 #if 0
@@ -3021,16 +3020,16 @@ __global__ void calculateKernelValues(double *X, double *kernelValTable, int N){
 
 }
 
-__global__  void calculateLossKernel(double *X,double *kernelValTable, double *sum, int N){
+__global__  void calculateLossKernel(float *X,float *kernelValTable, float *sum, int N){
 
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
 	if(tid < N){
 
 
-		double lossFunc = 0.0;
+		float lossFunc = 0.0;
 
-		double kernelSum = 0.0;
+		float kernelSum = 0.0;
 
 		for(int i=0; i<N; i++){
 
@@ -3057,7 +3056,7 @@ __global__  void calculateLossKernel(double *X,double *kernelValTable, double *s
 
 		}
 
-		double fapprox=0.0;
+		float fapprox=0.0;
 		for(int i=0; i<N; i++){
 
 			if(tid != i){
@@ -3093,8 +3092,8 @@ __global__  void calculateLossKernel(double *X,double *kernelValTable, double *s
 }
 
 
-__global__  void calculateLossKernel_b(double *X, double *kernelValTable, double *
-		kernelValTableb, double *sum, double *sumb, int N
+__global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
+		kernelValTableb, float *sum, float *sumb, int N
 ) {
 
 
@@ -3104,12 +3103,12 @@ __global__  void calculateLossKernel_b(double *X, double *kernelValTable, double
 	if (tid < N) {
 
 
-		double lossFunc;
-		double lossFuncb;
-		double kernelSum=0.0;
-		double kernelSumb;
+		float lossFunc;
+		float lossFuncb;
+		float kernelSum=0.0;
+		float kernelSumb;
 
-		double fapproxb;
+		float fapproxb;
 
 
 		for (int i = 0; i < N; ++i){
@@ -3136,7 +3135,7 @@ __global__  void calculateLossKernel_b(double *X, double *kernelValTable, double
 #endif			
 
 
-		double fapprox = 0.0;
+		float fapprox = 0.0;
 		for (int i = 0; i < N; ++i){
 			if (tid != i) {
 				int indxKernelValTable;
@@ -3201,7 +3200,7 @@ __global__  void calculateLossKernel_b(double *X, double *kernelValTable, double
 		for (int i = N-1; i > -1; --i) {
 
 			if (tid != i)  {
-				double tempb;
+				float tempb;
 				int indxKernelValTable;
 				if (i < tid)
 					indxKernelValTable = i*N + tid;
@@ -3262,7 +3261,7 @@ __global__  void calculateLossKernel_b(double *X, double *kernelValTable, double
 	//		*kernelValTableb = 0.0;
 }
 
-void calcLossFunGPU(double *result, double *input, double *data,int N){
+void calcLossFunGPU(float *result, float *input, float *data,int N){
 
 	cudaEvent_t start, stop;
 	cudaEventCreate( &start ) ;
@@ -3273,9 +3272,9 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 	cudaError_t err = cudaSuccess;
 
 
-	double LT[numVar][numVar];
-	double L[numVar][numVar];
-	double M[numVar*numVar+1];
+	float LT[numVar][numVar];
+	float L[numVar][numVar];
+	float M[numVar*numVar+1];
 
 
 
@@ -3387,7 +3386,7 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 
 	/* copy the values of M to the constant memory */
 
-	err= cudaMemcpyToSymbol(MDevice,M, (numVar*numVar+1)*sizeof(double));
+	err= cudaMemcpyToSymbol(MDevice,M, (numVar*numVar+1)*sizeof(float));
 	//for(int i=0; i<numVar*numVar+1; i++)MDevice[i] = M[i];
 
 	if (err != cudaSuccess)
@@ -3397,11 +3396,11 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 	}
 
 
-	double *dataDevice;
+	float *dataDevice;
 
 
 	// allocate the memory on the GPU for the data matrix
-	err = cudaMalloc(&dataDevice, N *(numVar+1) * sizeof(double) ) ;
+	err = cudaMalloc(&dataDevice, N *(numVar+1) * sizeof(float) ) ;
 
 	if (err != cudaSuccess)
 	{
@@ -3410,7 +3409,7 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 	}
 
 
-	err = cudaMemcpy(dataDevice, data, N *(numVar+1) *sizeof(double), cudaMemcpyHostToDevice);
+	err = cudaMemcpy(dataDevice, data, N *(numVar+1) *sizeof(float), cudaMemcpyHostToDevice);
 
 	if (err != cudaSuccess)
 	{
@@ -3420,10 +3419,10 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 
 
 
-	double *kernelValuesDevice;
+	float *kernelValuesDevice;
 
 	// allocate the memory on the GPU for kernel Values
-	err = cudaMalloc(&kernelValuesDevice, N*N* sizeof(double) ) ;
+	err = cudaMalloc(&kernelValuesDevice, N*N* sizeof(float) ) ;
 
 	if (err != cudaSuccess)
 	{
@@ -3452,10 +3451,10 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 	mat Xval(N,numVar);
 	vec ys(N);
 
-	double *kernelValuesHost = new double[N*N];
+	float *kernelValuesHost = new float[N*N];
 
 
-	err = cudaMemcpy(kernelValuesHost, kernelValuesDevice, N*N*sizeof(double), cudaMemcpyDeviceToHost);
+	err = cudaMemcpy(kernelValuesHost, kernelValuesDevice, N*N*sizeof(float), cudaMemcpyDeviceToHost);
 
 	if (err != cudaSuccess)
 	{
@@ -3498,7 +3497,7 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 
 
 
-	double sigma  = input[numVar*numVar];
+	float sigma  = input[numVar*numVar];
 	rowvec xi,xj;
 
 	for(int i=0; i<N; i++){
@@ -3508,8 +3507,8 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 			xi = Xval.row(i);
 			xj = Xval.row(j);
 
-			double kernelValCPU = calcKernelValCPU(xi, xj, Mval, sigma);
-			double kernelValGPU = kernelValuesHost[i*N+j];
+			float kernelValCPU = calcKernelValCPU(xi, xj, Mval, sigma);
+			float kernelValGPU = kernelValuesHost[i*N+j];
 			printf("kernelValCPU = %19.7f, kernelValGPU = %19.7f, error = %15.12f\n",kernelValCPU,kernelValGPU,kernelValCPU-kernelValGPU);
 
 
@@ -3526,9 +3525,9 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 #endif	
 
 	/* allocate the memory on the GPU for the kernelsum */
-	double *lossSumDevice;
+	float *lossSumDevice;
 
-	err = cudaMalloc(&lossSumDevice, N * sizeof(double) ) ;
+	err = cudaMalloc(&lossSumDevice, N * sizeof(float) ) ;
 
 	if (err != cudaSuccess)
 	{
@@ -3537,7 +3536,7 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 	}
 
 
-	double *lossSumHost = new double[N];
+	float *lossSumHost = new float[N];
 
 
 
@@ -3554,7 +3553,7 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 	printf("Kernel: calculateLossKernel is done ...\n");
 
 
-	err = cudaMemcpy(lossSumHost, lossSumDevice, N*sizeof(double), cudaMemcpyDeviceToHost);
+	err = cudaMemcpy(lossSumHost, lossSumDevice, N*sizeof(float), cudaMemcpyDeviceToHost);
 
 	if (err != cudaSuccess)
 	{
@@ -3574,13 +3573,13 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 
 		rowvec xi = Xval.row(i);
 
-		double kernelSum=0.0;
+		float kernelSum=0.0;
 		for(int j=0; j<N; j++){
 			rowvec xj = Xval.row(j);
 
 			if(i !=j){
 
-				double kernelVal = calcKernelValCPU(xi, xj, Mval, sigma); 
+				float kernelVal = calcKernelValCPU(xi, xj, Mval, sigma);
 				kernelSum += kernelVal; 
 
 			}
@@ -3588,10 +3587,10 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 
 		}
 
-		double sum = 0.0;
+		float sum = 0.0;
 		for(int j=0; j<N; j++){
 			rowvec xj = Xval.row(j);
-			double kernelVal = calcKernelValCPU(xi, xj, Mval, sigma); 
+			float kernelVal = calcKernelValCPU(xi, xj, Mval, sigma);
 			if(i !=j){
 
 				sum+=ys(j)*kernelVal;
@@ -3622,7 +3621,7 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 #endif
 
 
-	double totalLoss=0.0;
+	float totalLoss=0.0;
 	for (int i=0; i<N; i++) {
 
 		totalLoss+=lossSumHost[i];
@@ -3655,8 +3654,8 @@ void calcLossFunGPU(double *result, double *input, double *data,int N){
 
 
 
-void calcLossFunGPU_b(double *result, double *resultb, double *input, 
-		double *inputb, double *data, int N)
+void calcLossFunGPU_b(float *result, float *resultb, float *input,
+		float *inputb, float *data, int N)
 {
 
 
@@ -3677,12 +3676,12 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 	// Error code to check return values for CUDA calls
 	cudaError_t err = cudaSuccess;
 
-	double LT[numVar][numVar];
-	double LTb[numVar][numVar];
-	double L[numVar][numVar];
-	double Lb[numVar][numVar];
-	double M[numVar*numVar + 1];
-	double Mb[numVar*numVar + 1];
+	float LT[numVar][numVar];
+	float LTb[numVar][numVar];
+	float L[numVar][numVar];
+	float Lb[numVar][numVar];
+	float M[numVar*numVar + 1];
+	float Mb[numVar*numVar + 1];
 
 
 	for (int i = 0; i < numVar; ++i){
@@ -3764,7 +3763,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 
 	/* copy the values of M to the constant memory "MDevice"*/
 
-	err= cudaMemcpyToSymbol(MDevice,M, (numVar*numVar+1)*sizeof(double));
+	err= cudaMemcpyToSymbol(MDevice,M, (numVar*numVar+1)*sizeof(float));
 	//for(int i=0; i<numVar*numVar+1; i++)MDevice[i] = M[i];
 
 
@@ -3775,11 +3774,11 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 	}
 
 
-	double *dataDevice;
+	float *dataDevice;
 
 
 	/* allocate the memory on the GPU for the data matrix */
-	err = cudaMalloc(&dataDevice, N *(numVar+1) * sizeof(double) ) ;
+	err = cudaMalloc(&dataDevice, N *(numVar+1) * sizeof(float) ) ;
 
 	if (err != cudaSuccess)
 	{
@@ -3788,7 +3787,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 	}
 
 
-	err = cudaMemcpy(dataDevice, data, N *(numVar+1) *sizeof(double), cudaMemcpyHostToDevice);
+	err = cudaMemcpy(dataDevice, data, N *(numVar+1) *sizeof(float), cudaMemcpyHostToDevice);
 
 	if (err != cudaSuccess)
 	{
@@ -3798,10 +3797,10 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 
 
 
-	double *kernelValuesDevice;
+	float *kernelValuesDevice;
 
 	// allocate the memory on the GPU for kernel Values
-	err = cudaMalloc(&kernelValuesDevice, N*N* sizeof(double) ) ;
+	err = cudaMalloc(&kernelValuesDevice, N*N* sizeof(float) ) ;
 
 	if (err != cudaSuccess)
 	{
@@ -3809,22 +3808,22 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 		exit(EXIT_FAILURE);
 	}
 
-	cudaMemset(kernelValuesDevice, 0, N*N* sizeof(double));
+	cudaMemset(kernelValuesDevice, 0, N*N* sizeof(float));
 
-	double *kernelValuesDeviceb;
+	float *kernelValuesDeviceb;
 
 	// allocate the memory on the GPU for kernel Values
-	err = cudaMalloc(&kernelValuesDeviceb, N*N* sizeof(double) ) ;
+	err = cudaMalloc(&kernelValuesDeviceb, N*N* sizeof(float) ) ;
 
 	if (err != cudaSuccess)
 	{
 		fprintf(stderr, "Failed to allocate device vector --kernelValuesDeviceb-- (error code %s)!\n", cudaGetErrorString(err));
 		exit(EXIT_FAILURE);
 	}
-	//	cudaMemset(kernelValuesDeviceb, 0, N*N* sizeof(double));
+	//	cudaMemset(kernelValuesDeviceb, 0, N*N* sizeof(float));
 
 
-	double *kernelValuesHostb = new double[N*N];
+	float *kernelValuesHostb = new float[N*N];
 
 	for(int i=0; i<N*N; i++) {
 
@@ -3832,7 +3831,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 
 	}
 
-	err = cudaMemcpy(kernelValuesDeviceb, kernelValuesHostb, (N*N) *sizeof(double), cudaMemcpyHostToDevice);
+	err = cudaMemcpy(kernelValuesDeviceb, kernelValuesHostb, (N*N) *sizeof(float), cudaMemcpyHostToDevice);
 
 	if (err != cudaSuccess)
 	{
@@ -3844,10 +3843,10 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 
 
 
-	double *MDeviceb;
+	float *MDeviceb;
 
 	// allocate the memory on the GPU for kernel Values
-	err = cudaMalloc(&MDeviceb, (numVar*numVar + 1)* sizeof(double) ) ;
+	err = cudaMalloc(&MDeviceb, (numVar*numVar + 1)* sizeof(float) ) ;
 
 	if (err != cudaSuccess)
 	{
@@ -3856,7 +3855,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 	}
 
 
-	double *MHostb = new double[numVar*numVar + 1];
+	float *MHostb = new float[numVar*numVar + 1];
 
 	for(int i=0; i<numVar*numVar + 1; i++) {
 
@@ -3865,7 +3864,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 	}
 
 
-	err = cudaMemcpy(MDeviceb, MHostb, (numVar*numVar + 1) *sizeof(double), cudaMemcpyHostToDevice);
+	err = cudaMemcpy(MDeviceb, MHostb, (numVar*numVar + 1) *sizeof(float), cudaMemcpyHostToDevice);
 
 	if (err != cudaSuccess)
 	{
@@ -3876,7 +3875,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 	delete[] MHostb;
 
 	/* init adjoint of M to zero */
-	//	cudaMemset(MDeviceb, 0, (numVar*numVar + 1)* sizeof(double));
+	//	cudaMemset(MDeviceb, 0, (numVar*numVar + 1)* sizeof(float));
 
 
 
@@ -3899,10 +3898,10 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 
 
 
-	double *lossSumDevice;
+	float *lossSumDevice;
 
 	// allocate the memory on the GPU for kernel Values
-	err = cudaMalloc(&lossSumDevice, N*sizeof(double) ) ;
+	err = cudaMalloc(&lossSumDevice, N*sizeof(float) ) ;
 
 	if (err != cudaSuccess)
 	{
@@ -3910,7 +3909,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 		exit(EXIT_FAILURE);
 	}
 
-	cudaMemset(lossSumDevice,0,N*sizeof(double));
+	cudaMemset(lossSumDevice,0,N*sizeof(float));
 
 
 	number_of_blocks = (N+number_of_threads_per_block-1)/number_of_threads_per_block;
@@ -3919,20 +3918,20 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 #endif
 
 
-	double totalLossb = 0.0;
+	float totalLossb = 0.0;
 	totalLossb = *resultb/N;
 
 
 
-	double *lossSumHostb = new double[N];
+	float *lossSumHostb = new float[N];
 
 	for(int i=0; i<N;i++) lossSumHostb[i] = 0;; 
 
 
-	double *lossSumDeviceb;
+	float *lossSumDeviceb;
 
 	// allocate the memory on the GPU for kernel Values
-	err = cudaMalloc(&lossSumDeviceb, N*sizeof(double) ) ;
+	err = cudaMalloc(&lossSumDeviceb, N*sizeof(float) ) ;
 
 	if (err != cudaSuccess)
 	{
@@ -3940,7 +3939,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 		exit(EXIT_FAILURE);
 	}
 
-	cudaMemset(lossSumDeviceb,0,N*sizeof(double));
+	cudaMemset(lossSumDeviceb,0,N*sizeof(float));
 
 	for (int i = N-1; i > -1; --i)
 		lossSumHostb[i] = lossSumHostb[i] + totalLossb;
@@ -3949,7 +3948,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 		printf("lossSumHostb[i] = %10.7f\n",i,lossSumHostb[i]);
 #endif	
 
-	err = cudaMemcpy(lossSumDeviceb, lossSumHostb, N *sizeof(double), cudaMemcpyHostToDevice);
+	err = cudaMemcpy(lossSumDeviceb, lossSumHostb, N *sizeof(float), cudaMemcpyHostToDevice);
 
 	if (err != cudaSuccess)
 	{
@@ -3958,7 +3957,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 	}
 
 
-	//	cudaMemset(kernelValuesDeviceb, 0, (N*N)* sizeof(double));
+	//	cudaMemset(kernelValuesDeviceb, 0, (N*N)* sizeof(float));
 
 	/* this subroutine evaluates the lossSumDevice and kernelValuesDeviceb */
 	calculateLossKernel_b<<<number_of_blocks,number_of_threads_per_block>>>(dataDevice,kernelValuesDevice,kernelValuesDeviceb, lossSumDevice,lossSumDeviceb, N);
@@ -3973,7 +3972,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 #endif
 
 
-	err = cudaMemcpy(kernelValuesHostb, kernelValuesDeviceb, N*N *sizeof(double), cudaMemcpyDeviceToHost);
+	err = cudaMemcpy(kernelValuesHostb, kernelValuesDeviceb, N*N *sizeof(float), cudaMemcpyDeviceToHost);
 
 	if (err != cudaSuccess)
 	{
@@ -3984,10 +3983,10 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 
 
 
-	double *lossSumHost = new double[N]();
+	float *lossSumHost = new float[N]();
 
 
-	err = cudaMemcpy(lossSumHost, lossSumDevice, N*sizeof(double), cudaMemcpyDeviceToHost);
+	err = cudaMemcpy(lossSumHost, lossSumDevice, N*sizeof(float), cudaMemcpyDeviceToHost);
 
 	if (err != cudaSuccess)
 	{
@@ -3996,7 +3995,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 	}
 
 
-	double totalLoss=0.0;
+	float totalLoss=0.0;
 	for (int i=0; i<N; i++) {
 
 		totalLoss+=lossSumHost[i];
@@ -4010,7 +4009,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 
 
 
-	cudaMemset(MDeviceb, 0, (numVar*numVar + 1)* sizeof(double));
+	cudaMemset(MDeviceb, 0, (numVar*numVar + 1)* sizeof(float));
 
 
 	number_of_blocks = (N*N+number_of_threads_per_block-1)/number_of_threads_per_block;
@@ -4033,7 +4032,7 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 		Mb[ii1] = 0.0;
 	}
 
-	err = cudaMemcpy(Mb, MDeviceb, (numVar*numVar+1)*sizeof(double), cudaMemcpyDeviceToHost);
+	err = cudaMemcpy(Mb, MDeviceb, (numVar*numVar+1)*sizeof(float), cudaMemcpyDeviceToHost);
 	if (err != cudaSuccess)
 	{
 		fprintf(stderr, "Failed to copy vector Mb from device to host (error code %s)!\n", cudaGetErrorString(err));
@@ -4112,20 +4111,20 @@ void calcLossFunGPU_b(double *result, double *resultb, double *input,
 }
 
 
-double kernelRegressor(mat &X, vec &y, rowvec &xp, mat &M, double sigma) {
+float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma) {
 
 	int d = y.size();
 
-	vec kernelVal(d);
-	vec weight(d);
-	double kernelSum = 0.0;
-	double yhat = 0.0;
+	fvec kernelVal(d);
+	fvec weight(d);
+	float kernelSum = 0.0;
+	float yhat = 0.0;
 
 
 
 	for (int i = 0; i < d; i++) {
 
-		rowvec xi = X.row(i);
+		frowvec xi = X.row(i);
 		kernelVal(i) = gaussianKernel(xi, xp, sigma, M);
 		kernelSum += kernelVal(i);
 	}
@@ -4156,11 +4155,12 @@ double kernelRegressor(mat &X, vec &y, rowvec &xp, mat &M, double sigma) {
  * */
 
 
-int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, double &w12,int max_cv_iter) {
+int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter) {
 
 
-	int max_opt_iter = 1000;
-	double learning_rate = 0.0001;
+	int max_opt_iter = 50000;
+	float learning_rateM = 0.001;
+	float learning_rateSigma = 0.0001;
 	unsigned int n = L.n_cols;
 	unsigned int m = L.n_cols;
 
@@ -4174,10 +4174,10 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 	int Ldim = numVar*numVar;
 
 	/* lower diagonal matrix Lbest to keep the best L*/
-	mat bestL(numVar,numVar);
+	fmat bestL(numVar,numVar);
 	bestL.fill(0.0);
 
-	double bestsigma = 0.0;
+	float bestsigma = 0.0;
 
 
 	/* divide the data set into training and validation sets */
@@ -4200,14 +4200,14 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 
 
 
-	mat dataTraining      = data.submat( 0, 0, Ntraining-1, numVar );
-	mat dataValidation    = data.submat( Ntraining, 0, N-1, numVar );
+	fmat dataTraining      = data.submat( 0, 0, Ntraining-1, numVar );
+	fmat dataValidation    = data.submat( Ntraining, 0, N-1, numVar );
 
 
-	mat XValidation = dataValidation.submat(0,0,NvalidationSet-1,numVar-1);
-	vec yValidation = dataValidation.col(numVar);
-	mat XTraining = dataTraining.submat(0,0,Ntraining-1,numVar-1);
-	vec yTraining = dataTraining.col(numVar);
+	fmat XValidation = dataValidation.submat(0,0,NvalidationSet-1,numVar-1);
+	fvec yValidation = dataValidation.col(numVar);
+	fmat XTraining = dataTraining.submat(0,0,Ntraining-1,numVar-1);
+	fvec yTraining = dataTraining.col(numVar);
 
 
 
@@ -4236,8 +4236,8 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 	yValidation.print();
 #endif
 
-	vec wSvdtrial(max_cv_iter);
-	vec w12trial(max_cv_iter);
+	fvec wSvdtrial(max_cv_iter);
+	fvec w12trial(max_cv_iter);
 
 
 	if(max_cv_iter !=1){
@@ -4246,8 +4246,8 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 
 		for(int i=0; i<max_cv_iter; i++){
 
-			wSvdtrial(i) = pow(10.0,RandomDouble(-2,0.0));
-			w12trial(i) = pow(10.0,RandomDouble(-2,0.0));
+			wSvdtrial(i) = pow(10.0,RandomFloat(-2,0.0));
+			w12trial(i) = pow(10.0,RandomFloat(-2,0.0));
 		}
 
 
@@ -4262,11 +4262,12 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 	}
 
 
-	double *inputVec = new double[Ldim+1]();
-	double *inputVecb = new double[Ldim+1]();
-	double *inputVecRegb = new double[Ldim]();
-	double *gradientVec = new double[Ldim+1]();
-	double *dataVecTraining = new double[Ntraining*(n+1)]();
+	float *inputVec = new float[Ldim+1]();
+	float *inputVecLocalBest = new float[Ldim+1]();
+	float *inputVecb = new float[Ldim+1]();
+	float *inputVecRegb = new float[Ldim]();
+	float *gradientVec = new float[Ldim+1]();
+	float *dataVecTraining = new float[Ntraining*(n+1)]();
 
 
 
@@ -4310,7 +4311,7 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 #endif	
 
 
-	double optGenError = 10E14;
+	float optGenError = 10E14;
 
 	/* cross validation loop to tune the weights for the regularization parameters */
 	for(int iter_cv=0; iter_cv< max_cv_iter; iter_cv++){
@@ -4344,16 +4345,16 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 				}
 				else {
 
-					inputVec[i*numVar+j] = RandomDouble(0.0,0.1);
+					inputVec[i*numVar+j] = RandomFloat(0.0,0.1);
 				}
 			}
 		}
 
 		/* assign sigma */
-		inputVec[Ldim] = RandomDouble(0.0,0.1);
+		inputVec[Ldim] = RandomFloat(0.0,0.1);
 
-		double lossVal,lossValb, regTerm;
-		double objFunVal;
+		float lossVal,lossValb, regTerm;
+		float objFunVal;
 		lossVal = 0.0;
 		lossValb = 1.0;
 
@@ -4393,7 +4394,7 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 		}
 
 
-#if 1
+#if 0
 
 		/* call the CodiPack version for validation */
 
@@ -4407,7 +4408,7 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 		}
 
 		codi::RealReverse lossValCodi = 0.0;
-		double *inputVecbCodi = new double[n*n+1]();
+		float *inputVecbCodi = new float[n*n+1]();
 
 		/* call the CodiPack version of "calcLossFunCPU" */ 
 
@@ -4430,7 +4431,7 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 
 #endif
 
-		exit(1);
+
 
 #if 0
 		printf("calculating regularization term...\n");
@@ -4474,11 +4475,11 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 		/* validation loop for the regularization term */
 
 
-		double f0 = 0.0;
-		double tempSave;
+		float f0 = 0.0;
+		float tempSave;
 		calcRegTerms(inputVec, &f0, wSvd, w12, n);
 		printf("f0 = %10.7f\n",f0);
-		double epsValReg= 0.001;
+		float epsValReg= 0.001;
 
 
 		for (int i = 0; i < n; i++) {
@@ -4488,17 +4489,17 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 				tempSave = inputVec[i*n+j];
 				inputVec[i*n+j]+=epsValReg;
 
-				double f1 = 0.0;
+				float f1 = 0.0;
 
 				calcRegTerms(inputVec, &f1, wSvd, w12, n);
 				printf("f1 = %10.7f, f0 = %10.7f\n",f1,f0);
 				inputVec[i*n+j]= tempSave;
 
-				double fdVal = (f1-f0)/epsValReg;
+				float fdVal = (f1-f0)/epsValReg;
 
 				printf("fd value = %10.7f, ad value = %10.7f\n",fdVal,inputVecRegb[i*n+j]);
 
-				double f2,f2d;
+				float f2,f2d;
 
 				/* call forward mode */
 				calcRegTerms(inputVec, &f2,&f2d, wSvd, w12, n, i*n+j);
@@ -4530,7 +4531,7 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 		}
 
 
-
+		float objectiveFunLocalBest = 10E14;
 
 		for(int opt_iter=0 ; opt_iter < max_opt_iter; opt_iter++){
 
@@ -4541,7 +4542,7 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 			for (int i = 0; i < numVar; i++){
 				for (int j = 0; j <= i; j++) {
 
-					inputVec[i*numVar+j]= inputVec[i*numVar+j] - learning_rate* gradientVec[i*numVar+j];
+					inputVec[i*numVar+j]= inputVec[i*numVar+j] - learning_rateM* gradientVec[i*numVar+j];
 
 
 				}
@@ -4563,11 +4564,8 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 
 			}
 
-
-
-
 			/* update sigma */
-			inputVec[Ldim]= inputVec[Ldim] - learning_rate*gradientVec[Ldim];
+			inputVec[Ldim]= inputVec[Ldim] - learning_rateSigma*gradientVec[Ldim];
 
 			if(inputVec[Ldim] <= 0) {
 
@@ -4627,6 +4625,20 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 
 			objFunVal = lossVal + regTerm;
 
+			if(objFunVal < objectiveFunLocalBest){
+
+
+				for(int i=0;i<Ldim+1;i++) {
+
+					inputVecLocalBest[i]=inputVec[i];
+
+				}
+
+
+				objectiveFunLocalBest = objFunVal;
+
+			}
+
 			if(opt_iter % 100 == 0){
 
 				printf("iter = %d, objective function = %10.7f, Leave One Out Error = %10.7f, Regularization term = %10.7f\n",opt_iter,objFunVal,lossVal, regTerm);
@@ -4663,15 +4675,15 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 		sigma = inputVec[Ldim]; 
 
 
-		mat M = L*trans(L);
+		fmat M = L*trans(L);
 
-		double genError = 0.0;
+		float genError = 0.0;
 
 		for(int i=0;i <NvalidationSet; i++){
 
-			rowvec xp = XValidation.row(i);
-			double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma);
-			double yexact = yValidation(i);
+			frowvec xp = XValidation.row(i);
+			float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma);
+			float yexact = yValidation(i);
 
 #if 0
 			printf("x:\n");

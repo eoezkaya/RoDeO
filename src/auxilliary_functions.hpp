@@ -57,6 +57,8 @@ double pdf(double x, double mu, double sigma);
 double cdf(double x, double mu, double sigma);
 
 double RandomDouble(double a, double b);
+float RandomFloat(float a, float b);
+
 int RandomInt(int a, int b);
 
 void RandomVector(rowvec &x);
@@ -161,6 +163,7 @@ double Lpnorm(T x, int p, int size,int *index=NULL){
 }
 
 double calcMetric(rowvec &xi,rowvec &xj, mat M);
+float calcMetric(frowvec &xi,frowvec &xj, fmat M);
 
 void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, unsigned int norm=2);
 
