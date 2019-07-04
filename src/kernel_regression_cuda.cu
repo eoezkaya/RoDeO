@@ -4664,15 +4664,18 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 
 
-		}
+		} /* end of local optimization loop */
+
 
 
 		for (int i = 0; i < numVar; i++)
 			for (int j = 0; j < numVar; j++) {
 
-				L(i,j)= inputVec[i*numVar+j];
+				L(i,j)= inputVecLocalBest[i*numVar+j];
 			}
-		sigma = inputVec[Ldim]; 
+
+
+		sigma = inputVecLocalBest[Ldim];
 
 
 		fmat M = L*trans(L);
