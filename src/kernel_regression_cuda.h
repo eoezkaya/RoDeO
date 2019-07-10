@@ -10,7 +10,7 @@
 
 using namespace arma;
 
-#define numVar 13
+#define numVar 10
 #define number_of_threads_per_block 64
 
 int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12, int max_cv_iter);

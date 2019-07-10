@@ -2772,7 +2772,7 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 
 
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
-	//	printf("tid = %d\n",tid);
+
 	float sigma = MDevice[numVar*numVar];
 	float sigmab = 0.0;
 	/* calculate column index */
@@ -2818,44 +2818,13 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 		float kernelVal = 1.0/(sigma*sqr_two_pi)*exp(-sum/(2*sigma*sigma))+10E-12;
 
 
-#if 0
-		if (isnan ( kernelVal) || isinf ( kernelVal) ){
-
-			printf("diff[k] is NaN or inf!\n");
-			assert(0);
-
-
-		}
-#endif					
-
-
 		kernelValb = kernelValTableb[indx1*N + indx2];
-
-#if 0
-		if (isnan ( kernelValb) || isinf ( kernelValb) ){
-
-			printf("kernelValb is NaN or inf!\n");
-			assert(0);
-
-
-		}
-#endif				
-
-
 
 
 		kernelValTableb[indx1*N + indx2] = 0.0;
 		tempb = kernelValb/(sqr_two_pi*sigma);
 
-#if 0
-		if (isnan ( tempb) || isinf ( tempb) ){
 
-			printf("tempb is NaN or inf!\n");
-			assert(0);
-
-
-		}
-#endif				
 
 
 
@@ -2865,17 +2834,7 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 		sumb = tempb0;
 		sigmab = -(exp(-temp0)*tempb/sigma) - 2*2*temp0*sigma*tempb0;
 
-#if 0
-		if (isnan ( sigmab) || isinf ( sigmab) ){
 
-			printf("sigmab is NaN or inf!\n");
-			assert(0);
-
-
-		}
-#endif					
-
-		//		printf("sigmab = %10.7f\n",sigmab);
 
 
 		for (int i = 0; i < numVar; ++i){
@@ -2895,15 +2854,7 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 			for (int j = numVar-1; j > -1; --j){
 
 				float addTerm = diff[j]*sumb;
-#if 0
-				if (isnan ( addTerm) || isinf ( addTerm) ){
 
-					printf("addTerm is NaN or inf!\n");
-					assert(0);
-
-
-				}
-#endif			
 
 				atomicAdd( &ab[i*numVar + j],addTerm );
 
@@ -2913,7 +2864,7 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 	} 
 	atomicAdd( &ab[numVar*numVar],sigmab );
 	//	ab[numVar*numVar] = ab[numVar*numVar] + sigmab;
-	//	printf("sigmab = %10.7f\n",sigmab);
+
 
 }
 
@@ -2942,15 +2893,7 @@ __global__ void calculateKernelValues(float *X, float *kernelValTable, int N){
 		for (int k = 0; k < numVar; k++) {
 
 			diff[k] = X[off1+k] - X[off2+k];
-#if 0
-			if (isnan ( diff[k]) || isinf ( diff[k]) ){
 
-				printf("diff[k] is NaN or inf!\n");
-				assert(0);
-
-
-			}
-#endif			
 		}
 
 
@@ -2977,40 +2920,13 @@ __global__ void calculateKernelValues(float *X, float *kernelValTable, int N){
 		}
 
 
-#if 0
-		if (isnan ( sum) || isinf ( sum) ){
 
-			printf("sum is NaN or inf!\n");
-			assert(0);
-
-
-		}
-#endif			
-
-
-#if 0
-		if (sum < 0){
-
-			printf("Error: Metric is negative!");
-			assert(0);
-
-		}
-#endif
 
 		float sqr_two_pi = sqrt(2.0 * 3.14159265359);
 
 		float kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-sum / (2 * sigma * sigma)) + 10E-12;
 
 
-#if 0
-		if (isnan ( kernelVal) || isinf ( kernelVal) ){
-
-			printf("diff[k] is NaN or inf!\n");
-			assert(0);
-
-
-		}
-#endif			
 
 		kernelValTable[indx1*N+indx2]= kernelVal;
 
@@ -3083,9 +2999,8 @@ __global__  void calculateLossKernel(float *X,float *kernelValTable, float *sum,
 		}
 
 
-		printf("tid = %d, fapprox = %10.7f, fexact = %10.7f\n", tid,fapprox, X[tid*(numVar+1)+numVar]);
-		lossFunc = (fapprox - X[tid*(numVar+1)+numVar]) * (fapprox - X[tid*(numVar+1)+numVar]);
-
+		//		lossFunc = (fapprox - X[tid*(numVar+1)+numVar]) * (fapprox - X[tid*(numVar+1)+numVar]);
+		lossFunc = fabs(fapprox - X[tid*(numVar+1)+numVar]);
 		sum[tid] = lossFunc;
 	}
 
@@ -3124,16 +3039,6 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 			} 
 		}
 
-#if 0
-		if (isnan (kernelSum ) || isinf (kernelSum) ){
-
-			printf("kernelSum  is NaN or inf!\n");
-			assert(0);
-
-
-		}
-#endif			
-
 
 		float fapprox = 0.0;
 		for (int i = 0; i < N; ++i){
@@ -3161,7 +3066,10 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 
 
 
-		lossFunc = (fapprox - X[tid*(numVar+1)+numVar]) * (fapprox - X[tid*(numVar+1)+numVar]);
+		//		lossFunc = (fapprox - X[tid*(numVar+1)+numVar]) * (fapprox - X[tid*(numVar+1)+numVar]);
+		lossFunc = fabs ( (fapprox - X[tid*(numVar+1)+numVar]) );
+
+
 		sum[tid] = lossFunc;
 
 		lossFuncb = sumb[tid];
@@ -3176,26 +3084,23 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 #endif				
 
 
-
-		//		printf("sumb[%d] = %10.7f\n",tid,sumb[tid]);
 		sumb[tid] = 0.0;
-		fapproxb = 2*(fapprox-X[tid*(numVar+1)+numVar])*lossFuncb;
-#if 0
-		if (isnan ( fapproxb) || isinf (fapproxb) ){
+		//		fapproxb = 2*(fapprox-X[tid*(numVar+1)+numVar])*lossFuncb;
 
-			printf("X[tid*(numVar+1)+numVar] = %10.7f\n",X[tid*(numVar+1)+numVar]);
-			printf("2*(fapprox-X[tid*(numVar+1)+numVar]) = %10.7f\n",2*(fapprox-X[tid*(numVar+1)+numVar]));
-
-			printf("lossFuncb = %10.7f\n",lossFuncb);
-			printf("fapproxb  is NaN or inf!\n");
+		if((fapprox - X[tid*(numVar+1)+numVar]) >= 0){
 
 
+			fapproxb = lossFuncb;
 
 		}
-#endif					
+		else{
+
+			fapproxb = -lossFuncb;
+
+		}
 
 
-		//		printf("fapproxb = %10.7f, fapprox = %10.7f\n",fapproxb,fapprox);
+
 		kernelSumb = 0.0;
 		for (int i = N-1; i > -1; --i) {
 
@@ -3210,16 +3115,6 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 
 
 				tempb = X[i*(numVar+1)+numVar]*fapproxb/kernelSum;
-#if 0
-				if (isnan ( tempb ) || isinf (tempb) ){
-
-					printf("tempb (calculateLossKernel_b) is NaN or inf!\n");
-
-
-
-				}
-#endif						
-
 
 				kernelValTableb[indxKernelValTable] = kernelValTableb[indxKernelValTable] + tempb;
 				kernelSumb = kernelSumb - kernelValTable[indxKernelValTable]*
@@ -3237,19 +3132,7 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 					indxKernelValTable = tid*N + i;
 
 				kernelValTableb[indxKernelValTable] = kernelValTableb[indxKernelValTable] + kernelSumb;
-#if 0
-				printf("kernelValTableb[%d] = %10.7f\n", indxKernelValTable,kernelValTableb[indxKernelValTable] );
 
-#endif
-#if 0
-				if (isnan ( kernelValTableb[indxKernelValTable] ) || isinf ( kernelValTableb[indxKernelValTable] ) ){
-
-					printf("kernelValTableb[indxKernelValTable]  is NaN or inf!\n");
-					assert(0);
-
-
-				}
-#endif											
 
 
 			}
@@ -3257,8 +3140,7 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 
 
 	} 
-	//	else
-	//		*kernelValTableb = 0.0;
+
 }
 
 void calcLossFunGPU(float *result, float *input, float *data,int N){
@@ -4158,11 +4040,11 @@ float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma) {
 int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter) {
 
 
-	int max_opt_iter = 50000;
-	float learning_rateM = 0.001;
-	float learning_rateSigma = 0.0001;
+	int max_opt_iter = 40000;
+
 	unsigned int n = L.n_cols;
 	unsigned int m = L.n_cols;
+	float alpha = 0.9;
 
 	if(m != n || m!=numVar || n!=numVar){
 
@@ -4263,6 +4145,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 
 	float *inputVec = new float[Ldim+1]();
+	float *inputVecVel = new float[Ldim+1]();
 	float *inputVecLocalBest = new float[Ldim+1]();
 	float *inputVecb = new float[Ldim+1]();
 	float *inputVecRegb = new float[Ldim]();
@@ -4317,6 +4200,11 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 	for(int iter_cv=0; iter_cv< max_cv_iter; iter_cv++){
 
 
+		float learning_rateM = 0.0001;
+		float learning_rateSigma = learning_rateM * 0.01;
+
+
+
 		if(max_cv_iter !=1){
 
 			wSvd = wSvdtrial(iter_cv);
@@ -4339,9 +4227,9 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 			for (int j = 0; j <= i; j++) {
 
-				if(i ==j) {
+				if(i ==j) { /* main diagonal */
 
-					inputVec[i*numVar+j] = 1.0;
+					inputVec[i*numVar+j] = 1.0+ RandomFloat(-0.1,0.1);
 				}
 				else {
 
@@ -4533,6 +4421,8 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 		float objectiveFunLocalBest = 10E14;
 
+
+
 		for(int opt_iter=0 ; opt_iter < max_opt_iter; opt_iter++){
 
 
@@ -4542,7 +4432,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 			for (int i = 0; i < numVar; i++){
 				for (int j = 0; j <= i; j++) {
 
-					inputVec[i*numVar+j]= inputVec[i*numVar+j] - learning_rateM* gradientVec[i*numVar+j];
+					inputVec[i*numVar+j]= inputVec[i*numVar+j] + inputVecVel[i*numVar+j];
 
 
 				}
@@ -4565,7 +4455,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 			}
 
 			/* update sigma */
-			inputVec[Ldim]= inputVec[Ldim] - learning_rateSigma*gradientVec[Ldim];
+			inputVec[Ldim]= inputVec[Ldim] + inputVecVel[Ldim];
 
 			if(inputVec[Ldim] <= 0) {
 
@@ -4627,6 +4517,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 			if(objFunVal < objectiveFunLocalBest){
 
+				objectiveFunLocalBest = objFunVal;
 
 				for(int i=0;i<Ldim+1;i++) {
 
@@ -4635,15 +4526,20 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 				}
 
 
-				objectiveFunLocalBest = objFunVal;
+
 
 			}
 
+
+
+
+
 			if(opt_iter % 100 == 0){
+
 
 				printf("iter = %d, objective function = %10.7f, Leave One Out Error = %10.7f, Regularization term = %10.7f\n",opt_iter,objFunVal,lossVal, regTerm);
 
-#if 0				
+#if 0
 				printf("L = \n");
 
 				for (int i = 0; i < numVar; i++) {
@@ -4663,6 +4559,16 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 			}
 
 
+			/* update velocity vector */
+			for(int i=0;i<Ldim;i++) {
+
+				inputVecVel[i]=alpha* inputVecVel[i] - learning_rateM*gradientVec[i];
+
+			}
+			inputVecVel[Ldim]=alpha* inputVecVel[Ldim] - learning_rateSigma*gradientVec[Ldim];
+
+
+
 
 		} /* end of local optimization loop */
 
@@ -4674,12 +4580,21 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 				L(i,j)= inputVecLocalBest[i*numVar+j];
 			}
 
+#if 1
+		printf("local optimization result:\n");
+		printf("L = \n");
+		L.print();
+		printf("sigma = %10.7f\n", inputVecLocalBest[Ldim]);
 
+#endif
 		sigma = inputVecLocalBest[Ldim];
 
 
 		fmat M = L*trans(L);
-
+#if 1
+		printf("M = \n");
+		M.print();
+#endif
 		float genError = 0.0;
 
 		for(int i=0;i <NvalidationSet; i++){
@@ -4695,7 +4610,8 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 #endif
 
 
-			genError += (yexact-ytilde)*(yexact-ytilde);
+			//			genError += (yexact-ytilde)*(yexact-ytilde);
+			genError += fabs(yexact-ytilde);
 
 
 		}

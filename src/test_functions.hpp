@@ -179,10 +179,9 @@ void perform_kriging_test(double (*test_function)(double *),
 		int  number_of_samples,
 		int sampling_method,
 		int problem_dimension,
-		int method_for_solving_lin_eq_for_training,
-		int method_for_solving_lin_eq_for_evaluation,
-		int linear_regression = 0,
-		int training_method =0);
+		int linear_regression = 0);
+
+
 
 
 void perform_NNregression_test(double (*test_function)(double *),

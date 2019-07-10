@@ -16,8 +16,8 @@ def norm(x):
 
 def build_model():
   model = keras.Sequential([
-    layers.Dense(8, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
-    layers.Dense(8, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
+    layers.Dense(10, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
+    layers.Dense(10, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
     layers.Dense(1)
   ])
 

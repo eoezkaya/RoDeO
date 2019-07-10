@@ -1091,23 +1091,18 @@ void perform_kriging_test(double (*test_function)(double *),
 		int  number_of_samples,
 		int sampling_method,
 		int problem_dimension,
-		int method_for_solving_lin_eq_for_training,
-		int method_for_solving_lin_eq_for_evaluation,
-		int linear_regression,
-		int training_method){
+		int linear_regression){
 
 	vec kriging_weights;
 	vec regression_weights;
 
-	double reg_param=8;
+	double reg_param = pow(10.0, -8.0);
 
 	int number_of_max_function_evals_for_training = 10000;
 
 
 	/* file name for data points in csv (comma separated values) format */
-	std::string input_file_name = function_name+"_"
-			+ std::to_string(number_of_samples )
-	+".csv";
+	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples )+".csv";
 
 	printf("input file name : %s\n",input_file_name.c_str());
 
@@ -1138,16 +1133,16 @@ void perform_kriging_test(double (*test_function)(double *),
 
 	printf("training kriging hyperparameters...\n");
 
-	if(training_method == MAXIMUM_LIKELIHOOD){
-		train_kriging_response_surface(input_file_name,
-				"None",
-				linear_regression,
-				regression_weights,
-				kriging_weights,
-				reg_param,
-				number_of_max_function_evals_for_training,
-				RAW_ASCII);
-	}
+
+	train_kriging_response_surface(input_file_name,
+			"None",
+			linear_regression,
+			regression_weights,
+			kriging_weights,
+			reg_param,
+			number_of_max_function_evals_for_training,
+			RAW_ASCII);
+
 
 
 
@@ -1175,13 +1170,14 @@ void perform_kriging_test(double (*test_function)(double *),
 
 
 	mat X = data.submat(0, 0, nrows - 1, ncols - 2);
-
-	//	X.print();
-
+#if 0
+	X.print();
+#endif
 	vec ys = data.col(dim);
 
-	//	ys.print();
-
+#if 0
+	ys.print();
+#endif
 	vec x_max(dim);
 	x_max.fill(0.0);
 
@@ -1194,11 +1190,14 @@ void perform_kriging_test(double (*test_function)(double *),
 
 	}
 
-	//	printf("maximum = \n");
-	//	x_max.print();
+#if 0
+	printf("maximum = \n");
+	x_max.print();
 
-	//	printf("minimum = \n");
-	//	x_min.print();
+	printf("minimum = \n");
+	x_min.print();
+#endif
+
 
 	/* normalize data */
 	for (int i = 0; i < nrows; i++) {
@@ -1250,94 +1249,28 @@ void perform_kriging_test(double (*test_function)(double *),
 	vec gamma = kriging_weights.tail(dim);
 
 
-	reg_param = pow(10.0, -1.0*reg_param);
+
 
 	/* evaluate the correlation matrix for the given theta and gamma */
 	compute_R_matrix(theta,gamma, reg_param, R, X);
 
 
+
+	mat Rinv = inv(R);
+	/* vector of ones */
 	vec I = ones(dimension_of_R);
-	vec R_inv_ys(dimension_of_R); /* R^-1 * ys */
-	vec R_inv_I (dimension_of_R); /* R^-1 * I */
-	vec R_inv_ys_min_beta(dimension_of_R); /* R^-1 * (ys-beta*I) */
 
-
-
-	if (method_for_solving_lin_eq_for_evaluation == SVD){
-
-		mat U(dimension_of_R, dimension_of_R);
-		mat V(dimension_of_R, dimension_of_R);
-		mat Ut(dimension_of_R, dimension_of_R);
-		mat D(dimension_of_R, dimension_of_R);
-
-		vec s(dimension_of_R);
-		vec sinv(dimension_of_R);
-
-		int flag_svd = svd( U, s, V, R );
-
-		if (flag_svd == 0) {
-			printf("SVD could not be performed\n");
-
-			exit(-1);
-		}
-
-		sinv = 1.0/s;
-
-		sinv.print();
-
-		double threshold = 10E-14;
-		for(int i=0; i< dimension_of_R; i++){
-			if(s(i)  < threshold){
-				sinv(i) = 0.0;
-			}
-
-		}
-
-		printf("sinv = \n");
-		sinv.print();
-		printf("\n");
-
-
-		Ut = trans(U);
-
-		D.fill(0.0);
-		for(int i=0; i< dimension_of_R;i++){
-
-			D(i,i) = sinv(i);
-
-
-		}
-
-
-		R_inv_ys =V*D*Ut*ys;
-		R_inv_I  =V*D*Ut*I;
-
-		beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
-
-		R_inv_ys_min_beta = V*D*Ut*(ys-beta0* I);
-
-
-	}
-
-
-
-
-	if (method_for_solving_lin_eq_for_evaluation == MATRIX_INVERSION){
-		mat Rinv = inv(R);
-		beta0 = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys));
-		R_inv_ys_min_beta = Rinv* (ys-beta0* I);
-
-	}
-	//	Rinv.print();
-
+	beta0 = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys));
+	vec R_inv_ys_min_beta = Rinv* (ys-beta0* I);
 
 
 	printf("beta0 = %10.7f\n",beta0);
 
 
-
-	//	R_inv_ys_min_beta.print();
-
+#if 0
+	printf("R_inv_ys_min_beta =\n");
+	R_inv_ys_min_beta.print();
+#endif
 
 
 
@@ -1349,10 +1282,6 @@ void perform_kriging_test(double (*test_function)(double *),
 		rowvec x = X.row(i);
 
 
-
-
-
-
 		double func_val = calculate_f_tilde(x,
 				X,
 				beta0,
@@ -1360,7 +1289,10 @@ void perform_kriging_test(double (*test_function)(double *),
 				R_inv_ys_min_beta,
 				kriging_weights);
 
-		for(int j=0; j<dim;j++) x(j) = x(j)* (x_max(j) - x_min(j))+x_min(j);
+		for(int j=0; j<dim;j++) {
+
+			x(j) = x(j)* (x_max(j) - x_min(j))+x_min(j);
+		}
 
 		double func_val_exact = test_function(x.memptr());
 
@@ -3147,7 +3079,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	float sigma = 0.01;
 	float wSvd = 1.0;
 	float w12 = 1.0;
-	int max_cv_iter = 20;
+	int max_cv_iter = 40;
 
 
 
@@ -3198,8 +3130,9 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	}
 	else{
 
-		int number_of_samples_to_generate = number_of_samples_with_g_eval;
+		int number_of_samples_to_generate = number_of_samples_with_only_f_eval;
 
+		printf("Generating data ...\n");
 		generate_highdim_test_function_data_cuda(test_function,
 				datafilename,
 				bounds,
@@ -3207,6 +3140,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 				numVar);
 
 	}
+
 
 
 	fmat data;
