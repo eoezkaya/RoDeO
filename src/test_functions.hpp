@@ -166,6 +166,9 @@ double Borehole_adj(double *x, double *xb);
 double Wingweight(double *x);
 double WingweightAdj(double *xin, double *xb);
 
+float Wingweightfloat(float *x);
+float WingweightAdjfloat(float *xin, float *xb);
+
 
 double empty(double *x);
 double empty(double *x, double *xb);
@@ -251,9 +254,9 @@ void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
 		int number_of_samples_with_g_eval,
 		int sampling_method);
 
-void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
+void generate_highdim_test_function_data_cuda(float (*test_function)(float *),
 		std::string filename,
-		double *bounds,
+		float *bounds,
 		int number_of_samples,
 		int dim);
 
@@ -276,9 +279,9 @@ void generate_test_function_data(double (*test_function)(double *),
 
 
 
-void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		double *bounds,
+void perform_kernel_regression_test_highdim_cuda(float (*test_function)(float *),
+		float (*test_function_adj)(float *, float *),
+		float *bounds,
 		std::string function_name ,
 		int  number_of_samples_with_only_f_eval,
 		int number_of_samples_with_g_eval,

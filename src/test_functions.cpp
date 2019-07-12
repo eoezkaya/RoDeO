@@ -788,6 +788,122 @@ double Wingweight(double *x){
 	return(W);
 }
 
+float Wingweightfloat(float *x){
+#if 0
+	printf("x = \n");
+	for(int i=0; i<10; i++) {
+
+		printf("%10.7f ",x[i]);
+
+	}
+	printf("\n");
+#endif
+
+	float Sw=x[0];
+	float Wfw=x[1];
+	float A=x[2];
+	float Lambda=x[3];
+	float q=x[4];
+	float lambda=x[5];
+	float tc=x[6];
+	float Nz=x[7];
+	float Wdg=x[8];
+	float Wp=x[9];
+
+
+	float deg = (Lambda*datum::pi)/180.0;
+
+	float W = 0.036*pow(Sw,0.758)*pow(Wfw,0.0035)*pow((A/(cos(deg)*cos(deg))),0.6) *
+			pow(q,0.006)*pow(lambda,0.04)*pow( (100.0*tc/cos(deg)), -0.3) *pow( (Nz*Wdg),0.49) + Sw*Wp;
+
+	return(W);
+}
+
+float WingweightAdjfloat(float *xin, float *xb){
+
+
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+	codi::RealReverse *x = new codi::RealReverse[10];
+
+	for(int i=0; i<10; i++) {
+
+		x[i] = xin[i];
+		tape.registerInput(x[i]);
+	}
+
+
+	codi::RealReverse Sw=x[0];
+	codi::RealReverse Wfw=x[1];
+	codi::RealReverse A=x[2];
+	codi::RealReverse Lambda=x[3];
+	codi::RealReverse q=x[4];
+	codi::RealReverse lambda=x[5];
+	codi::RealReverse tc=x[6];
+	codi::RealReverse Nz=x[7];
+	codi::RealReverse Wdg=x[8];
+	codi::RealReverse Wp=x[9];
+
+
+	codi::RealReverse deg = (Lambda*datum::pi)/180.0;
+
+	codi::RealReverse result = 0.036*pow(Sw,0.758)*pow(Wfw,0.0035)*pow((A/(cos(deg)*cos(deg))),0.6) *
+			pow(q,0.006)*pow(lambda,0.04)*pow( (100.0*tc/cos(deg)), -0.3) *pow( (Nz*Wdg),0.49) + Sw*Wp;
+
+	tape.registerOutput(result);
+
+	tape.setPassive();
+	result.setGradient(1.0);
+	tape.evaluate();
+
+	for(int i=0; i<10; i++) {
+
+		xb[i]=x[i].getGradient();
+	}
+
+
+#if 0
+	double fdres[10];
+	double epsilon = 0.0;
+	double xsave;
+	double fp = 0.0;
+
+	double f0 = Wingweight(xin);
+	for(int i=0; i<10; i++){
+
+		epsilon = xin[i]*0.001;
+		xsave = xin[i];
+		//		printf("xin[%d] = %20.15f\n",i,xin[i]);
+		xin[i]+=epsilon;
+		//		printf("xin[%d] = %20.15f\n",i,xin[i]);
+		fp =  Wingweight(xin);
+		xin[i] = xsave;
+		printf("fp = %20.15f f0 = %20.15f\n",fp,f0);
+
+		fdres[i] = (fp-f0)/epsilon;
+	}
+
+	printf("fd results = \n");
+	for(int i=0; i<10; i++) {
+		printf("%10.7f ",fdres[i]);
+	}
+	printf("\n");
+	printf("ad results = \n");
+	for(int i=0; i<10; i++) {
+		printf("%10.7f ",xb[i]);
+	}
+	printf("\n");
+
+#endif
+	delete[] x;
+	tape.reset();
+
+	return result.getValue();
+
+
+
+}
+
 double WingweightAdj(double *xin, double *xb){
 
 
@@ -2583,9 +2699,9 @@ void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
 }
 
 
-void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
+void generate_highdim_test_function_data_cuda(float (*test_function)(float *),
 		std::string filename,
-		double *bounds,
+		float *bounds,
 		int number_of_samples,
 		int dim){
 
@@ -2599,7 +2715,7 @@ void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
 	printf("opening file %s for input...\n",filename.c_str() );
 	outp = fopen(filename.c_str(), "w");
 
-	double *x = new double[dim];
+	float *x = new float[dim];
 
 
 	/* write functional values to the output file */
@@ -2613,7 +2729,7 @@ void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
 			x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
 		}
 
-		double f_val = test_function(x);
+		float f_val = test_function(x);
 
 		for(int j=0; j<dim;j++){
 			printf("%10.7f, ",x[j]);
@@ -3051,9 +3167,9 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 }
 
 
-void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		double *bounds,
+void perform_kernel_regression_test_highdim_cuda(float (*test_function)(float *),
+		float (*test_function_adj)(float *, float *),
+		float *bounds,
 		std::string function_name,
 		int  number_of_samples_with_only_f_eval,
 		int number_of_samples_with_g_eval,
