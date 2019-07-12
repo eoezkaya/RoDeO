@@ -241,6 +241,22 @@ double RandomDouble(double a, double b) {
  *
  * @param[in] a
  * @param[in] b
+ * @return random number between a and b
+ *
+ */
+float RandomFloat(float a, float b) {
+
+	float random = ((float) rand()) / (float) RAND_MAX;
+	float diff = b - a;
+	float r = random * diff;
+	return a + r;
+}
+
+
+/** generate a random number between a and b
+ *
+ * @param[in] a
+ * @param[in] b
  * @return random number in the interval [a,b]
  *
  */
@@ -626,6 +642,26 @@ double calcMetric(rowvec &xi,rowvec &xj, mat M){
 	return dot(diff,M*diffT);
 
 }
+
+float calcMetric(frowvec &xi,frowvec &xj, fmat M){
+#if 0
+	printf("calling calcMetric...\n");
+	printf("M = \n");
+	M.print();
+#endif
+	frowvec diff= xi-xj;
+
+#if 0
+	printf("diff = \n");
+	diff.print();
+#endif
+
+	fcolvec diffT= trans(diff);
+
+	return dot(diff,M*diffT);
+
+}
+
 
 
 /** brute force KNeighbours search

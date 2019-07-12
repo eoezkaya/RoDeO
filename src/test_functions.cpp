@@ -12,6 +12,7 @@
 #include "rbf.hpp"
 #include "trust_region_gek.hpp"
 #include "kernel_regression.hpp"
+#include "kernel_regression_cuda.h"
 #include <codi.hpp>
 
 #define ARMA_DONT_PRINT_ERRORS
@@ -52,6 +53,18 @@ void classification_test2(double *x, double *label, double *y){
 		*label=-1.0;
 	}
 
+
+}
+
+double empty(double *x){
+
+	return 0;
+
+}
+
+double empty(double *x, double *xb){
+
+	return 0;
 
 }
 
@@ -1078,23 +1091,18 @@ void perform_kriging_test(double (*test_function)(double *),
 		int  number_of_samples,
 		int sampling_method,
 		int problem_dimension,
-		int method_for_solving_lin_eq_for_training,
-		int method_for_solving_lin_eq_for_evaluation,
-		int linear_regression,
-		int training_method){
+		int linear_regression){
 
 	vec kriging_weights;
 	vec regression_weights;
 
-	double reg_param=8;
+	double reg_param = pow(10.0, -8.0);
 
 	int number_of_max_function_evals_for_training = 10000;
 
 
 	/* file name for data points in csv (comma separated values) format */
-	std::string input_file_name = function_name+"_"
-			+ std::to_string(number_of_samples )
-	+".csv";
+	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples )+".csv";
 
 	printf("input file name : %s\n",input_file_name.c_str());
 
@@ -1125,16 +1133,16 @@ void perform_kriging_test(double (*test_function)(double *),
 
 	printf("training kriging hyperparameters...\n");
 
-	if(training_method == MAXIMUM_LIKELIHOOD){
-		train_kriging_response_surface(input_file_name,
-				"None",
-				linear_regression,
-				regression_weights,
-				kriging_weights,
-				reg_param,
-				number_of_max_function_evals_for_training,
-				RAW_ASCII);
-	}
+
+	train_kriging_response_surface(input_file_name,
+			"None",
+			linear_regression,
+			regression_weights,
+			kriging_weights,
+			reg_param,
+			number_of_max_function_evals_for_training,
+			RAW_ASCII);
+
 
 
 
@@ -1162,13 +1170,14 @@ void perform_kriging_test(double (*test_function)(double *),
 
 
 	mat X = data.submat(0, 0, nrows - 1, ncols - 2);
-
-	//	X.print();
-
+#if 0
+	X.print();
+#endif
 	vec ys = data.col(dim);
 
-	//	ys.print();
-
+#if 0
+	ys.print();
+#endif
 	vec x_max(dim);
 	x_max.fill(0.0);
 
@@ -1181,11 +1190,14 @@ void perform_kriging_test(double (*test_function)(double *),
 
 	}
 
-	//	printf("maximum = \n");
-	//	x_max.print();
+#if 0
+	printf("maximum = \n");
+	x_max.print();
 
-	//	printf("minimum = \n");
-	//	x_min.print();
+	printf("minimum = \n");
+	x_min.print();
+#endif
+
 
 	/* normalize data */
 	for (int i = 0; i < nrows; i++) {
@@ -1237,94 +1249,28 @@ void perform_kriging_test(double (*test_function)(double *),
 	vec gamma = kriging_weights.tail(dim);
 
 
-	reg_param = pow(10.0, -1.0*reg_param);
+
 
 	/* evaluate the correlation matrix for the given theta and gamma */
 	compute_R_matrix(theta,gamma, reg_param, R, X);
 
 
+
+	mat Rinv = inv(R);
+	/* vector of ones */
 	vec I = ones(dimension_of_R);
-	vec R_inv_ys(dimension_of_R); /* R^-1 * ys */
-	vec R_inv_I (dimension_of_R); /* R^-1 * I */
-	vec R_inv_ys_min_beta(dimension_of_R); /* R^-1 * (ys-beta*I) */
 
-
-
-	if (method_for_solving_lin_eq_for_evaluation == SVD){
-
-		mat U(dimension_of_R, dimension_of_R);
-		mat V(dimension_of_R, dimension_of_R);
-		mat Ut(dimension_of_R, dimension_of_R);
-		mat D(dimension_of_R, dimension_of_R);
-
-		vec s(dimension_of_R);
-		vec sinv(dimension_of_R);
-
-		int flag_svd = svd( U, s, V, R );
-
-		if (flag_svd == 0) {
-			printf("SVD could not be performed\n");
-
-			exit(-1);
-		}
-
-		sinv = 1.0/s;
-
-		sinv.print();
-
-		double threshold = 10E-14;
-		for(int i=0; i< dimension_of_R; i++){
-			if(s(i)  < threshold){
-				sinv(i) = 0.0;
-			}
-
-		}
-
-		printf("sinv = \n");
-		sinv.print();
-		printf("\n");
-
-
-		Ut = trans(U);
-
-		D.fill(0.0);
-		for(int i=0; i< dimension_of_R;i++){
-
-			D(i,i) = sinv(i);
-
-
-		}
-
-
-		R_inv_ys =V*D*Ut*ys;
-		R_inv_I  =V*D*Ut*I;
-
-		beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
-
-		R_inv_ys_min_beta = V*D*Ut*(ys-beta0* I);
-
-
-	}
-
-
-
-
-	if (method_for_solving_lin_eq_for_evaluation == MATRIX_INVERSION){
-		mat Rinv = inv(R);
-		beta0 = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys));
-		R_inv_ys_min_beta = Rinv* (ys-beta0* I);
-
-	}
-	//	Rinv.print();
-
+	beta0 = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys));
+	vec R_inv_ys_min_beta = Rinv* (ys-beta0* I);
 
 
 	printf("beta0 = %10.7f\n",beta0);
 
 
-
-	//	R_inv_ys_min_beta.print();
-
+#if 0
+	printf("R_inv_ys_min_beta =\n");
+	R_inv_ys_min_beta.print();
+#endif
 
 
 
@@ -1336,10 +1282,6 @@ void perform_kriging_test(double (*test_function)(double *),
 		rowvec x = X.row(i);
 
 
-
-
-
-
 		double func_val = calculate_f_tilde(x,
 				X,
 				beta0,
@@ -1347,7 +1289,10 @@ void perform_kriging_test(double (*test_function)(double *),
 				R_inv_ys_min_beta,
 				kriging_weights);
 
-		for(int j=0; j<dim;j++) x(j) = x(j)* (x_max(j) - x_min(j))+x_min(j);
+		for(int j=0; j<dim;j++) {
+
+			x(j) = x(j)* (x_max(j) - x_min(j))+x_min(j);
+		}
 
 		double func_val_exact = test_function(x.memptr());
 
@@ -2638,6 +2583,53 @@ void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
 }
 
 
+void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
+		std::string filename,
+		double *bounds,
+		int number_of_samples,
+		int dim){
+
+#if 0
+	printf("generate_highdim_test_function_data...\n");
+	printf("dim = %d\n",dim);
+#endif
+
+	FILE *outp;
+
+	printf("opening file %s for input...\n",filename.c_str() );
+	outp = fopen(filename.c_str(), "w");
+
+	double *x = new double[dim];
+
+
+	/* write functional values to the output file */
+	for(int i=0; i<number_of_samples;i++ ){
+
+		for(int j=0; j<dim;j++){
+#if 0
+			printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
+			printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
+#endif
+			x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+		}
+
+		double f_val = test_function(x);
+
+		for(int j=0; j<dim;j++){
+			printf("%10.7f, ",x[j]);
+			fprintf(outp,"%10.7f, ",x[j]);
+		}
+		printf("%10.7f\n",f_val);
+		fprintf(outp,"%10.7f\n",f_val);
+
+
+	}
+
+	fclose(outp);
+
+	delete[] x;
+
+}
 
 
 
@@ -3058,826 +3050,371 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 
 }
 
-void perform_kernel_regression_test_highdim(double (*test_function)(double *),
+
+void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		double *bounds,
-		std::string function_name ,
+		std::string function_name,
 		int  number_of_samples_with_only_f_eval,
 		int number_of_samples_with_g_eval,
 		int sampling_method,
 		int dim){
 
-	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
-			+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
+	std::string datafilename;
 
+	if (sampling_method == EXISTING_FILE){
 
-	if(dim <= 2){
-		printf("Error: problem dimension must be greater than 2!\n");
-		exit(-1);
-	}
+		datafilename = function_name + ".csv";
 
-
-	/* generate sample points (may or may not include gradient information) */
-	generate_highdim_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,dim,
-			number_of_samples_with_only_f_eval,
-			number_of_samples_with_g_eval,
-			sampling_method );
-
-	mat data; /* data matrix */
-	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
-
-	int nrows = data.n_rows;
-	int ncols = data.n_cols;
-
-
-#if 1
-	printf("Data matrix = \n");
-	data.print();
-#endif
-
-	mat X = data.submat(0,0,nrows-1,dim-1);
-
-#if 1
-	printf("X = \n");
-	X.print();
-#endif
-	vec x_max(dim);
-	x_max.fill(0.0);
-
-	vec x_min(dim);
-	x_min.fill(0.0);
-
-	for (int i = 0; i < dim; i++) {
-
-		x_max(i) = X.col(i).max();
-		x_min(i) = X.col(i).min();
-
-	}
-
-#if 0
-	printf("maximum = \n");
-	x_max.print();
-
-	printf("minimum = \n");
-	x_min.print();
-#endif
-	/* normalize data */
-	for (int i = 0; i < nrows; i++) {
-
-		for (int j = 0; j < dim; j++) {
-
-			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-		}
-	}
-
-#if 1
-	printf("X(normalized) = \n");
-	X.print();
-#endif
-
-	mat metricM(dim,dim);
-
-	vec ys=data.col(dim);
-
-
-
-#if 0
-	printf("Training the Mahalanobis distance...\n");
-
-#endif
-
-
-	/* initialize values for regularization terms */
-	double wSvd = 0.1;
-	double w12 = 0.1;
-
-	/* initialize bandwidth for the Gaussian kernel*/
-	double sigma=0.1;
-
-	trainMahalanobisDistance(metricM,data,sigma, wSvd, w12, 20);
-
-
-	double out_sample_error = computeGenErrorKernelReg(test_function,bounds,dim,50000,X,ys,metricM,x_min,x_max,sigma);
-
-	printf("out of sample error = %10.7f\n",out_sample_error);
-
-	metricM.eye();
-
-	out_sample_error = computeGenErrorKernelReg(test_function,bounds,dim,50000,X,ys,metricM,x_min,x_max,sigma);
-
-	printf("out of sample error (M identity)= %10.7f\n",out_sample_error);
-	metricM.print();
-
-
-}
-
-
-
-
-
-
-void perform_kernel_regression_test(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		double *bounds,
-		std::string function_name ,
-		int  number_of_samples_with_only_f_eval,
-		int number_of_samples_with_g_eval,
-		int sampling_method,
-		int dim,
-		std::string python_dir){
-
-#if 0
-	printf("testing kernel regression for %s function...\n",function_name.c_str());
-	printf("number of samples with only functional value = %d\n",number_of_samples_with_only_f_eval);
-	printf("number of samples with gradients = %d\n",number_of_samples_with_g_eval);
-#endif
-
-	if(dim <= 0){
-		printf("Error: problem dimension must be greater than zero\n");
-		exit(-1);
-	}
-
-	int number_of_trials = 1;
-
-
-	/*
-	double mean_generalization_error = 0.0;
-	vec generelaziation_error(number_of_trials);
-	generelaziation_error.fill(0.0);
-
-	double mean_generalization_errorM1 = 0.0;
-	vec generelaziation_errorM1(number_of_trials);
-	generelaziation_errorM1.fill(0.0);
-	 */
-	/* initialize bandwidth */
-	double sigma=0.1;
-
-	/* trial loop */
-
-
-
-
-	//	for(int trial = 0; trial <number_of_trials; trial ++ ){
-
-
-	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"+std::to_string(number_of_samples_with_g_eval)+ ".csv";
-#if 0
-	printf("input file name : %s\n",input_file_name.c_str());
-#endif
-
-#if 0
-	if(dim ==2){
-		/* generate the contour_plot */
-		generate_contour_plot_2D_function_with_gradient(test_function_adj, bounds, function_name, python_dir);
-
-
-	}
-#endif
-
-
-	if(dim == 2){
-#if 0
-		printf("Generating inputs using %d points (%d gradient computations)...\n",number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval,number_of_samples_with_g_eval);
-#endif
-
-		/* generate the input data for test	*/
-		generate_2D_test_function_data_GEK(test_function,
-				test_function_adj,
-				input_file_name,
-				bounds,
-				number_of_samples_with_only_f_eval,
-				number_of_samples_with_g_eval,
-				sampling_method,
-				python_dir);
 
 	}
 	else{
 
-		/* generate the input data for test	*/
-		generate_highdim_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,dim,
-				number_of_samples_with_only_f_eval,
-				number_of_samples_with_g_eval,
-				sampling_method );
+		datafilename = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
+				+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
+
+
+	}
+
+	float sigma = 0.01;
+	float wSvd = 1.0;
+	float w12 = 1.0;
+	int max_cv_iter = 40;
+
+
+
+
+	float partition[2] = {0.9,0.1};
+
+	srand (time(NULL));
+	printf("GPU test for kernel regression\n");
+
+#if 0	
+	cudaDeviceProp prop;
+	int count;
+	cudaGetDeviceCount( &count ) ;
+	for (int i=0; i< count; i++) {
+		cudaGetDeviceProperties( &prop, i);
+		printf( "--- General Information for device %d ---\n", i );
+		printf( "Name:%s\n", prop.name );
+		printf( "Compute capability:%d.%d\n", prop.major, prop.minor );
+		printf( "Total global mem:%ld\n", prop.totalGlobalMem );
+		printf( "Total amount of constant memory: %lu bytes\n",
+				prop.totalConstMem);
+
+
+		printf( "Threads in warp:%d\n", prop.warpSize );
+		printf( "Max threads per block:%d\n",prop.maxThreadsPerBlock );
+		printf( "Max thread dimensions:(%d, %d, %d)\n",prop.maxThreadsDim[0], prop.maxThreadsDim[1],prop.maxThreadsDim[2] );
+		printf( "Max grid dimensions:(%d, %d, %d)\n",prop.maxGridSize[0], prop.maxGridSize[1],prop.maxGridSize[2] );		
+
+	}
+#endif
+
+
+
+
+
+
+	if(numVar!=dim) {
+
+		printf("Mismatch between numVar and dim");
+		exit(-1);
+	}
+
+
+	if ( sampling_method == EXISTING_FILE ){
+
+		// do nothing
+
+	}
+	else{
+
+		int number_of_samples_to_generate = number_of_samples_with_only_f_eval;
+
+		printf("Generating data ...\n");
+		generate_highdim_test_function_data_cuda(test_function,
+				datafilename,
+				bounds,
+				number_of_samples_to_generate,
+				numVar);
 
 	}
 
 
-	mat data; /* data matrix */
-	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
 
-	int nrows = data.n_rows;
-	int ncols = data.n_cols;
-
-
-#if 1
-	printf("Data matrix = \n");
+	fmat data;
+	bool load_ok = data.load(datafilename);
 	data.print();
-#endif
 
-	mat X = data.submat(0,0,nrows-1,dim-1);
 
-#if 1
-	printf("X = \n");
-	X.print();
-#endif
-	vec x_max(dim);
-	x_max.fill(0.0);
+	if(load_ok == false)
+	{
+		printf("problem with loading the file %s\n",datafilename.c_str());
+		exit(-1);
+	}
 
-	vec x_min(dim);
-	x_min.fill(0.0);
 
-	for (int i = 0; i < dim; i++) {
+	int number_of_data_points = data.n_rows;
 
-		x_max(i) = X.col(i).max();
-		x_min(i) = X.col(i).min();
+
+	if(numVar != data.n_cols-1){
+
+		printf("Number of columns in the input file does not match with numVar = %d\n",numVar);
+		exit(-1);
 
 	}
 
+	printf("Kernel regression with the input data: %s\n",datafilename.c_str());
+	printf("Data has %d samples with %d variables\n",number_of_data_points,numVar);
+
+
+	printf("Original data:\n");
+	data.print();
+
+
+	data = shuffle(data);
 #if 0
+	printf("Original data (shuffled):\n");
+	data.print();
+#endif		
+
+	int number_of_training_samples = number_of_data_points*partition[0];
+	int number_of_test_samples = number_of_data_points - number_of_training_samples;
+
+
+	printf("number of training samples = %d\n",number_of_training_samples);
+	printf("number of test samples = %d\n",number_of_test_samples);
+
+
+
+	fmat dataTraining = data.submat( 0, 0, number_of_training_samples-1, numVar );
+	fmat dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, numVar );
+
+	data.reset();
+
+#if 1
+	printf("Training data:\n");
+	dataTraining.print();
+
+	printf("Test data:\n");
+	dataTest.print();	
+#endif	
+
+
+
+	fvec x_maxTraining(numVar);
+	x_maxTraining.fill(0.0);
+
+	fvec x_minTraining(numVar);
+	x_minTraining.fill(0.0);
+
+	for (int i = 0; i < numVar; i++) {
+
+		x_maxTraining(i) = dataTraining.col(i).max();
+		x_minTraining(i) = dataTraining.col(i).min();
+
+	}
+
+#if 1
 	printf("maximum = \n");
-	x_max.print();
+	x_maxTraining.print();
 
 	printf("minimum = \n");
-	x_min.print();
+	x_minTraining.print();
 #endif
-	/* normalize data */
-	for (int i = 0; i < nrows; i++) {
+	/* normalize training data */
+	for (int i = 0; i < number_of_training_samples; i++) {
 
-		for (int j = 0; j < dim; j++) {
+		for (int j = 0; j < numVar; j++) {
 
-			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+			dataTraining(i, j) = (1.0/numVar)*(dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
 		}
 	}
 
-#if 1
-	printf("X(normalized) = \n");
-	X.print();
-#endif
 
-	mat metricM(dim,dim);
+	float yTrainingMax = dataTraining.col(numVar).max();
 
-	vec ys=data.col(dim);
+	for (int i = 0; i < number_of_training_samples; i++) {
 
+		dataTraining(i, numVar) = dataTraining(i, numVar)/yTrainingMax ;
 
-
-#if 0
-	printf("Training the Mahalanobis distance...\n");
-
-#endif
-
-	double wSvd = 0.1;
-	double w12 = 0.1;
-
-	trainMahalanobisDistance(metricM,data,sigma, wSvd, w12);
-
-
-
-
-
-	if(dim ==2){
-		/* calculate the generalization error */
-		int resolution =100;
-
-		std::string kriging_response_surface_file_name = "kernel_regression_response_surface.dat";
-
-		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
-
-
-		double dx,dy; /* step sizes in x and y directions */
-		rowvec x(2);
-		rowvec xnorm(2);
-
-
-		dx = (bounds[1]-bounds[0])/(resolution-1);
-		dy = (bounds[3]-bounds[2])/(resolution-1);
-#if 0
-		printf("dx = %10.7f\n",dx);
-		printf("dy = %10.7f\n",dy);
-#endif
-
-		double out_sample_error=0.0;
-
-		std::string response_surface_file_name = "kernel_regression_response_surface.dat";
-
-		FILE *response_surface_file = fopen(response_surface_file_name.c_str(),"w");
-
-		double max_value = -LARGE;
-		double min_value =  LARGE;
-		double max_exactvalue = -LARGE;
-		double min_exactvalue =  LARGE;
-		rowvec pmin(dim);
-		rowvec pmax(dim);
-		rowvec pminex(dim);
-		rowvec pmaxex(dim);
-
-
-		vec ftilde(nrows,fill::zeros);
-		vec kernelVal(nrows,fill::zeros);
-
-
-		vec grad(dim,fill::zeros);
-		rowvec xk(dim,fill::zeros);
-		rowvec xk_normalized(dim,fill::zeros);
-
-
-
-
-
-		x[0] = bounds[0];
-		for(int i=0;i<resolution;i++){
-			x[1] = bounds[2];
-			for(int j=0;j<resolution;j++){
-
-#if 0
-				x(0) = RandomDouble(bounds[0], bounds[1]);
-				x(1) = RandomDouble(bounds[2], bounds[3]);
-#endif
-
-#if 0
-				printf("x = \n");
-				x.print();
-#endif
-
-				/* normalize x */
-				xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
-				xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
-#if 0
-				printf("xnorm = \n");
-				xnorm.print();
-#endif
-
-
-
-
-				double kernelSum=0.0;
-				for(int k=0; k<nrows; k++){
-
-					for(int l=0; l<dim; l++){
-
-						grad(l)=data(k,dim+1+l);
-						xk(l)=data(k,l);
-						xk_normalized(l)=X(k,l);
-					}
-
-					double fval= data(k,dim);
-
-					ftilde(k) = fval;
-					//					ftilde(k) += dot(grad,x-xk);
-
-					kernelVal(k)= gaussianKernel(xnorm,xk_normalized,sigma,metricM);
-
-					kernelSum += kernelVal(k);
-
-
-
-#if 0
-					printf("\n\nk= %d\n",k);
-					//					printf("grad = \n");
-					//					grad.print();
-					printf("xk = \n");
-					xk.print();
-					printf("difference = \n");
-					(x-xk).print();
-					printf("xk (normalized)= \n");
-					xk_normalized.print();
-
-					printf("fval = %10.7f\n",fval);
-					printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
-					printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
-
-
-
-#endif
-
-
-				} /* end of k loop */
-
-
-				double Fapprox = 0.0;
-				for(int k=0; k<nrows; k++){
-#if 0
-					printf("contribution of sample %d = %10.7f\n", k,kernelVal(k)/kernelSum);
-#endif
-					Fapprox += kernelVal(k)*ftilde(k);
-
-				}
-
-				Fapprox=Fapprox/kernelSum;
-
-				double Fvalexact = test_function(x.memptr());
-
-
-#if 0
-				printf("\nFvalexact = %10.7f\n",Fvalexact);
-				printf("Fapprox = %10.7f\n",Fapprox);
-#endif
-				fprintf(response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),Fapprox);
-				out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
-
-
-
-				x(1)+=dy;
-			}
-			x(0)+=dx;
-		}
-
-		out_sample_error=out_sample_error/(resolution*resolution);
-
-
-//		generelaziation_error(trial) = out_sample_error;
-#if 1
-		printf("out_sample_error = %10.7f\n",out_sample_error);
-
-#endif
-
-		fclose(response_surface_file);
-
-
-#if 0
-		std::string file_name_for_plot = "kernel_regression_response_surface_";
-		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-
-		std::string title = "kernel regression";
-
-		std::string python_command = "python -W ignore "+python_dir+"/plot_2d_surface.py "
-				+ response_surface_file_name+ " "
-				+ file_name_for_plot +" "+ title;
-
-#if 0
-		printf("python_command = %s\n",python_command.c_str());
-#endif
-		FILE* in = popen(python_command.c_str(), "r");
-
-
-		fprintf(in, "\n");
-#endif
-
-
-		metricM.eye();
-
-
-		out_sample_error=0.0;
-
-		response_surface_file_name = "kernel_regressionM1_response_surface.dat";
-
-		response_surface_file = fopen(response_surface_file_name.c_str(),"w");
-
-		max_value = -LARGE;
-		min_value =  LARGE;
-		max_exactvalue = -LARGE;
-		min_exactvalue =  LARGE;
-
-
-		ftilde.fill(0.0);
-		kernelVal.fill(0.0);
-
-
-		grad.fill(0.0);
-		xk.fill(0.0);
-		xk_normalized.fill(0.0);
-
-
-		x[0] = bounds[0];
-		for(int i=0;i<resolution;i++){
-			x[1] = bounds[2];
-			for(int j=0;j<resolution;j++){
-
-#if 0
-				x(0) = RandomDouble(bounds[0], bounds[1]);
-				x(1) = RandomDouble(bounds[2], bounds[3]);
-#endif
-
-				/* normalize x */
-				xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
-				xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
-#if 0
-				printf("x = \n");
-				x.print();
-				printf("xnorm = \n");
-				xnorm.print();
-#endif
-
-
-
-
-				double kernelSum=0.0;
-				for(int k=0; k<nrows; k++){
-
-					for(int l=0; l<dim; l++){
-
-						grad(l)=data(k,dim+1+l);
-						xk(l)=data(k,l);
-						xk_normalized(l)=X(k,l);
-					}
-
-					double fval= data(k,dim);
-
-					ftilde(k) = fval;
-					//					ftilde(k) += dot(grad,x-xk);
-
-					kernelVal(k)= gaussianKernel(xnorm,xk_normalized,sigma,metricM);
-
-					kernelSum += kernelVal(k);
-
-
-
-#if 0
-					printf("\n\nk= %d\n",k);
-					printf("grad = \n");
-					grad.print();
-					printf("xk = \n");
-					xk.print();
-					printf("difference = \n");
-					(x-xk).print();
-					printf("xk (normalized)= \n");
-					xk_normalized.print();
-
-					printf("fval = %10.7f\n",fval);
-					printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
-					printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
-
-
-
-#endif
-
-
-				} /* end of k loop */
-
-
-				double Fapprox = 0.0;
-				for(int k=0; k<nrows; k++){
-#if 0
-					printf("kernelVal(%d) * ftilde(%d)= %10.7f\n",k,k, kernelVal(k)*ftilde(k));
-#endif
-					Fapprox += kernelVal(k)*ftilde(k);
-
-				}
-
-				Fapprox=Fapprox/kernelSum;
-
-				double Fvalexact = test_function(x.memptr());
-
-
-#if 0
-				printf("Fvalexact = %10.7f\n",Fvalexact);
-				printf("Fapprox = %10.7f\n",Fapprox);
-#endif
-				fprintf(response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),Fapprox);
-				out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
-
-
-
-
-				x(1)+=dy;
-			}
-			x(0)+=dx;
-		}
-
-		out_sample_error=out_sample_error/(resolution*resolution);
-
-#if 1
-		printf("out_sample_error (M identity) = %10.7f\n",out_sample_error);
-#endif
-
-//		generelaziation_errorM1(trial) = out_sample_error;
-
-
-		fclose(response_surface_file);
-
-#if 0
-		file_name_for_plot = "kernel_regressionM1_response_surface_";
-		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-
-		title = "kernel regression";
-
-		python_command = "python -W ignore "+python_dir+"/plot_2d_surface.py "
-				+ response_surface_file_name+ " "
-				+ file_name_for_plot +" "+ title;
-
-#if 0
-		printf("python_command = %s\n",python_command.c_str());
-#endif
-		in = popen(python_command.c_str(), "r");
-
-
-		fprintf(in, "\n");
-#endif
 	}
 
 
 
+#if 1
+	printf("Training data (normalized) = \n");
+	dataTraining.print();
+#endif	
 
-	else{ /* for higher dimensions */
+	fvec x_maxTest(numVar);
+	x_maxTest.fill(0.0);
 
+	fvec x_minTest(numVar);
+	x_minTest.fill(0.0);
 
-		int number_of_samples = 50000;
+	for (int i = 0; i < numVar; i++) {
 
-		rowvec x(dim);
-		rowvec xb(dim);
-		rowvec xnorm(dim);
+		x_maxTest(i) = dataTest.col(i).max();
+		x_minTest(i) = dataTest.col(i).min();
 
+	}
 
-		vec ftilde(nrows,fill::zeros);
-		vec kernelVal(nrows,fill::zeros);
+#if 1
+	printf("maximum = \n");
+	x_maxTest.print();
 
+	printf("minimum = \n");
+	x_minTest.print();
+#endif
+	/* normalize test data */
+	for (int i = 0; i < number_of_test_samples; i++) {
 
-		vec grad(dim,fill::zeros);
-		rowvec xk(dim,fill::zeros);
-		rowvec xk_normalized(dim,fill::zeros);
+		for (int j = 0; j < numVar; j++) {
 
-		double out_sample_error=0.0;
+			dataTest(i, j) = (1.0/numVar)*(dataTest(i, j) - x_minTest(j)) / (x_maxTest(j) - x_minTest(j));
+		}
+	}
 
-
-		for(int i=0; i<number_of_samples; i++){
-
-			/* generate a random input vector and normalize it */
-
-			for(int j=0; j<dim;j++){
-
-				x(j) = RandomDouble(bounds[j*2], bounds[j*2+1]);
-				xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
-
-			}
-
-
-			double kernelSum=0.0;
-			for(int k=0; k<nrows; k++){
-
-				for(int l=0; l<dim; l++){
-
-					grad(l)=data(k,dim+1+l);
-					xk(l)=data(k,l);
-					xk_normalized(l)=X(k,l);
-				}
-
-				double fval= data(k,dim);
-
-				ftilde(k) = fval;
-				//				ftilde(k) += dot(grad,x-xk);
-
-				kernelVal(k)= gaussianKernel(xnorm,xk_normalized,sigma,metricM);
-
-				kernelSum += kernelVal(k);
+#if 1
+	printf("Test data (normalized) = \n");
+	dataTest.print();
+#endif	
 
 
 
-#if 0
-				if(i == 23414){
+	fmat L(numVar,numVar);
+	L.fill(0.0);
 
-					printf("\n\nk= %d\n",k);
-					printf("grad = \n");
-					grad.print();
-					printf("xk = \n");
-					xk.print();
-					printf("difference = \n");
-					(x-xk).print();
-					printf("xk (normalized)= \n");
-					xk_normalized.print();
 
-					printf("fval = %10.7f\n",fval);
-					printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
-					printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
 
-				}
 
+
+
+	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter);
+
+
+	fmat M = L*trans(L);
+
+	fmat U;
+	fvec s;
+	fmat V;
+
+	svd(U,s,V,M);
+
+#if 1
+	printf("singular values of M = \n");
+	s.print();
+#endif	
+
+	/* compute generalization error */
+
+
+
+	fmat XTest = dataTest.submat(0,0,number_of_test_samples-1,numVar-1);
+	fvec yTest = dataTest.col(numVar);
+	fmat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
+	fvec yTraining = dataTraining.col(numVar);
+
+	float genError = 0.0;
+
+	for(int i=0;i <number_of_test_samples; i++){
+
+		frowvec xp = XTest.row(i);
+		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+		float yexact = yTest(i);
+
+#if 1
+		printf("x:\n");
+		xp.print();
+		printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
 #endif
 
 
-			} /* end of k loop */
+		genError += (yexact-ytilde)*(yexact-ytilde);
 
 
-			double Fapprox = 0.0;
-			for(int k=0; k<nrows; k++){
+	}
 
-				Fapprox += kernelVal(k)*ftilde(k);
+	genError = genError/number_of_test_samples;
 
-			}
-
-			Fapprox=Fapprox/kernelSum;
-
-			double Fvalexact = test_function(x.memptr());
+	printf("genError = %10.7f\n",genError );
 
 #if 0
-			if(i % 100 == 0){
 
-				printf("\nFvalexact = %10.7f\n",Fvalexact);
-				printf("Fapprox = %10.7f\n",Fapprox);
-			}
-#endif
-			out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
-
-		} /* end of for */
-
-		out_sample_error = out_sample_error/(number_of_samples);
+	wSvd = 0.0;
+	w12 = 1.0;
 
 
-		printf("out of sample error = %10.7f\n",out_sample_error);
-
-		metricM.eye();
+	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12,max_cv_iter);
 
 
-		out_sample_error=0.0;
+	M = L*trans(L);
 
 
-		for(int i=0; i<number_of_samples; i++){
 
-			/* generate a random input vector and normalize it */
+	genError = 0.0;
 
-			for(int j=0; j<dim;j++){
+	for(int i=0;i <number_of_test_samples; i++){
 
-				x(j) = RandomDouble(bounds[j*2], bounds[j*2+1]);
-				xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
-
-			}
-
-
-			double kernelSum=0.0;
-			for(int k=0; k<nrows; k++){
-
-				for(int l=0; l<dim; l++){
-
-					grad(l)=data(k,dim+1+l);
-					xk(l)=data(k,l);
-					xk_normalized(l)=X(k,l);
-				}
-
-				double fval= data(k,dim);
-
-				ftilde(k) = fval;
-				//				ftilde(k) += dot(grad,x-xk);
-
-				kernelVal(k)= gaussianKernel(xnorm,xk_normalized,sigma,metricM);
-
-				kernelSum += kernelVal(k);
-
-
+		rowvec xp = XTest.row(i);
+		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
+		float yexact = yTest(i);
 
 #if 0
-				if(i == 23414){
-					printf("\n\nk= %d\n",k);
-					//					printf("grad = \n");
-					//					grad.print();
-					printf("xk = \n");
-					xk.print();
-					printf("difference = \n");
-					(x-xk).print();
-					printf("xk (normalized)= \n");
-					xk_normalized.print();
-
-					printf("fval = %10.7f\n",fval);
-					printf("ftilde(%d) = %10.7f\n",k,ftilde(k));
-					printf("kernelVal(%d) = %10.7f\n",k,kernelVal(k));
-
-				}
-
+		printf("x:\n");
+		xp.print();
+		printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
 #endif
 
 
-			} /* end of k loop */
-			double Fapprox = 0.0;
-			for(int k=0; k<nrows; k++){
-
-				Fapprox += kernelVal(k)*ftilde(k);
-
-			}
-
-			Fapprox=Fapprox/kernelSum;
-
-			double Fvalexact = test_function(x.memptr());
+		genError += (yexact-ytilde)*(yexact-ytilde);
 
 
-#if 0
-			if(i % 100 == 0){
+	}
 
-				printf("\nFvalexact = %10.7f\n",Fvalexact);
-				printf("Fapprox = %10.7f\n",Fapprox);
-			}
-#endif
+	genError = genError/number_of_test_samples;
 
-			out_sample_error+= (Fvalexact-Fapprox)*(Fvalexact-Fapprox);
+	printf("genError = %10.7f\n",genError );
 
-		} /* end of for */
+#endif	
 
-		out_sample_error = out_sample_error/(number_of_samples);
+	M = eye<fmat>(numVar,numVar);
+	sigma = 0.1;
 
+	genError = 0.0;
 
-		printf("out of sample error (M identity)= %10.7f\n",out_sample_error);
-		metricM.print();
+	for(int i=0;i <number_of_test_samples; i++){
 
-
-
-	} /* end of else */
-
-
-
-	//	} /* end of trial loop */
-
+		frowvec xp = XTest.row(i);
+		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
+		float yexact = yTest(i);
 
 #if 0
-	printf("mean generalization error = %10.7f\n", mean(generelaziation_error));
-	printf("mean generalization error (M Identity)= %10.7f\n", mean(generelaziation_errorM1));
+		printf("x:\n");
+		xp.print();
+		printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
 #endif
+
+
+		genError += (yexact-ytilde)*(yexact-ytilde);
+
+
+	}
+
+	genError = genError/number_of_test_samples;
+
+	printf("genError = %10.7f\n",genError );
+
+
+
+
+
+	//	delete[] bounds;
+
 }
+
 
 
 

@@ -1,6 +1,3 @@
-
-
-
 #include<stdio.h>
 #include<iostream>
 
@@ -17,6 +14,7 @@
 #include "auxilliary_functions.hpp"
 #include "read_settings.hpp"
 #include "kernel_regression.hpp"
+#include "kernel_regression_cuda.h"
 
 Rodeo_settings settings;
 
@@ -72,18 +70,26 @@ int main(void){
 	 */
 
 
-//	double parameter_bounds[20];
-//	parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
-//	parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
-//	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
-//	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
-//	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
-//	parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
-//	parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
-//	parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
-//	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
-//	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
+	double parameter_bounds[20];
+	parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
+	parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
+	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
+	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
+	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
+	parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
+	parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
+	parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
+	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
+	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
 
+
+	perform_kriging_test(Wingweight,
+			parameter_bounds,
+			"Wingweight" ,
+			400,
+			RANDOM_SAMPLING,
+			10,
+			LINEAR_REGRESSION_ON);
 
 
 //	perform_NNregression_test(Wingweight,
@@ -106,24 +112,46 @@ int main(void){
 
 
 
-	double parameter_bounds[10];
-		parameter_bounds[0]=-1.0; parameter_bounds[1]=2.0;
-		parameter_bounds[2]=0.0; parameter_bounds[3]=3.0;
-		parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
-		parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
-		parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
+	// double parameter_bounds[10];
+	// 	parameter_bounds[0]=-1.0; parameter_bounds[1]=2.0;
+	// 	parameter_bounds[2]=0.0; parameter_bounds[3]=3.0;
+	// 	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
+	// 	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
+	// 	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
 
-	perform_kernel_regression_test_highdim(test_function2KernelReg,
-			test_function2KernelRegAdj,
-				parameter_bounds,
-				"test_function2KernelReg",
-				0,
-				200,
-				RANDOM_SAMPLING,
-				5);
+	// perform_kernel_regression_test_highdim(test_function2KernelReg,
+	// 		test_function2KernelRegAdj,
+	// 			parameter_bounds,
+	// 			"test_function2KernelReg",
+	// 			0,
+	// 			200,
+	// 			RANDOM_SAMPLING,
+	// 			5);
 
-
-
+//	double *parameter_bounds = new double[20];
+//	parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
+//	parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
+//	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
+//	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
+//	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
+//	parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
+//	parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
+//	parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
+//	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
+//	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
+//
+//	perform_kernel_regression_test_highdim_cuda(Wingweight,
+//			WingweightAdj,
+//			parameter_bounds,
+//			"Wingweight",
+//			400,
+//			0,
+//			RANDOM_SAMPLING,
+//			10);
+//
+//
+//
+//	delete[] parameter_bounds;
 
 
 }
