@@ -2770,10 +2770,24 @@ void calcLossFunCPU(codi::RealForward *result, codi::RealForward *input,int tldI
 
 __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTable, float *kernelValTableb, int N) {
 
+	__shared__ float MShared[numVar*numVar +1];
 
+    /*Have to be careful not to exceed the size of the shared memory available
+	Right now we are well within the maximum allowed size (64Kb) */
+
+    int idx = threadIdx.x;  //Helpful for intra-block operations
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
-
-	float sigma = MDevice[numVar*numVar];
+	//	printf("tid = %d\n",tid)
+	
+	if(idx < numVar*numVar+1){
+		MShared[idx] = MDevice[idx];
+		//fprintf(outMShared,"%10.7f\n",MShared[tid]);
+    }
+    __syncthreads(); //Block size = 32 --> covered by a warp so no need to explicitly sync threads. However, this would be required if 
+					 //block size is increased beyond 32
+					 
+    //float sigma = MDevice[numVar*numVar];
+    float sigma = MShared[numVar*numVar];
 	float sigmab = 0.0;
 	/* calculate column index */
 	int indx2 = tid%N;
@@ -2799,17 +2813,23 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 		float temp0;
 		float tempb;
 		float tempb0;
+
+		#pragma unroll
 		for (int k = 0; k < numVar; ++k)
 			diff[k] = X[off1 + k] - X[off2 + k];
 
 		float sum = 0.0;
+		#pragma unroll
 		for (int i = 0; i < numVar; ++i) {
+			#pragma unroll
 			for (int j = 0; j < numVar; ++j)
-				sum = sum + MDevice[i*numVar+j]*diff[j];
+				//sum = sum + MDevice[i*numVar+j]*diff[j];
+				sum = sum + MShared[i*numVar+j]*diff[j];
 			tempVec[i] = sum;
 			sum = 0.0;
 		}
 		sum = 0.0;
+		#pragma unroll
 		for (int i = 0; i < numVar; ++i)
 			sum = sum + tempVec[i]*diff[i];
 
@@ -2836,21 +2856,24 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 
 
 
-
+		#pragma unroll
 		for (int i = 0; i < numVar; ++i){
 
 			tempVecb[i] = 0.0;
 
 		}
 
+		#pragma unroll
 		for (int i = numVar-1; i > -1; --i){
 
 			tempVecb[i] = tempVecb[i] + diff[i]*sumb;
 		}
 
+		#pragma unroll
 		for (int i = numVar-1; i > -1; --i) {
 			sumb = tempVecb[i];
 			tempVecb[i] = 0.0;
+			#pragma unroll
 			for (int j = numVar-1; j > -1; --j){
 
 				float addTerm = diff[j]*sumb;
