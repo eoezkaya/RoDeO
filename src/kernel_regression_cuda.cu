@@ -2770,7 +2770,7 @@ void calcLossFunCPU(codi::RealForward *result, codi::RealForward *input,int tldI
 
 __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTable, float *kernelValTableb, int N) {
 
-	__shared__ float MShared[numVar*numVar +1];
+	//__shared__ float MShared[numVar*numVar +1];
 
     /*Have to be careful not to exceed the size of the shared memory available
 	Right now we are well within the maximum allowed size (64Kb) */
@@ -2779,15 +2779,15 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 	//	printf("tid = %d\n",tid)
 	
-	if(idx < numVar*numVar+1){
-		MShared[idx] = MDevice[idx];
-		//fprintf(outMShared,"%10.7f\n",MShared[tid]);
-    }
+	// if(idx < numVar*numVar+1){
+	// 	MShared[idx] = MDevice[idx];
+	// 	//fprintf(outMShared,"%10.7f\n",MShared[tid]);
+    // }
     __syncthreads(); //Block size = 32 --> covered by a warp so no need to explicitly sync threads. However, this would be required if 
 					 //block size is increased beyond 32
 					 
-    //float sigma = MDevice[numVar*numVar];
-    float sigma = MShared[numVar*numVar];
+    float sigma = MDevice[numVar*numVar];
+    //float sigma = MShared[numVar*numVar];
 	float sigmab = 0.0;
 	/* calculate column index */
 	int indx2 = tid%N;
@@ -2823,8 +2823,8 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 		for (int i = 0; i < numVar; ++i) {
 			#pragma unroll
 			for (int j = 0; j < numVar; ++j)
-				//sum = sum + MDevice[i*numVar+j]*diff[j];
-				sum = sum + MShared[i*numVar+j]*diff[j];
+				sum = sum + MDevice[i*numVar+j]*diff[j];
+				//sum = sum + MShared[i*numVar+j]*diff[j];
 			tempVec[i] = sum;
 			sum = 0.0;
 		}
