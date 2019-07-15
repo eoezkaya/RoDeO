@@ -2783,7 +2783,7 @@ __global__ void calculateKernelValues_b(float *ab, float *X, float *kernelValTab
 	// 	MShared[idx] = MDevice[idx];
 	// 	//fprintf(outMShared,"%10.7f\n",MShared[tid]);
     // }
-    __syncthreads(); //Block size = 32 --> covered by a warp so no need to explicitly sync threads. However, this would be required if 
+    //__syncthreads(); //Block size = 32 --> covered by a warp so no need to explicitly sync threads. However, this would be required if 
 					 //block size is increased beyond 32
 					 
     float sigma = MDevice[numVar*numVar];
