@@ -145,6 +145,47 @@ double test_function1D(double *x){
 }
 
 
+double Griewank2D(double *x){
+
+	return (x[0]*x[0])/4000.0 + (x[1]*x[1])/4000.0 - cos(x[0]) * cos(x[1]/sqrt(2.0));
+
+
+
+}
+
+double Griewank2D_adj(double *xin, double *xb){
+
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+	codi::RealReverse *x = new codi::RealReverse[2];
+
+	for(int i=0; i<2;i++){
+
+		x[i]= xin[i];
+		tape.registerInput(x[i]);
+	}
+
+	codi::RealReverse result = (x[0]*x[0])/4000.0 + (x[1]*x[1])/4000.0 - cos(x[0]) * cos(x[1]/sqrt(2.0));
+	tape.registerOutput(result);
+
+	tape.setPassive();
+	result.setGradient(1.0);
+	tape.evaluate();
+
+	for(int i=0; i<2;i++){
+		xb[i]=x[i].getGradient();
+
+	}
+	delete[] x;
+	tape.reset();
+	return result.getValue();
+
+
+
+
+
+}
+
 double Waves2D(double *x){
 
 	double coef = 0.001;
@@ -1093,6 +1134,9 @@ void perform_kriging_test(double (*test_function)(double *),
 		int problem_dimension,
 		int linear_regression){
 
+
+	const int number_of_function_validation_points = 100;
+
 	vec kriging_weights;
 	vec regression_weights;
 
@@ -1144,15 +1188,16 @@ void perform_kriging_test(double (*test_function)(double *),
 			RAW_ASCII);
 
 
-
+#if 0
 
 	printf("kriging weights = \n");
 	kriging_weights.print();
 	printf("regression weights = \n");
 	regression_weights.print();
 
-	printf("reg_param = %20.15f\n", reg_param);
 
+	printf("reg_param = %20.15f\n", reg_param);
+#endif
 
 	mat data; /* data matrix */
 	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
@@ -1202,7 +1247,7 @@ void perform_kriging_test(double (*test_function)(double *),
 	/* normalize data */
 	for (int i = 0; i < nrows; i++) {
 		for (int j = 0; j < dim; j++) {
-			X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
 		}
 	}
 
@@ -1291,7 +1336,7 @@ void perform_kriging_test(double (*test_function)(double *),
 
 		for(int j=0; j<dim;j++) {
 
-			x(j) = x(j)* (x_max(j) - x_min(j))+x_min(j);
+			x(j) = dim* x(j)* (x_max(j) - x_min(j))+x_min(j);
 		}
 
 		double func_val_exact = test_function(x.memptr());
@@ -1339,8 +1384,8 @@ void perform_kriging_test(double (*test_function)(double *),
 			for(int j=0;j<resolution;j++){
 
 				/* normalize x */
-				xnorm(0)= (x(0)- x_min(0)) / (x_max(0) - x_min(0));
-				xnorm(1)= (x(1)- x_min(1)) / (x_max(1) - x_min(1));
+				xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
+				xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
 
 				func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights, R_inv_ys_min_beta, kriging_weights);
 				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
@@ -1410,7 +1455,7 @@ void perform_kriging_test(double (*test_function)(double *),
 
 
 			/* normalize x */
-			xnorm(0)= (x(0)- x_min(0)) / (x_max(0) - x_min(0));
+			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
 			func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights,
 					R_inv_ys_min_beta, kriging_weights);
 
@@ -1446,7 +1491,73 @@ void perform_kriging_test(double (*test_function)(double *),
 
 
 
+	if (problem_dimension > 2){
+
+		rowvec xs(problem_dimension);
+		rowvec xe(problem_dimension);
+		rowvec x(problem_dimension);
+		rowvec xnorm(problem_dimension);
+
+		double func_val;
+		double func_val_exact;
+		double final_validation_error=0.0;
+
+
+		int count=0;
+		for(int i=0;i<problem_dimension;i++){
+			xs(i) = bounds[count];
+			count++;
+			xe(i) = bounds[count];
+			count++;
+
+		}
+
+
+		for(int i=0; i<number_of_function_validation_points;i++ ){
+
+			for(int j=0;j<problem_dimension;j++) {
+
+				x(j) = RandomDouble(xs(j), xe(j));
+			}
+#if 1
+			printf("x = \n");
+			x.print();
+#endif
+			/* normalize x */
+			for(int j=0;j<problem_dimension;j++) {
+
+				xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
+			}
+
+
+			func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights,
+					R_inv_ys_min_beta, kriging_weights);
+
+			func_val_exact = test_function(x.memptr());
+
+			printf("f_exact = %10.7f, f_tilde =  %10.7f\n",func_val_exact,func_val);
+
+			final_validation_error+=pow((func_val_exact-func_val),2.0);
+
+
+
+
+		} /* end of validation loop */
+
+		final_validation_error = final_validation_error/number_of_function_validation_points;
+
+		printf("final validation error(L2) : %10.7f\n",final_validation_error );
+
+
+
+
+	}
+
+
 }
+
+
+
 
 
 void perform_NNregression_test(double (*test_function)(double *),
@@ -3055,7 +3166,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 		double (*test_function_adj)(double *, double *),
 		double *bounds,
 		std::string function_name,
-		int  number_of_samples_with_only_f_eval,
+		int number_of_samples_with_only_f_eval,
 		int number_of_samples_with_g_eval,
 		int sampling_method,
 		int dim){
@@ -3084,7 +3195,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	float partition[2] = {0.9,0.1};
+	float partition[2] = {0.4,0.6};
 
 	srand (time(NULL));
 	printf("GPU test for kernel regression\n");
@@ -3130,16 +3241,44 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	}
 	else{
 
-		int number_of_samples_to_generate = number_of_samples_with_only_f_eval;
 
-		printf("Generating data ...\n");
-		generate_highdim_test_function_data_cuda(test_function,
-				datafilename,
-				bounds,
-				number_of_samples_to_generate,
-				numVar);
+		/* generate data only with functional values */
 
-	}
+		if(number_of_samples_with_g_eval == 0) {
+
+			int number_of_samples_to_generate = number_of_samples_with_only_f_eval;
+
+			printf("Generating data with %d samples...\n", number_of_samples_to_generate);
+			generate_highdim_test_function_data_cuda(test_function,
+					datafilename,
+					bounds,
+					number_of_samples_to_generate,
+					numVar);
+
+		}
+
+		else{
+
+			/* generate data with gradients */
+
+			generate_highdim_test_function_data_GEK(test_function,
+					test_function_adj,
+					datafilename,
+					bounds,
+					dim,
+					number_of_samples_with_only_f_eval,
+					number_of_samples_with_g_eval,
+					sampling_method);
+
+
+
+		}
+
+		exit(1);
+
+
+
+	} /* end of else */
 
 
 
@@ -3292,7 +3431,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter);
+	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter,L2_LOSS_FUNCTION);
 
 
 	fmat M = L*trans(L);
@@ -3304,6 +3443,10 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	svd(U,s,V,M);
 
 #if 1
+
+	printf("M = \n");
+	M.print();
+	printf("sigma = %10.7f\n",sigma);
 	printf("singular values of M = \n");
 	s.print();
 #endif	
@@ -3380,8 +3523,9 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 #endif	
 
+	/* generalization error for M = I */
+
 	M = eye<fmat>(numVar,numVar);
-	sigma = 0.1;
 
 	genError = 0.0;
 
@@ -3648,6 +3792,7 @@ void perform_rbf_test(double (*test_function)(double *),
 	}
 
 }
+
 
 void test_norms(int dim){
 

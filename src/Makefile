@@ -12,7 +12,7 @@ LDFLAGS = -lm -larmadillo -rdc=true -lcudadevrt -lgomp
 
 OBJ = Rodeo.o test_functions.o trust_region_gek.o kriging_training.o su2_optim.o \
 auxilliary_functions.o linear_regression.o rbf.o kd_tree.o \
-binary_search_tree.o kmeans_clustering.o kernel_regression_cuda.o
+binary_search_tree.o kmeans_clustering.o kernel_regression_cuda.o 
 make: $(OBJ)
 	$(CC) $(CFLAGS) -o rodeo $(OBJ) $(LDFLAGS)
 

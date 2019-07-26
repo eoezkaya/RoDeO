@@ -122,6 +122,9 @@ double simple_2D_linear_test_function1_adj(double *x, double *xb);
 double Eggholder(double *x);
 double EggholderAdj(double *x, double *xb);
 
+double Griewank2D(double *x);
+double Griewank2D_adj(double *xin, double *xb);
+
 
 double Waves2D(double *x);
 double Waves2D_adj(double *x,double *xb);
@@ -292,6 +295,8 @@ void perform_rbf_test(double (*test_function)(double *),
         int sampling_method,
         int problem_dimension,
         RBF_TYPE rbf_type);
+
+
 
 void test_norms(int dim);
 

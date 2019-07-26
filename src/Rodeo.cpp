@@ -38,7 +38,7 @@ int main(void){
 
 	/* initialize random seed*/
 	srand (time(NULL));
-	arma_rng::set_seed_random();
+
 
 
 	settings.read();
@@ -83,13 +83,13 @@ int main(void){
 	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
 
 
-	perform_kriging_test(Wingweight,
-			parameter_bounds,
-			"Wingweight" ,
-			400,
-			RANDOM_SAMPLING,
-			10,
-			LINEAR_REGRESSION_ON);
+//	perform_kriging_test(Wingweight,
+//			parameter_bounds,
+//			"Wingweight" ,
+//			400,
+//			RANDOM_SAMPLING,
+//			10,
+//			LINEAR_REGRESSION_OFF);
 
 
 //	perform_NNregression_test(Wingweight,
@@ -140,15 +140,15 @@ int main(void){
 //	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
 //	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
 //
-//	perform_kernel_regression_test_highdim_cuda(Wingweight,
-//			WingweightAdj,
-//			parameter_bounds,
-//			"Wingweight",
-//			400,
-//			0,
-//			RANDOM_SAMPLING,
-//			10);
-//
+	perform_kernel_regression_test_highdim_cuda(Wingweight,
+			WingweightAdj,
+			parameter_bounds,
+			"Wingweight",
+			0,
+			100,
+			RANDOM_SAMPLING,
+			10);
+
 //
 //
 //	delete[] parameter_bounds;

@@ -2936,7 +2936,7 @@ __global__ void calculateKernelValues(float *X, float *kernelValTable, int N){
 
 }
 
-__global__  void calculateLossKernel(float *X,float *kernelValTable, float *sum, int N){
+__global__  void calculateLossKernelL1(float *X,float *kernelValTable, float *sum, int N){
 
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
@@ -3006,10 +3006,80 @@ __global__  void calculateLossKernel(float *X,float *kernelValTable, float *sum,
 
 }
 
+__global__  void calculateLossKernelL2(float *X,float *kernelValTable, float *sum, int N){
 
-__global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
-		kernelValTableb, float *sum, float *sumb, int N
-) {
+	int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+	if(tid < N){
+
+
+		float lossFunc = 0.0;
+
+		float kernelSum = 0.0;
+
+		for(int i=0; i<N; i++){
+
+			if(tid != i){
+
+				int indxKernelValTable;
+				if(i<tid) {
+
+
+					indxKernelValTable = i*N+tid;
+
+				}
+				else{
+
+					indxKernelValTable = tid*N+i;
+
+				}
+
+				kernelSum += kernelValTable[indxKernelValTable];
+
+			}
+
+
+
+		}
+
+		float fapprox=0.0;
+		for(int i=0; i<N; i++){
+
+			if(tid != i){
+				int indxKernelValTable;
+
+				if(i<tid) {
+
+					indxKernelValTable = i*N+tid;
+
+				}
+				else{
+
+					indxKernelValTable = tid*N+i;
+
+				}
+
+				fapprox += (kernelValTable[indxKernelValTable]/kernelSum)* X[i*(numVar+1)+numVar];
+
+			}
+
+
+
+
+		}
+
+
+		lossFunc = (fapprox - X[tid*(numVar+1)+numVar]) * (fapprox - X[tid*(numVar+1)+numVar]);
+
+		sum[tid] = lossFunc;
+	}
+
+}
+
+
+
+__global__  void calculateLossKernelL1_b(float *X, float *kernelValTable, float *
+		kernelValTableb, float *sum, float *sumb, int N) {
 
 
 	int tid = threadIdx.x + blockIdx.x * blockDim.x;
@@ -3036,7 +3106,7 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 				kernelSum = kernelSum + kernelValTable[indxKernelValTable];
 
 
-			} 
+			}
 		}
 
 
@@ -3058,9 +3128,9 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 					assert(0);
 
 				}
-#endif			
+#endif
 
-			} 
+			}
 		}
 
 
@@ -3081,7 +3151,7 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 
 
 		}
-#endif				
+#endif
 
 
 		sumb[tid] = 0.0;
@@ -3139,11 +3209,136 @@ __global__  void calculateLossKernel_b(float *X, float *kernelValTable, float *
 		}
 
 
+	}
+
+}
+
+
+__global__  void calculateLossKernelL2_b(float *X, float *kernelValTable, float *
+		kernelValTableb, float *sum, float *sumb, int N) {
+
+
+	int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+
+	if (tid < N) {
+
+
+		float lossFunc;
+		float lossFuncb;
+		float kernelSum=0.0;
+		float kernelSumb;
+
+		float fapproxb;
+
+
+		for (int i = 0; i < N; ++i){
+			if (tid != i) {
+				int indxKernelValTable;
+				if (i < tid)
+					indxKernelValTable = i*N + tid;
+				else
+					indxKernelValTable = tid*N + i;
+				kernelSum = kernelSum + kernelValTable[indxKernelValTable];
+
+
+			} 
+		}
+
+
+		float fapprox = 0.0;
+		for (int i = 0; i < N; ++i){
+			if (tid != i) {
+				int indxKernelValTable;
+				if (i < tid)
+					indxKernelValTable = i*N + tid;
+				else
+					indxKernelValTable = tid*N + i;
+				fapprox = fapprox + kernelValTable[indxKernelValTable]/
+						kernelSum*X[i*(numVar+1)+numVar];
+#if 0
+				if (isnan (fapprox ) || isinf (fapprox) ){
+
+					printf("fapprox  is NaN or inf %10.7f\n",kernelSum);
+
+					assert(0);
+
+				}
+#endif			
+
+			} 
+		}
+
+
+
+
+		lossFunc = (fapprox - X[tid*(numVar+1)+numVar]) * (fapprox - X[tid*(numVar+1)+numVar]);
+
+
+		sum[tid] = lossFunc;
+
+		lossFuncb = sumb[tid];
+#if 0
+		if (isnan (sumb[tid] ) || isinf (sumb[tid]) ){
+
+			printf("sumb[tid]  is NaN or inf!\n");
+
+
+
+		}
+#endif				
+
+
+		sumb[tid] = 0.0;
+		fapproxb = 2*(fapprox-X[tid*(numVar+1)+numVar])*lossFuncb;
+
+
+
+
+		kernelSumb = 0.0;
+		for (int i = N-1; i > -1; --i) {
+
+			if (tid != i)  {
+				float tempb;
+				int indxKernelValTable;
+				if (i < tid)
+					indxKernelValTable = i*N + tid;
+				else
+					indxKernelValTable = tid*N + i;
+
+
+
+				tempb = X[i*(numVar+1)+numVar]*fapproxb/kernelSum;
+
+				kernelValTableb[indxKernelValTable] = kernelValTableb[indxKernelValTable] + tempb;
+				kernelSumb = kernelSumb - kernelValTable[indxKernelValTable]*
+						tempb/kernelSum;
+			}
+		}
+		for (int i = N-1; i > -1; --i) {
+
+			if (tid != i)  {
+				int indxKernelValTable;
+
+				if (i < tid)
+					indxKernelValTable = i*N + tid;
+				else
+					indxKernelValTable = tid*N + i;
+
+				kernelValTableb[indxKernelValTable] = kernelValTableb[indxKernelValTable] + kernelSumb;
+
+
+
+			}
+		}
+
+
 	} 
 
 }
 
-void calcLossFunGPU(float *result, float *input, float *data,int N){
+
+void calcLossFunGPU(float *result, float *input, float *data,int N, int lossFunType){
 
 	cudaEvent_t start, stop;
 	cudaEventCreate( &start ) ;
@@ -3426,7 +3621,11 @@ void calcLossFunGPU(float *result, float *input, float *data,int N){
 	printf("Launching the second kernel with %d blocks...\n",number_of_blocks);
 
 
-	calculateLossKernel<<<number_of_blocks,number_of_threads_per_block>>>(dataDevice,kernelValuesDevice, lossSumDevice, N);
+	if(lossFunType == L1_LOSS_FUNCTION){
+
+		calculateLossKernelL1<<<number_of_blocks,number_of_threads_per_block>>>(dataDevice,kernelValuesDevice, lossSumDevice, N);
+
+	}
 
 	cudaDeviceSynchronize();
 
@@ -3537,7 +3736,7 @@ void calcLossFunGPU(float *result, float *input, float *data,int N){
 
 
 void calcLossFunGPU_b(float *result, float *resultb, float *input,
-		float *inputb, float *data, int N)
+		float *inputb, float *data, int N, int lossFunType)
 {
 
 
@@ -3807,7 +4006,10 @@ void calcLossFunGPU_b(float *result, float *resultb, float *input,
 
 	float *lossSumHostb = new float[N];
 
-	for(int i=0; i<N;i++) lossSumHostb[i] = 0;; 
+	for(int i=0; i<N;i++) {
+
+		lossSumHostb[i] = 0;;
+	}
 
 
 	float *lossSumDeviceb;
@@ -3842,7 +4044,23 @@ void calcLossFunGPU_b(float *result, float *resultb, float *input,
 	//	cudaMemset(kernelValuesDeviceb, 0, (N*N)* sizeof(float));
 
 	/* this subroutine evaluates the lossSumDevice and kernelValuesDeviceb */
-	calculateLossKernel_b<<<number_of_blocks,number_of_threads_per_block>>>(dataDevice,kernelValuesDevice,kernelValuesDeviceb, lossSumDevice,lossSumDeviceb, N);
+
+	if(lossFunType == L1_LOSS_FUNCTION){
+
+		calculateLossKernelL1_b<<<number_of_blocks,number_of_threads_per_block>>>(dataDevice,kernelValuesDevice,kernelValuesDeviceb, lossSumDevice,lossSumDeviceb, N);
+
+
+	}
+
+	if(lossFunType == L2_LOSS_FUNCTION){
+
+		calculateLossKernelL2_b<<<number_of_blocks,number_of_threads_per_block>>>(dataDevice,kernelValuesDevice,kernelValuesDeviceb, lossSumDevice,lossSumDeviceb, N);
+
+
+	}
+
+
+
 
 	cudaDeviceSynchronize();
 
@@ -4037,7 +4255,7 @@ float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma) {
  * */
 
 
-int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter) {
+int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter, int lossFunType) {
 
 
 	int max_opt_iter = 40000;
@@ -4254,7 +4472,9 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		/* calculate the first gradient vector */
 
 		printf("Evaluating the first gradient...\n");
-		calcLossFunGPU_b(&lossVal, &lossValb, inputVec,inputVecb, dataVecTraining,Ntraining);
+
+		calcLossFunGPU_b(&lossVal, &lossValb, inputVec,inputVecb, dataVecTraining,Ntraining, lossFunType);
+
 		printf("initial Loss (GPU Version)= %10.7f\n", lossVal);
 
 
@@ -4472,7 +4692,10 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 #if 0
 			printf("evaluating gradient vector...\n");
 #endif		
-			calcLossFunGPU_b(&lossVal, &lossValb, inputVec,inputVecb, dataVecTraining,Ntraining);
+
+			calcLossFunGPU_b(&lossVal, &lossValb, inputVec,inputVecb, dataVecTraining,Ntraining,L1_LOSS_FUNCTION);
+
+
 #if 0
 			printf("Loss (GPU Version)= %10.7f\n", lossVal);
 #endif
@@ -4610,9 +4833,9 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 #endif
 
 
-			//			genError += (yexact-ytilde)*(yexact-ytilde);
-			genError += fabs(yexact-ytilde);
 
+			if( lossFunType == L1_LOSS_FUNCTION) genError += fabs(yexact-ytilde);
+			if( lossFunType == L2_LOSS_FUNCTION) genError += (yexact-ytilde)*(yexact-ytilde);
 
 		}
 
