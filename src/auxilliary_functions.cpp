@@ -6,7 +6,27 @@
 #include <vector>
 
 
+void perturbVectorUniform(frowvec &xp,float sigmaPert){
 
+
+	int size = xp.size();
+
+	for(int i=0; i<size; i++){
+
+		float eps = sigmaPert* RandomFloat(-1.0, 1.0);
+
+		xp(i) += eps;
+
+
+	}
+
+
+
+
+
+
+
+}
 
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
 

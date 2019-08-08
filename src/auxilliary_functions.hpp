@@ -8,6 +8,8 @@
 using namespace arma;
 
 
+void perturbVectorUniform(frowvec &xp,float sigmaPert);
+
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
 
 

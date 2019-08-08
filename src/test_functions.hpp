@@ -129,6 +129,9 @@ double Griewank2D_adj(double *xin, double *xb);
 double Waves2D(double *x);
 double Waves2D_adj(double *x,double *xb);
 
+double Waves2Dperturbed(double *x);
+double Waves2Dperturbed_adj(double *x,double *xb);
+
 double Herbie2D(double *x);
 double Herbie2D_adj(double *x, double *xb);
 

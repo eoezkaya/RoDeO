@@ -15,9 +15,24 @@ using namespace arma;
 
 int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter, int lossFunType);
 
+int trainMahalanobisDistanceWithGradient(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter, int lossFunType);
+
 float gaussianKernel(frowvec &xi, frowvec &xj, float sigma, fmat &M);
 
 float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma);
+float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float sigma) ;
+
+
+float kernelRegressorNotNormalized(fmat &X,
+								   fmat &XnotNormalized,
+								   fvec &y,
+								   fmat &grad,
+								   frowvec &xp,
+								   fvec &xmin,
+								   fvec &xmax,
+								   fmat &M,
+								   float sigma);
+
 
 
 #endif

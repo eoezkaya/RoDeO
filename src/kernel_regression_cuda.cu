@@ -4211,25 +4211,34 @@ void calcLossFunGPU_b(float *result, float *resultb, float *input,
 }
 
 
-float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma) {
+float kernelRegressorNotNormalized(fmat &X, fvec &y, frowvec &xp, vec& xmax, vec &xmin, fmat &M, float sigma) {
 
-	int d = y.size();
+	int N = y.size();
 
-	fvec kernelVal(d);
-	fvec weight(d);
+	fvec kernelVal(N);
+	fvec weight(N);
+
+	frowvec xpNormalized;
+
+	/* first normalize xp */
+
+	for (int j = 0; j < xp.size(); j++) {
+
+		xpNormalized(j) = (1.0/xp.size())*(xp(j) - xmin(j)) / (xmax(j) - xmin(j));
+	}
+
+	/* calculate the kernel values */
+
 	float kernelSum = 0.0;
-	float yhat = 0.0;
-
-
-
-	for (int i = 0; i < d; i++) {
+	for (int i = 0; i < N; i++) {
 
 		frowvec xi = X.row(i);
-		kernelVal(i) = gaussianKernel(xi, xp, sigma, M);
+		kernelVal(i) = gaussianKernel(xi, xpNormalized, sigma, M);
 		kernelSum += kernelVal(i);
 	}
 
-	for (int i = 0; i < d; i++) {
+	float yhat = 0.0;
+	for (int i = 0; i < N; i++) {
 
 		weight(i) = kernelVal(i) / kernelSum;
 		yhat += y(i) * weight(i);
@@ -4241,6 +4250,251 @@ float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma) {
 	return yhat;
 
 }
+
+
+/*
+ * return kernel regression estimate
+ * @param[in] X: sample input values (normalized)
+ * @param[in] xp: point to be estimated
+ * @param[in] M : Mahalanobis matrix
+ * @param[in] sigma:  bandwidth parameter
+ * @param[in] y: functional values at sample locations(normalized)
+ *
+ * */
+
+float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma) {
+
+	int N = y.size();
+
+	fvec kernelVal(N);
+	fvec weight(N);
+
+
+	float kernelSum = 0.0;
+	for (int i = 0; i < N; i++) {
+
+		frowvec xi = X.row(i);
+		kernelVal(i) = gaussianKernel(xi, xp, sigma, M);
+		kernelSum += kernelVal(i);
+	}
+
+
+
+	float yhat = 0.0;
+	for (int i = 0; i < N; i++) {
+
+		weight(i) = kernelVal(i) / kernelSum;
+		yhat += y(i) * weight(i);
+#if 0
+		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
+#endif
+	}
+
+	return yhat;
+
+}
+
+
+
+
+
+/*
+ * return kernel regression estimate with gradient data
+ * @param[in] X: sample input values (normalized)
+ * @param[in] grad: sample gradient values (normalized)
+ * @param[in] xp: point to be estimated
+ * @param[in] M : Mahalanobis matrix
+ * @param[in] sigma:  bandwidth parameter
+ * @param[in] y: functional values at sample locations(normalized)
+ *
+ * */
+
+
+float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float sigma) {
+
+	int N = y.size();
+
+	fvec kernelVal(N);
+	fvec weight(N);
+	float kernelSum = 0.0;
+	float yhat = 0.0;
+
+
+
+
+	/* first evaluate the kernel sum */
+	for (int i = 0; i < N; i++) {
+
+		frowvec xi = X.row(i);
+		kernelVal(i) = gaussianKernel(xi, xp, sigma, M);
+		kernelSum += kernelVal(i);
+
+
+	}
+
+#if 1
+
+	int above99flag=0;
+	int above99index = -1;
+	for (int i = 0; i < N; i++) {
+
+		weight(i) = kernelVal(i) / kernelSum;
+
+		if(weight(i) > 0.5) {
+
+			above99index = i;
+			above99flag=1;
+		}
+
+	}
+
+	if(above99flag == 1){
+		printf("above99flag is 1 with index = %d!\n",above99index);
+		for (int i = 0; i < N; i++) {
+
+			if(i!=above99index) {
+
+				weight(i) = 0.0;
+			}
+			else weight(i) = 1.0;
+		}
+
+
+	}
+
+
+//	weight.print();
+
+#endif
+
+	frowvec xdiff(xp.size());
+
+	for (int i = 0; i < N; i++) {
+
+		frowvec xi = X.row(i);
+
+		for(int j=0; j<xp.size(); j++) xdiff(j) = xp(j) -xi(j);
+
+		xdiff.print();
+
+#if 0
+		printf("xp =\n");
+		xp.print();
+		printf("xi =\n");
+		xi.print();
+		printf("xdiff =\n");
+		xdiff.print();
+		printf("grad =\n");
+		grad.row(i).print();
+#endif
+
+
+		float gradTerm = dot(xdiff,grad.row(i));
+#if 0
+		printf("gradTerm = %10.7f\n",gradTerm);
+		printf("y = %10.7f\n",y(i));
+#endif
+
+
+
+//		weight(i) = kernelVal(i) / kernelSum;
+		yhat += (y(i) + gradTerm) * weight(i);
+//		yhat += (y(i) ) * weight(i);
+#if 0
+		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
+#endif
+	}
+
+
+	printf("yhat = %10.7f\n",yhat);
+	return yhat;
+
+}
+
+
+/*
+ * return kernel regression estimate with gradient data
+ * @param[in] X: sample input values (normalized)
+ * @param[in] XnotNormalized: sample input values
+ * @param[in] grad: sample gradient values (not normalized)
+ * @param[in] xp: point to be estimated
+ * @param[in] M : Mahalanobis matrix
+ * @param[in] sigma:  bandwidth parameter
+ * @param[in] y: functional values at sample locations
+ *
+ * */
+
+
+float kernelRegressorNotNormalized(fmat &X,
+		fmat &XnotNormalized,
+		fvec &y,
+		fmat &grad,
+		frowvec &xp,
+		fvec &xmin,
+		fvec &xmax,
+		fmat &M,
+		float sigma) {
+
+
+	/* number of samples */
+	int N = y.size();
+	int d = xp.size();
+
+	fvec kernelVal(N);
+	fvec weight(N);
+
+	frowvec xpNormalized(d);
+
+	/* first normalize xp */
+
+	for (int j = 0; j < d; j++) {
+
+		xpNormalized(j) = (1.0/d)*(xp(j) - xmin(j)) / (xmax(j) - xmin(j));
+	}
+
+
+	float kernelSum = 0.0;
+
+
+	frowvec xi(d);
+	frowvec xdiff(d);
+
+	/* first evaluate the kernel sum */
+	for (int i = 0; i < N; i++) {
+
+		xi = X.row(i);
+
+		kernelVal(i) = gaussianKernel(xi, xpNormalized, sigma, M);
+		kernelSum += kernelVal(i);
+	}
+
+
+
+	float yhat = 0.0;
+
+	for (int i = 0; i < N; i++) {
+
+
+		xi = XnotNormalized.row(i);
+		for(int j=0; j<d; j++) {
+
+			xdiff(j) = xp(j) -xi(j);
+		}
+
+
+		float gradTerm = dot(xdiff,grad.row(i));
+
+		weight(i) = kernelVal(i) / kernelSum;
+		yhat += (y(i) + gradTerm) * weight(i);
+#if 0
+		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
+#endif
+	}
+
+	return yhat;
+
+}
+
 
 
 /*
@@ -4872,5 +5126,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 	return 0;
 
 }
+
+
 
 

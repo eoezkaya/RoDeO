@@ -186,7 +186,7 @@ double Griewank2D_adj(double *xin, double *xb){
 
 }
 
-double Waves2D(double *x){
+double Waves2Dpertrubed(double *x){
 
 	double coef = 0.001;
 	double term1 = coef*sin(100*x[0]);
@@ -204,7 +204,7 @@ double Waves2D(double *x){
 
 }
 
-double Waves2D_adj(double *x,double *xb){
+double Waves2Dperturbed_adj(double *x,double *xb){
 	double coef = 0.001;
 	double term1 = coef*sin(100*x[0]);
 	double term2 = coef*cos(100*x[1]);
@@ -221,6 +221,28 @@ double Waves2D_adj(double *x,double *xb){
 
 		return sin(x[0])+ cos(x[1])+term1+term2;
 	}
+
+
+
+}
+
+
+double Waves2D(double *x){
+
+
+
+	return sin(x[0])+ cos(x[1]);
+
+
+}
+
+double Waves2D_adj(double *x,double *xb){
+
+	xb[0] = cos(x[0]);
+	xb[1] = -sin(x[1]);
+
+	return sin(x[0])+ cos(x[1]);
+
 
 
 
@@ -3088,6 +3110,9 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 		exit(-1);
 	}
 
+
+	/* Kriging specific parameters */
+
 	mat kriging_weights;
 	mat regression_weights;
 	mat R_inv_ys_min_beta;
@@ -3131,7 +3156,11 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 	else{
 
 		/* generate the input data for test	*/
-		generate_highdim_test_function_data_GEK(test_function,test_function_adj, input_file_name, bounds,dim,
+		generate_highdim_test_function_data_GEK(test_function,
+				test_function_adj,
+				input_file_name,
+				bounds,
+				dim,
 				number_of_samples_with_only_f_eval,
 				number_of_samples_with_g_eval,
 				sampling_method );
@@ -3171,6 +3200,13 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 		int sampling_method,
 		int dim){
 
+
+	float sigma = 0.01;
+	float wSvd = 1.0;
+	float w12 = 1.0;
+	int max_cv_iter = 50;
+
+
 	std::string datafilename;
 
 	if (sampling_method == EXISTING_FILE){
@@ -3187,10 +3223,6 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 	}
 
-	float sigma = 0.01;
-	float wSvd = 1.0;
-	float w12 = 1.0;
-	int max_cv_iter = 40;
 
 
 
@@ -3274,7 +3306,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 		}
 
-		exit(1);
+
 
 
 
@@ -3284,8 +3316,6 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 	fmat data;
 	bool load_ok = data.load(datafilename);
-	data.print();
-
 
 	if(load_ok == false)
 	{
@@ -3297,19 +3327,30 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	int number_of_data_points = data.n_rows;
 
 
-	if(numVar != data.n_cols-1){
+	if(number_of_samples_with_g_eval ==0  && numVar != data.n_cols-1){
 
 		printf("Number of columns in the input file does not match with numVar = %d\n",numVar);
 		exit(-1);
 
 	}
 
+	if(number_of_samples_with_g_eval >0  && 2*numVar != data.n_cols-1){
+
+		printf("Number of columns in the input file does not match with numVar = %d\n",numVar);
+		exit(-1);
+
+	}
+
+
 	printf("Kernel regression with the input data: %s\n",datafilename.c_str());
 	printf("Data has %d samples with %d variables\n",number_of_data_points,numVar);
 
-
+#if 0
 	printf("Original data:\n");
 	data.print();
+#endif
+
+
 
 
 	data = shuffle(data);
@@ -3326,9 +3367,45 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	printf("number of test samples = %d\n",number_of_test_samples);
 
 
+	fmat dataTraining;
+	fmat dataTest;
 
-	fmat dataTraining = data.submat( 0, 0, number_of_training_samples-1, numVar );
-	fmat dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, numVar );
+	if(number_of_samples_with_g_eval ==0 ) {
+
+		dataTraining = data.submat( 0, 0, number_of_training_samples-1, numVar );
+
+
+	}
+
+	if(number_of_samples_with_g_eval >0 ) {
+
+		dataTraining = data.submat( 0, 0, number_of_training_samples-1, 2*numVar );
+
+
+	}
+
+
+	dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, numVar );
+
+
+
+
+	fmat XTrainingNotNormalized = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
+
+
+	if(number_of_samples_with_g_eval >0 ) {
+
+		fmat gradTrainingNotNormalized = dataTraining.submat(0,numVar+1,number_of_training_samples-1,2*numVar);
+
+
+	}
+	fvec yTrainingNotNormalized = dataTraining.col(numVar);
+
+	fmat XTestNotNormalized = dataTest.submat(0,0,number_of_test_samples-1,numVar-1);
+
+
+
+
 
 	data.reset();
 
@@ -3339,6 +3416,8 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	printf("Test data:\n");
 	dataTest.print();	
 #endif	
+
+
 
 
 
@@ -3362,17 +3441,12 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	printf("minimum = \n");
 	x_minTraining.print();
 #endif
-	/* normalize training data */
-	for (int i = 0; i < number_of_training_samples; i++) {
 
-		for (int j = 0; j < numVar; j++) {
+	/* normalize functional values */
 
-			dataTraining(i, j) = (1.0/numVar)*(dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
-		}
-	}
+	float yTrainingMax = 1.0;
 
-
-	float yTrainingMax = dataTraining.col(numVar).max();
+	yTrainingMax = dataTraining.col(numVar).max();
 
 	for (int i = 0; i < number_of_training_samples; i++) {
 
@@ -3381,11 +3455,45 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	}
 
 
+	/* normalize training data */
+	for (int i = 0; i < number_of_training_samples; i++) {
+
+		for (int j = 0; j < numVar; j++) {
+
+			dataTraining(i, j) = (1.0/numVar)*(dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
+		}
+
+
+		/* this part is for derivatives */
+		if(number_of_samples_with_g_eval >0) {
+
+
+			for (int j = numVar+1; j < 2*numVar+1; j++) {
+
+				dataTraining(i, j) = dataTraining(i, j) * (numVar/yTrainingMax) * (x_maxTraining(j-numVar-1) - x_minTraining(j-numVar-1));
+			}
+
+
+
+		}
+
+
+
+
+	}
+
+
+
+
+
 
 #if 1
 	printf("Training data (normalized) = \n");
 	dataTraining.print();
 #endif	
+
+
+
 
 	fvec x_maxTest(numVar);
 	x_maxTest.fill(0.0);
@@ -3407,6 +3515,8 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	printf("minimum = \n");
 	x_minTest.print();
 #endif
+
+
 	/* normalize test data */
 	for (int i = 0; i < number_of_test_samples; i++) {
 
@@ -3414,6 +3524,9 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 			dataTest(i, j) = (1.0/numVar)*(dataTest(i, j) - x_minTest(j)) / (x_maxTest(j) - x_minTest(j));
 		}
+
+
+
 	}
 
 #if 1
@@ -3428,13 +3541,16 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-
-
-
 	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter,L2_LOSS_FUNCTION);
 
 
+
+	/* from optimal L we obtain now M */
+
 	fmat M = L*trans(L);
+
+
+	/* give singular value info */
 
 	fmat U;
 	fvec s;
@@ -3451,111 +3567,230 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	s.print();
 #endif	
 
+
+
 	/* compute generalization error */
-
-
 
 	fmat XTest = dataTest.submat(0,0,number_of_test_samples-1,numVar-1);
 	fvec yTest = dataTest.col(numVar);
 	fmat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
 	fvec yTraining = dataTraining.col(numVar);
 
-	float genError = 0.0;
-
-	for(int i=0;i <number_of_test_samples; i++){
-
-		frowvec xp = XTest.row(i);
-		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
-		float yexact = yTest(i);
-
 #if 1
-		printf("x:\n");
-		xp.print();
-		printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
+	printf("dataTraining =\n");
+	dataTraining.print();
 #endif
 
 
-		genError += (yexact-ytilde)*(yexact-ytilde);
+	fmat gradTraining;
+	if(number_of_samples_with_g_eval >0 ){
 
+		gradTraining = dataTraining.submat(0,numVar+1,number_of_training_samples-1,2*numVar);
 
 	}
 
-	genError = genError/number_of_test_samples;
+#if 1
+	printf("gradTraining =\n");
+	gradTraining.print();
+#endif
 
-	printf("genError = %10.7f\n",genError );
+
+	float genError = 0.0;
+	float genErrorFirstOrder = 0.0;
 
 #if 0
+		/* error close to the training samples */
 
-	wSvd = 0.0;
-	w12 = 1.0;
-
-
-	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12,max_cv_iter);
+		float sigmaPert = 0.01;
 
 
-	M = L*trans(L);
+
+		for(int i=0;i <number_of_training_samples; i++){
+
+			frowvec xp = XTraining.row(i);
+
+			for(int j=0; j<100; j++){
+
+
+
+				perturbVectorUniform(xp,sigmaPert);
+
+
+				rowvec xpNotNormalized(numVar);
+				frowvec xpNotNormalizedFloat(numVar);
+				for(int j=0; j<numVar; j++){
+
+					xpNotNormalized(j) = numVar*xp(j) * (x_maxTest(j) - x_minTraining(j)) + x_minTraining(j);
+					xpNotNormalizedFloat(j) = numVar*xp(j) * (x_maxTest(j) - x_minTraining(j)) + x_minTraining(j);
+				}
+
+
+
+
+				float ytilde = 0.0;
+				float ytildefirst = 0.0;
+				if(number_of_samples_with_g_eval ==0 ) {
+
+					ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+
+				}
+				else{
+
+
+					ytilde = kernelRegressorNotNormalized(XTraining,
+							XTrainingNotNormalized,
+							yTrainingNotNormalized,
+							gradTrainingNotNormalized,
+							xpNotNormalizedFloat,
+							x_minTraining,
+							x_maxTraining,
+							M,
+							sigma);
+
+					/* this is the first order approximation */
+					ytildefirst = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+
+
+				}
+
+				float yexact = test_function(xpNotNormalized.memptr());
+
+
+				genErrorFirstOrder += (yexact-ytildefirst)*(yexact-ytildefirst);
+
+				genError += (yexact-ytilde)*(yexact-ytilde);
+
+
+			}
+
+
+
+		}
+
+
+		genErrorFirstOrder = genErrorFirstOrder/(100*number_of_training_samples);
+		genError = genError/(100*number_of_training_samples);
+
+		printf("genError (near sample)= %10.7f\n",genError );
+		printf("genError (near sample, without gradients)= %10.7f\n",genErrorFirstOrder );
+
+#endif
 
 
 
 	genError = 0.0;
+	genErrorFirstOrder = 0.0;
 
 	for(int i=0;i <number_of_test_samples; i++){
 
-		rowvec xp = XTest.row(i);
-		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
-		float yexact = yTest(i);
+		frowvec xp = XTest.row(i);
+		frowvec xpNotNormalized = XTestNotNormalized.row(i);
 
-#if 0
-		printf("x:\n");
-		xp.print();
-		printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
-#endif
+		float ytilde = 0.0;
+		float ytildefirst = 0.0;
+
+		if(number_of_samples_with_g_eval ==0 ) {
+
+			ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+
+		}
+		else{
+
+
+
+			ytilde = kernelRegressorNotNormalized(XTraining,
+					XTrainingNotNormalized,
+					yTrainingNotNormalized,
+					gradTrainingNotNormalized,
+					xpNotNormalized,
+					x_minTraining,
+					x_maxTraining,
+					M,
+					sigma);
+
+			/* this is the first order approximation */
+			ytildefirst = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+
+
+
+
+		}
+
+		float yexact = yTest(i);
 
 
 		genError += (yexact-ytilde)*(yexact-ytilde);
+		genErrorFirstOrder += (yexact-ytildefirst)*(yexact-ytildefirst);
 
 
 	}
 
 	genError = genError/number_of_test_samples;
+	genErrorFirstOrder = genErrorFirstOrder/number_of_test_samples;
 
-	printf("genError = %10.7f\n",genError );
+	printf("genError (out of sample)= %10.7f\n",genError );
+	printf("genError (out of sample, without gradients)= %10.7f\n",genErrorFirstOrder );
 
-#endif	
 
 	/* generalization error for M = I */
 
 	M = eye<fmat>(numVar,numVar);
 
 	genError = 0.0;
+	genErrorFirstOrder = 0.0;
 
 	for(int i=0;i <number_of_test_samples; i++){
 
+
+		float ytilde = 0.0;
+		float ytildefirst = 0.0;
+
 		frowvec xp = XTest.row(i);
-		float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
+		frowvec xpNotNormalized = XTestNotNormalized.row(i);
+		if(number_of_samples_with_g_eval ==0 ) {
+
+			ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+
+		}
+		else{
+
+
+
+			ytilde = kernelRegressorNotNormalized(XTraining,
+					XTrainingNotNormalized,
+					yTrainingNotNormalized,
+					gradTrainingNotNormalized,
+					xpNotNormalized,
+					x_minTraining,
+					x_maxTraining,
+					M,
+					sigma);
+
+
+			/* this is the first order approximation */
+			ytildefirst = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+
+
+
+		}
 		float yexact = yTest(i);
 
-#if 0
-		printf("x:\n");
-		xp.print();
-		printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
-#endif
 
 
 		genError += (yexact-ytilde)*(yexact-ytilde);
+		genErrorFirstOrder += (yexact-ytildefirst)*(yexact-ytildefirst);
 
 
 	}
 
 	genError = genError/number_of_test_samples;
+	genErrorFirstOrder = genErrorFirstOrder/number_of_test_samples;
 
-	printf("genError = %10.7f\n",genError );
+	printf("genError (out of sample, M = I) = %10.7f\n",genError );
+	printf("genError (out of sample, M = I, without gradients) = %10.7f\n",genErrorFirstOrder );
 
 
 
-
-
-	//	delete[] bounds;
 
 }
 
