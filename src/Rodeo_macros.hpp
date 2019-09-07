@@ -63,7 +63,7 @@ enum SVM_KERNEL_TYPE {
 #define EPSILON_SINGLE 10E-6
 
 
-#define MIN(x,y) ((x) <= (y) ? x : y)
-#define MAX(x,y) ((x) <= (y) ? y : x)
+//#define MIN(x,y) ((x) <= (y) ? x : y)
+//#define MAX(x,y) ((x) <= (y) ? y : x)
 
 #endif

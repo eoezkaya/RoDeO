@@ -20,8 +20,11 @@ using namespace arma;
 
 
 
+void plot_airfoil(std::string initial_airfoil_file, std::string deformed_mesh_file, int nelems){
 
-void plot_airfoil(std::string initial_airfoil_file, std::string deformed_mesh_file){
+
+	std::ifstream myfile (deformed_mesh_file.c_str());
+	std::string line;
 
 	struct coordinates{
 		int number_of_points;
@@ -29,8 +32,8 @@ void plot_airfoil(std::string initial_airfoil_file, std::string deformed_mesh_fi
 		double *ycor;
 	};
 
-	double tempf;
-
+	double tempf1;
+	double tempf2;
 
 	FILE *inp;
 	int i;
@@ -39,109 +42,91 @@ void plot_airfoil(std::string initial_airfoil_file, std::string deformed_mesh_fi
 	int NPOIN;
 	int NMARK;
 	int MARKER_ELEMS;
-	char temps[100];
-	int tempd;
-
-	inp=fopen(deformed_mesh_file.c_str(),"r");
-
-	fscanf(inp,"%s",&temps);
-	//	printf("%s",temps);
-
-	fscanf(inp,"%d",&NDIME);
-	//	printf("%d\n",NDIME);
-
-	fscanf(inp,"%s",&temps);
-	//	printf("%s",temps);
-
-	fscanf(inp,"%d",&NDIME);
-	//	printf("%d\n",NDIME);
-
-	fscanf(inp,"%s",&temps);
-	//	printf("%s",temps);
-
-	fscanf(inp,"%d",&NDIME);
-	//	printf("%d\n",NDIME);
-
-	fscanf(inp,"%s",&temps);
-	//	printf("%s",temps);
+	char temps[500];
+	int tempd1;
+	int tempd2;
 
 
-	fscanf(inp,"%d",&NELEM);
-	//	printf("%d\n",NELEM);
 
-	//skip connectivity
+	getline (myfile,line);
 
-	for(i=0;i<NELEM;i++){
-		fscanf(inp,"%d",&tempd);
-		fscanf(inp,"%d",&tempd);
-		fscanf(inp,"%d",&tempd);
-		fscanf(inp,"%d",&tempd);
-		fscanf(inp,"%d",&tempd);
-		fscanf(inp,"%d",&tempd);
+
+	//	cout<<line<<std::endl;
+
+	getline (myfile,line);
+
+
+	//	cout<<line<<std::endl;
+
+	getline (myfile,line);
+
+
+	//	cout<<line<<std::endl;
+
+
+
+
+
+
+
+	/*original grid */
+
+	for(i=0;i<nelems;i++){
+		myfile  >> tempf1;
+		myfile  >> tempf2;
+
+		//		printf("%10.7f %10.7f\n",tempf1,tempf2);
+
 	}
 
+	for(i=0;i<nelems;i++){
+		myfile  >> tempd1;
+		myfile  >> tempd2;
+		//		printf("%d %1d\n",tempd1,tempd2);
+	}
+
+	getline (myfile,line);
 
 
+	//	cout<<line<<std::endl;
 
-	fscanf(inp,"%s",&temps);
-	//	printf("%s",temps);
-
-	fscanf(inp,"%d",&NPOIN);
-	//	printf("%d\n",NPOIN);
+	getline (myfile,line);
 
 
-	//return 0;
+	//	cout<<line<<std::endl;
+	getline (myfile,line);
+
+
+	//	cout<<line<<std::endl;
 
 	coordinates deformed_airfoil;
 
-	deformed_airfoil.xcor=new double[NPOIN];
-	deformed_airfoil.ycor=new double[NPOIN];
+	deformed_airfoil.xcor=new double[nelems];
+	deformed_airfoil.ycor=new double[nelems];
 
 	// read grid coordinates
-	for(i=0;i<NPOIN;i++){
-		fscanf(inp,"%lf",&tempf);
-		deformed_airfoil.xcor[i]=tempf;
+	for(i=0;i<nelems;i++){
+		myfile  >> tempf1;
+		myfile  >> tempf2;
+		deformed_airfoil.xcor[i]=tempf1;
 
-		fscanf(inp,"%lf",&tempf);
-		deformed_airfoil.ycor[i]=tempf;
-		fscanf(inp,"%d",&tempd);
 
-		//printf("%15.10f %15.10f\n",naca0012.xcor[i],naca0012.ycor[i]);
+		deformed_airfoil.ycor[i]=tempf2;
+
 
 	}
-
-
-	fscanf(inp,"%s",&temps);
-	//	printf("%s",temps);
-
-	fscanf(inp,"%d",&NMARK);
-	//	printf("%d\n",NMARK);
-
-	fscanf(inp,"%s",&temps);
-	//	printf("%s",temps);
-
-	fscanf(inp,"%s",&temps);
-	//printf("%s\n",temps);
-
-	fscanf(inp,"%s",&temps);
-	//	printf("%s",temps);
-
-	fscanf(inp,"%d",&MARKER_ELEMS);
-	//printf("%d\n",MARKER_ELEMS);
-
 
 	FILE *outp=fopen("deformed_airfoil_geometry.dat","w");
-	for(i=0;i<MARKER_ELEMS;i++){
-		fscanf(inp,"%d",&tempd);
 
-		fscanf(inp,"%d",&tempd);
-		fprintf(outp,"%15.10f %15.10f\n",deformed_airfoil.xcor[tempd],deformed_airfoil.ycor[tempd]);
+	fprintf(outp,"%15.10f %15.10f\n",deformed_airfoil.xcor[nelems-1],deformed_airfoil.ycor[nelems-1]);
+	for(i=0;i<nelems;i++){
 
-		fscanf(inp,"%d",&tempd);
+		fprintf(outp,"%15.10f %15.10f\n",deformed_airfoil.xcor[i],deformed_airfoil.ycor[i]);
+
 
 	}
 
-	fclose(inp);
+
 	fclose(outp);
 
 	std::string file_name_for_plot = "deformed_airfoil.png";
@@ -2519,7 +2504,7 @@ int su2_robustoptimize_naca0012(OptimizationData &optimization_plan){
 
 
 			if(iter_EI < number_of_EI_iter_local){
-                /* search around best sample in the data set */
+				/* search around best sample in the data set */
 				for(int k=0; k<number_of_design_variables; k++){
 
 					double perturbation = RandomDouble(lower_bound_dv/100, upper_bound_dv/100);
@@ -4708,7 +4693,10 @@ void initial_data_acquisition(int number_of_initial_samples ){
 
 	std::string str_problem_dim = std::to_string(number_of_design_variables);
 	std::string lhs_filename = "lhs_points.dat";
-	std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(2*number_of_function_evals)+ " center" ;
+
+	std::string python_command = "python -W ignore " + settings.python_dir +
+			"/lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(5*number_of_function_evals)+ " center" ;
+
 
 	system(python_command.c_str());
 
@@ -4725,6 +4713,8 @@ void initial_data_acquisition(int number_of_initial_samples ){
 	dv_lhs.print();
 
 
+
+
 	int nsample=1;
 	unsigned int count_lhs = 0;
 
@@ -4735,15 +4725,17 @@ void initial_data_acquisition(int number_of_initial_samples ){
 		std::string basic_text;
 		getline (ifs, basic_text, (char) ifs.eof());
 
-		//	cout<<basic_text;
+#if 1
+		cout<<basic_text;
+#endif
 
 		if(nsample == 0){
 
 			for(int i=0;i<number_of_design_variables;i++){
 				dv(i)= 0.0;
-				//		dv[i]= 0.01;
+#if 0
 				printf("dv[%d]= %10.7f\n",i,dv[i]);
-
+#endif
 			}
 
 
@@ -4753,74 +4745,15 @@ void initial_data_acquisition(int number_of_initial_samples ){
 
 			for(int i=0;i<number_of_design_variables;i++){
 				dv(i)= dv_lhs(count_lhs,i);
-				//		dv[i]= 0.01;
+#if 0
 				printf("dv[%d]= %10.7f\n",i,dv[i]);
-
+#endif
 			}
 
 		}
 
 		count_lhs++;
 
-
-
-
-
-
-
-
-
-		/*
-
-
-
-	dv[0]= 0.00185900034702;
-	dv[1]= 0.000804810580711,
-	dv[2]= 0.00017387127634;
-	dv[3]=-0.000179996353079;
-	dv[4]=-0.000332158360203;
-	dv[5]= -0.000323433334616;
-	dv[6]= -0.000185335238962;
-	dv[7]= 4.32638551212e-05;
-	dv[8]= 0.000309097278654;
-	dv[9]= 0.000549767763278;
-	dv[10]= 0.000711205484079;
-	dv[11]= 0.000769975555649;
-	dv[12]= 0.000745013880423;
-	dv[13]= 0.000684192021349;
-	dv[14]= 0.000629931526259;
-	dv[15]= 0.000594735033279;
-	dv[16]= 0.000575035322664;
-	dv[17]= 0.00058131785587;
-	dv[18]= 0.000640302757141;
-	dv[19]=-6.05850607813e-06;
-	dv[20]=-0.00329035606284;
-	dv[21]=-0.00426950626903;
-	dv[22]=-0.00388789283017;
-	dv[23]=-0.00283221691817;
-	dv[24]=-0.00162183149207;
-	dv[25]=-0.00060838050784;
-	dv[26]=4.18754470906e-05;
-	dv[27]=0.000352255935059;
-	dv[28]=0.000504276969675;
-	dv[29]=0.000753608279203;
-	dv[30]=0.00129097180097;
-	dv[31]=0.00207890980622;
-	dv[32]=0.00275643958657;
-	dv[33]=0.00277333000307;
-	dv[34]=0.00187999797992;
-	dv[35]=0.000657253753578;
-	dv[36]=-2.45722010865e-05;
-	dv[37]=-0.000380820586498;
-
-	for(int i=0;i<number_of_design_variables;i++){
-			dv[i]+= 0.0001*RandomDouble(0, 1);
-			printf("dv[%d]= %10.7f\n",i,dv[i]);
-
-		}
-
-
-		 */
 
 
 		std::string dv_text = "DV_VALUE=";
@@ -4843,17 +4776,22 @@ void initial_data_acquisition(int number_of_initial_samples ){
 
 
 
+
+
 		system("SU2_DEF config_DEF_new.cfg");
 
-		system("./plot_airfoil");
+
+#if 1
+		plot_airfoil("rae2822_geometry.dat", "surface_grid.dat",192);
+#endif
 
 
 
-		system("SU2_GEO turb_SA_RAE2822.cfg");
+		system("SU2_GEO config_GEO.cfg");
 
 
 
-		double *geo_data = new double[10];
+		double *geo_data = new double[6];
 
 		std::ifstream geo_outstream("of_func.dat");
 		std::string str;
@@ -4869,7 +4807,7 @@ void initial_data_acquisition(int number_of_initial_samples ){
 
 				str.erase(std::remove(str.begin(), str.end(), ','), str.end());
 				std::stringstream ss(str);
-				for(int i=0;i<10;i++){
+				for(int i=0;i<6;i++){
 					ss >> geo_data[i];
 					//	        	  printf("geo_data[%d] = %10.7f\n",i,geo_data[i]);
 				}
@@ -4880,8 +4818,10 @@ void initial_data_acquisition(int number_of_initial_samples ){
 
 		}
 
-		double area = geo_data[6];
+		double area = geo_data[0];
 		printf("Area of the airfoil = %10.7f\n", area);
+
+
 
 
 
@@ -4892,7 +4832,7 @@ void initial_data_acquisition(int number_of_initial_samples ){
 		system(solver_command.c_str());
 
 
-		//		exit(1);
+
 
 		double CL=0,CD=0;
 
@@ -4904,66 +4844,54 @@ void initial_data_acquisition(int number_of_initial_samples ){
 
 		std::size_t found,found2;
 
-		std::ifstream forces_outstream("forces_breakdown.dat");
+		std::ifstream forces_outstream("history.dat");
+
+		std::string str_previous;
 
 		while (std::getline(forces_outstream, str))
 		{
+#if 0
+			cout<<str<<endl;
+#endif
 
-			//		cout<<str<<endl;
-
-
-			found = str.find(for_cl);
-			if (found!=std::string::npos && cl_found==0){
-
-				found2 = str.find('|');
-
-				//		            std::cout << "CL at: " << found << found2<<'\n';
-
-				std::string cl_value;
-				cl_value.assign(str,found+3,found2-found-3);
-
-
-				//		            std::cout << "CL val: " <<cl_value<<endl;
-
-				CL = std::stod (cl_value);
-
-				cl_found=1;
-
-				//		            cout<<"CL = "<<CL<<endl;
-
-
-			}
-
-			found = str.find(for_cd);
-			if (found!=std::string::npos && cd_found==0){
-
-				found2 = str.find('|');
-
-				//		            std::cout << "CL at: " << found << found2<<'\n';
-
-				std::string cd_value;
-				cd_value.assign(str,found+3,found2-found-3);
-
-
-				//		            std::cout << "CL val: " <<cl_value<<endl;
-
-				CD = std::stod (cd_value);
-
-				cd_found=1;
-
-				//		            cout<<"CL = "<<CL<<endl;
-
-
-			}
-
-
-
-
+			str_previous = str;
 
 		}
 
+#if 0
+		cout<<str_previous<<endl;
+#endif
+
+
+		std::vector<double> vect;
+
+		std::stringstream ss(str_previous);
+
+		double ff;
+
+
+		while(1){
+			ss>>ff;
+			vect.push_back(ff);
+			if (ss.peek() == ',')
+				ss.ignore();
+			else break;
+
+		}
+#if 0
+		for (std::size_t i = 0; i < vect.size(); i++) {
+
+			std::cout << i<< vect[i] << std::endl;
+
+		}
+#endif
+
+		CL = vect[1];
+		CD = vect[2];
+
 		cout<<"CL = "<<CL<<endl;
 		cout<<"CD = "<<CD<<endl;
+
 
 
 		CL_Kriging_data = fopen("CL_Kriging.csv","a+");
@@ -5309,7 +5237,7 @@ int call_SU2_Adjoint_Solver(
 	std::string solver_command;
 
 	solver_command = "discrete_adjoint.py -f " + optimization_plan.config_file_names[i]
-																					 + " -n 2 discrete_adjoint_"+ optimization_plan.output_names[i]+"_output";
+	                                                                                 + " -n 2 discrete_adjoint_"+ optimization_plan.output_names[i]+"_output";
 
 #if 1
 	printf("solver_command = %s\n",solver_command.c_str());
@@ -5569,7 +5497,7 @@ int call_SU2_Adjoint_Solver(
 	std::string solver_command;
 
 	solver_command = "discrete_adjoint.py -f " + sampling_plan.config_file_names[i]
-																				 + " -n 2 discrete_adjoint_"+ sampling_plan.output_names[i]+"_output";
+	                                                                             + " -n 2 discrete_adjoint_"+ sampling_plan.output_names[i]+"_output";
 
 #if 1
 	printf("solver_command = %s\n",solver_command.c_str());

@@ -72,6 +72,22 @@ float gaussianKernel(frowvec &xi, frowvec &xj, float sigma, fmat &M) {
 }
 
 
+double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
+
+	/* calculate distance between xi and xj with the matrix M */
+	double metricVal = calcMetric(xi, xj, M);
+
+	double sqr_two_pi = sqrt(2.0 * datum::pi);
+
+	double kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
+
+	kernelVal += 10E-14;
+
+	return kernelVal;
+
+}
+
+
 
 
 float SIGN(float a, float b) {
@@ -1623,6 +1639,249 @@ int calcRegTerms(float *L, float *Lb,float *result , float wSvd, float w12, int 
 
 }
 
+
+/** calculate regularization terms for the given matrix L
+ *
+ * @param[in]  L:  lower diagonal matrix
+ * @param[in]  w12: weight for the mixed 12 regularization part
+ * @param[out] regTerm
+ *
+ */
+
+int calcRegTermL12(float *L, float *regTerm, float w12, int dim) {
+
+
+
+
+	float **M;
+	M= new float*[dim];
+
+	for (int i = 0; i < dim; i++) {
+
+		M[i] = new float[dim];
+	}
+
+
+	float **LT;
+	LT = new float*[dim];
+	for (int i = 0; i < dim; i++) {
+		LT[i] = new float[dim];
+
+	}
+
+	for (int i = 0; i < dim; i++)
+		for (int j = 0; j < dim; j++) {
+
+			LT[i][j]=0.0;
+		}
+
+
+
+
+	for (int i = 0; i < dim; i++) {
+		for (int j = 0; j <= i; j++){
+
+			LT[j][i] = L[i*dim+j];
+		}
+
+
+	}
+
+
+
+	for(int i = 0; i < dim; ++i)
+		for(int j = 0; j < dim; ++j)
+		{
+
+			M[i][j]=0;
+		}
+
+	/* Multiplying matrix L and LT and storing in M */
+	for(int i = 0; i < dim; ++i)
+		for(int j = 0; j < dim; ++j)
+			for(int k = 0; k < dim; ++k)
+			{
+				M[i][j] += L[i*dim+k] * LT[k][j];
+
+			}
+
+
+	float reg_term_L1 = 0.0;
+
+	for (int i = 0; i < dim; i++)
+		for (int j = 0; j < dim; j++) {
+
+			reg_term_L1 = reg_term_L1 + M[i][j]* M[i][j];
+		}
+#if 0
+	printf("reg_term_L1 = %10.7f\n",reg_term_L1);
+#endif
+
+
+
+	for (int i = 0; i < dim; i++) {
+		delete[] M[i];
+		delete[] LT[i];
+	}
+
+
+	delete[] LT;
+	delete[] M;
+
+
+	*regTerm = w12 * reg_term_L1;
+#if 0
+	printf("result = %10.7f\n",*regTerm);
+#endif
+
+	return 0;
+
+
+
+
+}
+
+
+int calcRegTermL12(float *L, float *Lb,float *result , float w12, int dim) {
+
+
+
+	codi::RealReverse *Lcodi = new codi::RealReverse[dim*dim];
+	for (int i = 0; i < dim*dim; i++) {
+
+		Lcodi[i] = L[i];
+
+	}
+
+	/* activate tape and register input */
+
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+
+	codi::RealReverse regTerm=0.0;
+
+
+
+	for (int i = 0; i < dim*dim; i++) {
+
+		tape.registerInput(Lcodi[i]);
+
+	}
+
+
+
+
+
+	codi::RealReverse **M;
+	M = new codi::RealReverse*[dim];
+
+	for (int i = 0; i < dim; i++) {
+
+		M[i] = new codi::RealReverse[dim];
+	}
+
+
+
+
+	codi::RealReverse **LT;
+	LT = new codi::RealReverse*[dim];
+	for (int i = 0; i < dim; i++) {
+		LT[i] = new codi::RealReverse[dim];
+
+	}
+
+	for (int i = 0; i < dim; i++)
+		for (int j = 0; j < dim; j++) {
+
+			LT[i][j]=0.0;
+		}
+
+
+
+
+	for (int i = 0; i < dim; i++) {
+		for (int j = 0; j <= i; j++){
+
+			LT[j][i] = Lcodi[i*dim+j];
+		}
+
+
+	}
+
+	for(int i = 0; i < dim; ++i)
+		for(int j = 0; j < dim; ++j)
+		{
+
+			M[i][j]=0;
+		}
+
+	/* Multiplying matrix L and LT and storing in M */
+	for(int i = 0; i < dim; ++i)
+		for(int j = 0; j < dim; ++j)
+			for(int k = 0; k < dim; ++k)
+			{
+				M[i][j] += Lcodi[i*dim+k] * LT[k][j];
+
+			}
+
+
+
+
+
+
+
+	codi::RealReverse reg_term_L1 = 0.0;
+
+	for (int i = 0; i < dim; i++)
+		for (int j = 0; j < dim; j++) {
+
+			reg_term_L1 = reg_term_L1 + M[i][j]* M[i][j];
+		}
+
+
+	regTerm = w12 * reg_term_L1;
+
+#if 0
+	printf("w12 * reg_term_L1 = %10.7f\n",w12 * reg_term_L1.getValue());
+#endif
+
+
+	tape.registerOutput(regTerm);
+
+	tape.setPassive();
+	regTerm.setGradient(1.0);
+	tape.evaluate();
+
+	for (int i = 0; i < numVar*numVar; i++) {
+
+
+		Lb[i] = Lcodi[i].getGradient();
+
+	}
+
+
+	tape.reset();
+
+	*result = regTerm.getValue();
+
+	for (int i = 0; i < dim; i++) {
+
+		delete[] M[i];
+		delete[] LT[i];
+	}
+
+
+	delete[] LT;
+	delete[] M;
+	delete[] Lcodi;
+
+
+	return 0;
+
+
+
+
+}
 
 
 
@@ -4363,7 +4622,7 @@ float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float 
 	}
 
 
-//	weight.print();
+	//	weight.print();
 
 #endif
 
@@ -4397,9 +4656,9 @@ float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float 
 
 
 
-//		weight(i) = kernelVal(i) / kernelSum;
+		//		weight(i) = kernelVal(i) / kernelSum;
 		yhat += (y(i) + gradTerm) * weight(i);
-//		yhat += (y(i) ) * weight(i);
+		//		yhat += (y(i) ) * weight(i);
 #if 0
 		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
 #endif
@@ -4496,6 +4755,91 @@ float kernelRegressorNotNormalized(fmat &X,
 }
 
 
+/*
+ * return kernel regression estimate with gradient data
+ * @param[in] X: sample input values (normalized)
+ * @param[in] XnotNormalized: sample input values
+ * @param[in] grad: sample gradient values (not normalized)
+ * @param[in] xp: point to be estimated
+ * @param[in] M : Mahalanobis matrix
+ * @param[in] sigma:  bandwidth parameter
+ * @param[in] y: functional values at sample locations
+ *
+ * */
+
+
+double kernelRegressorNotNormalized(mat &X,
+		mat &XnotNormalized,
+		vec &y,
+		mat &grad,
+		rowvec &xp,
+		vec &xmin,
+		vec &xmax,
+		mat &M,
+		double sigma) {
+
+
+	/* number of samples */
+	int N = y.size();
+	int d = xp.size();
+
+	vec kernelVal(N);
+	vec weight(N);
+
+	rowvec xpNormalized(d);
+
+	/* first normalize xp */
+
+	for (int j = 0; j < d; j++) {
+
+		xpNormalized(j) = (1.0/d)*(xp(j) - xmin(j)) / (xmax(j) - xmin(j));
+	}
+
+
+	double kernelSum = 0.0;
+
+
+	rowvec xi(d);
+	rowvec xdiff(d);
+
+	/* first evaluate the kernel sum */
+	for (int i = 0; i < N; i++) {
+
+		xi = X.row(i);
+
+		kernelVal(i) = gaussianKernel(xi, xpNormalized, sigma, M);
+		kernelSum += kernelVal(i);
+	}
+
+
+
+	double yhat = 0.0;
+
+	for (int i = 0; i < N; i++) {
+
+
+		xi = XnotNormalized.row(i);
+		for(int j=0; j<d; j++) {
+
+			xdiff(j) = xp(j) -xi(j);
+		}
+
+
+		double gradTerm = dot(xdiff,grad.row(i));
+
+		weight(i) = kernelVal(i) / kernelSum;
+		yhat += (y(i) + gradTerm) * weight(i);
+#if 0
+		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
+#endif
+	}
+
+	return yhat;
+
+}
+
+
+
 
 /*
  * train the Mahalanobis matrix M and bandwidth parameter sigma
@@ -4510,6 +4854,11 @@ float kernelRegressorNotNormalized(fmat &X,
 
 
 int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter, int lossFunType) {
+
+
+	bool trainWithSvdFlag = false;
+
+	if(wSvd > 0.0) trainWithSvdFlag = true;
 
 
 	int max_opt_iter = 40000;
@@ -4601,7 +4950,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		for(int i=0; i<max_cv_iter; i++){
 
 			wSvdtrial(i) = pow(10.0,RandomFloat(-2,0.0));
-			w12trial(i) = pow(10.0,RandomFloat(-2,0.0));
+			w12trial(i) = pow(10.0,RandomFloat(-5,0.0));
 		}
 
 
@@ -4651,7 +5000,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 			dataVecTraining[i*(n+1)+j ] = dataTraining(i, j);
 		}
 	}
-#if 1
+#if 0
 	printf("data copied = \n");
 
 	for (int i = 0; i < Ntraining; i++) {
@@ -4679,7 +5028,13 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 		if(max_cv_iter !=1){
 
-			wSvd = wSvdtrial(iter_cv);
+			if(trainWithSvdFlag){
+				wSvd = wSvdtrial(iter_cv);
+			}
+			else{
+
+				wSvd = 0.0;
+			}
 			w12 =  w12trial(iter_cv);
 		}
 #if 1
@@ -4732,7 +5087,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		printf("initial Loss (GPU Version)= %10.7f\n", lossVal);
 
 
-#if 1	
+#if 0
 		printf("gradient of the loss term = \n");
 
 		for (int i = 0; i < numVar; i++) {
@@ -4804,8 +5159,15 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		}
 
 		/* call the adjoint mode of the function to compute the regularization term */
-		calcRegTerms(inputVec, inputVecRegb, &regTerm, wSvd, w12, n); 
+		if(trainWithSvdFlag){
 
+			calcRegTerms(inputVec, inputVecRegb, &regTerm, wSvd, w12, n);
+		}
+		else{
+
+			calcRegTermL12(inputVec, inputVecRegb,&regTerm, w12, n);
+
+		}
 
 #if 0	
 		printf("gradient of the regularization term = \n");
@@ -4966,7 +5328,17 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 			}
 
 			/* call the adjoint mode of the function to compute the regularization term */
-			calcRegTerms(inputVec, inputVecRegb, &regTerm, wSvd, w12, n); 
+
+			if(trainWithSvdFlag){
+
+						calcRegTerms(inputVec, inputVecRegb, &regTerm, wSvd, w12, n);
+					}
+					else{
+
+						calcRegTermL12(inputVec, inputVecRegb,&regTerm, w12, n);
+
+					}
+
 
 #if 0	
 			printf("gradient of the regularization term = \n");

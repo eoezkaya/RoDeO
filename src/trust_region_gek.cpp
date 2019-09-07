@@ -10,6 +10,162 @@ using namespace arma;
 #include "kriging_training.hpp"
 #include "test_functions.hpp"
 #include "auxilliary_functions.hpp"
+#include "kernel_regression_cuda.h"
+#include "Rodeo_globals.hpp"
+
+
+
+
+double ftildeAggModel(AggregationModel &model_settings,
+		rowvec &xp,
+		rowvec xpNotNormalized,
+		mat &X,
+		mat &XTrainingNotNormalized,
+		vec &yTrainingNotNormalized,
+		mat &gradTrainingNotNormalized,
+		vec &x_min,
+		vec &x_max){
+
+
+	int d = xp.size();
+#if 0
+	printf("xp = \n");
+	xp.print();
+	printf("xp (not normalized)= \n");
+	xpNotNormalized.print();
+#endif
+	double ftildeKriging = calculate_f_tilde(xp,
+			X,
+			model_settings.beta0,
+			model_settings.regression_weights,
+			model_settings.R_inv_ys_min_beta,
+			model_settings.kriging_weights);
+
+#if 0
+	printf("ftilde (Kriging) = %10.7f\n",ftildeKriging);
+#endif
+
+
+	double fKernelRegression = 0.0;
+
+
+	fKernelRegression = kernelRegressorNotNormalized(X,
+			XTrainingNotNormalized,
+			yTrainingNotNormalized,
+			gradTrainingNotNormalized,
+			xpNotNormalized,
+			x_min,
+			x_max,
+			model_settings.M,
+			model_settings.sigma);
+#if 0
+	printf("ftilde (Kernel Regression with gradient) = %10.7f\n",fKernelRegression);
+#endif
+
+	double min_dist=0.0;
+	int indx;
+
+	/* find the closest seeding point to the xp in the data set */
+	findKNeighbours(X,
+			xp,
+			1,
+			&min_dist,
+			&indx,
+			1);
+
+
+	rowvec xg = XTrainingNotNormalized.row(indx);
+
+#if 0
+	printf("xg = \n");
+	xg.print();
+#endif
+
+	rowvec xdiff = xpNotNormalized-xg;
+	double distance = L1norm(xdiff, d);
+
+#if 0
+	printf("L1 distance between xp and xg = %10.7f\n",distance);
+#endif
+
+
+	rowvec grad = gradTrainingNotNormalized.row(indx);
+
+#if 0
+	printf("grad = \n");
+	grad.print();
+#endif
+
+	double normgrad = L1norm(grad, d);
+
+#if 0
+	printf("L1 norm of grad = %10.7f\n",normgrad);
+#endif
+
+
+	double w1 = exp(-model_settings.rho *distance*normgrad);
+
+#if 0
+	printf("w1 = %10.7f\n",w1);
+#endif
+
+
+	double fval = w1*fKernelRegression + (1.0-w1)*ftildeKriging;
+
+	return fval;
+}
+
+
+double calcGenErrorAggModel(AggregationModel &model_settings,
+		mat Xvalidation,
+		mat XvalidationNotNormalized,
+		vec yvalidation,
+		mat X,
+		mat XTrainingNotNormalized,
+		vec yTrainingNotNormalized,
+		mat gradTrainingNotNormalized,
+		vec x_min,
+		vec x_max){
+
+
+	int Nval = Xvalidation.n_rows;
+
+
+	double genError = 0.0;
+
+	for(int i=0; i<Nval;i++){
+
+		rowvec xpNotNormalized = XvalidationNotNormalized.row(i);
+		rowvec xp = Xvalidation.row(i);
+#if 0
+		printf("xp =\n");
+		xp.print();
+#endif
+
+		double fAggModel = ftildeAggModel(model_settings,
+				xp,
+				xpNotNormalized,
+				X,
+				XTrainingNotNormalized,
+				yTrainingNotNormalized,
+				gradTrainingNotNormalized,
+				x_min,
+				x_max);
+
+		double fexact = yvalidation(i);
+
+#if 0
+		printf("ftilde (Agg. Model) = %10.7f, fexact = %10.7f\n",fAggModel,fexact);
+#endif
+
+		genError += (fAggModel - fexact)*(fAggModel - fexact);
+
+	}
+
+	return genError/Nval;
+
+}
+
 
 
 void train_optimal_radius(
@@ -1510,10 +1666,10 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		printf("out of sample error (pure Kriging) = %10.7f\n",out_sample_error);
 		printf("sqrt( out of sample error) (pure Kriging) = %10.7f\n",sqrt(out_sample_error));
 		/*
-		printf("min = %10.7f\n",min_value);
-		pmin.print();
-		printf("max = %10.7f\n",max_value);
-		pmax.print();
+	printf("min = %10.7f\n",min_value);
+	pmin.print();
+	printf("max = %10.7f\n",max_value);
+	pmax.print();
 		 */
 		double around_sample_error = 0.0;
 
@@ -1697,9 +1853,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 
 
 #if 0
-printf("at x: ");
-x.print();
-printf("func_val = %10.7f func_val_exact = %10.7f sqr_error = %10.7f\n",func_val,func_val_exact,sqr_error);
+			printf("at x: ");
+			x.print();
+			printf("func_val = %10.7f func_val_exact = %10.7f sqr_error = %10.7f\n",func_val,func_val_exact,sqr_error);
 #endif
 
 
@@ -2700,14 +2856,14 @@ printf("func_val = %10.7f func_val_exact = %10.7f sqr_error = %10.7f\n",func_val
 		printf("out of sample error (hybrid model) = %10.7f\n",out_sample_error);
 		printf("sqrt( out of sample error (hybrid model)) = %10.7f\n",sqrt(out_sample_error));
 		/*
-		printf("min = %10.7f\n",min_value);
-		pmin.print();
-		printf("max = %10.7f\n",max_value);
-		pmax.print();
-		printf("min (exact) = %10.7f\n",min_exactvalue);
-		pminex.print();
-		printf("max (exact) = %10.7f\n",max_exactvalue);
-		pmaxex.print();
+	printf("min = %10.7f\n",min_value);
+	pmin.print();
+	printf("max = %10.7f\n",max_value);
+	pmax.print();
+	printf("min (exact) = %10.7f\n",min_exactvalue);
+	pminex.print();
+	printf("max (exact) = %10.7f\n",max_exactvalue);
+	pmaxex.print();
 
 		 */
 
@@ -3063,6 +3219,692 @@ printf("func_val = %10.7f func_val_exact = %10.7f sqr_error = %10.7f\n",func_val
 
 }
 
+int train_aggregation_model(AggregationModel &model_settings) {
+
+	printf("Training aggregation model for the data: %s...\n",model_settings.input_filename.c_str());
+
+
+	if (model_settings.visualizeKrigingValidation == "yes" || model_settings.visualizeKernelRegressionValidation == "yes" ){
+
+		if(model_settings.validationset_input_filename == "None") {
+
+			printf("File name for validation is not specified!\n");
+			exit(-1);
+
+		}
+
+	}
+
+
+	/* first generate temp data for Kriging training */
+
+	mat inputData;
+
+
+
+	bool load_ok = inputData.load(model_settings.input_filename.c_str());
+
+	if(load_ok == false)
+	{
+		printf("problem with loading the file %s\n",model_settings.input_filename.c_str());
+		exit(-1);
+	}
+
+
+	fmat inputdataSinglePrecision;
+	load_ok = inputdataSinglePrecision.load(model_settings.input_filename.c_str());
+
+	if(load_ok == false)
+	{
+		printf("problem with loading the file %s\n",model_settings.input_filename.c_str());
+		exit(-1);
+	}
+
+
+	int N = inputData.n_rows;
+	int Ncols = inputData.n_cols;
+	int d = model_settings.dim;
+
+	mat inputDataKriging = inputData.submat(0,0,N-1,d);
+
+	/* check dimensions of the data */
+
+	if(Ncols != 2*d +1 ) {
+
+		printf("Input data dimension does not match!\n");
+		exit(-1);
+
+	}
+
+#if 0
+	printf("Input data:\n");
+	inputData.print();
+#endif
+
+
+	mat X = inputData.submat(0,0,N-1,d-1);
+
+	/* find minimum and maximum of the columns of X */
+
+	vec x_max(d);
+	x_max.fill(0.0);
+
+	vec x_min(d);
+	x_min.fill(0.0);
+
+
+
+	for (int i = 0; i < d; i++) {
+		x_max(i) = X.col(i).max();
+		x_min(i) = X.col(i).min();
+
+	}
+
+#if 0
+	printf("maximum = \n");
+	x_max.print();
+
+	printf("minimum = \n");
+	x_min.print();
+#endif
+
+
+
+	/* normalize data X */
+
+	for (int i = 0; i < N; i++) {
+
+		for (int j = 0; j < d; j++) {
+
+			X(i, j) = (1.0/d)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+
+		}
+	}
+
+
+
+
+	mat validationData;
+	mat Xvalidation;
+	mat XvalidationNotNormalized;
+	int Nval = 0;
+
+	if(model_settings.validationset_input_filename != "None"){
+
+
+#if 1
+		printf("Reading validation set %s...\n",model_settings.validationset_input_filename.c_str());
+#endif
+
+		load_ok = validationData.load(model_settings.validationset_input_filename.c_str());
+
+		if(load_ok == false)
+		{
+			printf("problem with loading the file %s\n",model_settings.validationset_input_filename.c_str());
+			exit(-1);
+		}
+
+
+#if 0
+		printf("Validation data =\n");
+		validationData.print();
+#endif
+
+
+		Nval = validationData.n_rows;
+		Xvalidation = validationData.submat(0,0,Nval-1,d-1);
+		XvalidationNotNormalized = Xvalidation;
+
+
+		/* normalize data X for validation*/
+
+		for (int i = 0; i < Nval; i++) {
+
+			for (int j = 0; j < d; j++) {
+
+				Xvalidation(i, j) = (1.0/d)*(Xvalidation(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+			}
+		}
+
+#if 0
+		printf("X Validation (normalized) =\n");
+		Xvalidation.print();
+#endif
+	}
+
+
+
+#if 0
+	printf("Kriging input data:\n");
+	inputDataKriging.print();
+	printf("X:\n");
+	X.print();
+
+#endif
+
+	printf("Training the Kriging parameters...\n");
+
+	train_kriging_response_surface(inputDataKriging,
+			model_settings.kriging_hyperparameters_filename ,
+			LINEAR_REGRESSION_ON,
+			model_settings.regression_weights,
+			model_settings.kriging_weights,
+			model_settings.epsilon_kriging,
+			model_settings.max_number_of_kriging_iterations);
+
+	printf("Training of the Kriging parameters done...\n");
+
+
+	/*update y vectors according to linear regression */
+
+	mat augmented_X(N, d + 1);
+
+	for (int i = 0; i < N; i++) {
+
+		for (int j = 0; j <= d; j++) {
+
+			if (j == 0){
+
+				augmented_X(i, j) = 1.0;
+			}
+			else{
+
+				augmented_X(i, j) = X(i, j - 1);
+
+			}
+		}
+	}
+
+
+#if 1
+	printf("Regression weights:\n");
+	model_settings.regression_weights.t().print();
+	printf("Kriging weights:\n");
+	model_settings.kriging_weights.t().print();
+
+#endif
+
+	vec ys = inputData.col(d);
+
+	compute_R_inv_ys_min_beta(X,
+			ys,
+			model_settings.kriging_weights,
+			model_settings.regression_weights,
+			model_settings.R_inv_ys_min_beta,
+			model_settings.beta0,
+			model_settings.epsilon_kriging,
+			LINEAR_REGRESSION_ON);
+
+	mat visualizeKriging;
+
+	if(model_settings.visualizeKrigingValidation == "yes"){
+
+
+		double genErrorKriging = 0.0;
+
+		visualizeKriging = zeros(Nval,2);
+
+		for(int i=0; i<Nval; i++){
+
+			rowvec xp = Xvalidation.row(i);
+#if 0
+			printf("xp =\n");
+			xp.print();
+#endif
+			double ftildeKriging = calculate_f_tilde(xp,
+					X,
+					model_settings.beta0,
+					model_settings.regression_weights,
+					model_settings.R_inv_ys_min_beta,
+					model_settings.kriging_weights);
+
+			double fexact = validationData(i,d);
+
+			genErrorKriging += (fexact-ftildeKriging)*(fexact-ftildeKriging);
+#if 0
+			printf("ftilde (Kriging) = %10.7f, fexact = %10.7f\n",ftildeKriging,fexact);
+#endif
+			if(model_settings.visualizeKrigingValidation == "yes"){
+				visualizeKriging(i,0) = fexact;
+				visualizeKriging(i,1) = ftildeKriging;
+			}
+
+		}
+
+		genErrorKriging = genErrorKriging/Nval;
+
+		printf("Generalization Error for Kriging (MSE) = %10.7f\n",genErrorKriging);
+
+		visualizeKriging.save("visualizeKriging.dat",raw_ascii);
+
+		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKriging.dat visualizeKriging.png" ;
+
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+
+	}
+
+
+
+
+
+	/* parameters for the kernel regression training */
+	float sigma = 0.01;
+	float wSvd = 0.0;
+	float w12 = 0.01;
+
+
+	/* lower diagonal matrix for the kernel regression part */
+	fmat LKernelRegression(model_settings.dim,model_settings.dim);
+	mat L= zeros(d,d);
+
+	fmat inputDataKernelRegression = inputdataSinglePrecision.submat(0,0,N-1,2*d);
+
+#if 0
+	inputDataKernelRegression.print();
+#endif
+
+	/* normalize functional values */
+
+	float yTrainingMax = 1.0;
+
+
+
+	mat XTrainingNotNormalized = inputData.submat(0,0,N-1,d-1);
+	vec yTrainingNotNormalized = inputData.col(d);
+	mat gradTrainingNotNormalized = inputData.submat(0,d+1,N-1,2*d);
+
+	yTrainingMax = inputDataKernelRegression.col(d).max();
+
+	for (int i = 0; i < N; i++) {
+
+		inputDataKernelRegression(i, d) = inputDataKernelRegression(i, d)/yTrainingMax ;
+
+	}
+
+
+	/* normalize training data */
+	for (int i = 0; i < N; i++) {
+
+		for (int j = 0; j < d; j++) {
+
+			inputDataKernelRegression(i, j) = (1.0/d)*(inputDataKernelRegression(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+		}
+
+
+	}
+
+
+	if(model_settings.number_of_cv_iterations > 0){
+
+		printf("Training the Mahalanobis matrix and sigma...\n");
+		/* now train the Mahalanobis matrix */
+		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression, sigma, wSvd, w12, model_settings.number_of_cv_iterations,L2_LOSS_FUNCTION);
+
+		fmat Mtemp = LKernelRegression*trans(LKernelRegression);
+
+		for(int i=0; i<d; i++)
+			for(int j=0; j<d; j++) {
+
+				model_settings.M(i,j) = Mtemp(i,j);
+			}
+
+
+		model_settings.sigma = sigma;
+
+
+
+	}
+	else{
+		printf("Reading model settings...\n");
+		model_settings.load_state();
+
+	}
+
+
+
+
+
+	mat visualizeKernelRegression;
+
+	if(model_settings.visualizeKernelRegressionValidation == "yes"){
+
+		visualizeKernelRegression = zeros(Nval,2);
+
+
+		double genErrorKernelReg = 0.0;
+
+		for(int i=0; i<Nval; i++){
+
+			rowvec xpNotNormalized = XvalidationNotNormalized.row(i);
+#if 0
+			printf("xp =\n");
+			xp.print();
+#endif
+
+
+			double fKernelRegression = 0.0;
+
+
+			fKernelRegression = kernelRegressorNotNormalized(X,
+					XTrainingNotNormalized,
+					yTrainingNotNormalized,
+					gradTrainingNotNormalized,
+					xpNotNormalized,
+					x_min,
+					x_max,
+					model_settings.M,
+					model_settings.sigma);
+
+
+
+			double fexact = validationData(i,d);
+
+			genErrorKernelReg += (fKernelRegression-fexact)*(fKernelRegression-fexact);
+#if 1
+			printf("ftilde (Kernel Regression) = %10.7f, fexact = %10.7f\n",fKernelRegression,fexact);
+#endif
+			if(model_settings.visualizeKernelRegressionValidation == "yes"){
+				visualizeKernelRegression(i,0) = fexact;
+				visualizeKernelRegression(i,1) = fKernelRegression;
+			}
+
+
+
+		}
+
+		genErrorKernelReg = genErrorKernelReg/Nval;
+
+		printf("Generalization Error for Kernel Regregression (MSE) = %10.7f\n",genErrorKernelReg);
+
+
+		visualizeKernelRegression.save("visualizeKernelRegression.dat",raw_ascii);
+
+		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKernelRegression.dat visualizeKernelRegression.png" ;
+
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+
+
+
+
+	} /* end of validation part */
+
+
+
+
+	/* training of the rho parameter */
+
+	/* obtain sample statistics */
+
+	vec probe_distances_sample(N);
+
+	for(int i=0; i<N; i++){
+
+		rowvec np = X.row(i);
+
+
+		double min_dist[2]={0.0,0.0};
+		int indx[2]={-1,-1};
+
+		/* find the closest two points to the np in the data set */
+		findKNeighbours(X,
+				np,
+				2,
+				min_dist,
+				indx,
+				1);
+
+
+#if 0
+		printf("point:\n");
+		np.print();
+		printf("nearest neighbour is:\n");
+		X.row(indx[0]).print();
+		printf("minimum distance (L1 norm)= %10.7f\n\n",min_dist[0]);
+		printf("second nearest neighbour is:\n");
+		X.row(indx[1]).print();
+		printf("minimum distance (L1 norm)= %10.7f\n\n",min_dist[1]);
+#endif
+
+		probe_distances_sample(i)=min_dist[1];
+
+
+	}
+
+	double average_distance_sample = mean(probe_distances_sample);
+
+
+
+	/* obtain gradient statistics */
+	double sumnormgrad = 0.0;
+	for(unsigned int i=0; i<N; i++){
+
+		rowvec grad= gradTrainingNotNormalized.row(i);
+
+
+		double normgrad= L1norm(grad, d);
+#if 0
+		printf("%dth entry at the data gradients:\n",i);
+		grad.print();
+		printf("norm of the gradient = %10.7e\n",normgrad);
+#endif
+		sumnormgrad+= normgrad;
+
+
+	}
+
+	double avg_norm_grad= sumnormgrad/N;
+#if 1
+	printf("average norm grad = %10.7e\n", avg_norm_grad);
+#endif
+	/* define the search range for the hyperparameter r */
+
+
+	double min_r = 0.0;
+	//	max_r = 1.0/dim;
+	double max_r = -2*log(0.00001)/ (max(probe_distances_sample) * avg_norm_grad);
+	//	max_r = 0.01;
+
+	double dr;
+
+
+
+	dr = (max_r - min_r)/(model_settings.number_of_cv_iterations_rho);
+
+#if 0
+	printf("average distance in the training data= %10.7f\n",average_distance_sample);
+	printf("min (sample)       = %10.7f\n",min(probe_distances_sample));
+	printf("max (sample)       = %10.7f\n",max(probe_distances_sample));
+	printf("max_r = %10.7f\n",max_r);
+	printf("dr = %10.7f\n",dr);
+	printf("factor at maximum distance at max r = %15.10f\n",exp(-max_r*max(probe_distances_sample)* avg_norm_grad));
+#endif
+
+
+
+
+
+	/* number of cross validation points */
+	int NCVVal = N*0.2;
+	int NCVTra = N - NCVVal;
+
+#if 0
+	printf("number of validation points (rho training) = %d\n", NCVVal);
+	printf("number of rest points in the training data (rho training) = %d\n", NCVTra);
+#endif
+
+
+
+	mat inputDataCVval = inputData.submat(0,0,NCVVal-1,2*d);
+	mat inputDataCVtra = inputData.submat(NCVVal,0,N-1,2*d);
+	mat XCVval = X.submat(0,0,NCVVal-1,d-1);
+	mat XCVtra = X.submat(NCVVal,0,N-1,d-1);
+
+	mat XCVvalNotNormalized = XTrainingNotNormalized.submat(0,0,NCVVal-1,d-1);
+	mat XCVtraNotNormalized = XTrainingNotNormalized.submat(NCVVal,0,N-1,d-1);
+	vec yvalidation = inputDataCVval.col(d);
+	vec ytraining   = inputDataCVtra.col(d);
+
+
+	mat gradCVTraNotNormalized = inputDataCVtra.submat(0,d+1,NCVTra-1,2*d);
+#if 0
+	printf("inputDataCVval:\n");
+	inputDataCVval.print();
+	printf("XCVval:\n");
+	XCVval.print();
+	printf("XCVtra:\n");
+	XCVtra.print();
+	printf("XCVvalNotNormalized:\n");
+	XCVvalNotNormalized.print();
+#endif
+
+
+	double minGenErrorCVLoop = LARGE;
+	double optimal_rho = -1.0;
+
+
+	compute_R_inv_ys_min_beta(XCVtra,
+			ytraining,
+			model_settings.kriging_weights,
+			model_settings.regression_weights,
+			model_settings.R_inv_ys_min_beta,
+			model_settings.beta0,
+			model_settings.epsilon_kriging,
+			LINEAR_REGRESSION_ON);
+
+
+	for(int rho_iter=0; rho_iter< model_settings.number_of_cv_iterations_rho; rho_iter++){
+
+
+		/* value of the hyper parameter to be tried */
+		double rho_trial = min_r+(rho_iter)*dr;
+
+		model_settings.rho = rho_trial;
+
+
+		double genError = calcGenErrorAggModel(model_settings,
+				XCVval,
+				XCVvalNotNormalized,
+				yvalidation,
+				XCVtra,
+				XCVtraNotNormalized,
+				ytraining,
+				gradCVTraNotNormalized,
+				x_min,
+				x_max);
+
+#if 0
+		printf("CV iteration = %d, rho = %10.7f, Gen. Error = %10.7f\n",rho_iter,rho_trial,genError);
+#endif
+
+		if(genError < minGenErrorCVLoop){
+
+			minGenErrorCVLoop = genError;
+			optimal_rho = rho_trial;
+
+		}
+
+	}
+
+#if 0
+	printf("Optimal value of rho = %10.7f, Gen. Error = %10.7f\n",optimal_rho,minGenErrorCVLoop);
+#endif
+
+	model_settings.rho = optimal_rho;
+
+
+	compute_R_inv_ys_min_beta(X,
+			ys,
+			model_settings.kriging_weights,
+			model_settings.regression_weights,
+			model_settings.R_inv_ys_min_beta,
+			model_settings.beta0,
+			model_settings.epsilon_kriging,
+			LINEAR_REGRESSION_ON);
+
+
+
+
+	mat visualizeAggModel;
+
+	if(model_settings.visualizeAggModelValidation == "yes"){
+
+		visualizeAggModel = zeros(Nval,2);
+
+
+		double genErrorAggModel = 0.0;
+
+		for(int i=0; i<Nval; i++){
+
+			rowvec xpNotNormalized = XvalidationNotNormalized.row(i);
+			rowvec xp = Xvalidation.row(i);
+#if 0
+			printf("xp =\n");
+			xp.print();
+#endif
+
+			double fAggModel = ftildeAggModel(model_settings,
+					xp,
+					xpNotNormalized,
+					X,
+					XTrainingNotNormalized,
+					yTrainingNotNormalized,
+					gradTrainingNotNormalized,
+					x_min,
+					x_max);
+
+			double fexact = validationData(i,d);
+
+			genErrorAggModel += (fAggModel-fexact)*(fAggModel-fexact);
+
+#if 1
+			printf("ftilde (Agg. Model) = %10.7f, fexact = %10.7f\n",fAggModel,fexact);
+#endif
+
+
+			visualizeAggModel(i,0) = fexact;
+			visualizeAggModel(i,1) = fAggModel;
+
+
+
+		}
+
+
+		genErrorAggModel = genErrorAggModel/Nval;
+
+		printf("Generalization Error for the Agg. Model (MSE) = %10.7f\n",genErrorAggModel);
+
+
+		visualizeAggModel.save("visualizeAggModel.dat",raw_ascii);
+
+		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeAggModel.dat visualizeAggModel.png" ;
+
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+
+
+
+
+
+	}
+
+
+	model_settings.save_state();
+
+
+
+	return 0;
+}
 
 
 

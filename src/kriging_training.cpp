@@ -360,6 +360,9 @@ double calculate_f_tilde(rowvec xp,
 
 
 	int dim = xp.size();
+#if 0
+	printf("dim = %d\n",dim);
+#endif
 
 	vec r(X.n_rows);
 
@@ -371,6 +374,7 @@ double calculate_f_tilde(rowvec xp,
 	double f_kriging = 0.0;
 
 
+	/* if there exists linear regression part */
 	if(regression_weights.size() !=0){
 
 		for(unsigned int i=0;i<xp.size();i++){
@@ -381,14 +385,23 @@ double calculate_f_tilde(rowvec xp,
 		f_regression += regression_weights(0);
 
 	}
-
+#if 0
+	printf("f_regression = %10.7f\n",f_regression);
+#endif
 
 	for(unsigned int i=0;i<X.n_rows;i++){
 
 		r(i) = compute_R(xp, X.row(i), theta, gamma);
 
 	}
-
+#if 0
+	printf("size of vector r = %d\n",r.size());
+	printf("r = \n",f_regression);
+	trans(r).print();
+	printf("size of vector R_inv_ys_min_beta = %d\n",R_inv_ys_min_beta.size());
+	printf("R_inv_ys_min_beta = \n",f_regression);
+	trans(R_inv_ys_min_beta).print();
+#endif
 
 	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
 
@@ -1114,6 +1127,533 @@ void update_population_properties(std::vector<member> &population) {
 
 
 
+int train_kriging_response_surface(KrigingModel &model){
+
+
+	int linear_regression = model.linear_regression;
+	double reg_param = model.epsilon_kriging;
+	int max_number_of_function_calculations = model.max_number_of_kriging_iterations;
+
+	std::string input_file_name = model.input_filename;
+	std::string file_name_hyperparameters= model.kriging_hyperparameters_filename;
+
+
+	total_number_of_function_evals = 0;
+
+	printf("\n\ntraining Kriging response surface for the data : %s\n",
+			input_file_name.c_str());
+
+	/* initialize random seed*/
+	srand (time(NULL));
+
+	/* get the number of treads */
+	int number_of_treads = 1;
+#pragma omp parallel
+	{
+
+		int tid = omp_get_thread_num();
+		number_of_treads = omp_get_num_threads();
+
+
+		if (tid == 0){
+			printf("number of threads used : %d\n", number_of_treads);
+			max_number_of_function_calculations = max_number_of_function_calculations/number_of_treads;
+			printf("number of function evaluations per thread : %d\n", max_number_of_function_calculations);
+		}
+
+	}
+
+	mat data; /* data matrix */
+
+
+	/* data matrix input */
+
+	bool status = data.load(input_file_name.c_str(), csv_ascii);
+	if(status == true)
+	{
+		cout << "Data input is done" << endl;
+	}
+	else
+	{
+		cout << "Problem with data the input (cvs ascii format)" << endl;
+		exit(-1);
+	}
+
+
+	int nrows = data.n_rows; /* number of samples */
+	int ncols = data.n_cols; /* number of design variables + 1 (output) */
+	int dim = ncols - 1;     /* number of design variables */
+
+
+	int number_of_initial_population = dim * 16 / number_of_treads;
+
+	if(number_of_initial_population < 100) number_of_initial_population = 100;
+
+	printf(
+			"Data has %d rows (number of data points) and %d columns (number of variables+1)...\n",
+			nrows, ncols);
+
+	if(model.dim != ncols-1){
+
+		printf("Error: number of independent variables does not match with the input data (dim != ncols-1)\n");
+		exit(-1);
+
+	}
+
+
+	mat X = data.submat(0, 0, nrows - 1, ncols - 2);
+
+
+	vec ys = data.col(dim);
+
+
+#if 0
+	printf("X:\n");
+	X.print();
+	printf("ys:\n");
+	ys.print();
+#endif
+
+	/* find minimum and maximum of the columns of data */
+
+	vec x_max(dim);
+	x_max.fill(0.0);
+
+	vec x_min(dim);
+	x_min.fill(0.0);
+
+	for (int i = 0; i < dim; i++) {
+		x_max(i) = data.col(i).max();
+		x_min(i) = data.col(i).min();
+
+	}
+
+#if 0
+	printf("maximum = \n");
+	x_max.print();
+
+	printf("minimum = \n");
+	x_min.print();
+#endif
+
+
+	/* normalize data matrix */
+
+	for (int i = 0; i < nrows; i++) {
+
+		for (int j = 0; j < dim; j++) {
+
+			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+		}
+	}
+
+#if 0
+	printf("Normalized data = \n");
+	X.print();
+#endif
+
+	/* train linear regression */
+	if (linear_regression == LINEAR_REGRESSION_ON) { // if linear regression is on
+
+
+		int lin_reg_return = train_linear_regression(X, ys, model.regression_weights, 10E-6);
+
+
+		mat augmented_X(nrows, dim + 1);
+
+		for (int i = 0; i < nrows; i++) {
+
+			for (int j = 0; j <= dim; j++) {
+
+				if (j == 0){
+
+					augmented_X(i, j) = 1.0;
+				}
+				else {
+
+					augmented_X(i, j) = X(i, j - 1);
+
+				}
+			}
+		}
+
+		/* now update the ys vector */
+
+		vec ys_reg = augmented_X * regression_weights;
+
+#if 0
+		for(unsigned int i=0; i<ys.size(); i++){
+
+			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
+		}
+#endif
+		ys = ys - ys_reg;
+
+#if 0
+		printf("Updated ys vector = \n");
+#endif
+
+		for(unsigned int i=0; i<regression_weights.size();i++ ){
+
+			if(fabs(regression_weights(i)) > 10E5){
+
+				printf("WARNING: Linear regression coefficients are too large= \n");
+				printf("regression_weights(%d) = %10.7f\n",i,regression_weights(i));
+			}
+
+		}
+
+
+
+	} /* end of linear regression */
+
+	/* Kriging part starts from here*/
+
+	/* main training loop with EA*/
+
+#pragma omp parallel shared(ys,X, kriging_params,number_of_initial_population,nrows,dim,total_number_of_function_evals)
+	{
+
+		int tid;
+
+		std::vector<member>::iterator it;
+		std::vector <member> population;
+		int population_size = 0;
+
+		double population_max = -LARGE;
+		int population_max_index;
+
+
+		/* allocate the correlation matrix */
+		mat Rmatrix= zeros(nrows, nrows);
+
+
+		/* allocate the matrices for Cholesky decomposition */
+		mat Umatrix= zeros(nrows, nrows);
+		mat Lmatrix= zeros(nrows, nrows);
+
+		/* allocate the identity vector */
+		vec I = ones(nrows);
+
+
+		double Jnormalization_factor = 0.0;
+
+
+
+
+		for (int i = 0; i < max_number_of_function_calculations; i++) {
+
+
+			if(i==0){
+
+				member new_born;
+				new_born.theta.set_size(dim);
+				new_born.gamma.set_size(dim);
+
+				if(file_exist(file_name_hyperparameters.c_str())){
+#pragma omp master
+					{
+						printf("Hyperparameter file %s exists...\n",file_name_hyperparameters.c_str() );
+					}
+
+
+					mat hyper_param(1,2*dim);
+
+					bool status = hyper_param.load(file_name_hyperparameters.c_str(), csv_ascii);
+					if(status == false)
+					{
+						cout << "Some problem with the hyperparameter input" << endl;
+						exit(-1);
+
+					}
+
+#if 1
+#pragma omp master
+					{
+						printf("hyper parameters read from the file (theta; gamma)^T:\n");
+						hyper_param.print();
+					}
+#endif
+
+					if(hyper_param.n_cols != 2*dim){
+#if 1
+#pragma omp master
+						{
+							printf("hyper parameters do not match the problem dimensions\n");
+						}
+#endif
+						for (int j = 0; j < dim; j++) {
+
+							new_born.theta(j) = RandomDouble(0, 10); //theta
+							new_born.gamma(j) = RandomDouble(0, 2); //gamma
+
+						}
+
+					}
+
+					else{
+
+						for(unsigned i=0; i<dim;i++) {
+
+							if(hyper_param(0,i) < 100.0){
+
+								new_born.theta(i) = hyper_param(0,i);
+							}
+							else{
+
+								new_born.theta(i) = 1.0;
+							}
+
+
+						}
+						for(unsigned i=dim; i<2*dim;i++) {
+
+							if( hyper_param(0,i) < 2.0) {
+
+								new_born.gamma(i-dim) = hyper_param(0,i);
+
+							}
+							else{
+
+								new_born.gamma(i-dim) = 1.0;
+							}
+						}
+
+					}
+
+
+				}
+				else{ /* assign random parameters if there is no file */
+
+					for (int j = 0; j < dim; j++) {
+
+						new_born.theta(j) = RandomDouble(0, 10); //theta
+						new_born.gamma(j) = RandomDouble(0, 2); //gamma
+
+					}
+
+
+				}
+#if 0
+				new_born.theta.print();
+				new_born.gamma.print();
+
+#endif
+
+				calculate_fitness(new_born,
+						reg_param,
+						Rmatrix,
+						Umatrix,
+						Lmatrix,
+						X,
+						ys,
+						I);
+
+
+				if (new_born.objective_val != -LARGE) {
+					Jnormalization_factor = new_born.objective_val;
+					new_born.objective_val = 0.0;
+					new_born.id = population_size;
+					population.push_back(new_born);
+					population_size++;
+
+
+
+
+				}
+
+
+				continue;
+
+
+			} /* i=0 */
+
+
+
+
+			/* update population properties after initital iterations */
+			if (i >= number_of_initial_population) {
+
+				update_population_properties (population);
+			}
+
+
+
+			if (total_number_of_function_evals % 100 == 0){
+
+				printf("\r# of function calculations =  %d\n",
+						total_number_of_function_evals);
+				fflush(stdout);
+
+			}
+
+			member new_born;
+			new_born.theta.set_size(dim);
+			new_born.gamma.set_size(dim);
+			new_born.theta.zeros(dim);
+			new_born.gamma.zeros(dim);
+
+
+
+			if (i < number_of_initial_population) {
+
+				for (int j = 0; j < dim; j++) {
+					new_born.theta(j) = RandomDouble(0, 10); //theta
+					new_born.gamma(j) = RandomDouble(0, 2); //gamma
+
+				}
+
+			} else {
+
+				int father_id, mother_id;
+				pickup_random_pair(population, mother_id, father_id);
+				//		printf("cross-over\n");
+				crossover_kriging(population[mother_id], population[father_id],
+						new_born);
+			}
+
+
+			//		new_born.theta.print();
+			//		new_born.gamma.print();
+
+
+			calculate_fitness(new_born,
+					reg_param,
+					Rmatrix,
+					Umatrix,
+					Lmatrix,
+					X,
+					ys,
+					I);
+
+
+			if (new_born.objective_val != -LARGE) {
+
+				if(Jnormalization_factor != 0){
+					new_born.objective_val = new_born.objective_val-Jnormalization_factor;
+
+				}
+				else{
+					Jnormalization_factor = new_born.objective_val;
+					new_born.objective_val = 0.0;
+
+
+				}
+
+
+
+				new_born.id = population_size;
+
+				population.push_back(new_born);
+				population_size++;
+
+
+			}
+
+			if (population_size % 10 == 0 && i > number_of_initial_population) { //in each 10 iteration find population max
+				population_max = -LARGE;
+				for (it = population.begin(); it != population.end(); ++it) {
+
+					if (it->objective_val > population_max) {
+						population_max = it->objective_val;
+						population_max_index = it->id;
+					}
+
+				}
+
+
+			}
+
+		} // end of for loop
+
+
+		population_max= -LARGE;
+		for (it = population.begin() ; it != population.end(); ++it){
+
+			if ( it->objective_val >  population_max){
+				population_max = it->objective_val;
+				population_max_index = it->id;
+			}
+
+
+		}
+
+
+#pragma omp barrier
+
+#if 0
+		printf("kriging model training is over...\n");
+		printf("tread %d best design log likelihood = %10.7f\n",omp_get_thread_num(),population_max );
+#endif
+
+
+
+#pragma omp critical
+		{
+			if (population_max > population_overall_max){
+#if 0
+				printf("tread %d, population_overall_max = %10.7f\n",omp_get_thread_num(),population_overall_max);
+#endif
+				population_overall_max = population_max;
+				population_overall_max_tread_id = omp_get_thread_num();
+			}
+		}
+
+
+#pragma omp barrier
+
+
+		tid = omp_get_thread_num();
+		if(tid == population_overall_max_tread_id){
+
+
+#if 1
+			printf("tread %d has the best design with the log likelihood = %10.7f\n",population_overall_max_tread_id,population_overall_max );
+#endif
+			population.at(population_max_index).print();
+
+			kriging_params.set_size(2*dim);
+
+			for(int i=0;i<dim;i++) {
+
+			model.kriging_weights(i) = population.at(population_max_index).theta(i);
+			}
+			for(int i=0;i<dim;i++) {
+
+				model.kriging_weights(i+dim)= population.at(population_max_index).gamma(i);
+			}
+
+			FILE *hyperparameters_output = fopen(file_name_hyperparameters.c_str(),"w");
+			for(unsigned int i=0; i<kriging_params.size()-1;i++){
+
+				fprintf(hyperparameters_output,"%10.7f, ",kriging_params(i) );
+
+			}
+			fprintf(hyperparameters_output,"%10.7f",kriging_params(2*dim-1));
+			fclose(hyperparameters_output);
+
+		}
+
+	} /* end of parallel section */
+
+
+
+	vec theta = model.kriging_weights.head(dim);
+	vec gamma = model.kriging_weights.tail(dim);
+
+	compute_R_matrix(theta,
+			gamma,
+			reg_param,
+			model.R ,
+			X);
+
+
+
+
+
+
+}
+
 
 
 
@@ -1720,6 +2260,493 @@ int train_kriging_response_surface(std::string input_file_name,
 }
 
 
+int train_kriging_response_surface(mat data,
+		std::string file_name_hyperparameters,
+		int linear_regression,
+		vec &regression_weights,
+		vec &kriging_params,
+		double &reg_param,
+		int max_number_of_function_calculations) {
+
+	total_number_of_function_evals = 0;
+
+
+	/* initialize random seed*/
+	srand (time(NULL));
+
+	/* get the number of treads */
+	int number_of_treads = 1;
+#pragma omp parallel
+	{
+
+		int tid = omp_get_thread_num();
+		number_of_treads = omp_get_num_threads();
+
+
+		if (tid == 0){
+			printf("number of threads used : %d\n", number_of_treads);
+			max_number_of_function_calculations = max_number_of_function_calculations/number_of_treads;
+			printf("number of function evaluations per thread : %d\n", max_number_of_function_calculations);
+		}
+
+	}
+
+
+
+	int nrows = data.n_rows; /* number of samples */
+	int ncols = data.n_cols; /* number of design variables + 1 (output) */
+	int dim = ncols - 1;     /* number of design variables */
+
+
+
+
+	int number_of_initial_population = dim * 16 / number_of_treads;
+
+	if(number_of_initial_population < 100) number_of_initial_population = 100;
+
+
+	printf(
+			"Data has %d rows (number of data points) and %d columns (number of variables+1)...\n",
+			nrows, ncols);
+
+	mat X = data.submat(0, 0, nrows - 1, ncols - 2);
+
+
+	vec ys = data.col(dim);
+
+
+
+#if 0
+	printf("X:\n");
+	X.print();
+	printf("ys:\n");
+	ys.print();
+#endif
+
+	/* find minimum and maximum of the columns of data */
+
+	vec x_max(dim);
+	x_max.fill(0.0);
+
+	vec x_min(dim);
+	x_min.fill(0.0);
+
+	for (int i = 0; i < dim; i++) {
+		x_max(i) = data.col(i).max();
+		x_min(i) = data.col(i).min();
+
+	}
+
+#if 0
+	printf("maximum = \n");
+	x_max.print();
+
+	printf("minimum = \n");
+	x_min.print();
+#endif
+
+
+	/* normalize data matrix */
+
+	for (int i = 0; i < nrows; i++) {
+
+		for (int j = 0; j < dim; j++) {
+
+			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+		}
+	}
+
+#if 0
+	printf("Normalized data = \n");
+	X.print();
+#endif
+
+	/* train linear regression */
+	if (linear_regression == LINEAR_REGRESSION_ON) { // if linear regression is on
+
+
+		int lin_reg_return = train_linear_regression(X, ys, regression_weights, 10E-6);
+
+
+		mat augmented_X(nrows, dim + 1);
+
+		for (int i = 0; i < nrows; i++) {
+
+			for (int j = 0; j <= dim; j++) {
+
+				if (j == 0){
+
+					augmented_X(i, j) = 1.0;
+				}
+				else {
+
+					augmented_X(i, j) = X(i, j - 1);
+
+				}
+			}
+		}
+
+		/* now update the ys vector */
+
+		vec ys_reg = augmented_X * regression_weights;
+
+#if 0
+		for(unsigned int i=0; i<ys.size(); i++){
+
+			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
+		}
+#endif
+		ys = ys - ys_reg;
+
+#if 0
+		printf("Updated ys vector = \n");
+#endif
+
+		for(unsigned int i=0; i<regression_weights.size();i++ ){
+
+			if(fabs(regression_weights(i)) > 10E5){
+
+				printf("WARNING: Linear regression coefficients are too large= \n");
+				printf("regression_weights(%d) = %10.7f\n",i,regression_weights(i));
+			}
+
+		}
+
+
+
+	} /* end of linear regression */
+
+	/* Kriging part starts from here*/
+
+	/* main training loop with EA*/
+
+#pragma omp parallel shared(ys,X, kriging_params,number_of_initial_population,nrows,dim,total_number_of_function_evals)
+	{
+
+		int tid;
+
+		std::vector<member>::iterator it;
+		std::vector <member> population;
+		int population_size = 0;
+
+		double population_max = -LARGE;
+		int population_max_index;
+
+
+		/* allocate the correlation matrix */
+		mat Rmatrix= zeros(nrows, nrows);
+
+
+		/* allocate the matrices for Cholesky decomposition */
+		mat Umatrix= zeros(nrows, nrows);
+		mat Lmatrix= zeros(nrows, nrows);
+
+		/* allocate the identity vector */
+		vec I = ones(nrows);
+
+
+		double Jnormalization_factor = 0.0;
+
+
+
+
+		for (int i = 0; i < max_number_of_function_calculations; i++) {
+
+
+			if(i==0){
+
+				member new_born;
+				new_born.theta.set_size(dim);
+				new_born.gamma.set_size(dim);
+
+				if(file_exist(file_name_hyperparameters.c_str())){
+#pragma omp master
+					{
+						printf("Hyperparameter file %s exists...\n",file_name_hyperparameters.c_str() );
+					}
+
+
+					mat hyper_param(1,2*dim);
+
+					bool status = hyper_param.load(file_name_hyperparameters.c_str(), csv_ascii);
+					if(status == false)
+					{
+						cout << "Some problem with the hyperparameter input" << endl;
+						exit(-1);
+
+					}
+
+#if 1
+#pragma omp master
+					{
+						printf("hyper parameters read from the file (theta; gamma)^T:\n");
+						hyper_param.print();
+					}
+#endif
+
+					if(hyper_param.n_cols != 2*dim){
+#if 1
+#pragma omp master
+						{
+							printf("hyper parameters do not match the problem dimensions\n");
+						}
+#endif
+						for (int j = 0; j < dim; j++) {
+
+							new_born.theta(j) = RandomDouble(0, 10); //theta
+							new_born.gamma(j) = RandomDouble(0, 2); //gamma
+
+						}
+
+					}
+
+					else{
+
+						for(unsigned int i=0; i<dim;i++) {
+
+							if(hyper_param(0,i) < 100.0){
+
+								new_born.theta(i) = hyper_param(0,i);
+							}
+							else{
+
+								new_born.theta(i) = 1.0;
+							}
+
+
+						}
+						for(unsigned int i=dim; i<2*dim;i++) {
+
+							if( hyper_param(0,i) < 2.0) {
+
+								new_born.gamma(i-dim) = hyper_param(0,i);
+
+							}
+							else{
+
+								new_born.gamma(i-dim) = 1.0;
+							}
+						}
+
+					}
+
+
+				}
+				else{ /* assign random parameters if there is no file */
+
+					for (int j = 0; j < dim; j++) {
+
+						new_born.theta(j) = RandomDouble(0, 10); //theta
+						new_born.gamma(j) = RandomDouble(0, 2); //gamma
+
+					}
+
+
+				}
+#if 0
+				new_born.theta.print();
+				new_born.gamma.print();
+
+#endif
+
+				calculate_fitness(new_born,
+						reg_param,
+						Rmatrix,
+						Umatrix,
+						Lmatrix,
+						X,
+						ys,
+						I);
+
+
+				if (new_born.objective_val != -LARGE) {
+					Jnormalization_factor = new_born.objective_val;
+					new_born.objective_val = 0.0;
+					new_born.id = population_size;
+					population.push_back(new_born);
+					population_size++;
+
+
+
+
+				}
+
+
+				continue;
+
+
+			} /* i=0 */
+
+
+
+
+			/* update population properties after initital iterations */
+			if (i >= number_of_initial_population) {
+
+				update_population_properties (population);
+			}
+
+
+
+			if (total_number_of_function_evals % 100 == 0){
+
+				printf("\r# of function calculations =  %d\n",
+						total_number_of_function_evals);
+				fflush(stdout);
+
+			}
+
+			member new_born;
+			new_born.theta.set_size(dim);
+			new_born.gamma.set_size(dim);
+			new_born.theta.zeros(dim);
+			new_born.gamma.zeros(dim);
+
+
+
+			if (i < number_of_initial_population) {
+
+				for (int j = 0; j < dim; j++) {
+					new_born.theta(j) = RandomDouble(0, 10); //theta
+					new_born.gamma(j) = RandomDouble(0, 2); //gamma
+
+				}
+
+			} else {
+
+				int father_id, mother_id;
+				pickup_random_pair(population, mother_id, father_id);
+				//		printf("cross-over\n");
+				crossover_kriging(population[mother_id], population[father_id],
+						new_born);
+			}
+
+
+			//		new_born.theta.print();
+			//		new_born.gamma.print();
+
+
+			calculate_fitness(new_born,
+					reg_param,
+					Rmatrix,
+					Umatrix,
+					Lmatrix,
+					X,
+					ys,
+					I);
+
+
+			if (new_born.objective_val != -LARGE) {
+
+				if(Jnormalization_factor != 0){
+					new_born.objective_val = new_born.objective_val-Jnormalization_factor;
+
+				}
+				else{
+					Jnormalization_factor = new_born.objective_val;
+					new_born.objective_val = 0.0;
+
+
+				}
+
+
+
+				new_born.id = population_size;
+
+				population.push_back(new_born);
+				population_size++;
+
+
+			}
+
+			if (population_size % 10 == 0 && i > number_of_initial_population) { //in each 10 iteration find population max
+				population_max = -LARGE;
+				for (it = population.begin(); it != population.end(); ++it) {
+
+					if (it->objective_val > population_max) {
+						population_max = it->objective_val;
+						population_max_index = it->id;
+					}
+
+				}
+
+
+			}
+
+		} // end of for loop
+
+
+		population_max= -LARGE;
+		for (it = population.begin() ; it != population.end(); ++it){
+
+			if ( it->objective_val >  population_max){
+				population_max = it->objective_val;
+				population_max_index = it->id;
+			}
+
+
+		}
+
+
+#pragma omp barrier
+
+#if 0
+		printf("kriging model training is over...\n");
+		printf("tread %d best design log likelihood = %10.7f\n",omp_get_thread_num(),population_max );
+#endif
+
+
+
+#pragma omp critical
+		{
+			if (population_max > population_overall_max){
+#if 0
+				printf("tread %d, population_overall_max = %10.7f\n",omp_get_thread_num(),population_overall_max);
+#endif
+				population_overall_max = population_max;
+				population_overall_max_tread_id = omp_get_thread_num();
+			}
+		}
+
+
+#pragma omp barrier
+
+
+		tid = omp_get_thread_num();
+		if(tid == population_overall_max_tread_id){
+
+
+#if 1
+			printf("tread %d has the best design with the log likelihood = %10.7f\n",population_overall_max_tread_id,population_overall_max );
+#endif
+			population.at(population_max_index).print();
+
+			kriging_params.set_size(2*dim);
+
+			for(int i=0;i<dim;i++) kriging_params(i)     = population.at(population_max_index).theta(i);
+			for(int i=0;i<dim;i++) kriging_params(i+dim)= population.at(population_max_index).gamma(i);
+
+			FILE *hyperparameters_output = fopen(file_name_hyperparameters.c_str(),"w");
+			for(unsigned int i=0; i<kriging_params.size()-1;i++){
+
+				fprintf(hyperparameters_output,"%10.7f, ",kriging_params(i) );
+
+			}
+			fprintf(hyperparameters_output,"%10.7f",kriging_params(2*dim-1));
+			fclose(hyperparameters_output);
+
+		}
+
+	} /* end of parallel section */
+
+	return 0;
+
+}
+
+
+
+
+
 int train_GEK_response_surface(std::string input_file_name,
 		int linear_regression,
 		vec &regression_weights,
@@ -2242,7 +3269,111 @@ int train_GEK_response_surface(std::string input_file_name,
 }
 
 
+void compute_R_inv_ys_min_beta(mat X,
+		vec ys,
+		vec kriging_params,
+		vec regression_weights,
+		vec &res,
+		double &beta0,
+		double epsilon_kriging,
+		int linear_regression){
 
+	int N= ys.size();
+	int d= X.n_cols;
+
+	vec theta = kriging_params.head(d);
+	vec gamma = kriging_params.tail(d);
+
+	mat R=zeros(N,N);
+	mat U=zeros(N,N);
+
+	compute_R_matrix(theta,
+			gamma,
+			epsilon_kriging,
+			R,
+			X);
+#if 0
+	printf("R =\n");
+	R.print();
+#endif
+
+
+	mat augmented_X(N, d + 1);
+
+	if(linear_regression == LINEAR_REGRESSION_ON){
+
+
+
+		for (int i = 0; i < N; i++) {
+
+			for (int j = 0; j <= d; j++) {
+
+				if (j == 0){
+
+					augmented_X(i, j) = 1.0;
+				}
+				else{
+
+					augmented_X(i, j) = X(i, j - 1);
+
+				}
+			}
+		}
+
+
+	}
+
+
+	ys = ys - augmented_X * regression_weights;
+#if 0
+	printf("ys =\n");
+	trans(ys).print();
+#endif
+	/* vector of ones */
+	vec I = ones(N);
+
+
+	/* Cholesky decomposition R = LDL^T */
+
+	int cholesky_return = chol(U, R);
+
+	if (cholesky_return == 0) {
+		printf("Error: Ill conditioned correlation matrix, Cholesky decomposition failed...\n");
+		exit(-1);
+	}
+
+	mat L = trans(U);
+
+	vec R_inv_ys(N);
+	vec R_inv_I(N);
+
+	solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys);    /* solve R x = ys */
+#if 0
+	printf("R_inv_ys =\n");
+	trans(R_inv_ys).print();
+#endif
+
+
+	solve_linear_system_by_Cholesky(U, L, R_inv_I, I);      /* solve R x = I */
+#if 0
+	printf("R_inv_I =\n");
+	trans(R_inv_I).print();
+#endif
+
+	beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
+
+	vec ys_min_betaI = ys - beta0*I;
+
+	vec R_inv_ys_min_beta = zeros(N);
+
+	/* solve R x = ys-beta0*I */
+	solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta , ys_min_betaI);
+
+
+	res = R_inv_ys_min_beta;
+
+
+}
 
 
 

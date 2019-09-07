@@ -6,6 +6,10 @@
 #include <vector>
 
 
+
+
+
+
 void perturbVectorUniform(frowvec &xp,float sigmaPert){
 
 
@@ -623,25 +627,7 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
 
 }
 
-double mixed12Norm(mat &M){
 
-	double mixedNorm=0.0;
-	for(unsigned int i=0; i<M.n_rows;i++){ /* for each row of the matrix */
-
-		double sum=0.0;
-
-		for(int j=0; j<M.n_cols; j++){
-
-			sum+= M(i,j)*M(i,j);
-
-		}
-
-		mixedNorm+= sqrt(sum);
-
-	}
-
-
-}
 
 
 double calcMetric(rowvec &xi,rowvec &xj, mat M){
@@ -708,7 +694,6 @@ void findKNeighbours(mat &data,
 #endif
 
 	int number_of_points= data.n_rows;
-	int dim= data.n_cols;
 
 	min_dist.fill(LARGE);
 	indices.fill(-1);
@@ -785,7 +770,6 @@ void findKNeighbours(mat &data,
 		int number_of_independent_variables){
 
 	int number_of_points= data.n_rows;
-	int dim= data.n_cols;
 
 	for(int i=0; i<K; i++){
 
@@ -831,49 +815,5 @@ void findKNeighbours(mat &data,
 
 
 
-
-
-
-
-int getPopularlabel(int* labels, int size)
-{
-	int count = 1, tempCount;
-	int popular = labels[0];
-	int temp = 0;
-	for (int i = 0; i < (size - 1); i++)
-	{
-		temp = labels[i];
-		tempCount = 0;
-		for (int j = 1; j < size; j++)
-		{
-			if (temp == labels[j])
-				tempCount++;
-		}
-		if (tempCount > count)
-		{
-			popular = temp;
-			count = tempCount;
-		}
-	}
-	return popular;
-}
-
-
-
-void testLPnorm(void){
-
-	rowvec x(4);
-
-	x(0)=1.2;
-	x(1)=0.5;
-	x(2)=0.3;
-	x(3)=1.7;
-
-
-	double lpnorm  = Lpnorm(x,2, x.size());
-	printf("lp norm (p=2) = %10.7f\n",lpnorm);
-
-
-}
 
 

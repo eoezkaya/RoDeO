@@ -558,7 +558,6 @@ double Rosenbrock4D_adj(double *x, double *xb) {
 	double tempb;
 	double tempb0;
 	double tempb1;
-	double Rosenbrock4D;
 	term1b = Rosenbrock4Db;
 	term2b = Rosenbrock4Db;
 	term3b = Rosenbrock4Db;
@@ -2634,7 +2633,7 @@ void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
 				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
 				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
 #endif
-				x[i] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+				x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
 			}
 
 			double f_val = test_function(x);
@@ -3119,8 +3118,6 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 
 	vec beta0(dim+1);
 
-	double reg_param;
-
 
 	int number_of_max_function_evals_for_training = 10000;
 
@@ -3393,9 +3390,11 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	fmat XTrainingNotNormalized = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
 
 
+
+	fmat gradTrainingNotNormalized;
 	if(number_of_samples_with_g_eval >0 ) {
 
-		fmat gradTrainingNotNormalized = dataTraining.submat(0,numVar+1,number_of_training_samples-1,2*numVar);
+		gradTrainingNotNormalized = dataTraining.submat(0,numVar+1,number_of_training_samples-1,2*numVar);
 
 
 	}
@@ -3798,286 +3797,6 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-void perform_rbf_test(double (*test_function)(double *),
-		double *bounds,
-		std::string function_name ,
-		int  number_of_samples,
-		int sampling_method,
-		int problem_dimension,
-		RBF_TYPE rbf_type)
-{
 
-	/* file name for data points in csv (comma separated values) format */
-	std::string input_file_name = function_name+"_"
-			+ std::to_string(number_of_samples )
-	+".csv";
-
-	printf("input file name : %s\n",input_file_name.c_str());
-
-
-
-	/* generate the contour_plot for 2D data*/
-	if(problem_dimension==2){
-		generate_contour_plot_2D_function(test_function, bounds, function_name);
-	}
-
-
-	/* generate the function plot for 1D data*/
-	if(problem_dimension==1){
-		generate_plot_1D_function(test_function, bounds, function_name);
-
-	}
-
-
-	printf("Generating inputs using %d sample points...\n",number_of_samples );
-	/* generate the input data for testing */
-	generate_test_function_data(test_function,
-			input_file_name,
-			bounds,
-			number_of_samples,
-			sampling_method,
-			problem_dimension);
-
-
-
-	mat data; /* data matrix */
-	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
-
-#if 0
-	printf("data matrix = \n");
-	data.print();
-#endif
-
-
-	int nrows = data.n_rows;
-	int ncols = data.n_cols;
-
-	/* number of input parameters in the problem */
-	int dim = ncols - 1;
-
-	mat X = data.submat(0, 0, nrows - 1, ncols - 2);
-
-#if 0
-	printf("X = \n");
-	X.print();
-#endif
-
-	/* last column of the data matrix is the output vector */
-	vec ys = data.col(dim);
-
-#if 0
-	printf("ys = \n");
-	ys.print();
-#endif
-
-
-	vec x_max(dim);
-	x_max.fill(0.0);
-
-	vec x_min(dim);
-	x_min.fill(0.0);
-
-	for (int i = 0; i < dim; i++) {
-		x_max(i) = data.col(i).max();
-		x_min(i) = data.col(i).min();
-
-	}
-
-#if 0
-	printf("maximum = \n");
-	x_max.print();
-
-	printf("minimum = \n");
-	x_min.print();
-
-#endif
-
-	/* normalize data */
-	for (int i = 0; i < nrows; i++) {
-
-		for (int j = 0; j < dim; j++) {
-			X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-		}
-	}
-
-
-	/* weights of rbfs */
-	vec w(nrows+1);
-
-
-	/* train rbf weights */
-
-#if 0
-	printf("Training rbf...\n");
-#endif
-
-	double sigma=0.0;
-
-	RBF_param model_parameters;
-	model_parameters.type = rbf_type;
-
-#if 0
-	model_parameters.print();
-#endif
-
-	train_rbf(X, ys, w, sigma,model_parameters);
-
-#if 0
-	printf("Rbf weights =\n");
-	w.print();
-#endif
-
-
-
-	double in_sample_error = 0.0;
-
-	for(unsigned int i=0;i<X.n_rows;i++){
-
-		rowvec xp = X.row(i);
-
-
-
-
-		double func_val = calc_ftilde_rbf(X, xp, w, rbf_type, sigma);
-
-		/* convert to original input vector */
-		for(int j=0; j<problem_dimension;j++) {
-
-			xp(j) = xp(j)* (x_max(j) - x_min(j))+x_min(j);
-		}
-
-		double func_val_exact = test_function(xp.memptr());
-
-#if 0
-		printf("xp = \n");
-		xp.print();
-		printf("\n");
-		printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
-#endif
-
-		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-
-	}
-
-	in_sample_error = in_sample_error/X.n_rows;
-
-	printf("in sample error = %10.7f\n",in_sample_error);
-
-
-	/* visualize with contour plot if the problem is 2D */
-	if (problem_dimension == 2){
-		int resolution =100;
-
-		std::string rbf_response_surface_file_name = function_name+"_"+"rbf_response_surface_"+ std::to_string(number_of_samples )+".dat";
-
-		FILE *rbf_response_surface_file = fopen(rbf_response_surface_file_name.c_str(),"w");
-
-		double dx,dy; /* step sizes in x and y directions */
-		rowvec x(2);
-		rowvec xnorm(2);
-
-		double func_val;
-		dx = (bounds[1]-bounds[0])/(resolution-1);
-		dy = (bounds[3]-bounds[2])/(resolution-1);
-
-		double out_sample_error=0.0;
-
-		x[0] = bounds[0];
-		for(int i=0;i<resolution;i++){
-
-			x[1] = bounds[2];
-			for(int j=0;j<resolution;j++){
-
-				/* normalize x */
-				xnorm(0)= (x(0)- x_min(0)) / (x_max(0) - x_min(0));
-				xnorm(1)= (x(1)- x_min(1)) / (x_max(1) - x_min(1));
-
-
-				func_val = calc_ftilde_rbf(X, xnorm, w, rbf_type, sigma);
-
-				fprintf(rbf_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
-
-				double func_val_exact = test_function(x.memptr());
-
-				out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-
-				x[1]+=dy;
-			}
-			x[0]+= dx;
-
-		}
-		fclose(rbf_response_surface_file);
-
-		out_sample_error = out_sample_error/(resolution*resolution);
-
-		printf("out of sample error = %10.7f\n",out_sample_error);
-
-		/* plot the kriging response surface */
-
-		std::string file_name_for_plot = function_name+"_"+"rbf_response_surface_";
-		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-
-		std::string python_command = "python -W ignore plot_2d_surface.py "+ rbf_response_surface_file_name+ " "+ file_name_for_plot ;
-
-		FILE* in = popen(python_command.c_str(), "r");
-
-		fprintf(in, "\n");
-
-
-	}
-
-}
-
-
-void test_norms(int dim){
-
-	int number_of_points = 1000000;
-	vec dist1(number_of_points);
-	vec dist2(number_of_points);
-
-	for(int i=0; i<number_of_points; i++){
-
-		rowvec p1(dim);
-		rowvec p2(dim);
-
-		for(int j=0; j<dim;j++) {
-
-			p1(j)= RandomDouble(0.0, 1.0);
-			p2(j)= RandomDouble(0.0, 1.0);
-
-		}
-		rowvec diff = p1-p2;
-
-		dist2(i) = L2norm(diff,dim);
-		dist1(i) = L1norm(diff,dim);
-
-		//		printf("%d L2 = %10.7f L1 = %10.7f\n",i,dist2(i),dist1(i));
-
-
-	}
-
-
-	double max2= max(dist2);
-	double max1= max(dist1);
-
-	dist2 = dist2/max2;
-	dist1 = dist1/max1;
-
-	double meanL2 = mean(dist2);
-	double meanL1 = mean(dist1);
-	double stddevL2 = stddev(dist2);
-	double stddevL1 = stddev(dist1);
-
-	printf("mean L2 = %10.7f\n",meanL2);
-	printf("mean L1 = %10.7f\n",meanL1);
-	printf("stddev L2 = %10.7f\n",stddevL2);
-	printf("stddev L1 = %10.7f\n",stddevL1);
-
-
-
-
-
-
-}
 
 

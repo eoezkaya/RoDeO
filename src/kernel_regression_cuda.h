@@ -10,7 +10,7 @@
 
 using namespace arma;
 
-#define numVar 10
+#define numVar 38
 #define number_of_threads_per_block 64
 
 int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter, int lossFunType);
@@ -33,6 +33,15 @@ float kernelRegressorNotNormalized(fmat &X,
 								   fmat &M,
 								   float sigma);
 
+double kernelRegressorNotNormalized(mat &X,
+		mat &XnotNormalized,
+		vec &y,
+		mat &grad,
+		rowvec &xp,
+		vec &xmin,
+		vec &xmax,
+		mat &M,
+		double sigma);
 
 
 #endif

@@ -15,6 +15,7 @@
 #include "read_settings.hpp"
 #include "kernel_regression.hpp"
 #include "kernel_regression_cuda.h"
+#include "trust_region_gek.hpp"
 
 Rodeo_settings settings;
 
@@ -54,6 +55,57 @@ int main(void){
 
 
 
+	//	double parameter_bounds[4];
+	//	parameter_bounds[0]=0.0; parameter_bounds[1]=200.0;
+	//	parameter_bounds[2]=0.0; parameter_bounds[3]=200.0;
+	//
+	//	generate_highdim_test_function_data_GEK(Eggholder,
+	//			EggholderAdj,
+	//			"Eggholder_validation.csv",
+	//			parameter_bounds,
+	//			2,
+	//			1000,
+	//			0,
+	//			RANDOM_SAMPLING);
+	//
+	//	exit(1);
+
+
+//	AggregationModel settings_Eggholder("Eggholder100",2);
+//
+//
+//	settings_Eggholder.validationset_input_filename = "Eggholder_validation.csv";
+//	settings_Eggholder.max_number_of_kriging_iterations = 10000;
+//	settings_Eggholder.visualizeKrigingValidation = "yes";
+//	settings_Eggholder.visualizeKernelRegressionValidation = "yes";
+//	settings_Eggholder.number_of_cv_iterations = 0;
+//
+//	settings_Eggholder.visualizeAggModelValidation = "yes";
+//	train_aggregation_model(settings_Eggholder);
+//
+//	exit(1);
+
+
+
+
+	AggregationModel settings_CD("CL",38);
+
+
+	settings_CD.validationset_input_filename = "CL_Validation.csv";
+	settings_CD.max_number_of_kriging_iterations = 1000;
+	settings_CD.number_of_cv_iterations = 0;
+	settings_CD.visualizeKrigingValidation = "yes";
+	settings_CD.visualizeKernelRegressionValidation = "yes";
+	settings_CD.visualizeAggModelValidation = "yes";
+	train_aggregation_model(settings_CD);
+
+	exit(1);
+
+
+
+	initial_data_acquisition(200);
+
+
 
 	/*
 	 *  Sw: Wing Area (ft^2) (150,200)
@@ -70,17 +122,17 @@ int main(void){
 	 */
 
 
-//	double parameter_bounds[20];
-//	parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
-//	parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
-//	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
-//	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
-//	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
-//	parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
-//	parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
-//	parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
-//	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
-//	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
+	//	double parameter_bounds[20];
+	//	parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
+	//	parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
+	//	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
+	//	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
+	//	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
+	//	parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
+	//	parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
+	//	parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
+	//	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
+	//	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
 
 
 	//	perform_kriging_test(Wingweight,
@@ -128,40 +180,40 @@ int main(void){
 	// 			RANDOM_SAMPLING,
 	// 			5);
 
-		double *parameter_bounds = new double[20];
-		parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
-		parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
-		parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
-		parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
-		parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
-		parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
-		parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
-		parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
-		parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
-		parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
+	//		double *parameter_bounds = new double[20];
+	//		parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
+	//		parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
+	//		parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
+	//		parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
+	//		parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
+	//		parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
+	//		parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
+	//		parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
+	//		parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
+	//		parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
+	//
+	//	perform_kernel_regression_test_highdim_cuda(Wingweight,
+	//			WingweightAdj,
+	//			parameter_bounds,
+	//			"Wingweight",
+	//			0,
+	//			400,
+	//			RANDOM_SAMPLING,
+	//			10);
 
-	perform_kernel_regression_test_highdim_cuda(Wingweight,
-			WingweightAdj,
-			parameter_bounds,
-			"Wingweight",
-			0,
-			400,
-			RANDOM_SAMPLING,
-			10);
 
-
-//	double parameter_bounds[4];
-//	parameter_bounds[0]=-5.0; parameter_bounds[1]=5.0;
-//	parameter_bounds[2]=-5.0; parameter_bounds[3]=5.0;
-//
-//	perform_kernel_regression_test_highdim_cuda(Waves2D,
-//			Waves2D_adj,
-//			parameter_bounds,
-//			"Waves",
-//			0,
-//			200,
-//			RANDOM_SAMPLING,
-//			2);
+	//	double parameter_bounds[4];
+	//	parameter_bounds[0]=-5.0; parameter_bounds[1]=5.0;
+	//	parameter_bounds[2]=-5.0; parameter_bounds[3]=5.0;
+	//
+	//	perform_kernel_regression_test_highdim_cuda(Waves2D,
+	//			Waves2D_adj,
+	//			parameter_bounds,
+	//			"Waves",
+	//			0,
+	//			200,
+	//			RANDOM_SAMPLING,
+	//			2);
 
 
 	//
