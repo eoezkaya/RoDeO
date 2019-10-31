@@ -14,6 +14,7 @@ class KrigingModel {
 
 public:
 	int dim;
+	int N;
 	int linear_regression;
 	vec regression_weights;
 	vec kriging_weights;
@@ -22,28 +23,27 @@ public:
 	mat R;
 	mat U;
 	mat L;
+	mat X;
+	vec I;
+	mat data;
+	vec xmin;
+	vec xmax;
 	double beta0;
+	double sigma_sqr;
+	double genError;
 	std::string label;
 	std::string kriging_hyperparameters_filename;
 	std::string input_filename;
 	double epsilon_kriging;
 	int max_number_of_kriging_iterations;
 
-	KrigingModel(std::string name,int dimension){
+	KrigingModel(std::string name, int dimension);
+	void update(void);
+	double ftilde(rowvec xp);
+	double ftildeNorm(rowvec xp);
+	void calculate_f_tilde_and_ssqr(rowvec xp,double *f_tilde,double *ssqr);
 
-
-		label = name;
-		printf("Initializing settings for training %s data...\n",name.c_str());
-		input_filename = name +".csv";
-		kriging_hyperparameters_filename = name + "_Kriging_Hyperparameters.csv";
-		regression_weights.zeros(dimension);
-		kriging_weights.zeros(2*dimension);
-		epsilon_kriging = 10E-06;
-		max_number_of_kriging_iterations = 10000;
-		dim = dimension;
-		linear_regression = LINEAR_REGRESSION_ON;
-
-	}
+	void train_hyperparameters(void);
 
 	void save_state(void){
 
@@ -126,7 +126,7 @@ public:
 	}
 } ;
 
-
+double compute_R(rowvec x_i, rowvec x_j, vec theta, vec gamma);
 
 int train_kriging_response_surface(std::string input_file_name,
 		std::string file_name_hyperparameters,

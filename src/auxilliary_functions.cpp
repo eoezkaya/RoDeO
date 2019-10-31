@@ -7,6 +7,32 @@
 
 
 
+void normalize_vector(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax){
+
+	int dim = xp.size();
+
+	for(int i=0; i<dim; i++){
+
+		xpnorm(i) = (1.0/dim)*(xp(i) - xmin(i)) / (xmax(i) - xmin(i));
+
+	}
+
+
+
+}
+
+void normalize_vector_back(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax){
+
+	int dim = xp.size();
+
+	for(int i=0; i<dim; i++){
+
+		xp(i) = xpnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
+
+
+	}
+
+}
 
 
 
@@ -60,7 +86,7 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
 
 			for(unsigned int i=0; i<matrixIn.n_rows;i++){
 
-				matrixOut(i,j)  = (matrixIn(i,j)-xmin(j))/(delta);
+				matrixOut(i,j)  = ((1.0/dim)*(matrixIn(i,j)-xmin(j)))/(delta);
 			}
 
 		}

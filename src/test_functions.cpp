@@ -12,7 +12,11 @@
 #include "rbf.hpp"
 #include "trust_region_gek.hpp"
 #include "kernel_regression.hpp"
+
+#ifdef GPU_VERSION
 #include "kernel_regression_cuda.h"
+#endif
+
 #include <codi.hpp>
 
 #define ARMA_DONT_PRINT_ERRORS
@@ -3188,7 +3192,8 @@ void perform_trust_region_GEK_test(double (*test_function)(double *),
 }
 
 
-void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
+
+void perform_kernel_regression_test_highdim(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		double *bounds,
 		std::string function_name,
@@ -3223,13 +3228,15 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-
-	float partition[2] = {0.4,0.6};
+    /* division between number of training and validation samples */
+	float partition[2] = {0.6,0.4};
 
 	srand (time(NULL));
+
+
+#ifdef GPU_VERSION
 	printf("GPU test for kernel regression\n");
 
-#if 0	
 	cudaDeviceProp prop;
 	int count;
 	cudaGetDeviceCount( &count ) ;
@@ -3249,11 +3256,6 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 		printf( "Max grid dimensions:(%d, %d, %d)\n",prop.maxGridSize[0], prop.maxGridSize[1],prop.maxGridSize[2] );		
 
 	}
-#endif
-
-
-
-
 
 
 	if(numVar!=dim) {
@@ -3262,7 +3264,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 		exit(-1);
 	}
 
-
+#endif
 	if ( sampling_method == EXISTING_FILE ){
 
 		// do nothing
@@ -3282,7 +3284,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 					datafilename,
 					bounds,
 					number_of_samples_to_generate,
-					numVar);
+					dim);
 
 		}
 
@@ -3324,23 +3326,23 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	int number_of_data_points = data.n_rows;
 
 
-	if(number_of_samples_with_g_eval ==0  && numVar != data.n_cols-1){
+	if(number_of_samples_with_g_eval ==0  && dim != data.n_cols-1){
 
-		printf("Number of columns in the input file does not match with numVar = %d\n",numVar);
+		printf("Number of columns in the input file does not match with dim = %d\n",dim);
 		exit(-1);
 
 	}
 
-	if(number_of_samples_with_g_eval >0  && 2*numVar != data.n_cols-1){
+	if(number_of_samples_with_g_eval >0  && 2*dim != data.n_cols-1){
 
-		printf("Number of columns in the input file does not match with numVar = %d\n",numVar);
+		printf("Number of columns in the input file does not match with dim = %d\n",dim);
 		exit(-1);
 
 	}
 
 
 	printf("Kernel regression with the input data: %s\n",datafilename.c_str());
-	printf("Data has %d samples with %d variables\n",number_of_data_points,numVar);
+	printf("Data has %d samples with %d variables\n",number_of_data_points,dim);
 
 #if 0
 	printf("Original data:\n");
@@ -3369,38 +3371,38 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 	if(number_of_samples_with_g_eval ==0 ) {
 
-		dataTraining = data.submat( 0, 0, number_of_training_samples-1, numVar );
+		dataTraining = data.submat( 0, 0, number_of_training_samples-1, dim );
 
 
 	}
 
 	if(number_of_samples_with_g_eval >0 ) {
 
-		dataTraining = data.submat( 0, 0, number_of_training_samples-1, 2*numVar );
+		dataTraining = data.submat( 0, 0, number_of_training_samples-1, 2*dim );
 
 
 	}
 
 
-	dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, numVar );
+	dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, dim );
 
 
 
 
-	fmat XTrainingNotNormalized = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
+	fmat XTrainingNotNormalized = dataTraining.submat(0,0,number_of_training_samples-1, dim-1);
 
 
 
 	fmat gradTrainingNotNormalized;
 	if(number_of_samples_with_g_eval >0 ) {
 
-		gradTrainingNotNormalized = dataTraining.submat(0,numVar+1,number_of_training_samples-1,2*numVar);
+		gradTrainingNotNormalized = dataTraining.submat(0,dim+1,number_of_training_samples-1,2*dim);
 
 
 	}
-	fvec yTrainingNotNormalized = dataTraining.col(numVar);
+	fvec yTrainingNotNormalized = dataTraining.col(dim);
 
-	fmat XTestNotNormalized = dataTest.submat(0,0,number_of_test_samples-1,numVar-1);
+	fmat XTestNotNormalized = dataTest.submat(0,0,number_of_test_samples-1,dim-1);
 
 
 
@@ -3420,13 +3422,13 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	fvec x_maxTraining(numVar);
+	fvec x_maxTraining(dim);
 	x_maxTraining.fill(0.0);
 
-	fvec x_minTraining(numVar);
+	fvec x_minTraining(dim);
 	x_minTraining.fill(0.0);
 
-	for (int i = 0; i < numVar; i++) {
+	for (int i = 0; i < dim; i++) {
 
 		x_maxTraining(i) = dataTraining.col(i).max();
 		x_minTraining(i) = dataTraining.col(i).min();
@@ -3445,11 +3447,11 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 	float yTrainingMax = 1.0;
 
-	yTrainingMax = dataTraining.col(numVar).max();
+	yTrainingMax = dataTraining.col(dim).max();
 
 	for (int i = 0; i < number_of_training_samples; i++) {
 
-		dataTraining(i, numVar) = dataTraining(i, numVar)/yTrainingMax ;
+		dataTraining(i, dim) = dataTraining(i, dim)/yTrainingMax ;
 
 	}
 
@@ -3457,9 +3459,9 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	/* normalize training data */
 	for (int i = 0; i < number_of_training_samples; i++) {
 
-		for (int j = 0; j < numVar; j++) {
+		for (int j = 0; j < dim; j++) {
 
-			dataTraining(i, j) = (1.0/numVar)*(dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
+			dataTraining(i, j) = (1.0/dim)*(dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
 		}
 
 
@@ -3467,9 +3469,9 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 		if(number_of_samples_with_g_eval >0) {
 
 
-			for (int j = numVar+1; j < 2*numVar+1; j++) {
+			for (int j = dim+1; j < 2*dim+1; j++) {
 
-				dataTraining(i, j) = dataTraining(i, j) * (numVar/yTrainingMax) * (x_maxTraining(j-numVar-1) - x_minTraining(j-numVar-1));
+				dataTraining(i, j) = dataTraining(i, j) * (dim/yTrainingMax) * (x_maxTraining(j-dim-1) - x_minTraining(j-dim-1));
 			}
 
 
@@ -3494,13 +3496,13 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	fvec x_maxTest(numVar);
+	fvec x_maxTest(dim);
 	x_maxTest.fill(0.0);
 
-	fvec x_minTest(numVar);
+	fvec x_minTest(dim);
 	x_minTest.fill(0.0);
 
-	for (int i = 0; i < numVar; i++) {
+	for (int i = 0; i < dim; i++) {
 
 		x_maxTest(i) = dataTest.col(i).max();
 		x_minTest(i) = dataTest.col(i).min();
@@ -3519,9 +3521,9 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	/* normalize test data */
 	for (int i = 0; i < number_of_test_samples; i++) {
 
-		for (int j = 0; j < numVar; j++) {
+		for (int j = 0; j < dim; j++) {
 
-			dataTest(i, j) = (1.0/numVar)*(dataTest(i, j) - x_minTest(j)) / (x_maxTest(j) - x_minTest(j));
+			dataTest(i, j) = (1.0/dim)*(dataTest(i, j) - x_minTest(j)) / (x_maxTest(j) - x_minTest(j));
 		}
 
 
@@ -3535,8 +3537,10 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 
 
-	fmat L(numVar,numVar);
+	fmat L(dim,dim);
 	L.fill(0.0);
+
+
 
 
 
@@ -3570,10 +3574,10 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 	/* compute generalization error */
 
-	fmat XTest = dataTest.submat(0,0,number_of_test_samples-1,numVar-1);
-	fvec yTest = dataTest.col(numVar);
-	fmat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,numVar-1);
-	fvec yTraining = dataTraining.col(numVar);
+	fmat XTest = dataTest.submat(0,0,number_of_test_samples-1,dim-1);
+	fvec yTest = dataTest.col(dim);
+	fmat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,dim-1);
+	fvec yTraining = dataTraining.col(dim);
 
 #if 1
 	printf("dataTraining =\n");
@@ -3584,7 +3588,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 	fmat gradTraining;
 	if(number_of_samples_with_g_eval >0 ){
 
-		gradTraining = dataTraining.submat(0,numVar+1,number_of_training_samples-1,2*numVar);
+		gradTraining = dataTraining.submat(0,dim+1,number_of_training_samples-1,2*dim);
 
 	}
 
@@ -3733,7 +3737,7 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 
 	/* generalization error for M = I */
 
-	M = eye<fmat>(numVar,numVar);
+	M = eye<fmat>(dim,dim);
 
 	genError = 0.0;
 	genErrorFirstOrder = 0.0;

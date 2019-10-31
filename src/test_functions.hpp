@@ -282,7 +282,7 @@ void generate_test_function_data(double (*test_function)(double *),
 
 
 
-void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double *),
+void perform_kernel_regression_test_highdim(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		double *bounds,
 		std::string function_name ,
@@ -291,17 +291,9 @@ void perform_kernel_regression_test_highdim_cuda(double (*test_function)(double 
 		int sampling_method,
 		int dim);
 
-void perform_rbf_test(double (*test_function)(double *),
-        double *bounds,
-        std::string function_name ,
-        int  number_of_samples,
-        int sampling_method,
-        int problem_dimension,
-        RBF_TYPE rbf_type);
 
 
 
-void test_norms(int dim);
 
 
 #endif

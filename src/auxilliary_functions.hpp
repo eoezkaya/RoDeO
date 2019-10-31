@@ -8,6 +8,10 @@
 using namespace arma;
 
 
+void normalize_vector(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax);
+void normalize_vector_back(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax);
+
+
 void perturbVectorUniform(frowvec &xp,float sigmaPert);
 
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut);

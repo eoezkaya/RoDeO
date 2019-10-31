@@ -1588,6 +1588,327 @@ void su2_optimize(std::string python_dir){
 }
 
 
+int su2_robustOptimizeRae2822(void){
+
+
+	/* file name for the optimization history */
+	std::string all_data_file = "rae2822_optimization_history.csv";
+
+	const int number_of_design_variables = 38;
+	const double gaussian_noise_level = 0.0001;
+	std::default_random_engine generator;
+	std::normal_distribution<double> distribution(0.0,1.0);
+
+	const int number_of_function_evals_inner_iter = 5;
+	int number_of_MC_iter1 = 500;
+
+	vec best_EI_values(number_of_function_evals_inner_iter);
+	best_EI_values.fill(-LARGE);
+	mat dv_best_EI(number_of_function_evals_inner_iter,number_of_design_variables);
+	dv_best_EI.fill(0.0);
+
+	int worst_EI_array_indx = 0;
+
+
+	/* box constraints for the design variables */
+	const double upper_bound_dv =  0.003;
+	const double lower_bound_dv = -0.003;
+
+	const double lift_penalty_param = LARGE;
+	const double area_penalty_param = LARGE;
+
+	double CL_constraint = 0.723;
+	double Area_constraint = 0.077;
+
+	KrigingModel model_area("Area",number_of_design_variables);
+	model_area.max_number_of_kriging_iterations = 1000;
+
+
+	printf("here");
+	train_kriging_response_surface(model_area);
+	model_area.update();
+
+
+
+	AggregationModel model_CL("CL",number_of_design_variables);
+	model_CL.validationset_input_filename = "CL_Validation.csv";
+	model_CL.max_number_of_kriging_iterations = 1000;
+	model_CL.number_of_cv_iterations = 0;
+	model_CL.number_of_cv_iterations_rho = 0;
+	model_CL.visualizeKrigingValidation = "yes";
+	model_CL.visualizeKernelRegressionValidation = "yes";
+	model_CL.visualizeAggModelValidation = "yes";
+	model_CL.train();
+	model_CL.update();
+
+
+	AggregationModel model_CD("CD",number_of_design_variables);
+	model_CD.validationset_input_filename = "CD_Validation.csv";
+	model_CD.max_number_of_kriging_iterations = 1000;
+	model_CD.number_of_cv_iterations = 0;
+	model_CD.number_of_cv_iterations_rho = 0;
+	model_CD.visualizeKrigingValidation = "yes";
+	model_CD.visualizeKernelRegressionValidation = "yes";
+	model_CD.visualizeAggModelValidation = "yes";
+	model_CD.train();
+	model_CD.update();
+
+
+
+
+
+
+
+
+	while(1){
+
+		/* load samples from file*/
+		mat optimization_data;
+		optimization_data.load(all_data_file.c_str(), csv_ascii);
+
+#if 0
+		printf("optimization data:\n");
+		optimization_data.print();
+
+#endif
+
+
+
+
+		/* now find the best sample point */
+
+		double sample_min = LARGE;
+		double best_sample_CD = 0.0;
+		double best_sample_CL= 0.0;
+		double best_sample_S = 0.0;
+		int sample_min_indx = -1;
+
+
+		vec ys_CL = optimization_data.col(number_of_design_variables);
+		vec ys_CD = optimization_data.col(number_of_design_variables+1);
+		vec ys_area = optimization_data.col(number_of_design_variables+2);
+
+
+
+
+		for(unsigned int i=0; i<optimization_data.n_rows; i++){
+
+
+			double obj_fun = ys_CD(i);
+
+			/* add penalties for lift and area */
+			if(ys_CL(i) < CL_constraint){
+
+				obj_fun += lift_penalty_param*(CL_constraint-ys_CD(i));
+			}
+
+			if(ys_area(i)  < Area_constraint){
+
+				obj_fun += area_penalty_param*(Area_constraint-ys_area(i));
+			}
+
+			if(obj_fun < sample_min){
+
+				sample_min = obj_fun;
+				sample_min_indx = i;
+				best_sample_CD = ys_CD(i);
+				best_sample_CL = ys_CL(i);
+				best_sample_S = ys_area(i);
+
+			}
+
+		}
+#if 1
+		printf("Best sample in the data set is the %dth entry (without robustness criteria) :\n",sample_min_indx);
+		optimization_data.row(sample_min_indx).print();
+		printf("objective function value = %10.7e\n",sample_min);
+		printf("CD = %10.7e\n",best_sample_CD);
+		printf("CL = %10.7e\n",best_sample_CL);
+		printf("S = %10.7e\n",best_sample_S);
+
+
+#endif
+
+		double min_J = LARGE;
+		double best_sample_avg_cd=0.0;
+		double best_sample_worst_cl=0.0;
+		double best_sample_worst_area=0.0;
+		int best_sample_index = -1;
+
+
+		mat X_optimization = optimization_data.submat(0,0,optimization_data.n_rows-1, number_of_design_variables-1);
+
+		/* for each sample in the data */
+		for(int sample_index =0; sample_index<optimization_data.n_rows; sample_index++ ){
+#if 0
+
+			printf("sample index = %d\n",sample_index);
+#endif
+
+			/* get the sample from the data matrix */
+
+			rowvec dv_simulation= X_optimization.row(sample_index);
+
+
+			rowvec dv_simulation_normalized(number_of_design_variables);
+#if 0
+			printf("dv_simulation =\n");
+			dv_simulation.print();
+#endif
+
+
+			normalize_vector(dv_simulation, dv_simulation_normalized, model_CD.xmin, model_CD.xmax);
+#if 0
+			printf("dv_simulation_normalized =\n");
+			dv_simulation_normalized.print();
+#endif
+
+
+
+
+			double CD_tilde = ys_CD(sample_index);
+
+#if 0
+			printf("CD_tilde = %10.7f\n",CD_tilde);
+#endif
+
+			double worst_case_cl=LARGE;
+			double worst_case_area=LARGE;
+
+
+			/* inner MC loop */
+			for(int inner_mc_iter=0; inner_mc_iter<number_of_MC_iter1;inner_mc_iter++ ){
+
+#if 0
+				printf("mc inner loop iter1 = %d\n",inner_mc_iter);
+#endif
+				rowvec dv_with_noise(number_of_design_variables);
+				rowvec dv_normalized_with_noise(number_of_design_variables);
+
+
+				/* generate a random design and normalize it*/
+				for(int j= 0; j< number_of_design_variables; j++){
+
+					double number = distribution(generator);
+
+					if(number > 5 ) number = 5.0;
+					if(number < -5 ) number = -5.0;
+
+					double perturbation  = gaussian_noise_level* number;
+#if 0
+					printf("generated random number = %10.7f\n",number);
+					printf("perturbation            = %10.7f\n",perturbation);
+#endif
+
+
+
+					dv_with_noise(j)= dv_simulation(j)+perturbation ;
+#if 0
+					printf("design parameter = %15.10f (unperturbed) %15.10f (perturbed) \n",dv_simulation(j),dv_with_noise(j));
+#endif
+					dv_normalized_with_noise(j) = (1.0/number_of_design_variables)*(dv_with_noise(j) - model_CD.xmin(j)) / (model_CD.xmax(j) - model_CD.xmin(j));
+
+				}
+
+#if 0
+
+				printf("dv_with_noise = ");
+				dv_with_noise.print();
+
+				printf("dv_normalized_with_noise = ");
+				dv_normalized_with_noise.print();
+#endif
+
+
+				double S_tilde = model_area.ftildeNorm(dv_normalized_with_noise);
+#if 0
+			printf("S_tilde = %10.7f\n",S_tilde);
+#endif
+
+				double CL_tilde = model_CL.ftilde(dv_normalized_with_noise);
+
+#if 0
+			printf("CL_tilde = %10.7f\n",CL_tilde);
+#endif
+
+				if(CL_tilde < worst_case_cl){
+
+					worst_case_cl = CL_tilde;
+
+				}
+
+				if(S_tilde < worst_case_area){
+
+					worst_case_area = S_tilde;
+
+				}
+
+
+			} /* end of MC loop */
+
+
+
+
+			double objective_fun = CD_tilde;
+
+			if (worst_case_cl < CL_constraint) {
+
+				objective_fun += LARGE;
+			}
+
+			if (worst_case_area < Area_constraint) {
+
+				objective_fun += LARGE;
+			}
+
+#if 1
+			printf("%d %10.7f %10.7f %10.7f %10.7f\n",sample_index,objective_fun,CD_tilde,worst_case_cl,worst_case_area);
+#endif
+
+			if (objective_fun < min_J) {
+
+				min_J = objective_fun;
+				best_sample_avg_cd = CD_tilde;
+				best_sample_worst_cl = worst_case_cl;
+				best_sample_worst_area = worst_case_area;
+				best_sample_index = sample_index;
+
+			}
+
+
+
+		} /* end of loop through all samples in the data */
+
+#if 1
+		printf("best sample in the data (with robustness criteria) = \n");
+		printf("data point index = %d\n",best_sample_index);
+		rowvec best_design=optimization_data.row(best_sample_index);
+		printf("best design = \n");
+		best_design.print();
+		printf("mean CD = %10.7f\n", best_sample_avg_cd );
+		printf("worst CL = %10.7f\n", best_sample_worst_cl );
+		printf("worst Area = %10.7f\n", best_sample_worst_area);
+#endif
+
+
+
+		exit(1);
+
+
+
+
+
+
+	}
+
+
+
+
+
+
+}
+
+
 
 int su2_robustoptimize_naca0012(OptimizationData &optimization_plan){
 

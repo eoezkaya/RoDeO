@@ -241,4 +241,6 @@ void initial_data_acquisitionGEK(GEKSamplingData &sampling_plan);
 
 void su2_statistics_around_solution(int number_of_samples, std::string output_file_name,std::string input_file_name);
 
+int su2_robustOptimizeRae2822(void);
+
 #endif

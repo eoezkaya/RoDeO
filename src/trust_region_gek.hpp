@@ -1,9 +1,16 @@
 #ifndef TRAIN_TR_GEK_HPP
 #define TRAIN_TR_GEK_HPP
 
+#include "Rodeo_macros.hpp"
+
+
 class AggregationModel {
 
 public:
+
+	int dim;
+	int N;
+	int linear_regression;
 	vec regression_weights;
 	vec kriging_weights;
 	vec R_inv_ys_min_beta;
@@ -11,49 +18,42 @@ public:
 	mat R;
 	mat U;
 	mat L;
-	mat M;
-	int dim;
-	int number_of_cv_iterations_rho;
+	mat X;
+	mat XnotNormalized;
+	vec I;
+	mat data;
+	fmat dataSP;
+	mat grad;
+	vec xmin;
+	vec xmax;
+	double beta0;
+	double sigma_sqr;
+	double genError;
+	std::string label;
+	std::string kriging_hyperparameters_filename;
+	std::string input_filename;
+	double epsilon_kriging;
+	int max_number_of_kriging_iterations;
 
+
+	mat M;
+	int number_of_cv_iterations_rho;
+	int number_of_cv_iterations;
 	double rho;
 	double sigma;
-	double beta0;
-	std::string label;
-	std::string input_filename;
+
 	std::string validationset_input_filename;
-	std::string kriging_hyperparameters_filename;
 	std::string visualizeKrigingValidation;
 	std::string visualizeKernelRegressionValidation;
 	std::string visualizeAggModelValidation;
-	double epsilon_kriging;
-	int max_number_of_kriging_iterations;
-	int number_of_cv_iterations;
-
-	AggregationModel(std::string name,int dimension){
 
 
-		label = name;
-		printf("Initializing settings for training %s data...\n",name.c_str());
-		input_filename = name +".csv";
-		kriging_hyperparameters_filename = name + "_Kriging_Hyperparameters.csv";
-		visualizeKrigingValidation = "no";
-		visualizeKernelRegressionValidation = "no";
-		visualizeAggModelValidation = "no";
-		regression_weights.zeros(dimension);
-		kriging_weights.zeros(2*dimension);
-		M.zeros(dimension,dimension);
-		rho =  0.0;
-		sigma= 0.0;
-		beta0= 0.0;
-		epsilon_kriging = 10E-06;
-		max_number_of_kriging_iterations = 10000;
-		number_of_cv_iterations_rho = 100000;
-		dim = dimension;
-		validationset_input_filename = "None";
-		number_of_cv_iterations = 0;
 
-
-	}
+	AggregationModel(std::string name,int dimension);
+	void update(void);
+	double ftilde(rowvec xp);
+	double ftildeKriging(rowvec xp);
+	void train(void);
 
 	void save_state(void){
 
@@ -142,5 +142,26 @@ int train_TRGEK_response_surface(std::string input_file_name,
 		int train_hyper_param);
 
 int train_aggregation_model(AggregationModel &model_settings);
+
+double ftildeAggModel(AggregationModel &model_settings,
+		rowvec &xp,
+		rowvec xpNotNormalized,
+		mat &X,
+		mat &XTrainingNotNormalized,
+		vec &yTrainingNotNormalized,
+		mat &gradTrainingNotNormalized,
+		vec &x_min,
+		vec &x_max);
+
+double calcGenErrorAggModel(AggregationModel &model_settings,
+		mat Xvalidation,
+		mat XvalidationNotNormalized,
+		vec yvalidation,
+		mat X,
+		mat XTrainingNotNormalized,
+		vec yTrainingNotNormalized,
+		mat gradTrainingNotNormalized,
+		vec x_min,
+		vec x_max);
 
 #endif

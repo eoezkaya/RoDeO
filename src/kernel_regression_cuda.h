@@ -10,12 +10,11 @@
 
 using namespace arma;
 
-#define numVar 38
+#define numVar 2
 #define number_of_threads_per_block 64
 
 int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter, int lossFunType);
 
-int trainMahalanobisDistanceWithGradient(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,int max_cv_iter, int lossFunType);
 
 float gaussianKernel(frowvec &xi, frowvec &xj, float sigma, fmat &M);
 

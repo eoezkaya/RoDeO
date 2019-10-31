@@ -13,9 +13,15 @@
 #include "Rodeo_globals.hpp"
 #include "auxilliary_functions.hpp"
 #include "read_settings.hpp"
+
 #include "kernel_regression.hpp"
+
+#ifdef GPU_VERSION
 #include "kernel_regression_cuda.h"
+#endif
+
 #include "trust_region_gek.hpp"
+#include "kriging_training.hpp"
 
 Rodeo_settings settings;
 
@@ -54,56 +60,88 @@ int main(void){
 	}
 
 
+	double parameter_bounds[4];
+	parameter_bounds[0]=0.0; parameter_bounds[1]=200.0;
+	parameter_bounds[2]=0.0; parameter_bounds[3]=200.0;
+
+	perform_kernel_regression_test_highdim(Eggholder,
+			EggholderAdj,
+			parameter_bounds,
+			"Eggholder",
+			0,
+			100,
+			RANDOM_SAMPLING,
+			2);
+
+
 
 	//	double parameter_bounds[4];
 	//	parameter_bounds[0]=0.0; parameter_bounds[1]=200.0;
 	//	parameter_bounds[2]=0.0; parameter_bounds[3]=200.0;
 	//
+	//
 	//	generate_highdim_test_function_data_GEK(Eggholder,
-	//			EggholderAdj,
-	//			"Eggholder_validation.csv",
-	//			parameter_bounds,
-	//			2,
-	//			1000,
-	//			0,
-	//			RANDOM_SAMPLING);
+	//					EggholderAdj,
+	//					"Eggholder_validation.csv",
+	//					parameter_bounds,
+	//					2,
+	//					1000,
+	//					0,
+	//					RANDOM_SAMPLING);
+	//
+	//
+	//
+	//		generate_highdim_test_function_data_GEK(Eggholder,
+	//				EggholderAdj,
+	//				"Eggholder400.csv",
+	//				parameter_bounds,
+	//				2,
+	//				0,
+	//				400,
+	//				RANDOM_SAMPLING);
+	//
+	//
+	//
+	//	AggregationModel settings_Eggholder("Eggholder400",2);
+	//
+	//
+	//	settings_Eggholder.validationset_input_filename = "Eggholder_validation.csv";
+	//	settings_Eggholder.max_number_of_kriging_iterations = 10000;
+	//	settings_Eggholder.visualizeKrigingValidation = "yes";
+	//	settings_Eggholder.visualizeKernelRegressionValidation = "yes";
+	//	settings_Eggholder.number_of_cv_iterations = 20;
+	//
+	//	settings_Eggholder.visualizeAggModelValidation = "yes";
+	//	train_aggregation_model(settings_Eggholder);
 	//
 	//	exit(1);
-
-
-//	AggregationModel settings_Eggholder("Eggholder100",2);
-//
-//
-//	settings_Eggholder.validationset_input_filename = "Eggholder_validation.csv";
-//	settings_Eggholder.max_number_of_kriging_iterations = 10000;
-//	settings_Eggholder.visualizeKrigingValidation = "yes";
-//	settings_Eggholder.visualizeKernelRegressionValidation = "yes";
-//	settings_Eggholder.number_of_cv_iterations = 0;
-//
-//	settings_Eggholder.visualizeAggModelValidation = "yes";
-//	train_aggregation_model(settings_Eggholder);
-//
-//	exit(1);
-
-
-
-
-	AggregationModel settings_CD("CL",38);
-
-
-	settings_CD.validationset_input_filename = "CL_Validation.csv";
-	settings_CD.max_number_of_kriging_iterations = 1000;
-	settings_CD.number_of_cv_iterations = 0;
-	settings_CD.visualizeKrigingValidation = "yes";
-	settings_CD.visualizeKernelRegressionValidation = "yes";
-	settings_CD.visualizeAggModelValidation = "yes";
-	train_aggregation_model(settings_CD);
-
-	exit(1);
-
-
-
-	initial_data_acquisition(200);
+	//
+	//
+	//
+	//	KrigingModel model_area("Area",38);
+	//
+	//	train_kriging_response_surface(model_area);
+	//
+	//
+	//	exit(1);
+	//
+	//
+	//	AggregationModel settings_CD("CL",38);
+	//
+	//
+	//	settings_CD.validationset_input_filename = "CL_Validation.csv";
+	//	settings_CD.max_number_of_kriging_iterations = 1000;
+	//	settings_CD.number_of_cv_iterations = 0;
+	//	settings_CD.visualizeKrigingValidation = "yes";
+	//	settings_CD.visualizeKernelRegressionValidation = "yes";
+	//	settings_CD.visualizeAggModelValidation = "yes";
+	//	train_aggregation_model(settings_CD);
+	//
+	//	exit(1);
+	//
+	//
+	//
+	//	initial_data_acquisition(200);
 
 
 
