@@ -6,6 +6,39 @@
 #include <vector>
 
 
+void generateKRandomInt(uvec &numbers, unsigned int N, unsigned int k){
+
+	unsigned int numbersGenerated = 0;
+
+	numbers.fill(0);
+
+
+	while (numbersGenerated != k){
+
+
+		int r = rand()%N;
+#if 0
+		printf("random number = %d\n",r);
+#endif
+		if (is_in_the_list(r, numbers) == -1 ){
+
+			numbers(numbersGenerated) = r;
+			numbersGenerated++;
+#if 0
+			printf("numbers =\n");
+			numbers.print();
+#endif
+		}
+
+
+
+	}
+
+
+
+
+}
+
 
 void normalize_vector(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax){
 

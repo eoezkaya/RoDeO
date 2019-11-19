@@ -2583,6 +2583,11 @@ void calculateLossKernelL2(float* result, float *X,float *kernelValTable, int N,
 }
 
 
+
+
+
+
+
 void calculateLossKernelL2_b(float *result, float *resultb, float *X, float *
 		kernelValTable, float *kernelValTableb, int N, int d) {
 
@@ -3051,7 +3056,7 @@ void calcLossFunCPU_b(float *result, float *input, float *inputb, float *data,in
 	}
 
 
-#if 1
+#if 0
 	printf("loss = %10.7f\n", *result);
 #endif
 
@@ -3654,16 +3659,197 @@ double kernelRegressorNotNormalized(mat &X,
 
 }
 
+int trainMahalanobisDistanceBruteForce(fmat &L, fmat &data, float &sigma, float yTrainingMax, int lossFunType, int batchsize, int ntrials) {
+
+#if 1
+
+	printf("trainMahalanobisDistanceBruteForce...\n");
+#endif
+
+	unsigned int d = L.n_cols;
+
+	unsigned int Ldim = d*d;
+
+#if 1
+	printf("Ldim = %d\n",Ldim);
+
+	printf("Data (normalized) with ymax = %10.7f =\n",yTrainingMax);
+	data.print();
+
+#endif
+
+	/* lower diagonal matrix Lbest to keep the best L*/
+	fmat bestL(d,d);
+	bestL.fill(0.0);
+
+	float bestsigma = 0.0;
+
+
+	/* divide the data set into training and validation sets */
+
+	unsigned int N = data.n_rows;
+
+
+	/* size of the validation set, default to one fifth */
+	unsigned int NvalidationSet = N/5;
+	unsigned int Ntraining = N - NvalidationSet;
+#if 1
+	printf("N = %d, Ntraining = %d, Nvalidation =%d\n", N,Ntraining, NvalidationSet);
+#endif
+	fmat dataTraining      = data.submat( 0, 0, Ntraining-1, d );
+	fmat dataValidation    = data.submat( Ntraining, 0, N-1, d );
+
+
+	fmat XValidation = dataValidation.submat(0,0,NvalidationSet-1,d-1);
+	fvec yValidation = dataValidation.col(d);
+
+	fmat XTraining = dataTraining.submat(0,0,Ntraining-1,d-1);
+	fvec yTraining = dataTraining.col(d);
+
+
+
+
+	float optGenError = LARGE;
+	printf("ntrials = %d\n", ntrials);
+	/* optimization loop */
+
+
+
+	for(int ii=0; ii<100000; ii++){
+
+
+
+
+#if 0
+		if(ii > ntrials)
+
+			printf("iterTrial = %d, ntrials = %d\n", ii,ntrials);
+#endif
+
+		for (int i = 0; i < d; i++)
+			for (int j = 0; j <= i; j++) {
+
+				L(i,j) = RandomFloat(0.0,1.0);
+
+			}
+
+		sigma = RandomFloat(0.0,1.0);
+
+
+		if(ii == 0){
+
+			sigma = 0.1;
+			L = eye<fmat>(d,d);
+
+		}
+
+
+
+		fmat M = L*trans(L);
+
+
+
+
+#if 0
+		printf("L = \n");
+		L.print();
+		printf("M = \n");
+		M.print();
+		printf("sigma = %10.7f\n", sigma);
+#endif
+
+
+		float genError = 0.0;
+
+		for(int i=0;i <NvalidationSet; i++){
+
+			frowvec xp = XValidation.row(i);
+			float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
+			float yexact = yValidation(i)*yTrainingMax;
+
+#if 0
+			printf("i= %d, x:\n",i);
+			xp.print();
+			printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
+#endif
+
+
+
+			if( lossFunType == L1_LOSS_FUNCTION) genError += fabs(yexact-ytilde);
+			if( lossFunType == L2_LOSS_FUNCTION) genError += (yexact-ytilde)*(yexact-ytilde);
+
+		}
+
+		genError = genError/NvalidationSet;
+
+		if(ii == 0){
+			printf("Generalization error (for M=I) = %10.7f\n",genError);
+
+		}
+
+
+#if 0
+		printf("Generalization error = %10.7f\n",genError);
+#endif
+		if(genError < optGenError) {
+
+#if 1
+			printf("Better L has been found, updating L...\n");
+			printf("Generalization error = %10.7f\n",genError);
+
+			printf("L = \n");
+			L.print();
+			printf("M = \n");
+			M.print();
+			printf("sigma = %10.7f\n", sigma);
+
+#endif
+			bestL = L;
+			bestsigma = sigma;
+			optGenError = genError;
+
+
+		}
+
+
+
+
+
+
+
+
+	}
+
+
+
+	L = bestL;
+	sigma = bestsigma;
+	printf("L = \n");
+	L.print();
+	printf("optimization finished...\n");
+	return 0;
+
+}
+
 int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,
 		int max_cv_iter, int lossFunType, int batchsize, int nepochs) {
+
+#if 0
+	printf("Training the Mahalanobis distance...\n");
+	printf("Mini batch size = %d\n",batchsize);
+	printf("Number of epochs = %d\n",nepochs);
+	printf("number of cross-validation iterations = %d\n",max_cv_iter);
+#endif
+
 
 
 	bool trainWithSvdFlag = false;
 
-	if(wSvd > 0.0) trainWithSvdFlag = true;
+	if(wSvd > 0.0) {
 
+		trainWithSvdFlag = true;
+	}
 
-	int max_opt_iter = 40000;
 
 	const float alpha = 0.9;
 
@@ -3688,12 +3874,21 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 	unsigned int Ntraining = N - NvalidationSet;
 
 
-#if 1
+	/* do not allow that batch size will be greater than number of training samples */
+	if (batchsize > Ntraining){
+
+		batchsize = Ntraining;
+	}
+
+
+#if 0
 
 	printf("number of training samples (core) = %d\n",Ntraining);
 	printf("number of validation samples      = %d\n",NvalidationSet);
 
 #endif
+
+
 
 
 	/* divide the data into two sets */
@@ -3708,7 +3903,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 	fmat XTraining = dataTraining.submat(0,0,Ntraining-1,d-1);
 	fvec yTraining = dataTraining.col(d);
 
-
+	fmat dataMiniBatch(batchsize, d+1);
 
 
 #if 0
@@ -3750,16 +3945,17 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		}
 
 
-#if 1
+#if 0
 		printf("wSvdtrial = \n");
-		wSvdtrial.print();
+		trans(wSvdtrial).print();
 		printf("w12trial = \n");
-		w12trial.print();
+		trans(w12trial).print();
 #endif
 
 
 	}
 
+	/* auxilliary vectors */
 
 	float *inputVec = new float[Ldim+1]();
 	float *inputVecVel = new float[Ldim+1]();
@@ -3767,8 +3963,9 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 	float *inputVecb = new float[Ldim+1]();
 	float *inputVecRegb = new float[Ldim]();
 	float *gradientVec = new float[Ldim+1]();
-	float *dataVecTraining = new float[Ntraining*(d+1)]();
 
+
+	float *dataVecTraining = new float[batchsize*(d+1)]();
 
 
 
@@ -3786,29 +3983,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 #endif
 
 
-#if 1
-	printf("copying training data...\n");
-#endif
-	for (int i = 0; i < Ntraining; i++) {
 
-		for (int j = 0; j < d+1; j++) {
-
-			dataVecTraining[i*(d+1)+j ] = dataTraining(i, j);
-		}
-	}
-#if 0
-	printf("data copied = \n");
-
-	for (int i = 0; i < Ntraining; i++) {
-
-		for (int j = 0; j < d+1; j++) {
-
-			printf("%10.7f ",dataVecTraining[i*(n+1)+j ]);
-		}
-		printf("\n");
-	}
-
-#endif
 
 
 	float optGenError = 10E14;
@@ -3817,7 +3992,9 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 	for(int iter_cv=0; iter_cv< max_cv_iter; iter_cv++){
 
 
-		float learning_rateM = 0.0001;
+
+
+		float learning_rateM = 0.00001;
 		float learning_rateSigma = learning_rateM * 0.01;
 
 
@@ -3833,7 +4010,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 			}
 			w12 =  w12trial(iter_cv);
 		}
-#if 1
+#if 0
 		printf("Outer iteration = %d\n",iter_cv);
 		printf("wSvd = %10.7f, w12 = %10.7f\n",wSvd,w12);
 #endif
@@ -3862,7 +4039,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		}
 
 		/* assign sigma to a small value between 0 and 0.1 */
-		inputVec[Ldim] = RandomFloat(0.0,0.1);
+		inputVec[Ldim] = 0.01+RandomFloat(-0.001,0.001);
 
 		float lossVal,lossValb, regTerm;
 		float objFunVal;
@@ -3870,233 +4047,66 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		lossValb = 1.0;
 
 
-		/* init sensitivities to zero */
-		for(int i=0;i<Ldim+1;i++) {
-
-			inputVecb[i] = 0.0;
-		}
-
-		/* calculate the first gradient vector */
-
-		printf("Evaluating the first gradient...\n");
-
-
-
-		calcLossFunCPUCodi(&lossVal,inputVec,inputVecb, dataVecTraining,Ntraining,d, lossFunType);
-
-
-
-		calcLossFunCPU_b(&lossVal,inputVec,inputVecb, dataVecTraining,Ntraining,d, lossFunType);
-
-		exit(1);
-
-		calcLossFunCPU(&lossVal, inputVec, dataVecTraining,Ntraining, d,lossFunType);
-
-
-
-
-
-		//		calcLossFunCPU_b(&lossVal, &lossValb, inputVec,inputVecb, dataVecTraining,Ntraining, lossFunType);
-
-		printf("initial Loss (CPU Version)= %10.7f\n", lossVal);
-
-
-#if 0
-		printf("gradient of the loss term = \n");
-
-		for (int i = 0; i < d; i++) {
-			for (int j = 0; j < d; j++) {
-
-				printf("%10.7f ", inputVecb[i*d+j]);
-
-			}
-			printf("\n");
-		}
-		printf("sigma sensitivity = %10.7f\n", inputVecb[Ldim]);
-#endif
-
-
-
-
-
-		for(int i=0;i<Ldim+1;i++) {
-
-			gradientVec[i]=inputVecb[i];
-		}
-
-
-
-
-
-
-#if 0
-		printf("calculating regularization term...\n");
-#endif
-		for(int i=0;i<Ldim;i++) {
-
-			inputVecRegb[i] = 0.0;
-		}
-
-		/* call the adjoint mode of the function to compute the regularization term */
-		if(trainWithSvdFlag){
-
-			calcRegTerms(inputVec, inputVecRegb, &regTerm, wSvd, w12, d);
-		}
-		else{
-
-			calcRegTermL12(inputVec, inputVecRegb,&regTerm, w12, d);
-
-		}
-
-#if 0
-		printf("gradient of the regularization term = \n");
-
-		for (int i = 0; i < d; i++) {
-			for (int j = 0; j < d; j++) {
-
-				printf("%10.7f ", inputVecRegb[i*d+j]);
-
-			}
-			printf("\n");
-		}
-#endif
-
-		objFunVal = lossVal + regTerm;
-
-		printf("initial value of the objective function = %10.7f\n",objFunVal);
-
-		/* add the regularization sensitivities to the gradient vector */
-
-		for(int i=0;i<Ldim;i++) {
-
-			gradientVec[i]+=inputVecRegb[i];
-		}
-
-
-#if 0
-
-		/* validation loop for the regularization term */
-
-
-		float f0 = 0.0;
-		float tempSave;
-		calcRegTerms(inputVec, &f0, wSvd, w12, n);
-		printf("f0 = %10.7f\n",f0);
-		float epsValReg= 0.001;
-
-
-		for (int i = 0; i < n; i++) {
-			for (int j = 0; j <= i; j++) {
-
-				printf("validating the (%d,%d) th element of M\n",i,j);
-				tempSave = inputVec[i*n+j];
-				inputVec[i*n+j]+=epsValReg;
-
-				float f1 = 0.0;
-
-				calcRegTerms(inputVec, &f1, wSvd, w12, n);
-				printf("f1 = %10.7f, f0 = %10.7f\n",f1,f0);
-				inputVec[i*n+j]= tempSave;
-
-				float fdVal = (f1-f0)/epsValReg;
-
-				printf("fd value = %10.7f, ad value = %10.7f\n",fdVal,inputVecRegb[i*n+j]);
-
-				float f2,f2d;
-
-				/* call forward mode */
-				calcRegTerms(inputVec, &f2,&f2d, wSvd, w12, n, i*n+j);
-
-				printf("primal value = %10.7f, forward ad value = %10.7f, ad value = %10.7f\n",f2,f2d,inputVecRegb[i*n+j]);
-
-
-			}
-
-		}
-
-
-
-
-#endif
-
-		/* optimization loop */
-
-
-		/* check gradient */
-		for(int i=0;i<Ldim;i++) {
-
-			if( gradientVec[i] != gradientVec[i]){
-
-				printf("gradientVec[%d] is NaN!\n",i);
-				exit(1);
-
-			}
-		}
-
 
 		float objectiveFunLocalBest = 10E14;
 
 
 
-		for(int opt_iter=0 ; opt_iter < max_opt_iter; opt_iter++){
+		/* optimization loop */
+
+		for(int opt_iter=0 ; opt_iter < nepochs; opt_iter++){
+
+
+			shuffle(dataTraining);
+
+			/*get the mini batch */
+			dataMiniBatch = dataTraining.submat(0,0,batchsize-1,d);
+
+#if 0
+			printf("dataMiniBatch = \n");
+			dataMiniBatch.print();
+#endif
 
 
 
-			/* update M */
 
-			for (int i = 0; i < d; i++){
-				for (int j = 0; j <= i; j++) {
+#if 0
+			printf("copying training data...\n");
+#endif
+			for (int i = 0; i < batchsize; i++) {
 
-					inputVec[i*d+j]= inputVec[i*d+j] + inputVecVel[i*d+j];
+				for (int j = 0; j < d+1; j++) {
 
-
+					dataVecTraining[i*(d+1)+j ] = dataMiniBatch (i, j);
 				}
-
 			}
+#if 0
+			printf("data copied = \n");
 
+			for (int i = 0; i < batchsize; i++) {
 
-			for (int i = 0; i < d; i++){
-				for (int j = 0; j <= i; j++) {
+				for (int j = 0; j < d+1; j++) {
 
-					if ( inputVec[i*d+j] < 0) {
-
-						inputVec[i*d+j] = 10E-6;
-
-					}
-
-
+					printf("%10.7f ",dataVecTraining[i*(d+1)+j ]);
 				}
-
+				printf("\n");
 			}
 
-			/* update sigma */
-			inputVec[Ldim]= inputVec[Ldim] + inputVecVel[Ldim];
-
-			if(inputVec[Ldim] <= 0) {
-
-				inputVec[Ldim] = 10E-06;
-			}
+#endif
 
 
+
+
+
+			/* init sensitivities to zero */
 			for(int i=0;i<Ldim+1;i++) {
 
 				inputVecb[i] = 0.0;
 			}
 
-			/* calculate the gradient vector */
+			calcLossFunCPU_b(&lossVal,inputVec,inputVecb, dataVecTraining,batchsize,d, lossFunType);
 #if 0
-			printf("evaluating gradient vector...\n");
-#endif
-
-
-
-			//ceo			calcLossFunCPU_b(&lossVal, &lossValb, inputVec,inputVecb, dataVecTraining,Ntraining,L1_LOSS_FUNCTION);
-
-
-
-
-#if 0
-			printf("Loss (GPU Version)= %10.7f\n", lossVal);
+			printf("Loss (CPU Version)= %10.7f\n", lossVal);
 #endif
 			for(int i=0;i<Ldim+1;i++) {
 
@@ -4147,6 +4157,59 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 			objFunVal = lossVal + regTerm;
 
+			/* check if gradient has some NaNs*/
+			for(int i=0;i<Ldim;i++) {
+
+				if( gradientVec[i] != gradientVec[i]){
+
+					printf("Error: gradientVec[%d] is NaN!\n",i);
+					exit(1);
+
+				}
+			}
+
+
+
+			/* update L */
+
+			for (int i = 0; i < d; i++){
+				for (int j = 0; j <= i; j++) {
+
+					//					inputVec[i*d+j]= inputVec[i*d+j] + inputVecVel[i*d+j];
+					inputVec[i*d+j]= inputVec[i*d+j] -learning_rateM * gradientVec[i*d+j];
+
+				}
+
+			}
+
+			/* do not allow that entries of L will be negative! */
+
+			for (int i = 0; i < d; i++){
+				for (int j = 0; j <= i; j++) {
+
+					if ( inputVec[i*d+j] < 0) {
+
+						inputVec[i*d+j] = 10E-6;
+
+					}
+
+
+				}
+
+			}
+
+			/* update sigma */
+			//			inputVec[Ldim]= inputVec[Ldim] + inputVecVel[Ldim];
+			inputVec[Ldim]= inputVec[Ldim] - learning_rateSigma *gradientVec[Ldim];
+
+			if(inputVec[Ldim] <= 0) {
+
+				inputVec[Ldim] = 10E-06;
+			}
+
+
+
+
 			if(objFunVal < objectiveFunLocalBest){
 
 				objectiveFunLocalBest = objFunVal;
@@ -4162,9 +4225,9 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 			if(opt_iter % 100 == 0){
 
-
+#if 0
 				printf("iter = %d, objective function = %10.7f, Leave One Out Error = %10.7f, Regularization term = %10.7f\n",opt_iter,objFunVal,lossVal, regTerm);
-
+#endif
 #if 0
 				printf("L = \n");
 
@@ -4186,17 +4249,18 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 
 			/* update velocity vector */
-			for(int i=0;i<Ldim;i++) {
-
-				inputVecVel[i]=alpha* inputVecVel[i] - learning_rateM*gradientVec[i];
-
-			}
-			inputVecVel[Ldim]=alpha* inputVecVel[Ldim] - learning_rateSigma*gradientVec[Ldim];
+			//			for(int i=0;i<Ldim;i++) {
+			//
+			//				inputVecVel[i]=alpha* inputVecVel[i] - learning_rateM*gradientVec[i];
+			//
+			//			}
+			//			inputVecVel[Ldim]=alpha* inputVecVel[Ldim] - learning_rateSigma*gradientVec[Ldim];
 
 
 
 
 		} /* end of local optimization loop */
+
 
 
 
@@ -4206,7 +4270,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 				L(i,j)= inputVecLocalBest[i*d+j];
 			}
 
-#if 1
+#if 0
 		printf("local optimization result:\n");
 		printf("L = \n");
 		L.print();
@@ -4217,10 +4281,15 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 
 		fmat M = L*trans(L);
-#if 1
+#if 0
 		printf("M = \n");
 		M.print();
 #endif
+
+
+		dataTraining      = data.submat( 0, 0, Ntraining-1, d );
+
+
 		float genError = 0.0;
 
 		for(int i=0;i <NvalidationSet; i++){
@@ -4244,12 +4313,12 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 		genError = genError/NvalidationSet;
 
-#if 1
+#if 0
 		printf("Generalization error = %10.7f\n",genError);
 #endif
 		if(genError < optGenError) {
 
-#if 1
+#if 0
 			printf("Better L has been found, updating L...\n");
 #endif
 			bestL = L;

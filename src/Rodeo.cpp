@@ -60,6 +60,22 @@ int main(void){
 	}
 
 
+//	AggregationModel settings_CD("CD",13);
+//
+//
+//	settings_CD.validationset_input_filename = "CD_val.csv";
+//	settings_CD.max_number_of_kriging_iterations = 10000;
+//	settings_CD.visualizeKrigingValidation = "yes";
+//	settings_CD.visualizeKernelRegressionValidation = "yes";
+//	settings_CD.number_of_cv_iterations = 50;
+//
+//	settings_CD.visualizeAggModelValidation = "yes";
+//	train_aggregation_model(settings_CD);
+//
+//	exit(1);
+
+
+
 	double parameter_bounds[4];
 	parameter_bounds[0]=0.0; parameter_bounds[1]=200.0;
 	parameter_bounds[2]=0.0; parameter_bounds[3]=200.0;
@@ -69,7 +85,7 @@ int main(void){
 			parameter_bounds,
 			"Eggholder",
 			0,
-			100,
+			3000,
 			RANDOM_SAMPLING,
 			2);
 

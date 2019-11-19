@@ -676,7 +676,7 @@ void AggregationModel::train(void) {
 
 		printf("Training the Mahalanobis matrix and sigma...\n");
 		/* now train the Mahalanobis matrix */
-		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression, sigma, wSvd, w12, number_of_cv_iterations,L2_LOSS_FUNCTION);
+		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression, sigma, wSvd, w12, number_of_cv_iterations,L2_LOSS_FUNCTION, 100,10000);
 
 		fmat Mtemp = LKernelRegression*trans(LKernelRegression);
 
@@ -4637,7 +4637,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 		printf("Training the Mahalanobis matrix and sigma...\n");
 		/* now train the Mahalanobis matrix */
-		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression, sigma, wSvd, w12, model_settings.number_of_cv_iterations,L2_LOSS_FUNCTION);
+		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression, sigma, wSvd, w12, model_settings.number_of_cv_iterations,L2_LOSS_FUNCTION, 100,10000);
 
 		fmat Mtemp = LKernelRegression*trans(LKernelRegression);
 
