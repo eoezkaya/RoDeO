@@ -4,11 +4,7 @@
 
 #include "su2_optim.hpp"
 #include "test_functions.hpp"
-#include "rbf.hpp"
-#include "kd_tree.hpp"
-#include "binary_search_tree.hpp"
 #include "linear_regression.hpp"
-#include "kmeans_clustering.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
 #include "auxilliary_functions.hpp"
@@ -60,34 +56,114 @@ int main(void){
 	}
 
 
-//	AggregationModel settings_CD("CD",13);
-//
-//
-//	settings_CD.validationset_input_filename = "CD_val.csv";
-//	settings_CD.max_number_of_kriging_iterations = 10000;
-//	settings_CD.visualizeKrigingValidation = "yes";
-//	settings_CD.visualizeKernelRegressionValidation = "yes";
-//	settings_CD.number_of_cv_iterations = 50;
-//
-//	settings_CD.visualizeAggModelValidation = "yes";
-//	train_aggregation_model(settings_CD);
-//
-//	exit(1);
+	AggregationModel settings_CD("CL",38);
 
 
+	settings_CD.validationset_input_filename = "CL_Validation.csv";
+	settings_CD.max_number_of_kriging_iterations = 10000;
+	settings_CD.number_of_cv_iterations = 20;
+	settings_CD.visualizeKrigingValidation = "yes";
+	settings_CD.visualizeKernelRegressionValidation = "yes";
+	settings_CD.visualizeAggModelValidation = "yes";
+	train_aggregation_model(settings_CD);
 
-	double parameter_bounds[4];
-	parameter_bounds[0]=0.0; parameter_bounds[1]=200.0;
-	parameter_bounds[2]=0.0; parameter_bounds[3]=200.0;
 
-	perform_kernel_regression_test_highdim(Eggholder,
-			EggholderAdj,
+	exit(1);
+
+	double parameter_bounds[12];
+	parameter_bounds[0]=-5.12; parameter_bounds[1]=5.12;
+	parameter_bounds[2]=-5.12; parameter_bounds[3]=5.12;
+	parameter_bounds[4]=-5.12; parameter_bounds[5]=5.12;
+	parameter_bounds[6]=-5.12; parameter_bounds[7]=5.12;
+	parameter_bounds[8]=-5.12; parameter_bounds[9]=5.12;
+	parameter_bounds[10]=-5.12; parameter_bounds[11]=5.12;
+
+	perform_aggregation_model_test_highdim(Rastrigin6D,
+			Rastrigin6D_adj,
 			parameter_bounds,
-			"Eggholder",
-			0,
-			3000,
+			"Rastrigin6D",
+			400,
 			RANDOM_SAMPLING,
-			2);
+			6);
+
+
+
+	//	AggregationModel settings_CD("CD",13);
+	//
+	//
+	//	settings_CD.validationset_input_filename = "CD_val.csv";
+	//	settings_CD.max_number_of_kriging_iterations = 10000;
+	//	settings_CD.visualizeKrigingValidation = "yes";
+	//	settings_CD.visualizeKernelRegressionValidation = "yes";
+	//	settings_CD.number_of_cv_iterations = 50;
+	//
+	//	settings_CD.visualizeAggModelValidation = "yes";
+	//	train_aggregation_model(settings_CD);
+	//
+	//	exit(1);
+
+
+
+
+	//		double parameter_bounds[4];
+	//		parameter_bounds[0]=0.0; parameter_bounds[1]=200.0;
+	//		parameter_bounds[2]=0.0; parameter_bounds[3]=200.0;
+	//
+	//
+	//
+	//	perform_NNregression_test(Eggholder,
+	//						parameter_bounds,
+	//						"Eggholder" ,
+	//						1250,
+	//						RANDOM_SAMPLING,
+	//						2,
+	//						100);
+
+
+	//	double *parameter_bounds = new double[20];
+	//	parameter_bounds[0]=150.0; parameter_bounds[1]=200.0;
+	//	parameter_bounds[2]=220.0; parameter_bounds[3]=300.0;
+	//	parameter_bounds[4]=6.0; parameter_bounds[5]=10.0;
+	//	parameter_bounds[6]=-10.0; parameter_bounds[7]=10.0;
+	//	parameter_bounds[8]=16.0; parameter_bounds[9]=45.0;
+	//	parameter_bounds[10]=0.5; parameter_bounds[11]=1.0;
+	//	parameter_bounds[12]=0.08; parameter_bounds[13]=0.018;
+	//	parameter_bounds[14]=2.5; parameter_bounds[15]=6.0;
+	//	parameter_bounds[16]=1700.0; parameter_bounds[17]=2500.0;
+	//	parameter_bounds[18]=0.025; parameter_bounds[19]=0.08;
+	//
+	//
+	//		perform_NNregression_test(Wingweight,
+	//					parameter_bounds,
+	//					"Wingweight" ,
+	//					500,
+	//					RANDOM_SAMPLING,
+	//					10,
+	//					500);
+	//
+	//	exit(1);
+	//
+	//
+	//	perform_aggregation_model_test_highdim(Wingweight,
+	//			WingweightAdj,
+	//			parameter_bounds,
+	//			"Wingweight",
+	//			400,
+	//			RANDOM_SAMPLING,
+	//			10);
+
+
+
+	//
+	//
+	//	perform_kernel_regression_test_highdim(Eggholder,
+	//			EggholderAdj,
+	//			parameter_bounds,
+	//			"Eggholder",
+	//			0,
+	//			3000,
+	//			RANDOM_SAMPLING,
+	//			2);
 
 
 
@@ -198,13 +274,7 @@ int main(void){
 	//			LINEAR_REGRESSION_OFF);
 
 
-	//	perform_NNregression_test(Wingweight,
-	//			parameter_bounds,
-	//			"Wingweight" ,
-	//			400,
-	//			RANDOM_SAMPLING,
-	//			10,
-	//			500);
+
 
 	//
 	//	perform_kernel_regression_test_highdim(Wingweight,

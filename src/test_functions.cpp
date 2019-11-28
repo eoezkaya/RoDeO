@@ -9,7 +9,6 @@
 #include "auxilliary_functions.hpp"
 #include "test_functions.hpp"
 #include "kriging_training.hpp"
-#include "rbf.hpp"
 #include "trust_region_gek.hpp"
 #include "kernel_regression.hpp"
 
@@ -190,6 +189,66 @@ double Griewank2D_adj(double *xin, double *xb){
 
 }
 
+double Rastrigin6D(double *x){
+
+	int d = 6;
+	double sum = 0;
+	for (int i = 0; i<d; i++){
+
+		sum = sum + (x[i]*x[i] - 10.0*cos(2*3.14159265359*x[i]));
+	}
+
+	sum = 10.0*d + sum;
+	return sum;
+
+
+}
+
+double Rastrigin6D_adj(double *xin, double *xb){
+
+	int d = 6;
+
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+	codi::RealReverse *x = new codi::RealReverse[d];
+
+	for(int i=0; i<d;i++){
+
+		x[i]= xin[i];
+		tape.registerInput(x[i]);
+	}
+
+
+	codi::RealReverse sum = 0;
+	for (int i = 0; i<d; i++){
+
+		sum = sum + (x[i]*x[i] - 10.0*cos(2*3.14159265359*x[i]));
+	}
+
+	sum = 10.0*d + sum;
+
+
+	tape.registerOutput(sum);
+
+	tape.setPassive();
+	sum.setGradient(1.0);
+	tape.evaluate();
+
+	for(int i=0; i<d;i++){
+		xb[i]=x[i].getGradient();
+
+	}
+	delete[] x;
+	tape.reset();
+	return sum.getValue();
+
+
+
+
+
+}
+
+
 double Waves2Dpertrubed(double *x){
 
 	double coef = 0.001;
@@ -260,20 +319,35 @@ double Herbie2D(double *x){
 
 }
 
-double Herbie2D_adj(double *x, double *xb) {
+double Herbie2D_adj(double *xin, double *xb) {
 
-	double Herbie2Db=1.0;
-	xb[0] = 0.0;
-	xb[1] = 0.0;
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+	codi::RealReverse *x = new codi::RealReverse[2];
 
-	xb[0] = xb[0] + (-8*(cos(8*(x[0]+0.1))*0.05)-0.8*exp(-(0.8*pow(x[0]+1, 2))
-	)*2*pow(x[0]+1, 2-1)-exp(-pow(x[0]-1, 2))*2*pow(x[0]-1, 2-1))*
-	Herbie2Db;
-	xb[1] = xb[1] + (-8*(cos(8*(x[1]+0.1))*0.05)-0.8*exp(-(0.8*pow(x[1]+1, 2))
-	)*2*pow(x[1]+1, 2-1)-exp(-pow(x[1]-1, 2))*2*pow(x[1]-1, 2-1))*
-	Herbie2Db;
-	return exp(-pow((x[0]-1),2))+exp(-0.8*pow((x[0]+1),2))-0.05*sin(8*(x[0]+0.1))
+	for(int i=0; i<2;i++){
+
+		x[i]= xin[i];
+		tape.registerInput(x[i]);
+	}
+
+
+	codi::RealReverse result = exp(-pow((x[0]-1),2))+exp(-0.8*pow((x[0]+1),2))-0.05*sin(8*(x[0]+0.1))
 	+ exp(-pow((x[1]-1),2))+exp(-0.8*pow((x[1]+1),2))-0.05*sin(8*(x[1]+0.1));
+	tape.registerOutput(result);
+
+	tape.setPassive();
+	result.setGradient(1.0);
+	tape.evaluate();
+
+	for(int i=0; i<2;i++){
+		xb[i]=x[i].getGradient();
+
+	}
+	delete[] x;
+	tape.reset();
+	return result.getValue();
+
 }
 
 
@@ -1596,6 +1670,7 @@ void perform_NNregression_test(double (*test_function)(double *),
 	FILE *NNinput;
 
 	vec meanError(number_of_trials);
+	meanError.fill(0.0);
 	vec stdError(number_of_trials);
 
 
@@ -1626,7 +1701,11 @@ void perform_NNregression_test(double (*test_function)(double *),
 		printf("python_command : %s\n",python_command.c_str());
 #endif
 
+
+
 		system(python_command.c_str());
+
+
 
 		NNinput = fopen("NNoutput.dat", "r");
 
@@ -1635,7 +1714,7 @@ void perform_NNregression_test(double (*test_function)(double *),
 
 		fclose(NNinput);
 
-		printf("it = %d, squared error = %10.7f\n",trial,meanError(trial));
+		printf("it = %d, MSE = %10.7f, mean(MSE) = %10.7f\n",trial,meanError(trial), sum(meanError)/(trial+1));
 
 	}
 
@@ -2740,8 +2819,9 @@ void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
 #endif
 
 	FILE *outp;
-
+#if 0
 	printf("opening file %s for input...\n",filename.c_str() );
+#endif
 	outp = fopen(filename.c_str(), "w");
 
 	double *x = new double[dim];
@@ -2761,10 +2841,14 @@ void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
 		double f_val = test_function(x);
 
 		for(int j=0; j<dim;j++){
+#if 0
 			printf("%10.7f, ",x[j]);
+#endif
 			fprintf(outp,"%10.7f, ",x[j]);
 		}
+#if 0
 		printf("%10.7f\n",f_val);
+#endif
 		fprintf(outp,"%10.7f\n",f_val);
 
 
@@ -3877,6 +3961,109 @@ void perform_kernel_regression_test_highdim(double (*test_function)(double *),
 }
 
 
+void perform_aggregation_model_test_highdim(double (*test_function)(double *),
+		double (*test_function_adj)(double *, double *),
+		double *bounds,
+		std::string function_name,
+		int number_of_training_samples,
+		int sampling_method,
+		int dim){
+
+
+	float sigma = 0.01;
+	float wSvd = 0.0;
+	float w12 = 1.0;
+
+	int number_of_trials = 100;
+
+	std::string datafilename = function_name+".csv";
+	std::string validationfilename = function_name+"_"+ std::to_string(number_of_training_samples)+"_validation.csv";
+
+
+
+
+	unsigned int number_of_test_samples = 10000;
+
+	srand (time(NULL));
+
+
+	vec genErr1(number_of_trials); genErr1.fill(0.0);
+	vec genErr2(number_of_trials); genErr2.fill(0.0);
+	vec genErr3(number_of_trials); genErr3.fill(0.0);
+	vec genErr4(number_of_trials); genErr4.fill(0.0);
+
+	for(int iter=0; iter<number_of_trials; iter++){
+
+#if 1
+		printf("iter = %d\n",iter);
+#endif
+
+
+
+#if 1
+		printf("Generating validation data with %d samples...\n", number_of_test_samples);
+#endif
+		generate_highdim_test_function_data_cuda(test_function,
+				validationfilename,
+				bounds,
+				number_of_test_samples,
+				dim);
+
+		/* generate data with gradients */
+#if 1
+		printf("Generating training data with %d samples...\n", number_of_training_samples);
+#endif
+		generate_highdim_test_function_data_GEK(test_function,
+				test_function_adj,
+				datafilename,
+				bounds,
+				dim,
+				0,
+				number_of_training_samples,
+				sampling_method);
+
+
+		AggregationModel settingsAggModel(function_name,dim);
+
+		settingsAggModel.validationset_input_filename = validationfilename;
+		settingsAggModel.max_number_of_kriging_iterations = 10000;
+		settingsAggModel.number_of_cv_iterations = 20;
+		settingsAggModel.visualizeKrigingValidation = "yes";
+		settingsAggModel.visualizeKernelRegressionValidation = "yes";
+
+
+		settingsAggModel.visualizeAggModelValidation = "yes";
+
+		train_aggregation_model(settingsAggModel);
+
+
+		genErr1(iter)= settingsAggModel.genErrorKriging;
+		genErr2(iter)= settingsAggModel.genErrorKernelRegression;
+		genErr3(iter)= settingsAggModel.genErrorAggModel;
+
+
+
+		float sum1 = sum(genErr1);
+		float sum2 = sum(genErr2);
+		float sum3 = sum(genErr3);
+		//		float sum4 = sum(genErr4);
+		//
+		float mean1 = sum1/(iter+1);
+		float mean2 = sum2/(iter+1);
+		float mean3 = sum3/(iter+1);
+		//		float mean4 = sum4/(iter+1);
+		//
+		//
+		printf("MSE,Kriging       = %10.7f, MSE,KerReg       = %10.7f, MSE,AggMod       = %10.7f\n",genErr1(iter),genErr2(iter),genErr3(iter));
+		printf("mean(MSE,Kriging) = %10.7f, mean(MSE,KerReg) = %10.7f, mean(MSE,AggMod) = %10.7f\n",mean1,mean2,mean3);
+
+
+	}
+
+
+
+
+}
 
 
 

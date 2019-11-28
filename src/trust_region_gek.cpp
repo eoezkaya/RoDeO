@@ -37,13 +37,17 @@ AggregationModel::AggregationModel(std::string name,int dimension){
 	M.zeros(dimension,dimension);
 	rho =  0.0;
 	sigma= 0.0;
+	genErrorKriging = LARGE;
+	genErrorKernelRegression = LARGE;
+	genErrorAggModel = LARGE;
+	minibatchsize = 100;
 
 	epsilon_kriging = 10E-06;
 	max_number_of_kriging_iterations = 10000;
 	number_of_cv_iterations_rho = 100000;
 	dim = dimension;
 	validationset_input_filename = "None";
-	number_of_cv_iterations = 0;
+	number_of_cv_iterations = 10;
 	linear_regression = LINEAR_REGRESSION_ON;
 
 
@@ -579,7 +583,7 @@ void AggregationModel::train(void) {
 	if(visualizeKrigingValidation == "yes"){
 
 
-		double genErrorKriging = 0.0;
+		genErrorKriging = 0.0;
 
 		visualizeKriging = zeros(Nval,2);
 
@@ -607,8 +611,9 @@ void AggregationModel::train(void) {
 
 		genErrorKriging = genErrorKriging/Nval;
 
-		printf("Generalization Error for Kriging (MSE) = %10.7f\n",genErrorKriging);
 
+		printf("Generalization Error for Kriging (MSE) = %10.7f\n",genErrorKriging);
+#if 0
 		visualizeKriging.save("visualizeKriging.dat",raw_ascii);
 
 		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKriging.dat visualizeKriging.png" ;
@@ -618,7 +623,7 @@ void AggregationModel::train(void) {
 
 
 		fprintf(in, "\n");
-
+#endif
 	}
 
 
@@ -674,9 +679,10 @@ void AggregationModel::train(void) {
 
 	if(number_of_cv_iterations > 0){
 
-		printf("Training the Mahalanobis matrix and sigma...\n");
+		printf("Training the Mahalanobis matrix and sigma with %d iterations...\n",number_of_cv_iterations);
 		/* now train the Mahalanobis matrix */
-		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression, sigma, wSvd, w12, number_of_cv_iterations,L2_LOSS_FUNCTION, 100,10000);
+		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression,
+				sigma, wSvd, w12, number_of_cv_iterations,L2_LOSS_FUNCTION, minibatchsize,10000);
 
 		fmat Mtemp = LKernelRegression*trans(LKernelRegression);
 
@@ -709,7 +715,7 @@ void AggregationModel::train(void) {
 		visualizeKernelRegression = zeros(Nval,2);
 
 
-		double genErrorKernelReg = 0.0;
+		genErrorKernelRegression = 0.0;
 
 		for(int i=0; i<Nval; i++){
 
@@ -737,7 +743,7 @@ void AggregationModel::train(void) {
 
 			double fexact = validationData(i,dim);
 
-			genErrorKernelReg += (fKernelRegression-fexact)*(fKernelRegression-fexact);
+			genErrorKernelRegression += (fKernelRegression-fexact)*(fKernelRegression-fexact);
 #if 0
 			printf("ftilde (Kernel Regression) = %10.7f, fexact = %10.7f\n",fKernelRegression,fexact);
 #endif
@@ -750,11 +756,11 @@ void AggregationModel::train(void) {
 
 		}
 
-		genErrorKernelReg = genErrorKernelReg/Nval;
+		genErrorKernelRegression = genErrorKernelRegression/Nval;
 
-		printf("Generalization Error for Kernel Regregression (MSE) = %10.7f\n",genErrorKernelReg);
+		printf("Generalization Error for Kernel Regregression (MSE) = %10.7f\n",genErrorKernelRegression);
 
-
+#if 0
 		visualizeKernelRegression.save("visualizeKernelRegression.dat",raw_ascii);
 
 		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKernelRegression.dat visualizeKernelRegression.png" ;
@@ -765,7 +771,7 @@ void AggregationModel::train(void) {
 
 		fprintf(in, "\n");
 
-
+#endif
 
 
 	} /* end of validation part */
@@ -855,7 +861,7 @@ void AggregationModel::train(void) {
 
 		dr = (max_r - min_r)/(number_of_cv_iterations_rho);
 
-#if 0
+#if 1
 		printf("average distance in the training data= %10.7f\n",average_distance_sample);
 		printf("min (sample)       = %10.7f\n",min(probe_distances_sample));
 		printf("max (sample)       = %10.7f\n",max(probe_distances_sample));
@@ -955,7 +961,7 @@ void AggregationModel::train(void) {
 				genError = genError/Nval;
 
 
-#if 0
+#if 1
 			printf("CV iteration = %d, rho = %10.7f, Gen. Error = %10.7f\n",rho_iter,rho_trial,genError);
 #endif
 
@@ -968,7 +974,7 @@ void AggregationModel::train(void) {
 
 		}
 
-#if 0
+#if 1
 		printf("Optimal value of rho = %10.7f, Gen. Error = %10.7f\n",optimal_rho,minGenErrorCVLoop);
 #endif
 
@@ -994,7 +1000,7 @@ void AggregationModel::train(void) {
 		visualizeAggModel = zeros(Nval,2);
 
 
-		double genErrorAggModel = 0.0;
+		genErrorAggModel = 0.0;
 
 		for(int i=0; i<Nval; i++){
 
@@ -1029,7 +1035,6 @@ void AggregationModel::train(void) {
 		printf("Generalization Error for the Agg. Model (MSE) = %10.7f\n",genErrorAggModel);
 
 
-		genError = genErrorAggModel;
 
 		visualizeAggModel.save("visualizeAggModel.dat",raw_ascii);
 
@@ -4315,9 +4320,9 @@ int train_TRGEK_response_surface(std::string input_file_name,
 }
 
 int train_aggregation_model(AggregationModel &model_settings) {
-
+#if 0
 	printf("Training aggregation model for the data: %s...\n",model_settings.input_filename.c_str());
-
+#endif
 
 	if (model_settings.visualizeKrigingValidation == "yes" || model_settings.visualizeKernelRegressionValidation == "yes" ){
 
@@ -4427,7 +4432,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 	if(model_settings.validationset_input_filename != "None"){
 
 
-#if 1
+#if 0
 		printf("Reading validation set %s...\n",model_settings.validationset_input_filename.c_str());
 #endif
 
@@ -4477,8 +4482,9 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 #endif
 
+#if 1
 	printf("Training the Kriging parameters...\n");
-
+#endif
 	train_kriging_response_surface(inputDataKriging,
 			model_settings.kriging_hyperparameters_filename ,
 			LINEAR_REGRESSION_ON,
@@ -4486,9 +4492,9 @@ int train_aggregation_model(AggregationModel &model_settings) {
 			model_settings.kriging_weights,
 			model_settings.epsilon_kriging,
 			model_settings.max_number_of_kriging_iterations);
-
+#if 1
 	printf("Training of the Kriging parameters done...\n");
-
+#endif
 
 	/*update y vectors according to linear regression */
 
@@ -4511,7 +4517,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 	}
 
 
-#if 1
+#if 0
 	printf("Regression weights:\n");
 	model_settings.regression_weights.t().print();
 	printf("Kriging weights:\n");
@@ -4535,7 +4541,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 	if(model_settings.visualizeKrigingValidation == "yes"){
 
 
-		double genErrorKriging = 0.0;
+		model_settings.genErrorKriging = 0.0;
 
 		visualizeKriging = zeros(Nval,2);
 
@@ -4555,7 +4561,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 			double fexact = validationData(i,d);
 
-			genErrorKriging += (fexact-ftildeKriging)*(fexact-ftildeKriging);
+			model_settings.genErrorKriging += (fexact-ftildeKriging)*(fexact-ftildeKriging);
 #if 0
 			printf("ftilde (Kriging) = %10.7f, fexact = %10.7f\n",ftildeKriging,fexact);
 #endif
@@ -4566,10 +4572,12 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 		}
 
-		genErrorKriging = genErrorKriging/Nval;
+		model_settings.genErrorKriging = model_settings.genErrorKriging/Nval;
+#if 1
+		printf("Generalization Error for Kriging (MSE) = %10.7f\n",model_settings.genErrorKriging);
+#endif
 
-		printf("Generalization Error for Kriging (MSE) = %10.7f\n",genErrorKriging);
-
+#if 1
 		visualizeKriging.save("visualizeKriging.dat",raw_ascii);
 
 		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKriging.dat visualizeKriging.png" ;
@@ -4579,7 +4587,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 
 		fprintf(in, "\n");
-
+#endif
 	}
 
 
@@ -4634,8 +4642,9 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 
 	if(model_settings.number_of_cv_iterations > 0){
-
+#if 0
 		printf("Training the Mahalanobis matrix and sigma...\n");
+#endif
 		/* now train the Mahalanobis matrix */
 		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression, sigma, wSvd, w12, model_settings.number_of_cv_iterations,L2_LOSS_FUNCTION, 100,10000);
 
@@ -4670,7 +4679,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 		visualizeKernelRegression = zeros(Nval,2);
 
 
-		double genErrorKernelReg = 0.0;
+		model_settings.genErrorKernelRegression = 0.0;
 
 		for(int i=0; i<Nval; i++){
 
@@ -4698,7 +4707,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 			double fexact = validationData(i,d);
 
-			genErrorKernelReg += (fKernelRegression-fexact)*(fKernelRegression-fexact);
+			model_settings.genErrorKernelRegression += (fKernelRegression-fexact)*(fKernelRegression-fexact);
 #if 0
 			printf("ftilde (Kernel Regression) = %10.7f, fexact = %10.7f\n",fKernelRegression,fexact);
 #endif
@@ -4711,11 +4720,12 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 		}
 
-		genErrorKernelReg = genErrorKernelReg/Nval;
+		model_settings.genErrorKernelRegression = model_settings.genErrorKernelRegression/Nval;
+#if 1
+		printf("Generalization Error for Kernel Regregression (MSE) = %10.7f\n",model_settings.genErrorKernelRegression);
+#endif
 
-		printf("Generalization Error for Kernel Regregression (MSE) = %10.7f\n",genErrorKernelReg);
-
-
+#if 1
 		visualizeKernelRegression.save("visualizeKernelRegression.dat",raw_ascii);
 
 		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKernelRegression.dat visualizeKernelRegression.png" ;
@@ -4725,7 +4735,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 
 		fprintf(in, "\n");
-
+#endif
 
 
 
@@ -4831,7 +4841,15 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 		/* number of cross validation points */
 		int NCVVal = N*0.2;
+
+		if(N <= 100){
+
+			NCVVal = N*0.3;
+		}
+
 		int NCVTra = N - NCVVal;
+
+
 
 #if 0
 		printf("number of validation points (rho training) = %d\n", NCVVal);
@@ -4899,6 +4917,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 					x_max);
 
 #if 0
+
 			printf("CV iteration = %d, rho = %10.7f, Gen. Error = %10.7f\n",rho_iter,rho_trial,genError);
 #endif
 
@@ -4914,6 +4933,8 @@ int train_aggregation_model(AggregationModel &model_settings) {
 #if 0
 		printf("Optimal value of rho = %10.7f, Gen. Error = %10.7f\n",optimal_rho,minGenErrorCVLoop);
 #endif
+
+
 
 		model_settings.rho = optimal_rho;
 
@@ -4937,7 +4958,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 		visualizeAggModel = zeros(Nval,2);
 
 
-		double genErrorAggModel = 0.0;
+		model_settings.genErrorAggModel = 0.0;
 
 		for(int i=0; i<Nval; i++){
 
@@ -4960,7 +4981,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 			double fexact = validationData(i,d);
 
-			genErrorAggModel += (fAggModel-fexact)*(fAggModel-fexact);
+			model_settings.genErrorAggModel += (fAggModel-fexact)*(fAggModel-fexact);
 
 #if 0
 			printf("ftilde (Agg. Model) = %10.7f, fexact = %10.7f\n",fAggModel,fexact);
@@ -4975,13 +4996,14 @@ int train_aggregation_model(AggregationModel &model_settings) {
 		}
 
 
-		genErrorAggModel = genErrorAggModel/Nval;
+		model_settings.genErrorAggModel = model_settings.genErrorAggModel/Nval;
 
-		printf("Generalization Error for the Agg. Model (MSE) = %10.7f\n",genErrorAggModel);
+#if 1
+		printf("Generalization Error for the Agg. Model (MSE) = %10.7f\n",model_settings.genErrorAggModel);
+#endif
 
 
-
-
+#if 1
 		visualizeAggModel.save("visualizeAggModel.dat",raw_ascii);
 
 		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeAggModel.dat visualizeAggModel.png" ;
@@ -4991,7 +5013,7 @@ int train_aggregation_model(AggregationModel &model_settings) {
 
 
 		fprintf(in, "\n");
-
+#endif
 
 
 

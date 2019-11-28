@@ -28,13 +28,15 @@ public:
 	vec xmax;
 	double beta0;
 	double sigma_sqr;
-	double genError;
+	double genErrorKriging;
+	double genErrorKernelRegression;
+	double genErrorAggModel;
 	std::string label;
 	std::string kriging_hyperparameters_filename;
 	std::string input_filename;
 	double epsilon_kriging;
 	int max_number_of_kriging_iterations;
-
+	unsigned int minibatchsize;
 
 	mat M;
 	int number_of_cv_iterations_rho;

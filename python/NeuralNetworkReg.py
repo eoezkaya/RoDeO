@@ -16,8 +16,9 @@ def norm(x):
 
 def build_model():
   model = keras.Sequential([
+    layers.Dense(2, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
     layers.Dense(10, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
-    layers.Dense(10, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
+    layers.Dense(10, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),	
     layers.Dense(1)
   ])
 
@@ -63,9 +64,10 @@ def plot_history(history):
 
 
 
-column_names = ['Wing area','Fuel weight','Aspect ratio','Quarter chord sweep','Dynamic pressure',
-                'Taper ratio', 'Airfoil thickness to chord ratio', 'Ultimate load factor','Flight design weight', 'Paint weight', 'Wing weight' ]
+#column_names = ['Wing area','Fuel weight','Aspect ratio','Quarter chord sweep','Dynamic pressure',
+#                'Taper ratio', 'Airfoil thickness to chord ratio', 'Ultimate load factor','Flight design weight', 'Paint weight', 'Wing weight' ]
 
+column_names = ['x1','x2', 'Wing weight' ]
 
 
 dataset = pd.read_csv(str(sys.argv[1]),names=column_names)
@@ -78,9 +80,10 @@ dataset = pd.read_csv(str(sys.argv[1]),names=column_names)
 train_dataset = dataset.sample(frac=0.2,random_state=0)
 test_dataset = dataset.drop(train_dataset.index)
 
-
-#print(train_dataset)
-#print(test_dataset)
+print('training dataset')
+print(train_dataset)
+print('test dataset')
+print(test_dataset)
 
 
 

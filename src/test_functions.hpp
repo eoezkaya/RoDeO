@@ -126,6 +126,11 @@ double Griewank2D(double *x);
 double Griewank2D_adj(double *xin, double *xb);
 
 
+double Rastrigin6D(double *x);
+double Rastrigin6D_adj(double *xin, double *xb);
+
+
+
 double Waves2D(double *x);
 double Waves2D_adj(double *x,double *xb);
 
@@ -288,6 +293,14 @@ void perform_kernel_regression_test_highdim(double (*test_function)(double *),
 		std::string function_name ,
 		int  number_of_samples_with_only_f_eval,
 		int number_of_samples_with_g_eval,
+		int sampling_method,
+		int dim);
+
+void perform_aggregation_model_test_highdim(double (*test_function)(double *),
+		double (*test_function_adj)(double *, double *),
+		double *bounds,
+		std::string function_name,
+		int number_of_training_samples,
 		int sampling_method,
 		int dim);
 
