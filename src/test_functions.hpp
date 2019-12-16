@@ -296,6 +296,15 @@ void perform_kernel_regression_test_highdim(double (*test_function)(double *),
 		int sampling_method,
 		int dim);
 
+
+void perform_kernel_regression_test_highdim(double (*test_function)(double *),
+		double *bounds,
+		std::string function_name,
+		int number_of_samples,
+		int sampling_method,
+		int dim);
+
+
 void perform_aggregation_model_test_highdim(double (*test_function)(double *),
 		double (*test_function_adj)(double *, double *),
 		double *bounds,

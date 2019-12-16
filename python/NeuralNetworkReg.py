@@ -17,8 +17,8 @@ def norm(x):
 def build_model():
   model = keras.Sequential([
     layers.Dense(2, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
-    layers.Dense(10, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),
-    layers.Dense(10, activation=tf.nn.relu, input_shape=[len(train_dataset.keys())]),	
+    layers.Dense(50, activation=tf.nn.relu),
+    layers.Dense(50, activation=tf.nn.relu),	
     layers.Dense(1)
   ])
 
@@ -108,7 +108,7 @@ normed_test_data = norm(test_dataset)
 
 
 
-#print(train_labels)
+print(train_labels)
 
 
 #print(normed_train_data)
@@ -121,8 +121,8 @@ model = build_model()
 
 
 
-example_batch = normed_train_data[:10]
-example_result = model.predict(example_batch)
+#example_batch = normed_train_data[:10]
+#example_result = model.predict(example_batch)
 #print(example_result)
 
 
@@ -159,8 +159,9 @@ fo.write( "{:5.2f}\n".format(mse));
 # Close opend file
 fo.close()
 
-#test_predictions = model.predict(normed_test_data).flatten()
+test_predictions = model.predict(normed_test_data).flatten()
 
+print(test_predictions)
 
 
 #plt.scatter(test_labels, test_predictions)

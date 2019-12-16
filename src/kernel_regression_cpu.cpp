@@ -168,6 +168,10 @@ float gaussianKernel(frowvec &xi, frowvec &xj, float sigma, fmat &M) {
 	float sqr_two_pi = sqrt(2.0 * datum::pi);
 
 	float kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
+#if 0
+	printf("kernelVal = %20.15f\n",kernelVal);
+#endif
+	/* add a small value for stability */
 
 	kernelVal += 10E-14;
 
@@ -3366,9 +3370,15 @@ float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma) {
 		weight(i) = kernelVal(i) / kernelSum;
 		yhat += y(i) * weight(i);
 #if 0
-		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
+		if(weight(i) > 0.05){
+			X.row(i).print();
+			printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
+
+		}
 #endif
 	}
+
+
 
 	return yhat;
 
@@ -3412,7 +3422,7 @@ float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float 
 
 	}
 
-#if 1
+#if 0
 
 	int above99flag=0;
 	int above99index = -1;
@@ -4010,7 +4020,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 			}
 			w12 =  w12trial(iter_cv);
 		}
-#if 0
+#if 1
 		printf("Outer iteration = %d\n",iter_cv);
 		printf("wSvd = %10.7f, w12 = %10.7f\n",wSvd,w12);
 #endif
@@ -4225,7 +4235,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 			if(opt_iter % 100 == 0){
 
-#if 0
+#if 1
 				printf("iter = %d, objective function = %10.7f, Leave One Out Error = %10.7f, Regularization term = %10.7f\n",opt_iter,objFunVal,lossVal, regTerm);
 #endif
 #if 0
@@ -4247,14 +4257,6 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 			}
 
-
-			/* update velocity vector */
-			//			for(int i=0;i<Ldim;i++) {
-			//
-			//				inputVecVel[i]=alpha* inputVecVel[i] - learning_rateM*gradientVec[i];
-			//
-			//			}
-			//			inputVecVel[Ldim]=alpha* inputVecVel[Ldim] - learning_rateSigma*gradientVec[Ldim];
 
 
 
