@@ -3482,7 +3482,7 @@ void perform_kernel_regression_test_highdim(double (*test_function)(double *),
 		L.fill(0.0);
 
 
-	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter,L2_LOSS_FUNCTION, number_of_training_samples, 50000);
+	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter,L1_LOSS_FUNCTION, number_of_training_samples, 50000);
 
 #if 1
 
