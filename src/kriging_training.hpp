@@ -7,9 +7,6 @@
 using namespace arma;
 
 
-//#define calculate_fitness_CHECK
-
-
 class KrigingModel {
 
 public:

@@ -55,23 +55,18 @@ int main(void){
 		exit(-1);
 	}
 
-	double *parameter_bounds = new double[4];
-		parameter_bounds[0]=0.0; parameter_bounds[1]=200.0;
-		parameter_bounds[2]=0.0; parameter_bounds[3]=200.0;
+
+	OptimizationData OptimizationSettings(38);
 
 
-
-	perform_kernel_regression_test_highdim(Eggholder,
-			parameter_bounds,
-			"Eggholder",
-			1000,
-			RANDOM_SAMPLING,
-			2);
+	OptimizationSettings.name = "NACA0012";
+	OptimizationSettings.max_number_of_samples = 500;
+	OptimizationSettings.lower_bound_dv.fill(-0.003);
+	OptimizationSettings.upper_bound_dv.fill( 0.003);
 
 
+	su2_EGO(OptimizationSettings);
 
-
-	delete[] parameter_bounds;
 
 
 }

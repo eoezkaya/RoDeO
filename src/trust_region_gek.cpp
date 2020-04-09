@@ -58,18 +58,19 @@ AggregationModel::AggregationModel(std::string name,int dimension){
 	}
 	else
 	{
-		printf("Problem with data the input (cvs ascii format)\n");
+		printf("Problem with data the input (cvs ascii format) (line number %d in file %s)\n",__LINE__, __FILE__);
 		exit(-1);
 	}
 
 	status = dataSP.load(input_filename.c_str(), csv_ascii);
 	if(status == true)
 	{
-		printf("Data input is done\n");
+		printf("Data input is done (single precision)\n");
 	}
 	else
 	{
-		printf("Problem with data the input (cvs ascii format)\n");
+
+		printf("Problem with the input data (cvs ascii format) (line number %d in file %s)\n",__LINE__, __FILE__);
 		exit(-1);
 	}
 
@@ -84,10 +85,16 @@ AggregationModel::AggregationModel(std::string name,int dimension){
 
 	XnotNormalized = X;
 
+
+	/* matrix that holds the gradient data (nrows= N-1, ncols = dim)*/
+
 	grad = data.submat(0,dim+1, N-1, 2*dim);
 
 	xmax = zeros(dim);
 	xmin = zeros(dim);
+
+
+	/* get the maximum and minimum of each column of the data matrix */
 
 	for (int i = 0; i < dim; i++) {
 
@@ -96,7 +103,7 @@ AggregationModel::AggregationModel(std::string name,int dimension){
 
 	}
 
-	/* normalize data matrix */
+	/* normalize the data matrix */
 
 	for (int i = 0; i < N; i++) {
 
@@ -220,7 +227,7 @@ void AggregationModel::update(void){
 	X.print();
 #endif
 
-	/* train linear regression */
+	/* update linear regression part */
 	if (linear_regression == LINEAR_REGRESSION_ON) { // if linear regression is on
 
 
@@ -444,27 +451,34 @@ void AggregationModel::train(void) {
 	printf("Training aggregation model for the data: %s...\n",input_filename.c_str());
 
 
+	/* quit if no filename for the validation is specified */
+
 	if (visualizeKrigingValidation == "yes" || visualizeKernelRegressionValidation == "yes" ){
 
 		if(validationset_input_filename == "None") {
 
-			printf("File name for validation is not specified!\n");
+			printf("File name for validation is not specified! (line number %d in file %s)\n", __LINE__, __FILE__);
 			exit(-1);
 
 		}
 
 	}
 
-	mat inputDataKriging = data.submat(0,0,N-1,dim);
 
-	/* check dimensions of the data */
-
+	/* data matrix must have 2d+1 columns */
 	if(data.n_cols != 2*dim +1 ) {
 
-		printf("Input data dimension does not match!\n");
+		printf("Input data dimension does not match! (line number %d in file %s)\n", __LINE__, __FILE__);
 		exit(-1);
 
 	}
+
+
+	/* This is the data matrix used for Kriging training */
+
+	mat inputDataKriging = data.submat(0,0,N-1,dim);
+
+	/* check dimensions of the data */
 
 
 	mat validationData;
@@ -483,7 +497,7 @@ void AggregationModel::train(void) {
 
 		if(load_ok == false)
 		{
-			printf("problem with loading the file %s\n",validationset_input_filename.c_str());
+			printf("problem with loading the file %s (line number %d in file %s)\n",validationset_input_filename.c_str(),__LINE__, __FILE__);
 			exit(-1);
 		}
 
@@ -492,7 +506,6 @@ void AggregationModel::train(void) {
 		printf("Validation data =\n");
 		validationData.print();
 #endif
-
 
 		Nval = validationData.n_rows;
 		Xvalidation = validationData.submat(0,0,Nval-1,dim-1);
@@ -536,6 +549,8 @@ void AggregationModel::train(void) {
 			max_number_of_kriging_iterations);
 
 	printf("Training of the Kriging hyperparameters is done...\n");
+
+
 
 
 	/*update y vectors according to linear regression */
@@ -613,7 +628,7 @@ void AggregationModel::train(void) {
 
 
 		printf("Generalization Error for Kriging (MSE) = %10.7f\n",genErrorKriging);
-#if 0
+#if 1
 		visualizeKriging.save("visualizeKriging.dat",raw_ascii);
 
 		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKriging.dat visualizeKriging.png" ;
@@ -625,8 +640,6 @@ void AggregationModel::train(void) {
 		fprintf(in, "\n");
 #endif
 	}
-
-
 
 
 
@@ -683,6 +696,9 @@ void AggregationModel::train(void) {
 		/* now train the Mahalanobis matrix */
 		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression,
 				sigma, wSvd, w12, number_of_cv_iterations,L2_LOSS_FUNCTION, minibatchsize,10000);
+
+		exit(1);
+
 
 		fmat Mtemp = LKernelRegression*trans(LKernelRegression);
 
@@ -935,30 +951,30 @@ void AggregationModel::train(void) {
 			int Nval = Xvalidation.n_rows;
 
 
-				double genError = 0.0;
+			double genError = 0.0;
 
-				for(int i=0; i<Nval;i++){
+			for(int i=0; i<Nval;i++){
 
 
-					rowvec xp = Xvalidation.row(i);
-			#if 0
-					printf("xp =\n");
-					xp.print();
-			#endif
+				rowvec xp = Xvalidation.row(i);
+#if 0
+				printf("xp =\n");
+				xp.print();
+#endif
 
-					double fAggModel = ftilde(xp);
+				double fAggModel = ftilde(xp);
 
-					double fexact = yvalidation(i);
+				double fexact = yvalidation(i);
 
-			#if 0
-					printf("ftilde (Agg. Model) = %10.7f, fexact = %10.7f\n",fAggModel,fexact);
-			#endif
+#if 0
+				printf("ftilde (Agg. Model) = %10.7f, fexact = %10.7f\n",fAggModel,fexact);
+#endif
 
-					genError += (fAggModel - fexact)*(fAggModel - fexact);
+				genError += (fAggModel - fexact)*(fAggModel - fexact);
 
-				}
+			}
 
-				genError = genError/Nval;
+			genError = genError/Nval;
 
 
 #if 1

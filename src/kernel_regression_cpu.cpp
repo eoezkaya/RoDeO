@@ -4348,3 +4348,4 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 }
 
 
+

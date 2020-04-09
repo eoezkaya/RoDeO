@@ -2449,7 +2449,491 @@ double dsvdAdj(int iteration,mat &Lin, mat &data, double &sigma, mat &Mgradient,
 
 }
 
+/*
+ * train the Mahalanobis matrix M and bandwidth parameter sigma
+ * @param[in] data: sample data matrix (nominal values, not normalized)
+ * @param[in] max_cv_iter: number of iterations for cross validation loop
+ * @param[out] wSvd: weight for svd regularization
+ * @param[out] w12:  weight for mixed 12norm regularization
+ * @param[out] M: Mahalanobis matrix
+ * @param[out] sigma: bandwidth parameter for the Gaussian kernel
+ *
+ * */
 
+int trainMahalanobisDistance_v2(mat &M, mat &data, double &sigma, double &wSvd, double &w12,int max_cv_iter) {
+
+
+
+	/* weight for the loss function, default to one */
+	double wLoss = 1.0;
+
+
+	if(M.n_cols != M.n_rows){
+
+		fprintf(stderr,"Error: The Mahalanobis matrix is not square!\n");
+		exit(-1);
+	}
+
+	unsigned int n = M.n_cols;
+
+	mat bestM(n,n);
+	bestM.fill(0.0);
+
+
+	/* divide the data set into training and validation sets */
+
+	unsigned int N = data.n_rows;
+
+
+	/* size of the validation set, default to one fifth */
+	unsigned int NvalSet = N/5;
+	unsigned int Ntra = N - NvalSet;
+
+
+	uvec indicesvalset(NvalSet);
+	generate_validation_set(indicesvalset, N);
+
+#if 1
+	printf("indices of the validation set =\n");
+	indicesvalset.print();
+#endif
+
+
+	mat dataValidation(NvalSet,data.n_cols );
+	mat dataTraining(N-NvalSet,data.n_cols );
+
+
+	unsigned int added_rowsTraining=0.0;
+	unsigned int added_rowsValidation=0.0;
+	for(unsigned int j=0; j<N; j++){ /* for each row in the data matrix */
+
+		/* if j is not a validation point */
+		if ( is_in_the_list(int(j), indicesvalset) == -1){
+
+#if 0
+			printf("%dth point is not a validation point\n",j);
+#endif
+			dataTraining.row(added_rowsTraining)=data.row(j);
+			added_rowsTraining++;
+
+		}
+		else{
+#if 0
+			printf("%dth point is a validation point\n",j);
+#endif
+			dataValidation.row(added_rowsValidation)=data.row(j);
+			added_rowsValidation++;
+
+		}
+
+
+	}
+
+#if 1
+
+	printf("Training data set = \n");
+	dataTraining.print();
+
+	printf("Validation data set = \n");
+	dataValidation.print();
+
+#if 0
+	printf("Data matrix = \n");
+	data.print();
+#endif
+
+	mat XTraining = dataTraining.submat(0, 0, Ntra - 1, n - 1);
+	mat XValidation = dataValidation.submat(0, 0, NvalSet - 1, n - 1);
+#if 1
+	printf("XTraining = \n");
+	XTraining.print();
+
+	printf("XValidation = \n");
+	XValidation.print();
+#endif
+	vec x_max(n);
+	x_max.fill(0.0);
+
+	vec x_min(n);
+	x_min.fill(n);
+
+	for (int i = 0; i < n; i++) {
+
+		x_max(i) = data.col(i).max();
+		x_min(i) = data.col(i).min();
+
+	}
+
+#if 0
+	printf("maximum = \n");
+	x_max.print();
+
+	printf("minimum = \n");
+	x_min.print();
+#endif
+	/* normalize training and validation data */
+	for (unsigned int i = 0; i < NvalSet; i++) {
+
+		for (unsigned int j = 0; j < n; j++) {
+
+			XValidation(i, j) = (1.0 / n) * (XValidation(i, j) - x_min(j))
+																																																																																																															/ (x_max(j) - x_min(j));
+		}
+	}
+
+	for (unsigned int i = 0; i < Ntra; i++) {
+
+		for (unsigned int j = 0; j < n; j++) {
+
+			XTraining (i, j) = (1.0 / n) * (XTraining (i, j) - x_min(j))
+																																																																																																																/ (x_max(j) - x_min(j));
+		}
+	}
+
+
+
+#if 1
+	printf("XTraining  (normalized) = \n");
+	XTraining.print();
+
+	printf("XValidation (normalized) = \n");
+	XValidation.print();
+
+#endif
+
+	vec ysTraining;
+    ysTraining = dataTraining.col(n);
+
+
+	vec ysValidation;
+	ysValidation = dataValidation.col(n);
+
+
+
+#if 0
+	printf("ys (training data) = \n");
+	ysTraining.print();
+
+	printf("ys (validation data) = \n");
+	ysValidation.print();
+
+
+#endif
+
+
+
+#endif
+
+
+#if 0
+
+	// consistency check
+
+	double sigma_derivative;
+	mat adjoint_res(n,n);
+	adjoint_res.fill(0.0);
+
+	L.print();
+
+	double result = dsvd(L,data,sigma,wLoss,wSvd,w12);
+	printf("output (primal) = %10.7f\n",result);
+
+	double resultAdj = dsvdAdj(L, data,sigma, adjoint_res, sigma_derivative,wLoss,wSvd,w12);
+	double resultTl = dsvdTL(L,data, sigma, 0, 0, &sigma_derivative,wLoss, wSvd,w12);
+
+
+	printf("output (reverse) = %10.7f\n",resultAdj);
+	printf("output (forward) = %10.7f\n",resultTl);
+
+	double resultpert;
+	mat fd(n,n);
+	fd.fill(0.0);
+	mat forward_res(n,n);
+	forward_res.fill(0.0);
+	mat Lcopy(n,n);
+
+	double temp;
+	const double perturbation_param = 0.000001;
+	double adot_save;
+
+	for(int i=0;i<n;i++)
+		for(int j=0;j<=i;j++) {
+			printf("i = %d, j= %d\n",i,j);
+			resultTl = dsvdTL(L,data, sigma, i, j, &forward_res(i,j),wLoss,wSvd,w12);
+			result = dsvd(L, data,sigma,wLoss,wSvd,w12);
+			printf("result = %10.7f\n",resultTl);
+			Lcopy=L;
+			L(i,j)+=perturbation_param;
+			cout.precision(12);
+			printf("L perturbed = \n");
+			L.print();
+			resultpert = dsvd(L, data,sigma,wLoss,wSvd,w12);
+			printf("resultpert = %10.7f\n",resultpert);
+
+			fd(i,j)= (resultpert-result)/perturbation_param;
+			L=Lcopy;
+
+
+
+		}
+
+	resultAdj = dsvdAdj(L, data,sigma, adjoint_res, sigma_derivative,wLoss,wSvd,w12);
+
+	printf("fd results =\n");
+	fd.print();
+	printf("forward AD results =\n");
+	forward_res.print();
+	printf("reverse AD results =\n");
+	adjoint_res.print();
+
+	printf("error  between forward AD and fd=\n");
+	mat errorForAD = fd - forward_res;
+	errorForAD.print();
+	printf("error  between forward AD and reverse AD=\n");
+	mat errorRevAD = forward_res-adjoint_res;
+	errorRevAD.print();
+
+	printf("derivative of sigma (adjoint) = %10.7f\n",sigma_derivative);
+
+	double sigma_derivative_forward_mode;
+
+	resultTl = dsvdTL(L,data, sigma, -1, -1, &sigma_derivative_forward_mode,wLoss,wSvd,w12);
+
+	printf("derivative of sigma (forward) = %10.7f\n",sigma_derivative_forward_mode);
+
+	result = dsvd(L, data,sigma,wLoss,wSvd,w12);
+
+	sigma+=perturbation_param;
+	resultpert = dsvd(L, data,sigma,wLoss,wSvd,w12);
+
+	double fd_sigma= (resultpert-result)/perturbation_param;
+
+	printf("derivative of sigma (fd) = %10.7f\n",fd_sigma);
+#endif
+
+
+
+	vec wSvdtrial(max_cv_iter);
+	wSvdtrial.randu();
+
+	vec w12trial(max_cv_iter);
+	w12trial.randu();
+
+
+	double bestValidationError = 10E14;
+	double bestwSvd = 0.0;
+	double bestw12 = 0.0;
+
+	/* cross validation loop to tune weights for the regularization parameters */
+	for(int iter_cv;iter_cv< max_cv_iter; iter_cv++){
+
+		if(max_cv_iter > 1){
+
+			wSvd = wSvdtrial(iter_cv)*0.1;
+			w12 =  w12trial(iter_cv)*0.1;
+		}
+
+#if 1
+		printf("cv iteration = %d, wSvd = %10.7f, w12 = %10.7f\n",iter_cv,wSvd,w12);
+#endif
+		/* initialize the L matrix (lower diagonal) */
+
+		mat L(n,n);
+
+
+		L.fill(0.0);
+
+		for(unsigned int i=0;i<n;i++)
+			for(unsigned int j=0;j<=i;j++) {
+
+				if (i==j) {
+
+					L(i,j)=1.0;
+				}
+				else{
+
+					L(i,j)=0.001;
+				}
+
+			}
+
+#if 0
+		L.print();
+#endif
+
+
+		/* optimization stage */
+
+		int maxoOptIter = 100000;
+		/* iteration counter for optimization */
+		int optIter = 1;
+		mat gradientL(n, n);
+		double stepSizeInit = 0.001;
+		double stepSize = stepSizeInit;
+		double fStep, fpreviousIter;
+		double sigmab = 0.0;
+
+		/* compute the initial gradient and objective function value */
+		fpreviousIter = dsvdAdj(optIter,L, dataTraining, sigma, gradientL, sigmab, wLoss,wSvd,w12);
+
+#if 0
+		printf("initial gradient for L= \n");
+		gradientL.print();
+#endif
+
+		mat Lsave(n, n);
+		Lsave.fill(0.0);
+		double sigmaSave = 0.0;
+
+
+		while (1) {
+
+			Lsave = L;
+			sigmaSave = sigma;
+
+#if 0
+			printf("gradient = \n");
+			gradient.print();
+			printf("L (before) = \n");
+			L.print();
+			printf("sigma (before) = %10.7f\n",sigma);
+#endif
+
+			/* update the lower triangular matrix L */
+			for (unsigned int i = 0; i < n; i++){
+				for (unsigned int j = 0; j <= i; j++) {
+
+					L(i, j) = L(i, j) - stepSize * gradientL(i, j);
+
+				}
+			}
+
+			/* update the bandwidth parameter*/
+
+			sigma = sigma - stepSize*sigmab;
+
+			/* sigma is not allowed to be negative */
+			if(sigma <= 0.0) {
+
+				sigma = 10E-6;
+			}
+
+#if 0
+			printf("L = \n");
+			L.print();
+			printf("sigma = %10.7f\n",sigma);
+			printf("stepSize = %10.7f\n",stepSize);
+			printf("evaluating gradient vector...\n");
+			M.print();
+#endif
+
+			/* compute the gradient vector and objective function value at the new design*/
+			fStep = dsvdAdj(optIter,L, dataTraining, sigma, gradientL, sigmab, wLoss,wSvd,w12);
+
+
+#if 0
+			printf("fStep= %10.7f\n", fStep);
+
+#endif
+
+#if 0
+			if (fStep > fpreviousIter) {
+
+				L = Lsave;
+				sigma = sigmaSave;
+
+				stepSize = stepSize / 2.0;
+
+			} else {
+
+			}
+#endif
+
+			fpreviousIter = fStep;
+
+			optIter++;
+			if (optIter > maxoOptIter || stepSize < 10E-10) {
+#if 0
+				printf("optimization procedure is terminating with iteration number = %d...\n",
+						optIter);
+#endif
+				break;
+
+			}
+		}
+#if 0
+
+		printf("optimal sigma = %10.7f\n",sigma);
+		printf("sigma derivative= %10.7f\n",sigmab);
+#endif
+
+#if 1
+		printf("optimal M =\n");
+		M = L*trans(L);
+		M.print();
+		printf("gradient w.r.t to M =\n");
+		gradientL.print();
+
+
+		mat U;
+		vec s;
+		mat V;
+
+		svd(U, s, V, M);
+
+		printf("singular values of M = \n");
+		s.print();
+#endif
+
+		/* compute the error for the validation set */
+
+		double ErrorValidation=0.0;
+
+		for(unsigned int j=0; j<NvalSet;j++){
+
+			rowvec xp = XValidation.row(j);
+			double yApprox = kernelRegressor(XTraining, ysTraining, xp, M, sigma);
+			double yExact = ysValidation(j);
+
+			/* accumulate the squared error */
+			ErrorValidation += (yApprox-yExact)*(yApprox-yExact);
+
+#if 0
+			printf("xp = \n");
+			xp.print();
+			printf("yApprox = %10.7f\n",yApprox );
+			printf("yExact  = %10.7f\n",yExact  );
+			printf("Validation Error = %10.7f\n",ErrorValidation );
+
+#endif
+		}
+
+		/* compute the mean squared error (MSE) */
+		ErrorValidation = ErrorValidation/NvalSet;
+		printf("Validation Error (MSE) = %10.7f\n",ErrorValidation );
+
+		if (ErrorValidation  < bestValidationError){
+
+			bestM = M;
+			bestwSvd = wSvd;
+			bestw12 = w12;
+			bestValidationError = ErrorValidation;
+		}
+
+
+	} /* end of cv loop */
+
+#if 1
+	printf("Optimal weights: wSvd = %10.7f, w12 = %10.7f\n",bestwSvd,bestw12);
+	printf("Optimal M = \n");
+	bestM.print();
+#endif
+
+	/* return the optimal M */
+	M = bestM;
+
+	return 0;
+}
 
 
 /*

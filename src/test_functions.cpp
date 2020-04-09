@@ -394,7 +394,7 @@ double Eggholder(double *x){
 }
 
 
-double EggholderAdj(double *xin, double *xb){
+double Eggholder_adj(double *xin, double *xb){
 
 	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
 	tape.setActive();
@@ -4159,6 +4159,9 @@ void perform_aggregation_model_test_highdim(double (*test_function)(double *),
 		int sampling_method,
 		int dim){
 
+#if 1
+	printf("perform_aggregation_model_test_highdim ... \n");
+#endif
 
 	float sigma = 0.01;
 	float wSvd = 0.0;
@@ -4180,12 +4183,12 @@ void perform_aggregation_model_test_highdim(double (*test_function)(double *),
 	vec genErr1(number_of_trials); genErr1.fill(0.0);
 	vec genErr2(number_of_trials); genErr2.fill(0.0);
 	vec genErr3(number_of_trials); genErr3.fill(0.0);
-	vec genErr4(number_of_trials); genErr4.fill(0.0);
+
 
 	for(int iter=0; iter<number_of_trials; iter++){
 
 #if 1
-		printf("iter = %d\n",iter);
+		printf("outer iteration = %d\n",iter);
 #endif
 
 
@@ -4212,19 +4215,23 @@ void perform_aggregation_model_test_highdim(double (*test_function)(double *),
 				number_of_training_samples,
 				sampling_method);
 
+		/* set up the aggregation model */
 
 		AggregationModel settingsAggModel(function_name,dim);
 
 		settingsAggModel.validationset_input_filename = validationfilename;
 		settingsAggModel.max_number_of_kriging_iterations = 10000;
 		settingsAggModel.number_of_cv_iterations = 20;
+
+
+		/* set visualization settings */
 		settingsAggModel.visualizeKrigingValidation = "yes";
 		settingsAggModel.visualizeKernelRegressionValidation = "yes";
-
-
 		settingsAggModel.visualizeAggModelValidation = "yes";
 
-		train_aggregation_model(settingsAggModel);
+		settingsAggModel.train();
+
+		exit(1);
 
 
 		genErr1(iter)= settingsAggModel.genErrorKriging;
@@ -4236,14 +4243,11 @@ void perform_aggregation_model_test_highdim(double (*test_function)(double *),
 		float sum1 = sum(genErr1);
 		float sum2 = sum(genErr2);
 		float sum3 = sum(genErr3);
-		//		float sum4 = sum(genErr4);
-		//
+
 		float mean1 = sum1/(iter+1);
 		float mean2 = sum2/(iter+1);
 		float mean3 = sum3/(iter+1);
-		//		float mean4 = sum4/(iter+1);
-		//
-		//
+
 		printf("MSE,Kriging       = %10.7f, MSE,KerReg       = %10.7f, MSE,AggMod       = %10.7f\n",genErr1(iter),genErr2(iter),genErr3(iter));
 		printf("mean(MSE,Kriging) = %10.7f, mean(MSE,KerReg) = %10.7f, mean(MSE,AggMod) = %10.7f\n",mean1,mean2,mean3);
 

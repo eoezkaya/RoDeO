@@ -120,7 +120,7 @@ double simple_2D_linear_test_function1_adj(double *x, double *xb);
 
 
 double Eggholder(double *x);
-double EggholderAdj(double *x, double *xb);
+double Eggholder_adj(double *x, double *xb);
 
 double Griewank2D(double *x);
 double Griewank2D_adj(double *xin, double *xb);

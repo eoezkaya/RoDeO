@@ -6,7 +6,7 @@ AD_PATH = /home/emre/CoDiPack-master/include
 CUDA_PATH = ~/NVIDIA_CUDA-10.0_Samples/common/inc/ 
 CFLAGS_GPU  = -std=c++11 -Xcompiler -fopenmp -I $(AD_PATH) -I $(CUDA_PATH)
 CFLAGS  = -std=c++11 -fopenmp -I $(AD_PATH) 
-CPPFLAGS  = -Wall -O2 -std=c++11 -fopenmp -I $(AD_PATH) 
+CPPFLAGS  = -Wall -O3 -std=c++11 -fopenmp -I $(AD_PATH) 
 LDFLAGS_GPU = -lm -larmadillo -rdc=true -lcudadevrt -lgomp
 LDFLAGS = -lm -larmadillo -lgomp
 

@@ -9,7 +9,13 @@ using namespace arma;
 int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,
 		int max_cv_iter, int lossFunType, int batchsize, int nepochs);
 
+
+int trainMahalanobisDistance_v2(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12, int max_cv_iter, int lossFunType);
+
+
+
 int trainMahalanobisDistanceBruteForce(fmat &L, fmat &data, float &sigma, float ymax, int lossFunType, int batchsize, int ntrials);
+
 
 
 float gaussianKernel(frowvec &xi, frowvec &xj, float sigma, fmat &M);
