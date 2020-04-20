@@ -152,42 +152,19 @@ float calcMetric(float *xi, float *xj, float *M, int dim) {
 
 
 
-float gaussianKernel(frowvec &xi, frowvec &xj, float sigma, fmat &M) {
-#if 0
-	printf("calling gaussianKernel...\n");
-	xi.print();
-	xj.print();
-#endif
-
-	/* calculate distance between xi and xj with the matrix M */
-	float metricVal = calcMetric(xi, xj, M);
-#if 0
-	printf("metricVal = %10.7f\n",metricVal);
-#endif
-
-	float sqr_two_pi = sqrt(2.0 * datum::pi);
-
-	float kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-metricVal / (2 * sigma * sigma));
-#if 0
-	printf("kernelVal = %20.15f\n",kernelVal);
-#endif
-	/* add a small value for stability */
-
-	kernelVal += 10E-14;
-
-#if 0
-	printf("kernelVal = %10.7f\n",kernelVal);
-
-#endif
-	return kernelVal;
-
-}
-
 
 double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
+#if 0
+	printf("calling gaussianKernel with sigma = %10.7f...\n", sigma);
+	xi.print();
+	xj.print();
+	M.print();
+#endif
 
 	/* calculate distance between xi and xj with the matrix M */
 	double metricVal = calcMetric(xi, xj, M);
+
+
 
 	double sqr_two_pi = sqrt(2.0 * datum::pi);
 
@@ -195,6 +172,14 @@ double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
 
 	kernelVal += 10E-14;
 
+#if 0
+	printf("metricVal = %15.10f\n",metricVal);
+	printf("exp(-metricVal / (2 * sigma * sigma)) = %15.10f\n",exp(-metricVal / (2 * sigma * sigma)));
+	printf("kernelVal = %15.10f\n",kernelVal);
+#endif
+
+
+
 	return kernelVal;
 
 }
@@ -202,7 +187,7 @@ double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
 
 
 
-float SIGN(float a, float b) {
+double SIGN(double a, double b) {
 
 	if (b >= 0.0) {
 		return fabs(a);
@@ -231,8 +216,8 @@ codi::RealForward SIGN(codi::RealForward a, codi::RealForward b) {
 	}
 }
 
-float PYTHAG(float a, float b) {
-	float at = fabs(a), bt = fabs(b), ct, result;
+double PYTHAG(double a, double b) {
+	double at = fabs(a), bt = fabs(b), ct, result;
 
 	if (at > bt) {
 		ct = bt / at;
@@ -283,37 +268,37 @@ codi::RealForward PYTHAG(codi::RealForward a, codi::RealForward b) {
  *
  */
 
-int calcRegTerms(float *L, float *regTerm, float wSvd, float w12, int dim) {
+int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
 	int flag, i, its, j, jj, k, l = 0, nm;
-	float c, f, h, s, x, y, z;
-	float anorm = 0.0, g = 0.0, scale = 0.0;
+	double c, f, h, s, x, y, z;
+	double anorm = 0.0, g = 0.0, scale = 0.0;
 
 
 	int m = dim;
 	int n = dim;
 
 
-	float **a;
-	a = new float*[dim];
+	double **a;
+	a = new double*[dim];
 
 	for (i = 0; i < dim; i++) {
 
-		a[i] = new float[dim];
+		a[i] = new double[dim];
 	}
 
-	float **M;
-	M= new float*[dim];
+	double **M;
+	M= new double*[dim];
 
 	for (i = 0; i < dim; i++) {
 
-		M[i] = new float[dim];
+		M[i] = new double[dim];
 	}
 
 
-	float **LT;
-	LT = new float*[dim];
+	double **LT;
+	LT = new double*[dim];
 	for (int i = 0; i < dim; i++) {
-		LT[i] = new float[dim];
+		LT[i] = new double[dim];
 
 	}
 
@@ -422,16 +407,16 @@ int calcRegTerms(float *L, float *regTerm, float wSvd, float w12, int dim) {
 
 	/* SVD part */
 
-	float **v;
-	v = new float*[n];
+	double **v;
+	v = new double*[n];
 
 	for (i = 0; i < n; i++) {
 
-		v[i] = new float[n];
+		v[i] = new double[n];
 	}
-	float *w = new float[n];
+	double *w = new double[n];
 
-	float *rv1 = new float[n];
+	double *rv1 = new double[n];
 
 	/* Householder reduction to bidiagonal form */
 	for (i = 0; i < n; i++) {
@@ -661,7 +646,7 @@ int calcRegTerms(float *L, float *regTerm, float wSvd, float w12, int dim) {
 
 	/* sort the singular values */
 
-	float temp;
+	double temp;
 	for (i = 0; i < n; ++i) {
 		for (j = i + 1; j < n; ++j) {
 
@@ -686,7 +671,7 @@ int calcRegTerms(float *L, float *regTerm, float wSvd, float w12, int dim) {
 #endif
 
 	/* normalization */
-	float wsum = 0.0;
+	double wsum = 0.0;
 	for (i = 0; i < n; i++) {
 
 		wsum += w[i];
@@ -710,7 +695,7 @@ int calcRegTerms(float *L, float *regTerm, float wSvd, float w12, int dim) {
 #endif
 
 
-	float svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
+	double svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
 
 	svd_multiplier = 1.0/svd_multiplier;
 #if 0
@@ -729,7 +714,7 @@ int calcRegTerms(float *L, float *regTerm, float wSvd, float w12, int dim) {
 #endif
 
 
-	float reg_term_L1 = 0.0;
+	double reg_term_L1 = 0.0;
 
 	for (i = 0; i < n; i++)
 		for (j = 0; j < n; j++) {
@@ -772,7 +757,7 @@ int calcRegTerms(float *L, float *regTerm, float wSvd, float w12, int dim) {
 
 /* forward mode */
 
-int calcRegTerms(float *L, float *regTerm,float *regTermd, float wSvd, float w12, int dim, int derIndx) {
+int calcRegTerms(double *L, double *regTerm, double *regTermd, double wSvd, double w12, int dim, int derIndx) {
 	int flag, i, its, j, jj, k, l = 0, nm;
 	codi::RealForward c, f, h, s, x, y, z;
 	codi::RealForward anorm = 0.0, g = 0.0, scale = 0.0;
@@ -1237,7 +1222,7 @@ int calcRegTerms(float *L, float *regTerm,float *regTermd, float wSvd, float w12
 
 
 
-int calcRegTerms(float *L, float *Lb,float *result , float wSvd, float w12, int dim) {
+int calcRegTerms(double *L, double *Lb, double *result, double wSvd, double w12, int dim) {
 	int flag, i, its, j, jj, k, l = 0, nm;
 
 
@@ -1762,24 +1747,22 @@ int calcRegTerms(float *L, float *Lb,float *result , float wSvd, float w12, int 
  *
  */
 
-int calcRegTermL12(float *L, float *regTerm, float w12, int dim) {
+int calcRegTermL12(double *L, double *regTerm, double w12, int dim) {
 
 
-
-
-	float **M;
-	M= new float*[dim];
+	double **M;
+	M= new double*[dim];
 
 	for (int i = 0; i < dim; i++) {
 
-		M[i] = new float[dim];
+		M[i] = new double[dim];
 	}
 
 
-	float **LT;
-	LT = new float*[dim];
+	double **LT;
+	LT = new double*[dim];
 	for (int i = 0; i < dim; i++) {
-		LT[i] = new float[dim];
+		LT[i] = new double[dim];
 
 	}
 
@@ -1820,7 +1803,7 @@ int calcRegTermL12(float *L, float *regTerm, float w12, int dim) {
 			}
 
 
-	float reg_term_L1 = 0.0;
+	double reg_term_L1 = 0.0;
 
 	for (int i = 0; i < dim; i++)
 		for (int j = 0; j < dim; j++) {
@@ -1856,7 +1839,7 @@ int calcRegTermL12(float *L, float *regTerm, float w12, int dim) {
 }
 
 
-int calcRegTermL12(float *L, float *Lb,float *result , float w12, int dim) {
+int calcRegTermL12(double *L, double *Lb, double *result , double w12, int dim) {
 
 
 
@@ -1999,15 +1982,15 @@ int calcRegTermL12(float *L, float *Lb,float *result , float w12, int dim) {
 
 
 
-void calculateKernelValues(float *X, float *kernelValTable, float *M, float sigma, int N, int d){
+void calculateKernelValues(double *X, double *kernelValTable, double *M, double sigma, int N, int d){
 #if 0
 	printf("calculateKernelValues...\n");
 #endif
 
-	const float sqr_two_pi = sqrt(2.0 * 3.14159265359);
+	const double sqr_two_pi = sqrt(2.0 * 3.14159265359);
 
-	float diff[d];
-	float tempVec[d];
+	double diff[d];
+	double tempVec[d];
 
 	for(int indx1=0; indx1<N; indx1++){
 		for(int indx2=indx1+1; indx2<N; indx2++){
@@ -2031,11 +2014,7 @@ void calculateKernelValues(float *X, float *kernelValTable, float *M, float sigm
 
 			}
 
-
-
-
-
-			float sum = 0.0;
+			double sum = 0.0;
 
 			for (int i = 0; i < d; i++) {
 				for (int j = 0; j < d; j++) {
@@ -2047,8 +2026,6 @@ void calculateKernelValues(float *X, float *kernelValTable, float *M, float sigm
 				sum = 0.0;
 
 			}
-
-
 			sum = 0.0;
 
 			for (int i = 0; i < d; i++) {
@@ -2056,10 +2033,7 @@ void calculateKernelValues(float *X, float *kernelValTable, float *M, float sigm
 				sum = sum + tempVec[i] * diff[i];
 			}
 
-
-
-
-			float kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-sum / (2 * sigma * sigma)) + 10E-12;
+			double kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-sum / (2 * sigma * sigma)) + 10E-12;
 
 			kernelValTable[indx1*N+indx2]= kernelVal;
 
@@ -2072,14 +2046,13 @@ void calculateKernelValues(float *X, float *kernelValTable, float *M, float sigm
 }
 
 
-void calculateKernelValues_b(float *X, float *kernelValTable, float *
-		kernelValTableb, float *M, float *Mb, float sigma, float *sigmab, int
-		N, int d) {
-	const float sqr_two_pi = sqrt(2.0*3.14159265359);
-	float diff[d];
-	float diffb[d];
-	float tempVec[d];
-	float tempVecb[d];
+void calculateKernelValues_b(double *X, double *kernelValTable, double *kernelValTableb, double *M, double *Mb, double sigma, double *sigmab, int N, int d) {
+
+	const double sqr_two_pi = sqrt(2.0*3.14159265359);
+	double diff[d];
+	//	double diffb[d];
+	double tempVec[d];
+	double tempVecb[d];
 
 
 	//	stack<float> stack;
@@ -2101,7 +2074,7 @@ void calculateKernelValues_b(float *X, float *kernelValTable, float *
 				//				stack.push(diff[k]);
 				diff[k] = X[off1 + k] - X[off2 + k];
 			}
-			float sum = 0.0;
+			double sum = 0.0;
 			for (int i = 0; i < d; ++i) {
 				for (int j = 0; j < d; ++j)
 					sum = sum + M[i*d+j]*diff[j];
@@ -2113,10 +2086,10 @@ void calculateKernelValues_b(float *X, float *kernelValTable, float *
 				sum = sum + tempVec[i]*diff[i];
 			}
 
-			float temp = 2*(sigma*sigma);
-			float temp0 = sum/temp;
-			float temp1 = exp(-temp0);
-			float kernelVal = 1.0/(sigma*sqr_two_pi)*temp1 + 10E-12;
+			double temp = 2*(sigma*sigma);
+			double temp0 = sum/temp;
+			double temp1 = exp(-temp0);
+			//			double kernelVal = 1.0/(sigma*sqr_two_pi)*temp1 + 10E-12;
 			//			stack.push(sum);
 			//		}
 
@@ -2132,12 +2105,12 @@ void calculateKernelValues_b(float *X, float *kernelValTable, float *
 			//			int off1;
 			//			int off2;
 			//			float sum;
-			float sumb = 0.0;
+			double sumb = 0.0;
 			//			float kernelVal;
-			float kernelValb = 0.0;
+			double kernelValb = 0.0;
 			double tempb;
 
-			float tempb0;
+			double tempb0;
 			//			sum = stack.top(); stack.pop();
 			//             popReal4(&sum);
 			kernelValb = kernelValTableb[indx1*N + indx2];
@@ -2168,9 +2141,9 @@ void calculateKernelValues_b(float *X, float *kernelValTable, float *
 }
 
 
-void calculateKernelValues(float *X, codi::RealReverse *kernelValTable, codi::RealReverse *M, codi::RealReverse sigma, int N, int d){
+void calculateKernelValues(double *X, codi::RealReverse *kernelValTable, codi::RealReverse *M, codi::RealReverse sigma, int N, int d){
 
-	const float sqr_two_pi = sqrt(2.0 * 3.14159265359);
+	const double sqr_two_pi = sqrt(2.0 * 3.14159265359);
 
 	codi::RealReverse diff[d];
 	codi::RealReverse tempVec[d];
@@ -2232,16 +2205,16 @@ void calculateKernelValues(float *X, codi::RealReverse *kernelValTable, codi::Re
 
 }
 
-void calculateLossKernelL1(float* result, float *data,float *kernelValTable, int N, int d){
+void calculateLossKernelL1(double *result, double *data, double *kernelValTable, int N, int d){
 
 
-	float lossFunc = 0.0;
+	double lossFunc = 0.0;
 
 	for(int tid=0; tid<N; tid++){
 
 
 
-		float kernelSum = 0.0;
+		double kernelSum = 0.0;
 
 		for(int i=0; i<N; i++){
 
@@ -2268,7 +2241,7 @@ void calculateLossKernelL1(float* result, float *data,float *kernelValTable, int
 
 		}
 
-		float fapprox=0.0;
+		double fapprox=0.0;
 		for(int i=0; i<N; i++){
 
 			if(tid != i){
@@ -2303,15 +2276,15 @@ void calculateLossKernelL1(float* result, float *data,float *kernelValTable, int
 }
 
 
-void calculateLossKernelL1_b(float *result, float *resultb, float *data, float
-		*kernelValTable, float *kernelValTableb, int N, int d) {
-	float lossFunc = 0.0;
-	float lossFuncb = 0.0;
+void calculateLossKernelL1_b(double *result, double *resultb, double *data, double
+		*kernelValTable, double *kernelValTableb, int N, int d) {
+	double lossFunc = 0.0;
+	double lossFuncb = 0.0;
 	int branch;
 
 	stack<int> stackInt;
 	stack<int> stackCont;
-	stack<float> stackReal;
+	stack<double> stackReal;
 
 
 	for(int i=0; i<N*N; i++) {
@@ -2319,8 +2292,8 @@ void calculateLossKernelL1_b(float *result, float *resultb, float *data, float
 	}
 
 	for (int tid = 0; tid < N; ++tid) {
-		float kernelSum = 0.0;
-		float fabs0;
+		double kernelSum = 0.0;
+		//		double fabs0;
 		for (int i = 0; i < N; ++i){
 			if (tid != i) {
 				int indxKernelValTable;
@@ -2338,7 +2311,7 @@ void calculateLossKernelL1_b(float *result, float *resultb, float *data, float
 			//				pushControl1b(0);
 
 		}
-		float fapprox = 0.0;
+		double fapprox = 0.0;
 		for (int i = 0; i < N; ++i){
 			if (tid != i) {
 				int indxKernelValTable;
@@ -2374,12 +2347,12 @@ void calculateLossKernelL1_b(float *result, float *resultb, float *data, float
 	*resultb = 0.0;
 	//	*kernelValTableb = 0.0;
 	for (int tid = N-1; tid > -1; --tid) {
-		float kernelSum;
-		float kernelSumb = 0.0;
-		float fabs0;
-		float fabs0b;
-		float fapprox;
-		float fapproxb = 0.0;
+		double kernelSum;
+		double kernelSumb = 0.0;
+		//		double fabs0;
+		double fabs0b;
+		//		double fapprox;
+		double fapproxb = 0.0;
 		kernelSum = stackReal.top(); stackReal.pop();
 		//		popReal4(&kernelSum);
 		fabs0b = lossFuncb;
@@ -2432,7 +2405,7 @@ void calculateLossKernelL1_b(float *result, float *resultb, float *data, float
 
 
 
-void calculateLossKernelL1(codi::RealReverse* result, float *data,codi::RealReverse *kernelValTable, int N, int d){
+void calculateLossKernelL1(codi::RealReverse* result, double *data,codi::RealReverse *kernelValTable, int N, int d){
 
 
 	codi::RealReverse lossFunc = 0.0;
@@ -2509,15 +2482,15 @@ void calculateLossKernelL1(codi::RealReverse* result, float *data,codi::RealReve
 
 
 
-void calculateLossKernelL2(float* result, float *X,float *kernelValTable, int N, int d){
+void calculateLossKernelL2(double *result, double *X, double *kernelValTable, int N, int d){
 
 
-	float lossFunc = 0.0;
+	double lossFunc = 0.0;
 
 	for(int tid=0; tid<N; tid++){
 
 
-		float kernelSum = 0.0;
+		double kernelSum = 0.0;
 
 		for(int i=0; i<N; i++){
 
@@ -2544,7 +2517,7 @@ void calculateLossKernelL2(float* result, float *X,float *kernelValTable, int N,
 
 		}
 
-		float fapprox=0.0;
+		double fapprox=0.0;
 		for(int i=0; i<N; i++){
 
 			if(tid != i){
@@ -2562,7 +2535,7 @@ void calculateLossKernelL2(float* result, float *X,float *kernelValTable, int N,
 				}
 
 				fapprox += (kernelValTable[indxKernelValTable]/kernelSum)* X[i*(d+1)+d];
-#if 0
+#if 1
 				printf("weight = %10.7f f = %10.7f\n", (kernelValTable[indxKernelValTable]/kernelSum),X[i*(d+1)+d]);
 #endif
 
@@ -2573,7 +2546,7 @@ void calculateLossKernelL2(float* result, float *X,float *kernelValTable, int N,
 
 
 		lossFunc += (fapprox - X[tid*(d+1)+d]) * (fapprox - X[tid*(d+1)+d]);
-#if 0
+#if 1
 		printf("ftilde = %10.7f fexact = %10.7f\n", fapprox,X[tid*(d+1)+d]);
 #endif
 
@@ -2592,23 +2565,22 @@ void calculateLossKernelL2(float* result, float *X,float *kernelValTable, int N,
 
 
 
-void calculateLossKernelL2_b(float *result, float *resultb, float *X, float *
-		kernelValTable, float *kernelValTableb, int N, int d) {
+void calculateLossKernelL2_b(double *result, double *resultb, double *X, double *kernelValTable, double *kernelValTableb, int N, int d) {
 
 	stack<int> stackInt;
 	stack<int> stackCont;
-	stack<float> stackReal;
+	stack<double> stackReal;
 
 	for(int i=0; i<N*N; i++) {
 		kernelValTableb[i]=0.0;
 	}
 
 
-	float lossFunc = 0.0;
-	float lossFuncb = 0.0;
+	double lossFunc = 0.0;
+	double lossFuncb = 0.0;
 	int branch;
 	for (int tid = 0; tid < N; ++tid) {
-		float kernelSum = 0.0;
+		double kernelSum = 0.0;
 		for (int i = 0; i < N; ++i){
 			if (tid != i) {
 				int indxKernelValTable;
@@ -2627,7 +2599,7 @@ void calculateLossKernelL2_b(float *result, float *resultb, float *X, float *
 
 
 		}
-		float fapprox = 0.0;
+		double fapprox = 0.0;
 		for (int i = 0; i < N; ++i){
 			if (tid != i) {
 				int indxKernelValTable;
@@ -2637,6 +2609,9 @@ void calculateLossKernelL2_b(float *result, float *resultb, float *X, float *
 					indxKernelValTable = tid*N + i;
 				fapprox = fapprox + kernelValTable[indxKernelValTable]/
 						kernelSum*X[i*(d+1)+d];
+#if 0
+				printf("weight = %10.7f f = %10.7f\n", (kernelValTable[indxKernelValTable]/kernelSum),X[i*(d+1)+d]);
+#endif
 				stackInt.push(indxKernelValTable);
 				//				pushInteger4(indxKernelValTable);
 				//				pushControl1b(1);
@@ -2648,7 +2623,9 @@ void calculateLossKernelL2_b(float *result, float *resultb, float *X, float *
 		}
 
 		lossFunc += (fapprox - X[tid*(d+1)+d]) * (fapprox - X[tid*(d+1)+d]);
-
+#if 0
+		printf("ftilde = %10.7f fexact = %10.7f\n", fapprox,X[tid*(d+1)+d]);
+#endif
 		//		pushReal4(kernelSum);
 		//		pushReal4(fapprox);
 
@@ -2662,10 +2639,10 @@ void calculateLossKernelL2_b(float *result, float *resultb, float *X, float *
 	*resultb = 0.0;
 	*kernelValTableb = 0.0;
 	for (int tid = N-1; tid > -1; --tid) {
-		float kernelSum;
-		float kernelSumb = 0.0;
-		float fapprox;
-		float fapproxb = 0.0;
+		double kernelSum;
+		double kernelSumb = 0.0;
+		double fapprox;
+		double fapproxb = 0.0;
 
 		fapprox = stackReal.top(); stackReal.pop();
 		kernelSum = stackReal.top(); stackReal.pop();
@@ -2679,7 +2656,7 @@ void calculateLossKernelL2_b(float *result, float *resultb, float *X, float *
 			branch = stackCont.top(); stackCont.pop();
 			if (branch != 0) {
 				int indxKernelValTable;
-				float tempb;
+				double tempb;
 				//				popInteger4(&indxKernelValTable);
 				indxKernelValTable = stackInt.top(); stackInt.pop();
 				tempb = X[i*(d+1)+d]*fapproxb/kernelSum;
@@ -2718,7 +2695,7 @@ void calculateLossKernelL2_b(float *result, float *resultb, float *X, float *
 }
 
 
-void calculateLossKernelL2(codi::RealReverse* result, float *X,codi::RealReverse *kernelValTable, int N, int d){
+void calculateLossKernelL2(codi::RealReverse* result, double *X,codi::RealReverse *kernelValTable, int N, int d){
 
 
 	codi::RealReverse lossFunc = 0.0;
@@ -2810,12 +2787,12 @@ void calculateLossKernelL2(codi::RealReverse* result, float *X,codi::RealReverse
  * */
 
 
-void calcLossFunCPU(float *result, float *input, float *data,int N, int d,int lossFunType){
+void calcLossFunCPU(double *result, double *input, double *data,int N, int d,int lossFunType){
 
 
-	float LT[d][d];
-	float L[d][d];
-	float M[d*d];
+	double LT[d][d];
+	double L[d][d];
+	double M[d*d];
 
 
 
@@ -2828,7 +2805,7 @@ void calcLossFunCPU(float *result, float *input, float *data,int N, int d,int lo
 		}
 
 
-	float sigma = input[d*d];
+	double sigma = input[d*d];
 
 
 
@@ -2868,7 +2845,7 @@ void calcLossFunCPU(float *result, float *input, float *data,int N, int d,int lo
 
 
 
-	float *kernelValTable = new float[N*N];
+	double *kernelValTable = new double[N*N];
 
 	calculateKernelValues(data, kernelValTable, M, sigma, N, d);
 
@@ -2883,7 +2860,7 @@ void calcLossFunCPU(float *result, float *input, float *data,int N, int d,int lo
 		calculateLossKernelL2(result, data,kernelValTable, N,d);
 		break;
 	default:
-		printf("Error: Unkown lossFunType");
+		printf("Error: Unknown lossFunType at %s, line %d\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -2900,7 +2877,7 @@ void calcLossFunCPU(float *result, float *input, float *data,int N, int d,int lo
 }
 
 /*
- * calculates the loss function for the given training data
+ * calculates the loss function for the given training data (CodiPack validation version)
  *
  * @param[in] data : first vector
  * @param[in] input : Matrix M + sigma
@@ -2912,16 +2889,152 @@ void calcLossFunCPU(float *result, float *input, float *data,int N, int d,int lo
  *
  * */
 
+void calcLossFunCPUCodi(double *result, double *input, double *inputb, double *data,int N, int d,int lossFunType){
 
-void calcLossFunCPU_b(float *result, float *input, float *inputb, float *data,int N, int d,int lossFunType){
+
+	codi::RealReverse *inputcodi = new codi::RealReverse[d*d+1];
+
+	codi::RealReverse LT[d][d];
+	codi::RealReverse L[d][d];
+	codi::RealReverse M[d*d];
+
+	codi::RealReverse *kernelValTable = new codi::RealReverse[N*N];
 
 
-	float LT[d][d];
-	float L[d][d];
-	float LTb[d][d];
-	float Lb[d][d];
-	float M[d*d];
-	float Mb[d*d];
+	/* activate tape and register input */
+
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+
+
+	for (int i = 0; i < d*d+1; i++) {
+		inputcodi[i] = input[i];
+		tape.registerInput(inputcodi[i]);
+
+	}
+
+
+
+	codi::RealReverse resultCodi;
+
+
+	for (int i = 0; i < d; i++)
+		for (int j = 0; j < d; j++) {
+			L[i][j]=inputcodi[i*d+j];
+
+		}
+
+
+	codi::RealReverse sigma = inputcodi[d*d];
+
+
+
+	for (int i = 0; i < d; i++)
+		for (int j = 0; j < d; j++) {
+
+			LT[i][j]=0.0;
+		}
+
+
+
+
+	for (int i = 0; i < d; i++) {
+		for (int j = 0; j <= i; j++){
+
+			LT[j][i] = L[i][j];
+		}
+
+
+	}
+
+
+	for(int i = 0; i < d; ++i)
+		for(int j = 0; j < d; ++j)
+		{
+			M[i*d+j]=0;
+		}
+
+	/* Multiplying matrix L and LT and storing in M */
+	for(int i = 0; i < d; ++i)
+		for(int j = 0; j < d; ++j)
+			for(int k = 0; k < d; ++k)
+			{
+				M[i*d+j] += L[i][k] * LT[k][j];
+
+			}
+
+	calculateKernelValues(data, kernelValTable, M, sigma, N, d);
+
+	if(lossFunType == L1_LOSS_FUNCTION){
+
+		calculateLossKernelL1(&resultCodi,data,kernelValTable, N, d);
+
+	}
+
+	if(lossFunType == L2_LOSS_FUNCTION){
+
+		calculateLossKernelL2(&resultCodi, data,kernelValTable, N,d);
+
+	}
+
+
+
+	tape.registerOutput(resultCodi);
+
+	tape.setPassive();
+	resultCodi.setGradient(1.0);
+	tape.evaluate();
+
+	for (int i = 0; i < d*d+1; i++) {
+
+
+		inputb[i] = inputcodi[i].getGradient();
+
+	}
+
+
+
+
+	*result = resultCodi.getValue();
+
+#if 1
+	printf("loss = %10.7f\n", *result);
+#endif
+
+#if 1
+
+
+	printf("Lb =\n");
+	for (int i = 0; i < d; i++){
+		for (int j = 0; j < d; j++) {
+			printf("%10.7f ",inputb[i*d+j]);
+
+		}
+
+		printf("\n");
+	}
+
+	printf("sigmab = %10.7f\n",inputb[d*d]);
+
+#endif
+
+	tape.reset();
+
+
+	delete [] kernelValTable;
+
+}
+
+
+void calcLossFunCPU_b(double *result, double *input, double *inputb, double *data,int N, int d,int lossFunType){
+
+
+	double LT[d][d];
+	double L[d][d];
+	double LTb[d][d];
+	double Lb[d][d];
+	double M[d*d];
+	double Mb[d*d];
 
 	for (int i = 0; i < d*d+1; i++) {
 
@@ -2938,8 +3051,8 @@ void calcLossFunCPU_b(float *result, float *input, float *inputb, float *data,in
 		}
 
 
-	float sigma = input[d*d];
-	float sigmab = 0.0;
+	double sigma = input[d*d];
+	double sigmab = 0.0;
 
 
 #if 0
@@ -3037,10 +3150,10 @@ void calcLossFunCPU_b(float *result, float *input, float *inputb, float *data,in
 #endif
 
 
-	float *kernelValTable = new float[N*N];
-	float *kernelValTableb = new float[N*N];
+	double *kernelValTable = new double[N*N];
+	double *kernelValTableb = new double[N*N];
 
-	float resultb = 1.0;
+	double resultb = 1.0;
 
 	calculateKernelValues(data, kernelValTable, M, sigma, N, d);
 
@@ -3055,7 +3168,7 @@ void calcLossFunCPU_b(float *result, float *input, float *inputb, float *data,in
 		calculateLossKernelL2_b(result, &resultb, data, kernelValTable, kernelValTableb, N, d);
 		break;
 	default:
-		printf("Error: Unkown lossFunType");
+		printf("Error: Unknown lossFunType at %s, line %d\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -3111,10 +3224,10 @@ void calcLossFunCPU_b(float *result, float *input, float *inputb, float *data,in
 
 	/* validation part */
 
-	float eps = 0.00001;
-	float f0 = *result;
-	float fp;
-	float fdres[d*d+1];
+	double eps = 0.00001;
+	double f0 = *result;
+	double fp;
+	double fdres[d*d+1];
 
 	for(int i=0; i<d*d+1; i++){
 
@@ -3137,141 +3250,9 @@ void calcLossFunCPU_b(float *result, float *input, float *inputb, float *data,in
 		printf("\n");
 	}
 
+
+
 	printf("sigmab (fd) = %10.7f\n",fdres[d*d]);
-
-#endif
-
-	delete [] kernelValTable;
-	delete [] kernelValTableb;
-
-
-}
-
-void calcLossFunCPUCodi(float *result, float *input, float *inputb, float *data,int N, int d,int lossFunType){
-
-
-	codi::RealReverse *inputcodi = new codi::RealReverse[d*d+1];
-
-	codi::RealReverse LT[d][d];
-	codi::RealReverse L[d][d];
-	codi::RealReverse M[d*d];
-
-	codi::RealReverse *kernelValTable = new codi::RealReverse[N*N];
-
-
-	/* activate tape and register input */
-
-	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-	tape.setActive();
-
-
-	for (int i = 0; i < d*d+1; i++) {
-		inputcodi[i] = input[i];
-		tape.registerInput(inputcodi[i]);
-
-	}
-
-
-
-	codi::RealReverse resultCodi;
-
-
-	for (int i = 0; i < d; i++)
-		for (int j = 0; j < d; j++) {
-			L[i][j]=inputcodi[i*d+j];
-
-		}
-
-
-	codi::RealReverse sigma = inputcodi[d*d];
-
-
-
-	for (int i = 0; i < d; i++)
-		for (int j = 0; j < d; j++) {
-
-			LT[i][j]=0.0;
-		}
-
-
-
-
-	for (int i = 0; i < d; i++) {
-		for (int j = 0; j <= i; j++){
-
-			LT[j][i] = L[i][j];
-		}
-
-
-	}
-
-
-	for(int i = 0; i < d; ++i)
-		for(int j = 0; j < d; ++j)
-		{
-			M[i*d+j]=0;
-		}
-
-	/* Multiplying matrix L and LT and storing in M */
-	for(int i = 0; i < d; ++i)
-		for(int j = 0; j < d; ++j)
-			for(int k = 0; k < d; ++k)
-			{
-				M[i*d+j] += L[i][k] * LT[k][j];
-
-			}
-
-
-
-
-	calculateKernelValues(data, kernelValTable, M, sigma, N, d);
-
-
-
-
-
-
-
-
-	if(lossFunType == L1_LOSS_FUNCTION){
-
-		calculateLossKernelL1(&resultCodi,data,kernelValTable, N, d);
-
-	}
-
-	if(lossFunType == L2_LOSS_FUNCTION){
-
-		calculateLossKernelL2(&resultCodi, data,kernelValTable, N,d);
-
-	}
-
-
-
-	tape.registerOutput(resultCodi);
-
-	tape.setPassive();
-	resultCodi.setGradient(1.0);
-	tape.evaluate();
-
-	for (int i = 0; i < d*d+1; i++) {
-
-
-		inputb[i] = inputcodi[i].getGradient();
-
-	}
-
-
-
-
-	*result = resultCodi.getValue();
-
-#if 1
-	printf("loss = %10.7f\n", *result);
-#endif
-
-#if 1
-
-
 	printf("Lb =\n");
 	for (int i = 0; i < d; i++){
 		for (int j = 0; j < d; j++) {
@@ -3282,46 +3263,54 @@ void calcLossFunCPUCodi(float *result, float *input, float *inputb, float *data,
 		printf("\n");
 	}
 
-	printf("sigmab = %10.7f\n",inputb[d*d]);
+	printf("sigmab = %10.7f\n",sigmab);
+
+	printf("CodiPack results...\n");
+	calcLossFunCPUCodi(result, input, inputb, data, N, d,lossFunType);
+
+
+
+	exit(1);
 
 #endif
 
-	tape.reset();
-
-
 	delete [] kernelValTable;
+	delete [] kernelValTableb;
+
 
 }
 
 
 
-float kernelRegressorNotNormalized(fmat &X, fvec &y, frowvec &xp, vec& xmax, vec &xmin, fmat &M, float sigma) {
+
+
+double kernelRegressorNotNormalized(mat &X, vec &y, rowvec &xp, vec& xmax, vec &xmin, mat &M, double sigma) {
 
 	int N = y.size();
 
-	fvec kernelVal(N);
-	fvec weight(N);
+	vec kernelVal(N);
+	vec weight(N);
 
-	frowvec xpNormalized;
+	rowvec xpNormalized;
 
 	/* first normalize xp */
 
-	for (int j = 0; j < xp.size(); j++) {
+	for (unsigned int j = 0; j < xp.size(); j++) {
 
 		xpNormalized(j) = (1.0/xp.size())*(xp(j) - xmin(j)) / (xmax(j) - xmin(j));
 	}
 
 	/* calculate the kernel values */
 
-	float kernelSum = 0.0;
+	double kernelSum = 0.0;
 	for (int i = 0; i < N; i++) {
 
-		frowvec xi = X.row(i);
+		rowvec xi = X.row(i);
 		kernelVal(i) = gaussianKernel(xi, xpNormalized, sigma, M);
 		kernelSum += kernelVal(i);
 	}
 
-	float yhat = 0.0;
+	double yhat = 0.0;
 	for (int i = 0; i < N; i++) {
 
 		weight(i) = kernelVal(i) / kernelSum;
@@ -3346,25 +3335,34 @@ float kernelRegressorNotNormalized(fmat &X, fvec &y, frowvec &xp, vec& xmax, vec
  *
  * */
 
-float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma) {
-
+double kernelRegressor(mat &X, vec &y, rowvec &xp, mat &M, double sigma) {
+#if 0
+	printf("xp: "); xp.print();
+#endif
 	int N = y.size();
 
 	fvec kernelVal(N);
 	fvec weight(N);
 
 
-	float kernelSum = 0.0;
+	double kernelSum = 0.0;
 	for (int i = 0; i < N; i++) {
 
-		frowvec xi = X.row(i);
+		rowvec xi = X.row(i);
 		kernelVal(i) = gaussianKernel(xi, xp, sigma, M);
 		kernelSum += kernelVal(i);
 	}
 
+	if(kernelSum < 10E-06){
+
+		printf("Warning: kernelSum is too small! KernelSum = %15.10f\n",kernelSum);
 
 
-	float yhat = 0.0;
+	}
+
+
+
+	double yhat = 0.0;
 	for (int i = 0; i < N; i++) {
 
 		weight(i) = kernelVal(i) / kernelSum;
@@ -3400,14 +3398,14 @@ float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma) {
  * */
 
 
-float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float sigma) {
+double kernelRegressor(mat &X, vec &y, mat &grad, rowvec &xp, mat &M, double sigma) {
 
 	int N = y.size();
 
-	fvec kernelVal(N);
-	fvec weight(N);
-	float kernelSum = 0.0;
-	float yhat = 0.0;
+	vec kernelVal(N);
+	vec weight(N);
+	double kernelSum = 0.0;
+	double yhat = 0.0;
 
 
 
@@ -3415,55 +3413,20 @@ float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float 
 	/* first evaluate the kernel sum */
 	for (int i = 0; i < N; i++) {
 
-		frowvec xi = X.row(i);
+		rowvec xi = X.row(i);
 		kernelVal(i) = gaussianKernel(xi, xp, sigma, M);
 		kernelSum += kernelVal(i);
 
 
 	}
 
-#if 0
-
-	int above99flag=0;
-	int above99index = -1;
-	for (int i = 0; i < N; i++) {
-
-		weight(i) = kernelVal(i) / kernelSum;
-
-		if(weight(i) > 0.5) {
-
-			above99index = i;
-			above99flag=1;
-		}
-
-	}
-
-	if(above99flag == 1){
-		printf("above99flag is 1 with index = %d!\n",above99index);
-		for (int i = 0; i < N; i++) {
-
-			if(i!=above99index) {
-
-				weight(i) = 0.0;
-			}
-			else weight(i) = 1.0;
-		}
-
-
-	}
-
-
-	//	weight.print();
-
-#endif
-
-	frowvec xdiff(xp.size());
+	rowvec xdiff(xp.size());
 
 	for (int i = 0; i < N; i++) {
 
-		frowvec xi = X.row(i);
+		rowvec xi = X.row(i);
 
-		for(int j=0; j<xp.size(); j++) xdiff(j) = xp(j) -xi(j);
+		for(unsigned int j=0; j<xp.size(); j++) xdiff(j) = xp(j) -xi(j);
 
 		xdiff.print();
 
@@ -3479,7 +3442,7 @@ float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float 
 #endif
 
 
-		float gradTerm = dot(xdiff,grad.row(i));
+		double gradTerm = dot(xdiff,grad.row(i));
 #if 0
 		printf("gradTerm = %10.7f\n",gradTerm);
 		printf("y = %10.7f\n",y(i));
@@ -3502,88 +3465,88 @@ float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float 
 }
 
 
-/*
- * return kernel regression estimate with gradient data
- * @param[in] X: sample input values (normalized)
- * @param[in] XnotNormalized: sample input values
- * @param[in] grad: sample gradient values (not normalized)
- * @param[in] xp: point to be estimated
- * @param[in] M : Mahalanobis matrix
- * @param[in] sigma:  bandwidth parameter
- * @param[in] y: functional values at sample locations
- *
- * */
-
-
-float kernelRegressorNotNormalized(fmat &X,
-		fmat &XnotNormalized,
-		fvec &y,
-		fmat &grad,
-		frowvec &xp,
-		fvec &xmin,
-		fvec &xmax,
-		fmat &M,
-		float sigma) {
-
-
-	/* number of samples */
-	int N = y.size();
-	int d = xp.size();
-
-	fvec kernelVal(N);
-	fvec weight(N);
-
-	frowvec xpNormalized(d);
-
-	/* first normalize xp */
-
-	for (int j = 0; j < d; j++) {
-
-		xpNormalized(j) = (1.0/d)*(xp(j) - xmin(j)) / (xmax(j) - xmin(j));
-	}
-
-
-	float kernelSum = 0.0;
-
-
-	frowvec xi(d);
-	frowvec xdiff(d);
-
-	/* first evaluate the kernel sum */
-	for (int i = 0; i < N; i++) {
-
-		xi = X.row(i);
-
-		kernelVal(i) = gaussianKernel(xi, xpNormalized, sigma, M);
-		kernelSum += kernelVal(i);
-	}
-
-
-
-	float yhat = 0.0;
-
-	for (int i = 0; i < N; i++) {
-
-
-		xi = XnotNormalized.row(i);
-		for(int j=0; j<d; j++) {
-
-			xdiff(j) = xp(j) -xi(j);
-		}
-
-
-		float gradTerm = dot(xdiff,grad.row(i));
-
-		weight(i) = kernelVal(i) / kernelSum;
-		yhat += (y(i) + gradTerm) * weight(i);
-#if 0
-		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
-#endif
-	}
-
-	return yhat;
-
-}
+///*
+// * return kernel regression estimate with gradient data
+// * @param[in] X: sample input values (normalized)
+// * @param[in] XnotNormalized: sample input values
+// * @param[in] grad: sample gradient values (not normalized)
+// * @param[in] xp: point to be estimated
+// * @param[in] M : Mahalanobis matrix
+// * @param[in] sigma:  bandwidth parameter
+// * @param[in] y: functional values at sample locations
+// *
+// * */
+//
+//
+//float kernelRegressorNotNormalized(fmat &X,
+//		fmat &XnotNormalized,
+//		fvec &y,
+//		fmat &grad,
+//		frowvec &xp,
+//		fvec &xmin,
+//		fvec &xmax,
+//		fmat &M,
+//		float sigma) {
+//
+//
+//	/* number of samples */
+//	int N = y.size();
+//	int d = xp.size();
+//
+//	fvec kernelVal(N);
+//	fvec weight(N);
+//
+//	frowvec xpNormalized(d);
+//
+//	/* first normalize xp */
+//
+//	for (int j = 0; j < d; j++) {
+//
+//		xpNormalized(j) = (1.0/d)*(xp(j) - xmin(j)) / (xmax(j) - xmin(j));
+//	}
+//
+//
+//	float kernelSum = 0.0;
+//
+//
+//	frowvec xi(d);
+//	frowvec xdiff(d);
+//
+//	/* first evaluate the kernel sum */
+//	for (int i = 0; i < N; i++) {
+//
+//		xi = X.row(i);
+//
+//		kernelVal(i) = gaussianKernel(xi, xpNormalized, sigma, M);
+//		kernelSum += kernelVal(i);
+//	}
+//
+//
+//
+//	float yhat = 0.0;
+//
+//	for (int i = 0; i < N; i++) {
+//
+//
+//		xi = XnotNormalized.row(i);
+//		for(int j=0; j<d; j++) {
+//
+//			xdiff(j) = xp(j) -xi(j);
+//		}
+//
+//
+//		float gradTerm = dot(xdiff,grad.row(i));
+//
+//		weight(i) = kernelVal(i) / kernelSum;
+//		yhat += (y(i) + gradTerm) * weight(i);
+//#if 0
+//		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
+//#endif
+//	}
+//
+//	return yhat;
+//
+//}
 
 
 /*
@@ -3625,8 +3588,10 @@ double kernelRegressorNotNormalized(mat &X,
 
 		xpNormalized(j) = (1.0/d)*(xp(j) - xmin(j)) / (xmax(j) - xmin(j));
 	}
-
-
+#if 1
+	printf("xpNormalized:\n");
+	xpNormalized.print();
+#endif
 	double kernelSum = 0.0;
 
 
@@ -3637,8 +3602,15 @@ double kernelRegressorNotNormalized(mat &X,
 	for (int i = 0; i < N; i++) {
 
 		xi = X.row(i);
+#if 1
+	printf("xi:\n");
+	xi.print();
+#endif
 
 		kernelVal(i) = gaussianKernel(xi, xpNormalized, sigma, M);
+#if 1
+		printf("kernelVal(%d) = %10.7f\n",i,kernelVal(i));
+#endif
 		kernelSum += kernelVal(i);
 	}
 
@@ -3660,7 +3632,7 @@ double kernelRegressorNotNormalized(mat &X,
 
 		weight(i) = kernelVal(i) / kernelSum;
 		yhat += (y(i) + gradTerm) * weight(i);
-#if 0
+#if 1
 		printf("y(%d) * weight(%d) = %10.7f * %10.7f\n",i,i,y(i),weight(i) );
 #endif
 	}
@@ -3669,189 +3641,184 @@ double kernelRegressorNotNormalized(mat &X,
 
 }
 
-int trainMahalanobisDistanceBruteForce(fmat &L, fmat &data, float &sigma, float yTrainingMax, int lossFunType, int batchsize, int ntrials) {
-
-#if 1
-
-	printf("trainMahalanobisDistanceBruteForce...\n");
-#endif
-
-	unsigned int d = L.n_cols;
-
-	unsigned int Ldim = d*d;
-
-#if 1
-	printf("Ldim = %d\n",Ldim);
-
-	printf("Data (normalized) with ymax = %10.7f =\n",yTrainingMax);
-	data.print();
-
-#endif
-
-	/* lower diagonal matrix Lbest to keep the best L*/
-	fmat bestL(d,d);
-	bestL.fill(0.0);
-
-	float bestsigma = 0.0;
-
-
-	/* divide the data set into training and validation sets */
-
-	unsigned int N = data.n_rows;
-
-
-	/* size of the validation set, default to one fifth */
-	unsigned int NvalidationSet = N/5;
-	unsigned int Ntraining = N - NvalidationSet;
-#if 1
-	printf("N = %d, Ntraining = %d, Nvalidation =%d\n", N,Ntraining, NvalidationSet);
-#endif
-	fmat dataTraining      = data.submat( 0, 0, Ntraining-1, d );
-	fmat dataValidation    = data.submat( Ntraining, 0, N-1, d );
-
-
-	fmat XValidation = dataValidation.submat(0,0,NvalidationSet-1,d-1);
-	fvec yValidation = dataValidation.col(d);
-
-	fmat XTraining = dataTraining.submat(0,0,Ntraining-1,d-1);
-	fvec yTraining = dataTraining.col(d);
-
-
-
-
-	float optGenError = LARGE;
-	printf("ntrials = %d\n", ntrials);
-	/* optimization loop */
-
-
-
-	for(int ii=0; ii<100000; ii++){
-
-
-
-
-#if 0
-		if(ii > ntrials)
-
-			printf("iterTrial = %d, ntrials = %d\n", ii,ntrials);
-#endif
-
-		for (int i = 0; i < d; i++)
-			for (int j = 0; j <= i; j++) {
-
-				L(i,j) = RandomFloat(0.0,1.0);
-
-			}
-
-		sigma = RandomFloat(0.0,1.0);
-
-
-		if(ii == 0){
-
-			sigma = 0.1;
-			L = eye<fmat>(d,d);
-
-		}
-
-
-
-		fmat M = L*trans(L);
-
-
-
-
-#if 0
-		printf("L = \n");
-		L.print();
-		printf("M = \n");
-		M.print();
-		printf("sigma = %10.7f\n", sigma);
-#endif
-
-
-		float genError = 0.0;
-
-		for(int i=0;i <NvalidationSet; i++){
-
-			frowvec xp = XValidation.row(i);
-			float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
-			float yexact = yValidation(i)*yTrainingMax;
-
-#if 0
-			printf("i= %d, x:\n",i);
-			xp.print();
-			printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
-#endif
-
-
-
-			if( lossFunType == L1_LOSS_FUNCTION) genError += fabs(yexact-ytilde);
-			if( lossFunType == L2_LOSS_FUNCTION) genError += (yexact-ytilde)*(yexact-ytilde);
-
-		}
-
-		genError = genError/NvalidationSet;
-
-		if(ii == 0){
-			printf("Generalization error (for M=I) = %10.7f\n",genError);
-
-		}
-
-
-#if 0
-		printf("Generalization error = %10.7f\n",genError);
-#endif
-		if(genError < optGenError) {
-
-#if 1
-			printf("Better L has been found, updating L...\n");
-			printf("Generalization error = %10.7f\n",genError);
-
-			printf("L = \n");
-			L.print();
-			printf("M = \n");
-			M.print();
-			printf("sigma = %10.7f\n", sigma);
-
-#endif
-			bestL = L;
-			bestsigma = sigma;
-			optGenError = genError;
-
-
-		}
-
-
-
-
-
-
-
-
-	}
-
-
-
-	L = bestL;
-	sigma = bestsigma;
-	printf("L = \n");
-	L.print();
-	printf("optimization finished...\n");
-	return 0;
-
-}
-
-int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,
-		int max_cv_iter, int lossFunType, int batchsize, int nepochs) {
-
-#if 0
-	printf("Training the Mahalanobis distance...\n");
-	printf("Mini batch size = %d\n",batchsize);
-	printf("Number of epochs = %d\n",nepochs);
-	printf("number of cross-validation iterations = %d\n",max_cv_iter);
-#endif
-
-
+//int trainMahalanobisDistanceBruteForce(mat &L, mat &data, double &sigma, double yTrainingMax, int lossFunType, int batchsize, int ntrials) {
+//
+//#if 1
+//
+//	printf("trainMahalanobisDistanceBruteForce...\n");
+//#endif
+//
+//	unsigned int d = L.n_cols;
+//
+//	unsigned int Ldim = d*d;
+//
+//#if 1
+//	printf("Ldim = %d\n",Ldim);
+//
+//	printf("Data (normalized) with ymax = %10.7f =\n",yTrainingMax);
+//	data.print();
+//
+//#endif
+//
+//	/* lower diagonal matrix Lbest to keep the best L*/
+//	mat bestL(d,d);
+//	bestL.fill(0.0);
+//
+//	double bestsigma = 0.0;
+//
+//
+//	/* divide the data set into training and validation sets */
+//
+//	unsigned int N = data.n_rows;
+//
+//
+//	/* size of the validation set, default to one fifth */
+//	unsigned int NvalidationSet = N/5;
+//	unsigned int Ntraining = N - NvalidationSet;
+//#if 1
+//	printf("N = %d, Ntraining = %d, Nvalidation =%d\n", N,Ntraining, NvalidationSet);
+//#endif
+//	mat dataTraining      = data.submat( 0, 0, Ntraining-1, d );
+//	mat dataValidation    = data.submat( Ntraining, 0, N-1, d );
+//
+//
+//	mat XValidation = dataValidation.submat(0,0,NvalidationSet-1,d-1);
+//	vec yValidation = dataValidation.col(d);
+//
+//	mat XTraining = dataTraining.submat(0,0,Ntraining-1,d-1);
+//	vec yTraining = dataTraining.col(d);
+//
+//
+//
+//
+//	double optGenError = LARGE;
+//	printf("ntrials = %d\n", ntrials);
+//	/* optimization loop */
+//
+//
+//
+//	for(int ii=0; ii<100000; ii++){
+//
+//
+//
+//
+//#if 0
+//		if(ii > ntrials)
+//
+//			printf("iterTrial = %d, ntrials = %d\n", ii,ntrials);
+//#endif
+//
+//		for (int i = 0; i < d; i++)
+//			for (int j = 0; j <= i; j++) {
+//
+//				L(i,j) = RandomFloat(0.0,1.0);
+//
+//			}
+//
+//		sigma = RandomFloat(0.0,1.0);
+//
+//
+//		if(ii == 0){
+//
+//			sigma = 0.1;
+//			L = eye<fmat>(d,d);
+//
+//		}
+//
+//
+//
+//		fmat M = L*trans(L);
+//
+//
+//
+//
+//#if 0
+//		printf("L = \n");
+//		L.print();
+//		printf("M = \n");
+//		M.print();
+//		printf("sigma = %10.7f\n", sigma);
+//#endif
+//
+//
+//		float genError = 0.0;
+//
+//		for(int i=0;i <NvalidationSet; i++){
+//
+//			frowvec xp = XValidation.row(i);
+//			float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax;
+//			float yexact = yValidation(i)*yTrainingMax;
+//
+//#if 0
+//			printf("i= %d, x:\n",i);
+//			xp.print();
+//			printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
+//#endif
+//
+//
+//
+//			if( lossFunType == L1_LOSS_FUNCTION) genError += fabs(yexact-ytilde);
+//			if( lossFunType == L2_LOSS_FUNCTION) genError += (yexact-ytilde)*(yexact-ytilde);
+//
+//		}
+//
+//		genError = genError/NvalidationSet;
+//
+//		if(ii == 0){
+//			printf("Generalization error (for M=I) = %10.7f\n",genError);
+//
+//		}
+//
+//
+//#if 0
+//		printf("Generalization error = %10.7f\n",genError);
+//#endif
+//		if(genError < optGenError) {
+//
+//#if 1
+//			printf("Better L has been found, updating L...\n");
+//			printf("Generalization error = %10.7f\n",genError);
+//
+//			printf("L = \n");
+//			L.print();
+//			printf("M = \n");
+//			M.print();
+//			printf("sigma = %10.7f\n", sigma);
+//
+//#endif
+//			bestL = L;
+//			bestsigma = sigma;
+//			optGenError = genError;
+//
+//
+//		}
+//
+//
+//
+//
+//
+//
+//
+//
+//	}
+//
+//
+//
+//	L = bestL;
+//	sigma = bestsigma;
+//	printf("L = \n");
+//	L.print();
+//	printf("optimization finished...\n");
+//	return 0;
+//
+//}
+
+int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, double &w12,
+		unsigned int max_cv_iter, unsigned int lossFunType, unsigned int batchsize, unsigned int nepochs) {
+
+
+	double learning_rateM = 0.00001;
+	double learning_rateSigma = learning_rateM * 0.01;
 
 	bool trainWithSvdFlag = false;
 
@@ -3861,17 +3828,18 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 	}
 
 
-	const float alpha = 0.9;
+	//	const double alpha = 0.9;
 
 	unsigned int d = L.n_cols;
 
+	/* Ldim is the number of entries in the L matrix */
 	unsigned int Ldim = d*d;
 
 	/* lower diagonal matrix Lbest to keep the best L*/
-	fmat bestL(d,d);
+	mat bestL(d,d);
 	bestL.fill(0.0);
 
-	float bestsigma = 0.0;
+	double bestsigma = 0.0;
 
 
 	/* divide the data set into training and validation sets */
@@ -3882,6 +3850,16 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 	/* size of the validation set, default to one fifth */
 	unsigned int NvalidationSet = N/5;
 	unsigned int Ntraining = N - NvalidationSet;
+#if 1
+	printf("Training the Mahalanobis distance...\n");
+	printf("Mini batch size = %d\n",batchsize);
+	printf("Number of epochs = %d\n",nepochs);
+	printf("number of cross-validation iterations = %d\n",max_cv_iter);
+	printf("number of training samples (core) = %d\n",Ntraining);
+	printf("number of validation samples      = %d\n",NvalidationSet);
+
+#endif
+
 
 
 	/* do not allow that batch size will be greater than number of training samples */
@@ -3890,30 +3868,19 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		batchsize = Ntraining;
 	}
 
-
-#if 0
-
-	printf("number of training samples (core) = %d\n",Ntraining);
-	printf("number of validation samples      = %d\n",NvalidationSet);
-
-#endif
-
-
-
-
 	/* divide the data into two sets */
 
-	fmat dataTraining      = data.submat( 0, 0, Ntraining-1, d );
-	fmat dataValidation    = data.submat( Ntraining, 0, N-1, d );
+	mat dataTraining      = data.submat( 0, 0, Ntraining-1, d );
+	mat dataValidation    = data.submat( Ntraining, 0, N-1, d );
 
 
-	fmat XValidation = dataValidation.submat(0,0,NvalidationSet-1,d-1);
-	fvec yValidation = dataValidation.col(d);
+	mat XValidation = dataValidation.submat(0,0,NvalidationSet-1,d-1);
+	vec yValidation = dataValidation.col(d);
 
-	fmat XTraining = dataTraining.submat(0,0,Ntraining-1,d-1);
-	fvec yTraining = dataTraining.col(d);
+	mat XTraining = dataTraining.submat(0,0,Ntraining-1,d-1);
+	vec yTraining = dataTraining.col(d);
 
-	fmat dataMiniBatch(batchsize, d+1);
+	mat dataMiniBatch(batchsize, d+1);
 
 
 #if 0
@@ -3940,21 +3907,17 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 	yValidation.print();
 #endif
 
-	fvec wSvdtrial(max_cv_iter);
-	fvec w12trial(max_cv_iter);
+	vec wSvdtrial(max_cv_iter);
+	vec w12trial(max_cv_iter);
 
 
 	if(max_cv_iter !=1){
 
-
-
-		for(int i=0; i<max_cv_iter; i++){
+		for(unsigned int i=0; i<max_cv_iter; i++){
 
 			wSvdtrial(i) = pow(10.0,RandomFloat(-2,0.0));
 			w12trial(i) = pow(10.0,RandomFloat(-5,0.0));
 		}
-
-
 #if 0
 		printf("wSvdtrial = \n");
 		trans(wSvdtrial).print();
@@ -3962,51 +3925,27 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		trans(w12trial).print();
 #endif
 
-
 	}
 
 	/* auxilliary vectors */
 
-	float *inputVec = new float[Ldim+1]();
-	float *inputVecVel = new float[Ldim+1]();
-	float *inputVecLocalBest = new float[Ldim+1]();
-	float *inputVecb = new float[Ldim+1]();
-	float *inputVecRegb = new float[Ldim]();
-	float *gradientVec = new float[Ldim+1]();
+	double *inputVec = new double[Ldim+1]();
+	//	double *inputVecVel = new double[Ldim+1]();
+	double *inputVecLocalBest = new double[Ldim+1]();
+	double *inputVecb = new double[Ldim+1]();
+	double *inputVecRegb = new double[Ldim]();
+	double *gradientVec = new double[Ldim+1]();
 
 
-	float *dataVecTraining = new float[batchsize*(d+1)]();
-
-
-
-#if 0
-	printf("L = \n");
-	for (int i = 0; i < d; i++){
-		for (int j = 0; j < d; j++) {
-
-			printf("%10.7f ",inputVec[i*numVar+j]);
-		}
-		printf("\n");
-	}
-
-	printf("sigma = %10.7f\n",inputVec[Ldim]);
-#endif
+	double *dataVecTraining = new double[batchsize*(d+1)]();
 
 
 
 
-
-	float optGenError = 10E14;
+	double optGenError = 10E14;
 
 	/* cross validation loop to tune the weights for the regularization parameters */
-	for(int iter_cv=0; iter_cv< max_cv_iter; iter_cv++){
-
-
-
-
-		float learning_rateM = 0.00001;
-		float learning_rateSigma = learning_rateM * 0.01;
-
+	for(unsigned int iter_cv=0; iter_cv< max_cv_iter; iter_cv++){
 
 
 		if(max_cv_iter !=1){
@@ -4027,15 +3966,15 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 		/* initialize the L matrix and sigma => everything is saved in the vector "inputVec" */
 
-		for (int i = 0; i < d; i++)
-			for (int j = 0; j < d; j++) {
+		for (unsigned int i = 0; i < d; i++)
+			for (unsigned int j = 0; j < d; j++) {
 
 				inputVec[i*d+j] = 0.0;
 			}
 
-		for (int i = 0; i < d; i++) {
+		for (unsigned int i = 0; i < d; i++) {
 
-			for (int j = 0; j <= i; j++) {
+			for (unsigned int j = 0; j <= i; j++) {
 
 				if(i ==j) { /* main diagonal */
 
@@ -4049,25 +3988,35 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		}
 
 		/* assign sigma to a small value between 0 and 0.1 */
-		inputVec[Ldim] = 0.01+RandomFloat(-0.001,0.001);
+		inputVec[Ldim] = 0.05+RandomFloat(-0.001,0.001);
+#if 1
+		printf("Initial values of L:\n");
 
-		float lossVal,lossValb, regTerm;
-		float objFunVal;
+		for (unsigned int i = 0; i < d; i++){
+			for (unsigned int j = 0; j < d; j++) {
+
+				printf("%10.7f ",inputVec[i*d+j]);
+			}
+			printf("\n");
+		}
+
+		printf("Initial sigma = %10.7f\n",inputVec[Ldim]);
+
+#endif
+		double lossVal, regTerm;
+		double objFunVal;
 		lossVal = 0.0;
-		lossValb = 1.0;
 
-
-
-		float objectiveFunLocalBest = 10E14;
+		double objectiveFunLocalBest = 10E14;
 
 
 
 		/* optimization loop */
 
-		for(int opt_iter=0 ; opt_iter < nepochs; opt_iter++){
+		for(unsigned int opt_iter=0 ; opt_iter < nepochs; opt_iter++){
 
 
-			shuffle(dataTraining);
+			dataTraining = shuffle(dataTraining);
 
 			/*get the mini batch */
 			dataMiniBatch = dataTraining.submat(0,0,batchsize-1,d);
@@ -4083,9 +4032,9 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 #if 0
 			printf("copying training data...\n");
 #endif
-			for (int i = 0; i < batchsize; i++) {
+			for (unsigned int i = 0; i < batchsize; i++) {
 
-				for (int j = 0; j < d+1; j++) {
+				for (unsigned int j = 0; j < d+1; j++) {
 
 					dataVecTraining[i*(d+1)+j ] = dataMiniBatch (i, j);
 				}
@@ -4109,7 +4058,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 
 			/* init sensitivities to zero */
-			for(int i=0;i<Ldim+1;i++) {
+			for(unsigned int i=0;i<Ldim+1;i++) {
 
 				inputVecb[i] = 0.0;
 			}
@@ -4118,14 +4067,14 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 #if 0
 			printf("Loss (CPU Version)= %10.7f\n", lossVal);
 #endif
-			for(int i=0;i<Ldim+1;i++) {
+			for(unsigned int i=0;i<Ldim+1;i++) {
 
 				gradientVec[i]=inputVecb[i];
 			}
 #if 0
 			printf("calculating the regularization term...\n");
 #endif
-			for(int i=0;i<Ldim;i++) {
+			for(unsigned int i=0;i<Ldim;i++) {
 
 				inputVecRegb[i] = 0.0;
 			}
@@ -4159,7 +4108,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 			/* add the regularization sensitivities to the gradient vector */
 
-			for(int i=0;i<Ldim;i++) {
+			for(unsigned int i=0;i<Ldim;i++) {
 
 				gradientVec[i]+=inputVecRegb[i];
 			}
@@ -4168,7 +4117,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 			objFunVal = lossVal + regTerm;
 
 			/* check if gradient has some NaNs*/
-			for(int i=0;i<Ldim;i++) {
+			for(unsigned int i=0;i<Ldim;i++) {
 
 				if( gradientVec[i] != gradientVec[i]){
 
@@ -4182,8 +4131,8 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 			/* update L */
 
-			for (int i = 0; i < d; i++){
-				for (int j = 0; j <= i; j++) {
+			for (unsigned int i = 0; i < d; i++){
+				for (unsigned int j = 0; j <= i; j++) {
 
 					//					inputVec[i*d+j]= inputVec[i*d+j] + inputVecVel[i*d+j];
 					inputVec[i*d+j]= inputVec[i*d+j] -learning_rateM * gradientVec[i*d+j];
@@ -4194,8 +4143,8 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 			/* do not allow that entries of L will be negative! */
 
-			for (int i = 0; i < d; i++){
-				for (int j = 0; j <= i; j++) {
+			for (unsigned int i = 0; i < d; i++){
+				for (unsigned int j = 0; j <= i; j++) {
 
 					if ( inputVec[i*d+j] < 0) {
 
@@ -4224,7 +4173,7 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 				objectiveFunLocalBest = objFunVal;
 
-				for(int i=0;i<Ldim+1;i++) {
+				for(unsigned int i=0;i<Ldim+1;i++) {
 
 					inputVecLocalBest[i]=inputVec[i];
 
@@ -4266,13 +4215,13 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 
 
-		for (int i = 0; i < d; i++)
-			for (int j = 0; j < d; j++) {
+		for (unsigned int i = 0; i < d; i++)
+			for (unsigned int j = 0; j < d; j++) {
 
 				L(i,j)= inputVecLocalBest[i*d+j];
 			}
 
-#if 0
+#if 1
 		printf("local optimization result:\n");
 		printf("L = \n");
 		L.print();
@@ -4282,8 +4231,8 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		sigma = inputVecLocalBest[Ldim];
 
 
-		fmat M = L*trans(L);
-#if 0
+		mat M = L*trans(L);
+#if 1
 		printf("M = \n");
 		M.print();
 #endif
@@ -4292,13 +4241,13 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 		dataTraining      = data.submat( 0, 0, Ntraining-1, d );
 
 
-		float genError = 0.0;
+		double genError = 0.0;
 
-		for(int i=0;i <NvalidationSet; i++){
+		for(unsigned int i=0;i <NvalidationSet; i++){
 
-			frowvec xp = XValidation.row(i);
-			float ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma);
-			float yexact = yValidation(i);
+			rowvec xp = XValidation.row(i);
+			double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma);
+			double yexact = yValidation(i);
 
 #if 0
 			printf("x:\n");
@@ -4308,8 +4257,14 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 
 
-			if( lossFunType == L1_LOSS_FUNCTION) genError += fabs(yexact-ytilde);
-			if( lossFunType == L2_LOSS_FUNCTION) genError += (yexact-ytilde)*(yexact-ytilde);
+			if( lossFunType == L1_LOSS_FUNCTION) {
+
+				genError += fabs(yexact-ytilde);
+			}
+			if( lossFunType == L2_LOSS_FUNCTION) {
+
+				genError += (yexact-ytilde)*(yexact-ytilde);
+			}
 
 		}
 
@@ -4332,18 +4287,25 @@ int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, flo
 
 
 
+
+
+
 	} /* end of cv loop */
 
 	L = bestL;
 	sigma = bestsigma;
 
 
+
 	delete[] inputVec;
+	delete[] inputVecLocalBest;
 	delete[] inputVecb;
 	delete[] inputVecRegb;
 	delete[] dataVecTraining;
 	delete[] gradientVec;
+
 	return 0;
+
 
 }
 

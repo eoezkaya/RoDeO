@@ -3189,1075 +3189,1075 @@ void generate_1D_test_function_data_GEK(double (*test_function)(double *),
 }
 
 
-void perform_trust_region_GEK_test(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		double *bounds,
-		std::string function_name ,
-		int  number_of_samples_with_only_f_eval,
-		int number_of_samples_with_g_eval,
-		int sampling_method,
-		int method_for_solving_lin_eq,
-		int dim,
-		int linear_regression,
-		std::string python_dir){
-
-	if(dim <= 0){
-		printf("Error: problem dimension must be greater than zero\n");
-		exit(-1);
-	}
-
-
-	/* Kriging specific parameters */
-
-	mat kriging_weights;
-	mat regression_weights;
-	mat R_inv_ys_min_beta;
-
-	vec beta0(dim+1);
-
-
-	int number_of_max_function_evals_for_training = 10000;
-
-	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"+std::to_string(number_of_samples_with_g_eval)+ ".csv";
-
-	printf("input file name : %s\n",input_file_name.c_str());
-
-
-
-	if(dim ==2){
-		/* generate the contour_plot */
-		generate_contour_plot_2D_function_with_gradient(test_function_adj, bounds, function_name, python_dir);
-
-
-	}
-
-
-	if(dim == 2){
-		printf("Generating inputs using %d points (%d gradient computations)...\n",number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval,number_of_samples_with_g_eval);
-
-
-		/* generate the input data for test	*/
-		generate_2D_test_function_data_GEK(test_function,
-				test_function_adj,
-				input_file_name,
-				bounds,
-				number_of_samples_with_only_f_eval,
-				number_of_samples_with_g_eval,
-				sampling_method,
-				python_dir);
-
-	}
-	else{
-
-		/* generate the input data for test	*/
-		generate_highdim_test_function_data_GEK(test_function,
-				test_function_adj,
-				input_file_name,
-				bounds,
-				dim,
-				number_of_samples_with_only_f_eval,
-				number_of_samples_with_g_eval,
-				sampling_method );
-
-	}
-
-
-
-
-	double radius;
-
-#if 0
-	printf("Training the hyperparameters of the model...\n");
-#endif
-	/* train the response surfaces */
-	train_TRGEK_response_surface(input_file_name,
-			"None",
-			linear_regression,
-			regression_weights,
-			kriging_weights,
-			R_inv_ys_min_beta,
-			radius,
-			beta0,
-			number_of_max_function_evals_for_training,
-			dim,1);
-
-
-}
-
-void perform_kernel_regression_test_highdim(double (*test_function)(double *),
-		double *bounds,
-		std::string function_name,
-		int number_of_samples,
-		int sampling_method,
-		int dim){
-
-	float sigma = 0.01;
-	float wSvd = 1.0;
-	float w12 = 1.0;
-	int max_cv_iter = 50;
-	int number_of_trials = 1;
-
-	vec genErr1(number_of_trials); genErr1.fill(0.0);
-	vec genErr2(number_of_trials); genErr2.fill(0.0);
-
-	std::string datafilename;
-
-	if (sampling_method == EXISTING_FILE){
-
-		datafilename = function_name + ".csv";
-
-
-	}
-	else{
-
-		datafilename = function_name+"_"+ std::to_string(number_of_samples)+".csv";
-
-
-	}
-
-#if 1
-	printf("filename = %s\n",datafilename.c_str());
-
-#endif
-	/* division between number of training and validation samples */
-	float partition[2] = {0.1,0.9};
-
-	srand (time(NULL));
-
-
-	for(int iter=0; iter<number_of_trials; iter++){
-
-#if 0
-		printf("iter = %d\n",iter);
-#endif
-
-		if ( sampling_method == EXISTING_FILE ){
-
-			// do nothing
-
-		}
-		else{
-
-			generate_highdim_test_function_data_cuda(test_function,
-					datafilename,
-					bounds,
-					number_of_samples,
-					dim);
-
-		} /* end of else */
-
-
-
-		fmat data;
-		bool load_ok = data.load(datafilename);
-
-		if(load_ok == false)
-		{
-			printf("problem with loading the file %s\n",datafilename.c_str());
-			exit(-1);
-		}
-
-
-#if 1
-		printf("Kernel regression with the input data: %s\n",datafilename.c_str());
-		printf("Data has %d samples with %d variables\n",number_of_samples,dim);
-		printf("Original data:\n");
-		data.print();
-#endif
-
-
-		int number_of_training_samples = number_of_samples*partition[0];
-		int number_of_test_samples = number_of_samples - number_of_training_samples;
-
-#if 0
-		printf("number of training samples = %d\n",number_of_training_samples);
-		printf("number of test samples = %d\n",number_of_test_samples);
-#endif
-
-		fmat dataTraining;
-		fmat dataTest;
-
-		dataTraining = data.submat( 0, 0, number_of_training_samples-1, dim );
-
-		dataTest     = data.submat( number_of_training_samples, 0, number_of_samples-1, dim );
-
-
-		data.reset();
-
-#if 1
-		printf("Training data:\n");
-		dataTraining.print();
-
-		printf("Test data:\n");
-		dataTest.print();
-#endif
-
-
-		fvec x_maxTraining(dim);
-		x_maxTraining.fill(0.0);
-
-		fvec x_minTraining(dim);
-		x_minTraining.fill(0.0);
-
-		for (int i = 0; i < dim; i++) {
-
-			x_maxTraining(i) = dataTraining.col(i).max();
-			x_minTraining(i) = dataTraining.col(i).min();
-
-		}
-
-#if 0
-		printf("maximum = \n");
-		x_maxTraining.print();
-
-		printf("minimum = \n");
-		x_minTraining.print();
-#endif
-
-		/* normalize functional values */
-
-		float yTrainingMax = 1.0;
-
-		yTrainingMax = dataTraining.col(dim).max();
-
-		for (int i = 0; i < number_of_training_samples; i++) {
-
-			dataTraining(i, dim) = dataTraining(i, dim)/yTrainingMax ;
-
-		}
-
-
-		/* normalize training data */
-		for (int i = 0; i < number_of_training_samples; i++) {
-
-			for (int j = 0; j < dim; j++) {
-
-				dataTraining(i, j) = (dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
-			}
-
-		}
-
-
-
-#if 1
-		printf("Training data (normalized) = \n");
-		dataTraining.print();
-#endif
-
-		fvec x_maxTest(dim); x_maxTest.fill(0.0);
-		fvec x_minTest(dim); x_minTest.fill(0.0);
-
-		for (int i = 0; i < dim; i++) {
-
-			x_maxTest(i) = dataTest.col(i).max();
-			x_minTest(i) = dataTest.col(i).min();
-
-		}
-
-#if 0
-		printf("maximum = \n");
-		x_maxTest.print();
-
-		printf("minimum = \n");
-		x_minTest.print();
-#endif
-
-
-		/* normalize test data */
-		for (int i = 0; i < number_of_test_samples; i++) {
-
-			for (int j = 0; j < dim; j++) {
-
-				dataTest(i, j) = (dataTest(i, j) - x_minTest(j)) / (x_maxTest(j) - x_minTest(j));
-			}
-
-		}
-
-#if 1
-		printf("Test data (normalized) = \n");
-		dataTest.print();
-#endif
-
-		fmat L(dim,dim);
-		L.fill(0.0);
-
-
-	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter,L1_LOSS_FUNCTION, number_of_training_samples, 50000);
-
-#if 1
-
-		printf("L = \n");
-		L.print();
-		printf("sigma = %10.7f\n",sigma);
-#endif
-
-
-		/* from optimal L we obtain now M */
-
-		fmat M = L*trans(L);
-
-#if 0
-		/* give singular value info */
-
-		fmat U;
-		fvec s;
-		fmat V;
-
-		svd(U,s,V,M);
-
-
-
-		printf("M = \n");
-		M.print();
-		printf("sigma = %10.7f\n",sigma);
-		printf("singular values of M = \n");
-		s.print();
-#endif
-
-
-
-		/* compute generalization error */
-
-		fmat XTest = dataTest.submat(0,0,number_of_test_samples-1,dim-1);
-		fvec yTest = dataTest.col(dim);
-
-
-#if 0
-		printf("number of test samples =%d\n",number_of_test_samples);
-		printf("XTest = \n");
-		XTest.print();
-		printf("yTest = \n");
-		trans(yTest).print();
-#endif
-		fmat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,dim-1);
-		fvec yTraining = dataTraining.col(dim);
-
-#if 0
-		printf("dataTraining =\n");
-		dataTraining.print();
-		printf("yTraining =\n");
-		yTraining.print();
-#endif
-
-
-		float genError = 0.0;
-
-
-		for(int i=0;i <number_of_test_samples; i++){
-
-			frowvec xp = XTest.row(i);
-#if 0
-			printf("xp = \n");
-			xp.print();
-			printf("ytest (normalized) = %10.7f\n",yTest(i)/yTrainingMax);
-
-#endif
-
-			float ytilde = 0.0;
-
-			ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
-
-
-			float yexact = yTest(i);
-
-
-			genError += (yexact-ytilde)*(yexact-ytilde);
-#if 0
-
-			printf("yexact = %10.7f, ytilde = %10.7f\n", yexact,ytilde);
-#endif
-
-
-
-		}
-
-
-		genError = genError/number_of_test_samples;
-		genErr1(iter) = genError;
-
-		printf("genError (out of sample)= %10.7f\n",genError );
-
-
-	}
-
-
-}
-
-
-
-void perform_kernel_regression_test_highdim(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		double *bounds,
-		std::string function_name,
-		int number_of_samples_with_only_f_eval,
-		int number_of_samples_with_g_eval,
-		int sampling_method,
-		int dim){
-
-
-	float sigma = 0.01;
-	float wSvd = 1.0;
-	float w12 = 1.0;
-	int max_cv_iter = 50;
-	int number_of_trials = 1;
-
-
-	std::string datafilename;
-
-	if (sampling_method == EXISTING_FILE){
-
-		datafilename = function_name + ".csv";
-
-
-	}
-	else{
-
-		datafilename = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
-				+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
-
-
-	}
-
-
-
-
-	/* division between number of training and validation samples */
-	float partition[2] = {0.1,0.9};
-
-	srand (time(NULL));
-
-
-
-
-	vec genErr1(number_of_trials); genErr1.fill(0.0);
-	vec genErr2(number_of_trials); genErr2.fill(0.0);
-	vec genErr3(number_of_trials); genErr3.fill(0.0);
-	vec genErr4(number_of_trials); genErr4.fill(0.0);
-
-	for(int iter=0; iter<number_of_trials; iter++){
-
-#if 0
-		printf("iter = %d\n",iter);
-#endif
-
-		if ( sampling_method == EXISTING_FILE ){
-
-			// do nothing
-
-		}
-		else{
-
-
-			/* generate data only with functional values */
-
-			if(number_of_samples_with_g_eval == 0) {
-
-				int number_of_samples_to_generate = number_of_samples_with_only_f_eval;
-#if 1
-				printf("Generating data with %d samples...\n", number_of_samples_to_generate);
-#endif
-				generate_highdim_test_function_data_cuda(test_function,
-						datafilename,
-						bounds,
-						number_of_samples_to_generate,
-						dim);
-
-			}
-
-			else{
-
-				/* generate data with gradients */
-
-				generate_highdim_test_function_data_GEK(test_function,
-						test_function_adj,
-						datafilename,
-						bounds,
-						dim,
-						number_of_samples_with_only_f_eval,
-						number_of_samples_with_g_eval,
-						sampling_method);
-
-
-
-			}
-
-
-
-
-
-		} /* end of else */
-
-
-
-		fmat data;
-		bool load_ok = data.load(datafilename);
-
-		if(load_ok == false)
-		{
-			printf("problem with loading the file %s\n",datafilename.c_str());
-			exit(-1);
-		}
-
-
-		int number_of_data_points = data.n_rows;
-
-
-		if(number_of_samples_with_g_eval ==0  && dim != data.n_cols-1){
-
-			printf("Number of columns in the input file does not match with dim = %d\n",dim);
-			exit(-1);
-
-		}
-
-		if(number_of_samples_with_g_eval >0  && 2*dim != data.n_cols-1){
-
-			printf("Number of columns in the input file does not match with dim = %d\n",dim);
-			exit(-1);
-
-		}
-
-#if 0
-		printf("Kernel regression with the input data: %s\n",datafilename.c_str());
-		printf("Data has %d samples with %d variables\n",number_of_data_points,dim);
-#endif
-#if 0
-		printf("Original data:\n");
-		data.print();
-#endif
-
-
-
-
-		data = shuffle(data);
-#if 0
-		printf("Original data (shuffled):\n");
-		data.print();
-#endif		
-
-		int number_of_training_samples = number_of_data_points*partition[0];
-		int number_of_test_samples = number_of_data_points - number_of_training_samples;
-
-#if 0
-		printf("number of training samples = %d\n",number_of_training_samples);
-		printf("number of test samples = %d\n",number_of_test_samples);
-#endif
-
-		fmat dataTraining;
-		fmat dataTest;
-
-		if(number_of_samples_with_g_eval ==0 ) {
-
-			dataTraining = data.submat( 0, 0, number_of_training_samples-1, dim );
-
-
-		}
-
-		if(number_of_samples_with_g_eval >0 ) {
-
-			dataTraining = data.submat( 0, 0, number_of_training_samples-1, 2*dim );
-
-
-		}
-
-
-		dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, dim );
-
-
-
-
-		fmat XTrainingNotNormalized = dataTraining.submat(0,0,number_of_training_samples-1, dim-1);
-
-
-
-		fmat gradTrainingNotNormalized;
-		if(number_of_samples_with_g_eval >0 ) {
-
-			gradTrainingNotNormalized = dataTraining.submat(0,dim+1,number_of_training_samples-1,2*dim);
-
-
-		}
-		fvec yTrainingNotNormalized = dataTraining.col(dim);
-
-		fmat XTestNotNormalized = dataTest.submat(0,0,number_of_test_samples-1,dim-1);
-
-
-
-
-
-		data.reset();
-
-#if 0
-		printf("Training data:\n");
-		dataTraining.print();
-
-		printf("Test data:\n");
-		dataTest.print();
-#endif	
-
-
-
-
-
-		fvec x_maxTraining(dim);
-		x_maxTraining.fill(0.0);
-
-		fvec x_minTraining(dim);
-		x_minTraining.fill(0.0);
-
-		for (int i = 0; i < dim; i++) {
-
-			x_maxTraining(i) = dataTraining.col(i).max();
-			x_minTraining(i) = dataTraining.col(i).min();
-
-		}
-
-#if 0
-		printf("maximum = \n");
-		x_maxTraining.print();
-
-		printf("minimum = \n");
-		x_minTraining.print();
-#endif
-
-		/* normalize functional values */
-
-		float yTrainingMax = 1.0;
-
-		yTrainingMax = dataTraining.col(dim).max();
-
-		for (int i = 0; i < number_of_training_samples; i++) {
-
-			dataTraining(i, dim) = dataTraining(i, dim)/yTrainingMax ;
-
-		}
-
-
-		/* normalize training data */
-		for (int i = 0; i < number_of_training_samples; i++) {
-
-			for (int j = 0; j < dim; j++) {
-
-				dataTraining(i, j) = (1.0/dim)*(dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
-			}
-
-
-			/* this part is for derivatives */
-			if(number_of_samples_with_g_eval >0) {
-
-
-				for (int j = dim+1; j < 2*dim+1; j++) {
-
-					dataTraining(i, j) = dataTraining(i, j) * (dim/yTrainingMax) * (x_maxTraining(j-dim-1) - x_minTraining(j-dim-1));
-				}
-
-
-
-			}
-
-		}
-
-
-
-#if 0
-		printf("Training data (normalized) = \n");
-		dataTraining.print();
-#endif	
-
-
-
-
-		fvec x_maxTest(dim);
-		x_maxTest.fill(0.0);
-
-		fvec x_minTest(dim);
-		x_minTest.fill(0.0);
-
-		for (int i = 0; i < dim; i++) {
-
-			x_maxTest(i) = dataTest.col(i).max();
-			x_minTest(i) = dataTest.col(i).min();
-
-		}
-
-#if 0
-		printf("maximum = \n");
-		x_maxTest.print();
-
-		printf("minimum = \n");
-		x_minTest.print();
-#endif
-
-
-		/* normalize test data */
-		for (int i = 0; i < number_of_test_samples; i++) {
-
-			for (int j = 0; j < dim; j++) {
-
-				dataTest(i, j) = (1.0/dim)*(dataTest(i, j) - x_minTest(j)) / (x_maxTest(j) - x_minTest(j));
-			}
-
-
-
-		}
-
-#if 0
-		printf("Test data (normalized) = \n");
-		dataTest.print();
-#endif	
-
-
-
-		fmat L(dim,dim);
-		L.fill(0.0);
-
-
-		//		trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter,L2_LOSS_FUNCTION, number_of_training_samples, 50000);
-
-
-
-#if 1
-
-		printf("L = \n");
-		L.print();
-		printf("sigma = %10.7f\n",sigma);
-#endif
-
-
-		/* from optimal L we obtain now M */
-
-		fmat M = L*trans(L);
-
-		M = eye<fmat>(dim,dim);
-
-
-		/* give singular value info */
-
-		fmat U;
-		fvec s;
-		fmat V;
-
-		svd(U,s,V,M);
-
-#if 0
-
-		printf("M = \n");
-		M.print();
-		printf("sigma = %10.7f\n",sigma);
-		printf("singular values of M = \n");
-		s.print();
-#endif	
-
-
-
-		/* compute generalization error */
-
-		fmat XTest = dataTest.submat(0,0,number_of_test_samples-1,dim-1);
-		fvec yTest = dataTest.col(dim);
-
-
-#if 0
-		printf("number of test samples =%d\n",number_of_test_samples);
-		printf("XTest = \n");
-		XTest.print();
-		printf("yTest = \n");
-		trans(yTest).print();
-#endif
-		fmat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,dim-1);
-		fvec yTraining = dataTraining.col(dim);
-
-#if 0
-		printf("dataTraining =\n");
-		dataTraining.print();
-		printf("yTraining =\n");
-		yTraining.print();
-#endif
-
-
-
-		fmat gradTraining;
-		if(number_of_samples_with_g_eval >0 ){
-
-			gradTraining = dataTraining.submat(0,dim+1,number_of_training_samples-1,2*dim);
-
-		}
-
-#if 0
-		printf("gradTraining =\n");
-		gradTraining.print();
-#endif
-
-
-
-
-		float genError = 0.0;
-		float genErrorFirstOrder = 0.0;
-
-		for(int i=0;i <number_of_test_samples; i++){
-
-			frowvec xp = XTest.row(i);
-			frowvec xpNotNormalized = XTestNotNormalized.row(i);
-#if 1
-			printf("xp = \n");
-			xp.print();
-			printf("ytest (normalized) = %10.7f\n",yTest(i)/yTrainingMax);
-
-#endif
-
-			float ytilde = 0.0;
-			float ytildefirst = 0.0;
-
-			if(number_of_samples_with_g_eval ==0 ) {
-
-				ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
-
-			}
-			else{
-
-
-
-				ytilde = kernelRegressorNotNormalized(XTraining,
-						XTrainingNotNormalized,
-						yTrainingNotNormalized,
-						gradTrainingNotNormalized,
-						xpNotNormalized,
-						x_minTraining,
-						x_maxTraining,
-						M,
-						sigma);
-
-				/* this is the first order approximation */
-				ytildefirst = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
-
-
-			}
-
-			float yexact = yTest(i);
-
-
-			genError += (yexact-ytilde)*(yexact-ytilde);
-			genErrorFirstOrder += (yexact-ytildefirst)*(yexact-ytildefirst);
-#if 1
-
-			printf("yexact = %10.7f, ytilde = %10.7f, ytildefirst = %10.7f\n", yexact,ytilde,ytildefirst);
-#endif
-
-
-			exit(1);
-		}
-
-		genError = genError/number_of_test_samples;
-		genErr1(iter) = genError;
-
-		genErrorFirstOrder = genErrorFirstOrder/number_of_test_samples;
-
-		genErr2(iter) = genErrorFirstOrder;
-
-		printf("genError (out of sample)= %10.7f\n",genError );
-		printf("genError (out of sample, without gradients)= %10.7f\n",genErrorFirstOrder );
-
-
-		/* generalization error for M = I */
-
-		M = eye<fmat>(dim,dim);
-		sigma = 0.1;
-
-		genError = 0.0;
-		genErrorFirstOrder = 0.0;
-
-		for(int i=0;i <number_of_test_samples; i++){
-
-
-			float ytilde = 0.0;
-			float ytildefirst = 0.0;
-
-			frowvec xp = XTest.row(i);
-			frowvec xpNotNormalized = XTestNotNormalized.row(i);
-			if(number_of_samples_with_g_eval ==0 ) {
-
-				ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
-
-			}
-			else{
-
-
-
-				ytilde = kernelRegressorNotNormalized(XTraining,
-						XTrainingNotNormalized,
-						yTrainingNotNormalized,
-						gradTrainingNotNormalized,
-						xpNotNormalized,
-						x_minTraining,
-						x_maxTraining,
-						M,
-						sigma);
-
-
-				/* this is the first order approximation */
-				ytildefirst = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
-
-
-
-			}
-			float yexact = yTest(i);
-
-#if 1
-
-			printf("yexact = %10.7f, ytilde = %10.7f, ytildefirst = %10.7f\n", yexact,ytilde,ytildefirst);
-#endif
-
-			genError += (yexact-ytilde)*(yexact-ytilde);
-			genErrorFirstOrder += (yexact-ytildefirst)*(yexact-ytildefirst);
-
-
-		}
-
-		genError = genError/number_of_test_samples;
-		genErrorFirstOrder = genErrorFirstOrder/number_of_test_samples;
-
-		genErr3(iter) = genError;
-
-
-
-		genErr4(iter) = genErrorFirstOrder;
-
-
-		printf("genError (out of sample, M = I) = %10.7f\n",genError );
-		printf("genError (out of sample, M = I, without gradients) = %10.7f\n",genErrorFirstOrder );
-
-
-		float sum1 = sum(genErr1);
-		float sum2 = sum(genErr2);
-		float sum3 = sum(genErr3);
-		float sum4 = sum(genErr4);
-
-		float mean1 = sum1/(iter+1);
-		float mean2 = sum2/(iter+1);
-		float mean3 = sum3/(iter+1);
-		float mean4 = sum4/(iter+1);
-
-
-		printf("mean(genErr1) = %10.7f\n",mean1);
-		printf("mean(genErr2) = %10.7f\n",mean2);
-		printf("mean(genErr3) = %10.7f\n",mean3);
-		printf("mean(genErr4) = %10.7f\n",mean4);
-
-	}
-
-
-
-
-}
-
-
-
-
-void perform_aggregation_model_test_highdim(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		double *bounds,
-		std::string function_name,
-		int number_of_training_samples,
-		int sampling_method,
-		int dim){
-
-#if 1
-	printf("perform_aggregation_model_test_highdim ... \n");
-#endif
-
-	float sigma = 0.01;
-	float wSvd = 0.0;
-	float w12 = 1.0;
-
-	int number_of_trials = 100;
-
-	std::string datafilename = function_name+".csv";
-	std::string validationfilename = function_name+"_"+ std::to_string(number_of_training_samples)+"_validation.csv";
-
-
-
-
-	unsigned int number_of_test_samples = 10000;
-
-	srand (time(NULL));
-
-
-	vec genErr1(number_of_trials); genErr1.fill(0.0);
-	vec genErr2(number_of_trials); genErr2.fill(0.0);
-	vec genErr3(number_of_trials); genErr3.fill(0.0);
-
-
-	for(int iter=0; iter<number_of_trials; iter++){
-
-#if 1
-		printf("outer iteration = %d\n",iter);
-#endif
-
-
-
-#if 1
-		printf("Generating validation data with %d samples...\n", number_of_test_samples);
-#endif
-		generate_highdim_test_function_data_cuda(test_function,
-				validationfilename,
-				bounds,
-				number_of_test_samples,
-				dim);
-
-		/* generate data with gradients */
-#if 1
-		printf("Generating training data with %d samples...\n", number_of_training_samples);
-#endif
-		generate_highdim_test_function_data_GEK(test_function,
-				test_function_adj,
-				datafilename,
-				bounds,
-				dim,
-				0,
-				number_of_training_samples,
-				sampling_method);
-
-		/* set up the aggregation model */
-
-		AggregationModel settingsAggModel(function_name,dim);
-
-		settingsAggModel.validationset_input_filename = validationfilename;
-		settingsAggModel.max_number_of_kriging_iterations = 10000;
-		settingsAggModel.number_of_cv_iterations = 20;
-
-
-		/* set visualization settings */
-		settingsAggModel.visualizeKrigingValidation = "yes";
-		settingsAggModel.visualizeKernelRegressionValidation = "yes";
-		settingsAggModel.visualizeAggModelValidation = "yes";
-
-		settingsAggModel.train();
-
-		exit(1);
-
-
-		genErr1(iter)= settingsAggModel.genErrorKriging;
-		genErr2(iter)= settingsAggModel.genErrorKernelRegression;
-		genErr3(iter)= settingsAggModel.genErrorAggModel;
-
-
-
-		float sum1 = sum(genErr1);
-		float sum2 = sum(genErr2);
-		float sum3 = sum(genErr3);
-
-		float mean1 = sum1/(iter+1);
-		float mean2 = sum2/(iter+1);
-		float mean3 = sum3/(iter+1);
-
-		printf("MSE,Kriging       = %10.7f, MSE,KerReg       = %10.7f, MSE,AggMod       = %10.7f\n",genErr1(iter),genErr2(iter),genErr3(iter));
-		printf("mean(MSE,Kriging) = %10.7f, mean(MSE,KerReg) = %10.7f, mean(MSE,AggMod) = %10.7f\n",mean1,mean2,mean3);
-
-
-	}
-
-
-
-
-}
+//void perform_trust_region_GEK_test(double (*test_function)(double *),
+//		double (*test_function_adj)(double *, double *),
+//		double *bounds,
+//		std::string function_name ,
+//		int  number_of_samples_with_only_f_eval,
+//		int number_of_samples_with_g_eval,
+//		int sampling_method,
+//		int method_for_solving_lin_eq,
+//		int dim,
+//		int linear_regression,
+//		std::string python_dir){
+//
+//	if(dim <= 0){
+//		printf("Error: problem dimension must be greater than zero\n");
+//		exit(-1);
+//	}
+//
+//
+//	/* Kriging specific parameters */
+//
+//	mat kriging_weights;
+//	mat regression_weights;
+//	mat R_inv_ys_min_beta;
+//
+//	vec beta0(dim+1);
+//
+//
+//	int number_of_max_function_evals_for_training = 10000;
+//
+//	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"+std::to_string(number_of_samples_with_g_eval)+ ".csv";
+//
+//	printf("input file name : %s\n",input_file_name.c_str());
+//
+//
+//
+//	if(dim ==2){
+//		/* generate the contour_plot */
+//		generate_contour_plot_2D_function_with_gradient(test_function_adj, bounds, function_name, python_dir);
+//
+//
+//	}
+//
+//
+//	if(dim == 2){
+//		printf("Generating inputs using %d points (%d gradient computations)...\n",number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval,number_of_samples_with_g_eval);
+//
+//
+//		/* generate the input data for test	*/
+//		generate_2D_test_function_data_GEK(test_function,
+//				test_function_adj,
+//				input_file_name,
+//				bounds,
+//				number_of_samples_with_only_f_eval,
+//				number_of_samples_with_g_eval,
+//				sampling_method,
+//				python_dir);
+//
+//	}
+//	else{
+//
+//		/* generate the input data for test	*/
+//		generate_highdim_test_function_data_GEK(test_function,
+//				test_function_adj,
+//				input_file_name,
+//				bounds,
+//				dim,
+//				number_of_samples_with_only_f_eval,
+//				number_of_samples_with_g_eval,
+//				sampling_method );
+//
+//	}
+//
+//
+//
+//
+//	double radius;
+//
+//#if 0
+//	printf("Training the hyperparameters of the model...\n");
+//#endif
+//	/* train the response surfaces */
+//	train_TRGEK_response_surface(input_file_name,
+//			"None",
+//			linear_regression,
+//			regression_weights,
+//			kriging_weights,
+//			R_inv_ys_min_beta,
+//			radius,
+//			beta0,
+//			number_of_max_function_evals_for_training,
+//			dim,1);
+//
+//
+//}
+
+//void perform_kernel_regression_test_highdim(double (*test_function)(double *),
+//		double *bounds,
+//		std::string function_name,
+//		int number_of_samples,
+//		int sampling_method,
+//		int dim){
+//
+//	double sigma = 0.01;
+//	double wSvd = 1.0;
+//	double w12 = 1.0;
+//	int max_cv_iter = 50;
+//	int number_of_trials = 1;
+//
+//	vec genErr1(number_of_trials); genErr1.fill(0.0);
+//	vec genErr2(number_of_trials); genErr2.fill(0.0);
+//
+//	std::string datafilename;
+//
+//	if (sampling_method == EXISTING_FILE){
+//
+//		datafilename = function_name + ".csv";
+//
+//
+//	}
+//	else{
+//
+//		datafilename = function_name+"_"+ std::to_string(number_of_samples)+".csv";
+//
+//
+//	}
+//
+//#if 1
+//	printf("filename = %s\n",datafilename.c_str());
+//
+//#endif
+//	/* division between number of training and validation samples */
+//	double partition[2] = {0.1,0.9};
+//
+//	srand (time(NULL));
+//
+//
+//	for(int iter=0; iter<number_of_trials; iter++){
+//
+//#if 0
+//		printf("iter = %d\n",iter);
+//#endif
+//
+//		if ( sampling_method == EXISTING_FILE ){
+//
+//			// do nothing
+//
+//		}
+//		else{
+//
+//			generate_highdim_test_function_data_cuda(test_function,
+//					datafilename,
+//					bounds,
+//					number_of_samples,
+//					dim);
+//
+//		} /* end of else */
+//
+//
+//
+//		mat data;
+//		bool load_ok = data.load(datafilename);
+//
+//		if(load_ok == false)
+//		{
+//			printf("problem with loading the file %s\n",datafilename.c_str());
+//			exit(-1);
+//		}
+//
+//
+//#if 1
+//		printf("Kernel regression with the input data: %s\n",datafilename.c_str());
+//		printf("Data has %d samples with %d variables\n",number_of_samples,dim);
+//		printf("Original data:\n");
+//		data.print();
+//#endif
+//
+//
+//		int number_of_training_samples = number_of_samples*partition[0];
+//		int number_of_test_samples = number_of_samples - number_of_training_samples;
+//
+//#if 0
+//		printf("number of training samples = %d\n",number_of_training_samples);
+//		printf("number of test samples = %d\n",number_of_test_samples);
+//#endif
+//
+//		mat dataTraining;
+//		mat dataTest;
+//
+//		dataTraining = data.submat( 0, 0, number_of_training_samples-1, dim );
+//
+//		dataTest     = data.submat( number_of_training_samples, 0, number_of_samples-1, dim );
+//
+//
+//		data.reset();
+//
+//#if 1
+//		printf("Training data:\n");
+//		dataTraining.print();
+//
+//		printf("Test data:\n");
+//		dataTest.print();
+//#endif
+//
+//
+//		vec x_maxTraining(dim);
+//		x_maxTraining.fill(0.0);
+//
+//		vec x_minTraining(dim);
+//		x_minTraining.fill(0.0);
+//
+//		for (int i = 0; i < dim; i++) {
+//
+//			x_maxTraining(i) = dataTraining.col(i).max();
+//			x_minTraining(i) = dataTraining.col(i).min();
+//
+//		}
+//
+//#if 0
+//		printf("maximum = \n");
+//		x_maxTraining.print();
+//
+//		printf("minimum = \n");
+//		x_minTraining.print();
+//#endif
+//
+//		/* normalize functional values */
+//
+//		double yTrainingMax = 1.0;
+//
+//		yTrainingMax = dataTraining.col(dim).max();
+//
+//		for (int i = 0; i < number_of_training_samples; i++) {
+//
+//			dataTraining(i, dim) = dataTraining(i, dim)/yTrainingMax ;
+//
+//		}
+//
+//
+//		/* normalize training data */
+//		for (int i = 0; i < number_of_training_samples; i++) {
+//
+//			for (int j = 0; j < dim; j++) {
+//
+//				dataTraining(i, j) = (dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
+//			}
+//
+//		}
+//
+//
+//
+//#if 1
+//		printf("Training data (normalized) = \n");
+//		dataTraining.print();
+//#endif
+//
+//		vec x_maxTest(dim); x_maxTest.fill(0.0);
+//		vec x_minTest(dim); x_minTest.fill(0.0);
+//
+//		for (int i = 0; i < dim; i++) {
+//
+//			x_maxTest(i) = dataTest.col(i).max();
+//			x_minTest(i) = dataTest.col(i).min();
+//
+//		}
+//
+//#if 0
+//		printf("maximum = \n");
+//		x_maxTest.print();
+//
+//		printf("minimum = \n");
+//		x_minTest.print();
+//#endif
+//
+//
+//		/* normalize test data */
+//		for (int i = 0; i < number_of_test_samples; i++) {
+//
+//			for (int j = 0; j < dim; j++) {
+//
+//				dataTest(i, j) = (dataTest(i, j) - x_minTest(j)) / (x_maxTest(j) - x_minTest(j));
+//			}
+//
+//		}
+//
+//#if 1
+//		printf("Test data (normalized) = \n");
+//		dataTest.print();
+//#endif
+//
+//		mat L(dim,dim);
+//		L.fill(0.0);
+//
+//
+//	trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter,L1_LOSS_FUNCTION, number_of_training_samples, 50000);
+//
+//#if 1
+//
+//		printf("L = \n");
+//		L.print();
+//		printf("sigma = %10.7f\n",sigma);
+//#endif
+//
+//
+//		/* from optimal L we obtain now M */
+//
+//		mat M = L*trans(L);
+//
+//#if 0
+//		/* give singular value info */
+//
+//		mat U;
+//		vec s;
+//		mat V;
+//
+//		svd(U,s,V,M);
+//
+//
+//
+//		printf("M = \n");
+//		M.print();
+//		printf("sigma = %10.7f\n",sigma);
+//		printf("singular values of M = \n");
+//		s.print();
+//#endif
+//
+//
+//
+//		/* compute generalization error */
+//
+//		mat XTest = dataTest.submat(0,0,number_of_test_samples-1,dim-1);
+//		vec yTest = dataTest.col(dim);
+//
+//
+//#if 0
+//		printf("number of test samples =%d\n",number_of_test_samples);
+//		printf("XTest = \n");
+//		XTest.print();
+//		printf("yTest = \n");
+//		trans(yTest).print();
+//#endif
+//		mat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,dim-1);
+//		vec yTraining = dataTraining.col(dim);
+//
+//#if 0
+//		printf("dataTraining =\n");
+//		dataTraining.print();
+//		printf("yTraining =\n");
+//		yTraining.print();
+//#endif
+//
+//
+//		double genError = 0.0;
+//
+//
+//		for(int i=0;i <number_of_test_samples; i++){
+//
+//			rowvec xp = XTest.row(i);
+//#if 0
+//			printf("xp = \n");
+//			xp.print();
+//			printf("ytest (normalized) = %10.7f\n",yTest(i)/yTrainingMax);
+//
+//#endif
+//
+//			double ytilde = 0.0;
+//
+//			ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+//
+//
+//			double yexact = yTest(i);
+//
+//
+//			genError += (yexact-ytilde)*(yexact-ytilde);
+//#if 0
+//
+//			printf("yexact = %10.7f, ytilde = %10.7f\n", yexact,ytilde);
+//#endif
+//
+//
+//
+//		}
+//
+//
+//		genError = genError/number_of_test_samples;
+//		genErr1(iter) = genError;
+//
+//		printf("genError (out of sample)= %10.7f\n",genError );
+//
+//
+//	}
+//
+//
+//}
+//
+//
+//
+//void perform_kernel_regression_test_highdim(double (*test_function)(double *),
+//		double (*test_function_adj)(double *, double *),
+//		double *bounds,
+//		std::string function_name,
+//		int number_of_samples_with_only_f_eval,
+//		int number_of_samples_with_g_eval,
+//		int sampling_method,
+//		int dim){
+//
+//
+//	float sigma = 0.01;
+//	float wSvd = 1.0;
+//	float w12 = 1.0;
+//	int max_cv_iter = 50;
+//	int number_of_trials = 1;
+//
+//
+//	std::string datafilename;
+//
+//	if (sampling_method == EXISTING_FILE){
+//
+//		datafilename = function_name + ".csv";
+//
+//
+//	}
+//	else{
+//
+//		datafilename = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"
+//				+ std::to_string(number_of_samples_with_g_eval)+ ".csv";
+//
+//
+//	}
+//
+//
+//
+//
+//	/* division between number of training and validation samples */
+//	float partition[2] = {0.1,0.9};
+//
+//	srand (time(NULL));
+//
+//
+//
+//
+//	vec genErr1(number_of_trials); genErr1.fill(0.0);
+//	vec genErr2(number_of_trials); genErr2.fill(0.0);
+//	vec genErr3(number_of_trials); genErr3.fill(0.0);
+//	vec genErr4(number_of_trials); genErr4.fill(0.0);
+//
+//	for(int iter=0; iter<number_of_trials; iter++){
+//
+//#if 0
+//		printf("iter = %d\n",iter);
+//#endif
+//
+//		if ( sampling_method == EXISTING_FILE ){
+//
+//			// do nothing
+//
+//		}
+//		else{
+//
+//
+//			/* generate data only with functional values */
+//
+//			if(number_of_samples_with_g_eval == 0) {
+//
+//				int number_of_samples_to_generate = number_of_samples_with_only_f_eval;
+//#if 1
+//				printf("Generating data with %d samples...\n", number_of_samples_to_generate);
+//#endif
+//				generate_highdim_test_function_data_cuda(test_function,
+//						datafilename,
+//						bounds,
+//						number_of_samples_to_generate,
+//						dim);
+//
+//			}
+//
+//			else{
+//
+//				/* generate data with gradients */
+//
+//				generate_highdim_test_function_data_GEK(test_function,
+//						test_function_adj,
+//						datafilename,
+//						bounds,
+//						dim,
+//						number_of_samples_with_only_f_eval,
+//						number_of_samples_with_g_eval,
+//						sampling_method);
+//
+//
+//
+//			}
+//
+//
+//
+//
+//
+//		} /* end of else */
+//
+//
+//
+//		fmat data;
+//		bool load_ok = data.load(datafilename);
+//
+//		if(load_ok == false)
+//		{
+//			printf("problem with loading the file %s\n",datafilename.c_str());
+//			exit(-1);
+//		}
+//
+//
+//		int number_of_data_points = data.n_rows;
+//
+//
+//		if(number_of_samples_with_g_eval ==0  && dim != data.n_cols-1){
+//
+//			printf("Number of columns in the input file does not match with dim = %d\n",dim);
+//			exit(-1);
+//
+//		}
+//
+//		if(number_of_samples_with_g_eval >0  && 2*dim != data.n_cols-1){
+//
+//			printf("Number of columns in the input file does not match with dim = %d\n",dim);
+//			exit(-1);
+//
+//		}
+//
+//#if 0
+//		printf("Kernel regression with the input data: %s\n",datafilename.c_str());
+//		printf("Data has %d samples with %d variables\n",number_of_data_points,dim);
+//#endif
+//#if 0
+//		printf("Original data:\n");
+//		data.print();
+//#endif
+//
+//
+//
+//
+//		data = shuffle(data);
+//#if 0
+//		printf("Original data (shuffled):\n");
+//		data.print();
+//#endif
+//
+//		int number_of_training_samples = number_of_data_points*partition[0];
+//		int number_of_test_samples = number_of_data_points - number_of_training_samples;
+//
+//#if 0
+//		printf("number of training samples = %d\n",number_of_training_samples);
+//		printf("number of test samples = %d\n",number_of_test_samples);
+//#endif
+//
+//		fmat dataTraining;
+//		fmat dataTest;
+//
+//		if(number_of_samples_with_g_eval ==0 ) {
+//
+//			dataTraining = data.submat( 0, 0, number_of_training_samples-1, dim );
+//
+//
+//		}
+//
+//		if(number_of_samples_with_g_eval >0 ) {
+//
+//			dataTraining = data.submat( 0, 0, number_of_training_samples-1, 2*dim );
+//
+//
+//		}
+//
+//
+//		dataTest     = data.submat( number_of_training_samples, 0, number_of_data_points-1, dim );
+//
+//
+//
+//
+//		fmat XTrainingNotNormalized = dataTraining.submat(0,0,number_of_training_samples-1, dim-1);
+//
+//
+//
+//		fmat gradTrainingNotNormalized;
+//		if(number_of_samples_with_g_eval >0 ) {
+//
+//			gradTrainingNotNormalized = dataTraining.submat(0,dim+1,number_of_training_samples-1,2*dim);
+//
+//
+//		}
+//		fvec yTrainingNotNormalized = dataTraining.col(dim);
+//
+//		fmat XTestNotNormalized = dataTest.submat(0,0,number_of_test_samples-1,dim-1);
+//
+//
+//
+//
+//
+//		data.reset();
+//
+//#if 0
+//		printf("Training data:\n");
+//		dataTraining.print();
+//
+//		printf("Test data:\n");
+//		dataTest.print();
+//#endif
+//
+//
+//
+//
+//
+//		fvec x_maxTraining(dim);
+//		x_maxTraining.fill(0.0);
+//
+//		fvec x_minTraining(dim);
+//		x_minTraining.fill(0.0);
+//
+//		for (int i = 0; i < dim; i++) {
+//
+//			x_maxTraining(i) = dataTraining.col(i).max();
+//			x_minTraining(i) = dataTraining.col(i).min();
+//
+//		}
+//
+//#if 0
+//		printf("maximum = \n");
+//		x_maxTraining.print();
+//
+//		printf("minimum = \n");
+//		x_minTraining.print();
+//#endif
+//
+//		/* normalize functional values */
+//
+//		float yTrainingMax = 1.0;
+//
+//		yTrainingMax = dataTraining.col(dim).max();
+//
+//		for (int i = 0; i < number_of_training_samples; i++) {
+//
+//			dataTraining(i, dim) = dataTraining(i, dim)/yTrainingMax ;
+//
+//		}
+//
+//
+//		/* normalize training data */
+//		for (int i = 0; i < number_of_training_samples; i++) {
+//
+//			for (int j = 0; j < dim; j++) {
+//
+//				dataTraining(i, j) = (1.0/dim)*(dataTraining(i, j) - x_minTraining(j)) / (x_maxTraining(j) - x_minTraining(j));
+//			}
+//
+//
+//			/* this part is for derivatives */
+//			if(number_of_samples_with_g_eval >0) {
+//
+//
+//				for (int j = dim+1; j < 2*dim+1; j++) {
+//
+//					dataTraining(i, j) = dataTraining(i, j) * (dim/yTrainingMax) * (x_maxTraining(j-dim-1) - x_minTraining(j-dim-1));
+//				}
+//
+//
+//
+//			}
+//
+//		}
+//
+//
+//
+//#if 0
+//		printf("Training data (normalized) = \n");
+//		dataTraining.print();
+//#endif
+//
+//
+//
+//
+//		fvec x_maxTest(dim);
+//		x_maxTest.fill(0.0);
+//
+//		fvec x_minTest(dim);
+//		x_minTest.fill(0.0);
+//
+//		for (int i = 0; i < dim; i++) {
+//
+//			x_maxTest(i) = dataTest.col(i).max();
+//			x_minTest(i) = dataTest.col(i).min();
+//
+//		}
+//
+//#if 0
+//		printf("maximum = \n");
+//		x_maxTest.print();
+//
+//		printf("minimum = \n");
+//		x_minTest.print();
+//#endif
+//
+//
+//		/* normalize test data */
+//		for (int i = 0; i < number_of_test_samples; i++) {
+//
+//			for (int j = 0; j < dim; j++) {
+//
+//				dataTest(i, j) = (1.0/dim)*(dataTest(i, j) - x_minTest(j)) / (x_maxTest(j) - x_minTest(j));
+//			}
+//
+//
+//
+//		}
+//
+//#if 0
+//		printf("Test data (normalized) = \n");
+//		dataTest.print();
+//#endif
+//
+//
+//
+//		fmat L(dim,dim);
+//		L.fill(0.0);
+//
+//
+//		//		trainMahalanobisDistance(L, dataTraining, sigma, wSvd, w12, max_cv_iter,L2_LOSS_FUNCTION, number_of_training_samples, 50000);
+//
+//
+//
+//#if 1
+//
+//		printf("L = \n");
+//		L.print();
+//		printf("sigma = %10.7f\n",sigma);
+//#endif
+//
+//
+//		/* from optimal L we obtain now M */
+//
+//		fmat M = L*trans(L);
+//
+//		M = eye<fmat>(dim,dim);
+//
+//
+//		/* give singular value info */
+//
+//		fmat U;
+//		fvec s;
+//		fmat V;
+//
+//		svd(U,s,V,M);
+//
+//#if 0
+//
+//		printf("M = \n");
+//		M.print();
+//		printf("sigma = %10.7f\n",sigma);
+//		printf("singular values of M = \n");
+//		s.print();
+//#endif
+//
+//
+//
+//		/* compute generalization error */
+//
+//		fmat XTest = dataTest.submat(0,0,number_of_test_samples-1,dim-1);
+//		fvec yTest = dataTest.col(dim);
+//
+//
+//#if 0
+//		printf("number of test samples =%d\n",number_of_test_samples);
+//		printf("XTest = \n");
+//		XTest.print();
+//		printf("yTest = \n");
+//		trans(yTest).print();
+//#endif
+//		fmat XTraining = dataTraining.submat(0,0,number_of_training_samples-1,dim-1);
+//		fvec yTraining = dataTraining.col(dim);
+//
+//#if 0
+//		printf("dataTraining =\n");
+//		dataTraining.print();
+//		printf("yTraining =\n");
+//		yTraining.print();
+//#endif
+//
+//
+//
+//		fmat gradTraining;
+//		if(number_of_samples_with_g_eval >0 ){
+//
+//			gradTraining = dataTraining.submat(0,dim+1,number_of_training_samples-1,2*dim);
+//
+//		}
+//
+//#if 0
+//		printf("gradTraining =\n");
+//		gradTraining.print();
+//#endif
+//
+//
+//
+//
+//		float genError = 0.0;
+//		float genErrorFirstOrder = 0.0;
+//
+//		for(int i=0;i <number_of_test_samples; i++){
+//
+//			frowvec xp = XTest.row(i);
+//			frowvec xpNotNormalized = XTestNotNormalized.row(i);
+//#if 1
+//			printf("xp = \n");
+//			xp.print();
+//			printf("ytest (normalized) = %10.7f\n",yTest(i)/yTrainingMax);
+//
+//#endif
+//
+//			float ytilde = 0.0;
+//			float ytildefirst = 0.0;
+//
+//			if(number_of_samples_with_g_eval ==0 ) {
+//
+//				ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+//
+//			}
+//			else{
+//
+//
+//
+//				ytilde = kernelRegressorNotNormalized(XTraining,
+//						XTrainingNotNormalized,
+//						yTrainingNotNormalized,
+//						gradTrainingNotNormalized,
+//						xpNotNormalized,
+//						x_minTraining,
+//						x_maxTraining,
+//						M,
+//						sigma);
+//
+//				/* this is the first order approximation */
+//				ytildefirst = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+//
+//
+//			}
+//
+//			float yexact = yTest(i);
+//
+//
+//			genError += (yexact-ytilde)*(yexact-ytilde);
+//			genErrorFirstOrder += (yexact-ytildefirst)*(yexact-ytildefirst);
+//#if 1
+//
+//			printf("yexact = %10.7f, ytilde = %10.7f, ytildefirst = %10.7f\n", yexact,ytilde,ytildefirst);
+//#endif
+//
+//
+//			exit(1);
+//		}
+//
+//		genError = genError/number_of_test_samples;
+//		genErr1(iter) = genError;
+//
+//		genErrorFirstOrder = genErrorFirstOrder/number_of_test_samples;
+//
+//		genErr2(iter) = genErrorFirstOrder;
+//
+//		printf("genError (out of sample)= %10.7f\n",genError );
+//		printf("genError (out of sample, without gradients)= %10.7f\n",genErrorFirstOrder );
+//
+//
+//		/* generalization error for M = I */
+//
+//		M = eye<fmat>(dim,dim);
+//		sigma = 0.1;
+//
+//		genError = 0.0;
+//		genErrorFirstOrder = 0.0;
+//
+//		for(int i=0;i <number_of_test_samples; i++){
+//
+//
+//			float ytilde = 0.0;
+//			float ytildefirst = 0.0;
+//
+//			frowvec xp = XTest.row(i);
+//			frowvec xpNotNormalized = XTestNotNormalized.row(i);
+//			if(number_of_samples_with_g_eval ==0 ) {
+//
+//				ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+//
+//			}
+//			else{
+//
+//
+//
+//				ytilde = kernelRegressorNotNormalized(XTraining,
+//						XTrainingNotNormalized,
+//						yTrainingNotNormalized,
+//						gradTrainingNotNormalized,
+//						xpNotNormalized,
+//						x_minTraining,
+//						x_maxTraining,
+//						M,
+//						sigma);
+//
+//
+//				/* this is the first order approximation */
+//				ytildefirst = kernelRegressor(XTraining, yTraining, xp, M, sigma)*yTrainingMax ;
+//
+//
+//
+//			}
+//			float yexact = yTest(i);
+//
+//#if 1
+//
+//			printf("yexact = %10.7f, ytilde = %10.7f, ytildefirst = %10.7f\n", yexact,ytilde,ytildefirst);
+//#endif
+//
+//			genError += (yexact-ytilde)*(yexact-ytilde);
+//			genErrorFirstOrder += (yexact-ytildefirst)*(yexact-ytildefirst);
+//
+//
+//		}
+//
+//		genError = genError/number_of_test_samples;
+//		genErrorFirstOrder = genErrorFirstOrder/number_of_test_samples;
+//
+//		genErr3(iter) = genError;
+//
+//
+//
+//		genErr4(iter) = genErrorFirstOrder;
+//
+//
+//		printf("genError (out of sample, M = I) = %10.7f\n",genError );
+//		printf("genError (out of sample, M = I, without gradients) = %10.7f\n",genErrorFirstOrder );
+//
+//
+//		float sum1 = sum(genErr1);
+//		float sum2 = sum(genErr2);
+//		float sum3 = sum(genErr3);
+//		float sum4 = sum(genErr4);
+//
+//		float mean1 = sum1/(iter+1);
+//		float mean2 = sum2/(iter+1);
+//		float mean3 = sum3/(iter+1);
+//		float mean4 = sum4/(iter+1);
+//
+//
+//		printf("mean(genErr1) = %10.7f\n",mean1);
+//		printf("mean(genErr2) = %10.7f\n",mean2);
+//		printf("mean(genErr3) = %10.7f\n",mean3);
+//		printf("mean(genErr4) = %10.7f\n",mean4);
+//
+//	}
+//
+//
+//
+//
+//}
+//
+//
+//
+//
+//void perform_aggregation_model_test_highdim(double (*test_function)(double *),
+//		double (*test_function_adj)(double *, double *),
+//		double *bounds,
+//		std::string function_name,
+//		int number_of_training_samples,
+//		int sampling_method,
+//		int dim){
+//
+//#if 1
+//	printf("perform_aggregation_model_test_highdim ... \n");
+//#endif
+//
+//	float sigma = 0.01;
+//	float wSvd = 0.0;
+//	float w12 = 1.0;
+//
+//	int number_of_trials = 100;
+//
+//	std::string datafilename = function_name+".csv";
+//	std::string validationfilename = function_name+"_"+ std::to_string(number_of_training_samples)+"_validation.csv";
+//
+//
+//
+//
+//	unsigned int number_of_test_samples = 10000;
+//
+//	srand (time(NULL));
+//
+//
+//	vec genErr1(number_of_trials); genErr1.fill(0.0);
+//	vec genErr2(number_of_trials); genErr2.fill(0.0);
+//	vec genErr3(number_of_trials); genErr3.fill(0.0);
+//
+//
+//	for(int iter=0; iter<number_of_trials; iter++){
+//
+//#if 1
+//		printf("outer iteration = %d\n",iter);
+//#endif
+//
+//
+//
+//#if 1
+//		printf("Generating validation data with %d samples...\n", number_of_test_samples);
+//#endif
+//		generate_highdim_test_function_data_cuda(test_function,
+//				validationfilename,
+//				bounds,
+//				number_of_test_samples,
+//				dim);
+//
+//		/* generate data with gradients */
+//#if 1
+//		printf("Generating training data with %d samples...\n", number_of_training_samples);
+//#endif
+//		generate_highdim_test_function_data_GEK(test_function,
+//				test_function_adj,
+//				datafilename,
+//				bounds,
+//				dim,
+//				0,
+//				number_of_training_samples,
+//				sampling_method);
+//
+//		/* set up the aggregation model */
+//
+//		AggregationModel settingsAggModel(function_name,dim);
+//
+//		settingsAggModel.validationset_input_filename = validationfilename;
+//		settingsAggModel.max_number_of_kriging_iterations = 10000;
+//		settingsAggModel.number_of_cv_iterations = 20;
+//
+//
+//		/* set visualization settings */
+//		settingsAggModel.visualizeKrigingValidation = "yes";
+//		settingsAggModel.visualizeKernelRegressionValidation = "yes";
+//		settingsAggModel.visualizeAggModelValidation = "yes";
+//
+//		settingsAggModel.train();
+//
+//		exit(1);
+//
+//
+//		genErr1(iter)= settingsAggModel.genErrorKriging;
+//		genErr2(iter)= settingsAggModel.genErrorKernelRegression;
+//		genErr3(iter)= settingsAggModel.genErrorAggModel;
+//
+//
+//
+//		float sum1 = sum(genErr1);
+//		float sum2 = sum(genErr2);
+//		float sum3 = sum(genErr3);
+//
+//		float mean1 = sum1/(iter+1);
+//		float mean2 = sum2/(iter+1);
+//		float mean3 = sum3/(iter+1);
+//
+//		printf("MSE,Kriging       = %10.7f, MSE,KerReg       = %10.7f, MSE,AggMod       = %10.7f\n",genErr1(iter),genErr2(iter),genErr3(iter));
+//		printf("mean(MSE,Kriging) = %10.7f, mean(MSE,KerReg) = %10.7f, mean(MSE,AggMod) = %10.7f\n",mean1,mean2,mean3);
+//
+//
+//	}
+//
+//
+//
+//
+//}
 
 
 

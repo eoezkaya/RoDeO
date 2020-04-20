@@ -267,6 +267,11 @@ void solve_linear_system_by_Cholesky(mat &U, mat &L, vec &x, vec &b){
 
 	int dim = x.size();
 
+	if(dim != int(U.n_rows)){
+		fprintf(stderr, "Error: dimensions does not match! at %s, line %d.\n",__FILE__, __LINE__);
+		exit(-1);
+
+	}
 	/* initialize x */
 
 	x.fill(0.0);

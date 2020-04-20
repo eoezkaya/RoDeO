@@ -2,7 +2,7 @@
 #include<iostream>
 
 
-#include "su2_optim.hpp"
+#include "optimization.hpp"
 #include "test_functions.hpp"
 #include "linear_regression.hpp"
 #include "Rodeo_macros.hpp"
@@ -56,16 +56,20 @@ int main(void){
 	}
 
 
-	OptimizationData OptimizationSettings(38);
 
 
-	OptimizationSettings.name = "NACA0012";
-	OptimizationSettings.max_number_of_samples = 500;
-	OptimizationSettings.lower_bound_dv.fill(-0.003);
-	OptimizationSettings.upper_bound_dv.fill( 0.003);
 
 
-	su2_EGO(OptimizationSettings);
+	OptimizationData OptimizationSettings(2);
+
+
+
+	OptimizationSettings.name = "Eggholder";
+	OptimizationSettings.max_number_of_samples = 100;
+	OptimizationSettings.lower_bound_dv.fill(0);
+	OptimizationSettings.upper_bound_dv.fill(200);
+
+	GlobalOptimization(OptimizationSettings);
 
 
 

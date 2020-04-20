@@ -6,33 +6,26 @@
 using namespace arma;
 
 
-int trainMahalanobisDistance(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12,
-		int max_cv_iter, int lossFunType, int batchsize, int nepochs);
-
-
-int trainMahalanobisDistance_v2(fmat &L, fmat &data, float &sigma, float &wSvd, float &w12, int max_cv_iter, int lossFunType);
+int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, double &w12,
+		unsigned int max_cv_iter, unsigned int lossFunType, unsigned int batchsize, unsigned int nepochs);
 
 
 
-int trainMahalanobisDistanceBruteForce(fmat &L, fmat &data, float &sigma, float ymax, int lossFunType, int batchsize, int ntrials);
+double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M);
+
+double kernelRegressor(mat &X, vec &y, rowvec &xp, mat &M, double sigma);
+double kernelRegressor(mat &X, vec &y, mat &grad, rowvec &xp, mat &M, double sigma) ;
 
 
-
-float gaussianKernel(frowvec &xi, frowvec &xj, float sigma, fmat &M);
-
-float kernelRegressor(fmat &X, fvec &y, frowvec &xp, fmat &M, float sigma);
-float kernelRegressor(fmat &X, fvec &y, fmat &grad, frowvec &xp, fmat &M, float sigma) ;
-
-
-float kernelRegressorNotNormalized(fmat &X,
-								   fmat &XnotNormalized,
-								   fvec &y,
-								   fmat &grad,
-								   frowvec &xp,
-								   fvec &xmin,
-								   fvec &xmax,
-								   fmat &M,
-								   float sigma);
+double kernelRegressorNotNormalized(mat &X,
+								   mat &XnotNormalized,
+								   vec &y,
+								   mat &grad,
+								   rowvec &xp,
+								   vec &xmin,
+								   vec &xmax,
+								   mat &M,
+								   double sigma);
 
 double kernelRegressorNotNormalized(mat &X,
 		mat &XnotNormalized,
