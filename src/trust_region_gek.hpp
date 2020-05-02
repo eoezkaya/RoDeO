@@ -11,9 +11,13 @@ public:
 	unsigned int dim;
 	unsigned int N;
 	bool linear_regression;
+
 	vec regression_weights;
 	vec kriging_weights;
 	vec R_inv_ys_min_beta;
+	vec R_inv_I;
+	vec I;
+
 	mat R;
 	mat U;
 	mat L;
@@ -46,12 +50,15 @@ public:
 	bool visualizeKernelRegressionValidation;
 	bool visualizeAggModelValidation;
 
+	double ymin,ymax,yave;
+
 
 
 	AggregationModel(std::string name,int dimension);
 	void update(void);
 	double ftilde(rowvec xp);
 	double ftildeKriging(rowvec xp);
+	void ftilde_and_ssqr(rowvec xp,double *f_tilde,double *ssqr);
 	void updateKrigingModel(void);
 	void train(void);
 	void save_state(void);

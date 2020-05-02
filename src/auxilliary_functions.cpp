@@ -76,7 +76,7 @@ void perturbVectorUniform(frowvec &xp,float sigmaPert){
 
 	for(int i=0; i<size; i++){
 
-		float eps = sigmaPert* RandomFloat(-1.0, 1.0);
+		float eps = sigmaPert* randomFloat(-1.0, 1.0);
 
 		xp(i) += eps;
 
@@ -317,7 +317,7 @@ void solve_linear_system_by_Cholesky(mat &U, mat &L, vec &x, vec &b){
  * @return random number between a and b
  *
  */
-double RandomDouble(double a, double b) {
+double randomDouble(double a, double b) {
 
 	double random = ((double) rand()) / (double) RAND_MAX;
 	double diff = b - a;
@@ -332,7 +332,7 @@ double RandomDouble(double a, double b) {
  * @return random number between a and b
  *
  */
-float RandomFloat(float a, float b) {
+float randomFloat(float a, float b) {
 
 	float random = ((float) rand()) / (float) RAND_MAX;
 	float diff = b - a;
@@ -348,7 +348,7 @@ float RandomFloat(float a, float b) {
  * @return random number in the interval [a,b]
  *
  */
-int RandomInt(int a, int b) {
+int randomInt(int a, int b) {
 
 	b++;
 	int diff = b-a;
@@ -356,11 +356,21 @@ int RandomInt(int a, int b) {
 	return a + random;
 }
 
-void RandomVector(rowvec &x){
+void randomVector(rowvec &x){
 
 	for(unsigned int i=0; i<x.size(); i++) {
 
-		x(i) = RandomDouble(0.0, 1.0);
+		x(i) = randomDouble(0.0, 1.0);
+	}
+
+
+}
+
+void randomVector(rowvec &x, vec lb, vec ub){
+
+	for(unsigned int i=0; i<x.size(); i++) {
+
+		x(i) = randomDouble(lb(i), ub(i));
 	}
 
 
@@ -878,6 +888,181 @@ void findKNeighbours(mat &data,
 }
 
 
+/*
+ * Correlation function R(x^i,x^j)
+ *
+ * R(x^i,x^j)=exp(-sum_{k=1}^p (  theta_k* ( abs(x^i_k-x^j_k)**gamma_k  ) )  )
+ * @param[in] x_i
+ * @param[in] X_j
+ * @param[in] theta
+ * @param[in] gamma
+ * @return R
+ *
+ * */
+double compute_R(rowvec x_i, rowvec x_j, vec theta, vec gamma) {
 
+	int dim = theta.size();
+
+	double sum = 0.0;
+	for (int k = 0; k < dim; k++) {
+
+		sum += theta(k) * pow(fabs(x_i(k) - x_j(k)), gamma(k));
+
+	}
+
+	return exp(-sum);
+}
+
+
+
+/*
+ * Correlation function R(x^i,x^j) with gamma = 2.0
+ *
+ * R(x^i,x^j)=exp(-sum_{k=1}^p (  theta_k* ( abs(x^i_k-x^j_k)**2.0  ) )  )
+ * @param[in] x_i
+ * @param[in] X_j
+ * @param[in] theta
+ * @return R
+ *
+ * */
+double compute_R_Gauss(rowvec x_i,
+		rowvec x_j,
+		vec theta) {
+
+	int dim = theta.size();
+
+	double sum = 0.0;
+	for (int k = 0; k < dim; k++) {
+
+		sum += theta(k) * pow(fabs(x_i(k) - x_j(k)), 2.0);
+
+	}
+
+	return exp(-sum);
+}
+
+
+
+/*
+ *
+ *
+ * derivative of R(x^i,x^j) w.r.t. x^i_k (for GEK)
+ *
+ *
+ * */
+
+double compR_dxi(rowvec x_i, rowvec x_j, vec theta, int k) {
+
+	int dim = theta.size();
+	double sum = 0.0;
+	double result;
+
+
+
+	/* first compute R(x^i,x^j) */
+	for(int m=0;m<dim;m++){
+		sum+=theta(m)*pow( fabs(x_i(m)-x_j(m)),2.0 );
+	}
+	sum=exp(-sum);
+	result= -2.0*theta(k)* (x_i(k)-x_j(k))* sum;
+	return result;
+}
+
+
+
+
+
+/*
+ *
+ *
+ * derivative of R(x^i,x^j) w.r.t. x^j_k (for GEK)
+ *
+ *
+ *
+ * */
+
+double compR_dxj(rowvec x_i, rowvec x_j, vec theta,  int k) {
+
+	int dim = theta.size();
+	double sum = 0.0;
+	double result;
+
+
+	/* first compute R(x^i,x^j) */
+	for(int m=0;m<dim;m++){
+		sum+=theta(m)*pow( fabs(x_i(m)-x_j(m)),2.0 );
+	}
+	sum=exp(-sum);
+
+	result= 2.0*theta(k)* (x_i(k)-x_j(k))* sum;
+
+	return result;
+}
+
+
+/*
+ *
+ * second derivative of R(x^i,x^j) w.r.t. x^i_l and x^j_k (hand derivation)
+ * (for GEK)
+ *
+ * */
+
+double compute_dr_dxi_dxj(rowvec x_i, rowvec x_j, vec theta,int l,int k){
+
+	int dim = theta.size();
+	double corr = 0.0;
+	double dx;
+
+	for (int i = 0;i<dim;i++){
+
+		corr = corr + theta(i) * pow(fabs(x_i(i)-x_j(i)),2.0);
+	}
+
+	corr = exp(-corr);
+
+	if (k == l){
+
+		dx = 2.0*theta(k)*(-2.0*theta(k)*pow((x_i(k)-x_j(k)),2.0)+1.0)*corr;
+	}
+	if (k != l) {
+
+		dx = -4.0*theta(k)*theta(l)*(x_i(k)-x_j(k))*(x_i(l)-x_j(l))*corr;
+	}
+
+	return dx;
+}
+
+
+/*
+ *
+ * Computation of the correlation matrix using standart correlation function
+ *
+ *
+ * */
+
+void compute_R_matrix(vec theta,
+		vec gamma,
+		double reg_param,
+		mat &R,
+		mat &X) {
+	double temp;
+	int nrows = R.n_rows;
+
+	R.fill(0.0);
+
+
+	for (int i = 0; i < nrows; i++) {
+		for (int j = i + 1; j < nrows; j++) {
+
+			temp = compute_R(X.row(i), X.row(j), theta, gamma);
+			R(i, j) = temp;
+			R(j, i) = temp;
+		}
+
+	}
+
+	R = R + eye(nrows,nrows) + eye(nrows,nrows)*reg_param;
+
+} /* end of compute_R_matrix */
 
 

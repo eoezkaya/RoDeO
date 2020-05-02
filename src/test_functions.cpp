@@ -11,7 +11,7 @@
 #include "kriging_training.hpp"
 #include "trust_region_gek.hpp"
 #include "kernel_regression.hpp"
-
+#include "optimization.hpp"
 #ifdef GPU_VERSION
 #include "kernel_regression_cuda.h"
 #endif
@@ -23,49 +23,400 @@
 using namespace arma;
 
 
-void classification_test1(double *x, double *label, double *y){
-	/* y = sin(x)+x-1+sin(2x) * (separating curve) */
 
-	*y = sin(x[0])+x[0]-1+sin(2.0*x[0]);
 
-	if (*y > x[1]) {
+TestFunction::TestFunction(std::string name,int dimension){
 
-		*label=1.0;
+	if(dimension <= 0){
+
+		fprintf(stderr, "Error: dimension must be at least 1! at %s, line %d.\n",__FILE__, __LINE__);
+		exit(-1);
+
 	}
-	else{
+	numberOfInputParams = dimension;
+	function_name = name;
+	func_ptr = empty;
+	adj_ptr  = emptyAdj;
+	noise_level = 0.0;
+	ifNoisy = false;
+	ifAdjointFunctionExist = false;
+	lower_bound.zeros(dimension);
+	upper_bound.zeros(dimension);
 
-		*label=-1.0;
+
+}
+
+void TestFunction::print(void){
+
+	printf("printing function information...\n");
+	printf("function name = %s\n",function_name.c_str());
+	printf("Number of independent variables = %d\n",numberOfInputParams);
+	printf("Parameter bounds:\n");
+
+	for(unsigned int i=0; i<numberOfInputParams; i++){
+
+		printf("x[%d]: %15.10f , %15.10f\n",i,lower_bound(i),upper_bound(i));
+
 	}
 
 
 }
 
-/* lineary seperable simple test problem */
+void TestFunction::plot(void){
 
-void classification_test2(double *x, double *label, double *y){
-	/* y = sin(x)+x-1+sin(2x) * (separating curve) */
+	if(numberOfInputParams !=2){
 
-	*y = 0.5*x[0]+0.2;
+		fprintf(stderr, "Error: only 2D functions can be plotted! at %s, line %d.\n",__FILE__, __LINE__);
+		exit(-1);
 
-	if (*y > x[1]) {
+	}
 
-		*label=1.0;
+	for(unsigned int j=0; j<numberOfInputParams;j++) {
+
+		if(lower_bound(j) == upper_bound(j)){
+
+			fprintf(stderr, "Error: Parameter bounds are not set correctly! at %s, line %d.\n",__FILE__, __LINE__);
+			exit(-1);
+
+		}
+	}
+
+	const int resolution = 100;
+
+	std::string filename= function_name +".dat";
+
+
+	std::string file_name_for_plot = function_name+".png";
+
+
+
+	printf("opening file %s for output...\n",filename.c_str());
+	FILE *test_function_data=fopen(filename.c_str(),"w");
+
+
+
+	double dx,dy; /* step sizes in x and y directions */
+	double x[2];
+	double func_val;
+	dx = (upper_bound(0)-lower_bound(0))/(resolution-1);
+	dy = (upper_bound(1)-lower_bound(1))/(resolution-1);
+
+	x[0] = lower_bound(0);
+	for(int i=0;i<resolution;i++){
+		x[1] = lower_bound(1);
+		for(int j=0;j<resolution;j++){
+			func_val = func_ptr(x);
+			fprintf(test_function_data,"%10.7f %10.7f %10.7f\n",x[0],x[1],func_val);
+
+
+			x[1]+=dy;
+		}
+		x[0]+= dx;
+
+	}
+
+	fclose(test_function_data);
+
+
+
+	std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_2d_surface.py "+ filename+ " "+ file_name_for_plot + " "+ function_name ;
+
+	FILE* in = popen(python_command.c_str(), "r");
+
+
+	fprintf(in, "\n");
+
+
+}
+
+void TestFunction::testKrigingModel(int nsamples, bool ifVisualize){
+
+	printf("Testing Kriging Model with the %s function...\n", function_name.c_str());
+
+	std::string filenameKrigingTest = function_name + "KrigingTest"+ std::to_string(nsamples)+".csv";
+	generateRandomSamples(nsamples, filenameKrigingTest);
+
+	KrigingModel TestFunSurrogate(function_name + "KrigingTest"+ std::to_string(nsamples),numberOfInputParams);
+	TestFunSurrogate.print();
+	TestFunSurrogate.train();
+
+	double in_sample_error = 0.0;
+
+	for(unsigned int i=0;i<TestFunSurrogate.N;i++){
+
+		rowvec xp = TestFunSurrogate.X.row(i);
+		rowvec x = TestFunSurrogate.XnotNormalized.row(i);
+
+
+		printf("\nData point = %d\n", i+1);
+		printf("calling f_tilde at x:\n");
+		x.print();
+
+		double func_val = TestFunSurrogate.ftilde(xp);
+
+		double func_val_exact = func_ptr(x.memptr());
+
+		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f\n", func_val_exact,func_val);
+
+		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
+#if 0
+		printf("in sample error = %15.10f\n", in_sample_error);
+#endif
+	}
+
+	in_sample_error = in_sample_error/TestFunSurrogate.N;
+
+	printf("In sample error (MSE) for the Kriging model = %15.10f\n",in_sample_error);
+
+
+
+	/* visualize with surface plot if the problem is 2D */
+
+	if (numberOfInputParams == 2){
+
+		int resolution =100;
+
+		std::string kriging_response_surface_file_name = function_name+"_"+"kriging_response_surface.dat";
+		std::string kriging_error_file_name = function_name+"_"+"kriging_error.dat";
+
+		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
+		FILE *kriging_error_file = fopen(kriging_error_file_name.c_str(),"w");
+
+		double dx,dy; /* step sizes in x and y directions */
+		rowvec x(2);
+		rowvec xp(2);
+
+		double func_val;
+		dx = (upper_bound(0)-lower_bound(0))/(resolution-1);
+		dy = (upper_bound(1)-lower_bound(1))/(resolution-1);
+
+		double out_sample_error=0.0;
+		int count = 1;
+		x[0] = lower_bound(0);
+		for(int i=0;i<resolution;i++){
+			x[1] = lower_bound(1);
+			for(int j=0;j<resolution;j++){
+
+				printf("\ncalling f_tilde at x:\n");
+				x.print();
+				/* normalize x */
+				xp(0)= (1.0/TestFunSurrogate.dim)*(x(0)- TestFunSurrogate.xmin(0)) / (TestFunSurrogate.xmax(0) - TestFunSurrogate.xmin(0));
+				xp(1)= (1.0/TestFunSurrogate.dim)*(x(1)- TestFunSurrogate.xmin(1)) / (TestFunSurrogate.xmax(1) - TestFunSurrogate.xmin(1));
+
+				func_val = TestFunSurrogate.ftilde(xp);
+				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
+
+				double func_val_exact = func_ptr(x.memptr());
+				double squaredError = (func_val_exact-func_val)*(func_val_exact-func_val);
+				fprintf(kriging_error_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),squaredError);
+
+
+				printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", func_val_exact,func_val,squaredError);
+				out_sample_error+= squaredError;
+#if 1
+				printf("out_sample_error = %10.7f\n",out_sample_error/count);
+#endif
+
+
+				count++;
+				x[1]+=dy;
+			}
+			x[0]+= dx;
+
+		}
+		fclose(kriging_response_surface_file);
+		fclose(kriging_error_file);
+
+		out_sample_error = out_sample_error/count;
+
+		printf("Mean out of sample error (MSE) for the Kriging model = %15.10f\n",out_sample_error);
+
+
+		if(ifVisualize){
+			/* plot the kriging response surface */
+
+			std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
+			file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+			std::string titlePlot = function_name + "_Kriging_surface";
+			std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot + " "+titlePlot ;
+
+
+			FILE* in = popen(python_command.c_str(), "r");
+
+
+			fprintf(in, "\n");
+
+			std::string file_name_for_plot2 = function_name+"_"+"kriging_error_";
+			file_name_for_plot2 += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+
+			std::string titlePlot2 = function_name + "_Kriging_squared_error";
+			std::string python_command2 = "python -W ignore "+ settings.python_dir + "/plot_2d_surface.py "+ kriging_error_file_name+ " "+ file_name_for_plot2 + " "+titlePlot2 ;
+
+
+			FILE* in2 = popen(python_command2.c_str(), "r");
+
+
+			fprintf(in2, "\n");
+
+		}
+
+
+
+
+
+
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+}
+
+
+void TestFunction::generateRandomSamples(unsigned int nsamples, std::string filename){
+
+	printf("Generating %d random samples for the function: %s\n",nsamples,function_name.c_str());
+
+	for(unsigned int j=0; j<numberOfInputParams;j++) {
+
+		if(lower_bound(j) == upper_bound(j)){
+
+			fprintf(stderr, "Error: Parameter bounds are not set correctly! at %s, line %d.\n",__FILE__, __LINE__);
+			exit(-1);
+
+		}
+	}
+
+
+
+	if(!ifAdjointFunctionExist){
+
+		mat data(nsamples, numberOfInputParams+1);
+
+		double *x  = new double[numberOfInputParams];
+
+		for(unsigned int i=0; i<nsamples; i++ ){
+
+			for(unsigned int j=0; j<numberOfInputParams;j++) {
+
+				x[j] = randomDouble(lower_bound(j), upper_bound(j));
+			}
+
+			double fVal = func_ptr(x);
+
+			for(unsigned int j=0;j<numberOfInputParams;j++){
+
+				data(i,j) = x[j];
+
+			}
+
+			data(i,numberOfInputParams) = fVal;
+
+
+		}
+		printf("Generating the file: %s\n",filename.c_str());
+		data.save(filename.c_str(), csv_ascii);
+
+		delete[] x;
+
 	}
 	else{
 
-		*label=-1.0;
+		double *x   = new double[numberOfInputParams];
+		double *xb  = new double[numberOfInputParams];
+
+		mat data(nsamples, 2*numberOfInputParams+1);
+
+		for(unsigned int i=0; i<nsamples; i++ ){
+
+			for(unsigned int j=0; j<numberOfInputParams;j++) {
+
+				x[j] = randomDouble(lower_bound(j), upper_bound(j));
+			}
+
+			for(unsigned int k=0; k<numberOfInputParams;k++) xb[k] = 0.0;
+
+			double fVal = adj_ptr(x,xb);
+
+			for(unsigned int j=0;j<numberOfInputParams;j++){
+
+				data(i,j) = x[j];
+
+			}
+
+			data(i,numberOfInputParams) = fVal;
+
+
+			for(unsigned int j=numberOfInputParams+1;j<2*numberOfInputParams+1;j++){
+
+				data(i,j) = xb[j-numberOfInputParams-1];
+
+			}
+
+		}
+		printf("Generating the file: %s\n",filename.c_str());
+		data.save(filename.c_str(), csv_ascii);
+
+		delete[] x;
+		delete[] xb;
+
+
+
+
 	}
 
 
 }
+
+void TestFunction::testEGO(int nsamplesTrainingData, int maxnsamples, bool ifVisualize, bool ifWarmStart){
+
+	printf("Testing Efficient Global Optimization with the %s function...\n", function_name.c_str());
+
+	std::string labelTest = function_name + "EGOTest_"+std::to_string(nsamplesTrainingData) + "_" + std::to_string(maxnsamples);
+
+	std::string filenameEGOTest = labelTest+".csv";
+
+	if(!ifWarmStart) {
+
+		generateRandomSamples(nsamplesTrainingData, filenameEGOTest);
+
+	}
+
+
+	Optimizer OptimizationStudy(labelTest,numberOfInputParams);
+
+	OptimizationStudy.obj_fun = func_ptr;
+	OptimizationStudy.max_number_of_samples = maxnsamples;
+	OptimizationStudy.lower_bound_dv = lower_bound;
+	OptimizationStudy.upper_bound_dv = upper_bound;
+
+	OptimizationStudy.EfficientGlobalOptimization();
+
+
+
+}
+
 
 double empty(double *x){
-
+	fprintf(stderr, "Error: calling empty function! at %s, line %d.\n",__FILE__, __LINE__);
+	exit(-1);
 	return 0;
 
 }
 
-double empty(double *x, double *xb){
+double emptyAdj(double *x, double *xb){
+	fprintf(stderr, "Error: calling emptyAdj function! at %s, line %d.\n",__FILE__, __LINE__);
+	exit(-1);
 
 	return 0;
 
@@ -372,7 +723,7 @@ double simple_2D_linear_test_function1(double *x){
 }
 
 double simple_2D_linear_test_function1_adj(double *x, double *xb) {
-	double simple_2D_linear_test_function1;
+
 	xb[0] = xb[0] + 2.0;
 	xb[1] = xb[1] + 3.0;
 	return 2*x[0]+3*x[1]+1.5;
@@ -1225,1968 +1576,1968 @@ void generate_plot_1D_function(double (*test_function)(double *), double *bounds
 }
 
 
-void perform_kriging_test(double (*test_function)(double *),
-		double *bounds,
-		std::string function_name ,
-		int  number_of_samples,
-		int sampling_method,
-		int problem_dimension,
-		int linear_regression){
-
-
-	const int number_of_function_validation_points = 100;
-
-	vec kriging_weights;
-	vec regression_weights;
-
-	double reg_param = pow(10.0, -8.0);
-
-	int number_of_max_function_evals_for_training = 10000;
-
-
-	/* file name for data points in csv (comma separated values) format */
-	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples )+".csv";
-
-	printf("input file name : %s\n",input_file_name.c_str());
-
-
-
-	/* generate the contour_plot for 2D data*/
-	if(problem_dimension==2){
-		generate_contour_plot_2D_function(test_function, bounds, function_name);
-	}
-
-
-	/* generate the function plot for 1D data*/
-	if(problem_dimension==1){
-		generate_plot_1D_function(test_function, bounds, function_name);
-
-	}
-	printf("Generating inputs using %d sample points...\n",number_of_samples );
-	/* generate the input data for test	*/
-	generate_test_function_data(test_function,
-			input_file_name,
-			bounds,
-			number_of_samples,
-			sampling_method,
-			problem_dimension);
-
-
-	/* train response surface with maximum likelihood principle */
-
-	printf("training kriging hyperparameters...\n");
-
-
-	train_kriging_response_surface(input_file_name,
-			"None",
-			linear_regression,
-			regression_weights,
-			kriging_weights,
-			reg_param,
-			number_of_max_function_evals_for_training,
-			RAW_ASCII);
-
-
-#if 0
-
-	printf("kriging weights = \n");
-	kriging_weights.print();
-	printf("regression weights = \n");
-	regression_weights.print();
-
-
-	printf("reg_param = %20.15f\n", reg_param);
-#endif
-
-	mat data; /* data matrix */
-	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
-
-	//	data.print();
-
-	int nrows = data.n_rows;
-	int ncols = data.n_cols;
-	int dim = ncols - 1;
-
-
-	int dimension_of_R = nrows;
-
-	double beta0=0.0;
-
-
-	mat X = data.submat(0, 0, nrows - 1, ncols - 2);
-#if 0
-	X.print();
-#endif
-	vec ys = data.col(dim);
-
-#if 0
-	ys.print();
-#endif
-	vec x_max(dim);
-	x_max.fill(0.0);
-
-	vec x_min(dim);
-	x_min.fill(0.0);
-
-	for (int i = 0; i < dim; i++) {
-		x_max(i) = data.col(i).max();
-		x_min(i) = data.col(i).min();
-
-	}
-
-#if 0
-	printf("maximum = \n");
-	x_max.print();
-
-	printf("minimum = \n");
-	x_min.print();
-#endif
-
-
-	/* normalize data */
-	for (int i = 0; i < nrows; i++) {
-		for (int j = 0; j < dim; j++) {
-			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-		}
-	}
-
-
-	if (linear_regression == LINEAR_REGRESSION_ON) { /* if linear regression is on */
-
-		mat augmented_X(X.n_rows, dim + 1);
-
-		for (unsigned int i = 0; i < X.n_rows; i++) {
-			for (int j = 0; j <= dim; j++) {
-				if (j == 0)
-					augmented_X(i, j) = 1.0;
-				else
-					augmented_X(i, j) = X(i, j - 1);
-
-			}
-		}
-
-
-
-		/* now update the ys_func vector */
-
-		ys = ys - augmented_X * regression_weights;
-
-		//		printf("Updated ys vector = \n");
-
-		//		ys.print();
-
-	} /* end of linear regression */
-
-
-
-
-
-
-
-	/* allocate the correlation matrix */
-	mat R =zeros(dimension_of_R, dimension_of_R);
-
-
-	//	R.print();
-
-	vec theta = kriging_weights.head(dim);
-	vec gamma = kriging_weights.tail(dim);
-
-
-
-
-	/* evaluate the correlation matrix for the given theta and gamma */
-	compute_R_matrix(theta,gamma, reg_param, R, X);
-
-
-
-	mat Rinv = inv(R);
-	/* vector of ones */
-	vec I = ones(dimension_of_R);
-
-	beta0 = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys));
-	vec R_inv_ys_min_beta = Rinv* (ys-beta0* I);
-
-
-	printf("beta0 = %10.7f\n",beta0);
-
-
-#if 0
-	printf("R_inv_ys_min_beta =\n");
-	R_inv_ys_min_beta.print();
-#endif
-
-
-
-	/* check in-sample error */
-
-	double in_sample_error = 0.0;
-	for(unsigned int i=0;i<X.n_rows;i++){
-
-		rowvec x = X.row(i);
-
-
-		double func_val = calculate_f_tilde(x,
-				X,
-				beta0,
-				regression_weights,
-				R_inv_ys_min_beta,
-				kriging_weights);
-
-		for(int j=0; j<dim;j++) {
-
-			x(j) = dim* x(j)* (x_max(j) - x_min(j))+x_min(j);
-		}
-
-		double func_val_exact = test_function(x.memptr());
-
-		printf("\n");
-		x.print();
-		printf("\n");
-		printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
-
-		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-
-
-	}
-
-	in_sample_error = sqrt(in_sample_error/X.n_rows);
-
-	printf("in sample error = %10.7f\n",in_sample_error);
-
-
-
-
-
-
-	/* visualize with contour plot if the problem is 2D */
-	if (problem_dimension == 2){
-		int resolution =100;
-
-		std::string kriging_response_surface_file_name = function_name+"_"+"kriging_response_surface_"+ std::to_string(number_of_samples )+".dat";
-
-		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
-
-		double dx,dy; /* step sizes in x and y directions */
-		rowvec x(2);
-		rowvec xnorm(2);
-
-		double func_val;
-		dx = (bounds[1]-bounds[0])/(resolution-1);
-		dy = (bounds[3]-bounds[2])/(resolution-1);
-
-		double out_sample_error=0.0;
-
-		x[0] = bounds[0];
-		for(int i=0;i<resolution;i++){
-			x[1] = bounds[2];
-			for(int j=0;j<resolution;j++){
-
-				/* normalize x */
-				xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
-				xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
-
-				func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights, R_inv_ys_min_beta, kriging_weights);
-				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
-
-				double func_val_exact = test_function(x.memptr());
-
-				out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-
-
-
-				x[1]+=dy;
-			}
-			x[0]+= dx;
-
-		}
-		fclose(kriging_response_surface_file);
-
-		out_sample_error = sqrt(out_sample_error/(resolution*resolution));
-
-		printf("out of sample error = %10.7f\n",out_sample_error);
-
-
-
-		/* plot the kriging response surface */
-
-		std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
-		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-
-		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
-
-
-
-		FILE* in = popen(python_command.c_str(), "r");
-
-
-		fprintf(in, "\n");
-
-
-	}
-
-
-	/* visualize with line plot if the problem is 1D */
-	if (problem_dimension == 1){
-		int resolution =1000;
-
-
-		std::string kriging_response_surface_file_name =
-				function_name+"_"+"kriging_response_surface_"
-				+ std::to_string(number_of_samples )
-		+".dat";
-
-		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
-
-		double dx; /* step sizes in x */
-		rowvec x(1);
-		rowvec xnorm(1);
-
-		double func_val;
-		double func_val_exact;
-		double final_validation_error=0.0;
-
-		dx = (bounds[1]-bounds[0])/(resolution-1);
-
-
-		x(0) = bounds[0];
-		for(int i=0;i<resolution;i++){
-
-
-			/* normalize x */
-			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
-			func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights,
-					R_inv_ys_min_beta, kriging_weights);
-
-			func_val_exact = test_function(x.memptr());
-
-			printf("%10.7f %10.7f %10.7f\n",x(0),func_val,func_val_exact);
-			fprintf(kriging_response_surface_file,"%10.7f %10.7f\n",x(0),func_val);
-			final_validation_error+=sqrt(pow((func_val_exact-func_val),2.0));
-
-			x(0)+= dx;
-
-		}
-		fclose(kriging_response_surface_file);
-
-
-		printf("final validation error(L2) : %10.7f\n",final_validation_error );
-
-
-
-		/* plot the kriging response surface */
-
-		std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
-		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-
-		std::string python_command = "python -W ignore plot_1d_function.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
-
-
-		FILE* in_python = popen(python_command.c_str(), "r");
-
-
-		fprintf(in_python, "\n");
-	}
-
-
-
-	if (problem_dimension > 2){
-
-		rowvec xs(problem_dimension);
-		rowvec xe(problem_dimension);
-		rowvec x(problem_dimension);
-		rowvec xnorm(problem_dimension);
-
-		double func_val;
-		double func_val_exact;
-		double final_validation_error=0.0;
-
-
-		int count=0;
-		for(int i=0;i<problem_dimension;i++){
-			xs(i) = bounds[count];
-			count++;
-			xe(i) = bounds[count];
-			count++;
-
-		}
-
-
-		for(int i=0; i<number_of_function_validation_points;i++ ){
-
-			for(int j=0;j<problem_dimension;j++) {
-
-				x(j) = RandomDouble(xs(j), xe(j));
-			}
-#if 1
-			printf("x = \n");
-			x.print();
-#endif
-			/* normalize x */
-			for(int j=0;j<problem_dimension;j++) {
-
-				xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
-			}
-
-
-			func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights,
-					R_inv_ys_min_beta, kriging_weights);
-
-			func_val_exact = test_function(x.memptr());
-
-			printf("f_exact = %10.7f, f_tilde =  %10.7f\n",func_val_exact,func_val);
-
-			final_validation_error+=pow((func_val_exact-func_val),2.0);
-
-
-
-
-		} /* end of validation loop */
-
-		final_validation_error = final_validation_error/number_of_function_validation_points;
-
-		printf("final validation error(L2) : %10.7f\n",final_validation_error );
-
-
-
-
-	}
-
-
-}
-
-
-
-
-
-void perform_NNregression_test(double (*test_function)(double *),
-		double *bounds,
-		std::string function_name ,
-		int  number_of_samples,
-		int sampling_method,
-		int problem_dimension,
-		int number_of_trials){
-
-	FILE *NNinput;
-
-	vec meanError(number_of_trials);
-	meanError.fill(0.0);
-	vec stdError(number_of_trials);
-
-
-	for(int trial=0; trial <number_of_trials; trial ++ ){
-
-		/* file name for data points in csv (comma separated values) format */
-		std::string input_file_name = function_name+"_"
-				+ std::to_string(number_of_samples )
-		+".csv";
-
-		printf("input file name : %s\n",input_file_name.c_str());
-		printf("Generating inputs using %d sample points...\n",number_of_samples );
-
-
-		/* generate the input data for test	*/
-		generate_test_function_data(test_function,
-				input_file_name,
-				bounds,
-				number_of_samples,
-				sampling_method,
-				problem_dimension);
-
-
-		/* run Neural Network Regression */
-
-		std::string python_command = "python -W ignore "+settings.python_dir+"/NeuralNetworkReg.py "+ input_file_name+ " > python.out";
-#if 1
-		printf("python_command : %s\n",python_command.c_str());
-#endif
-
-
-
-		system(python_command.c_str());
-
-
-
-		NNinput = fopen("NNoutput.dat", "r");
-
-		fscanf(NNinput,"%lf",&stdError(trial));
-		fscanf(NNinput,"%lf",&meanError(trial));
-
-		fclose(NNinput);
-
-		printf("it = %d, MSE = %10.7f, mean(MSE) = %10.7f\n",trial,meanError(trial), sum(meanError)/(trial+1));
-
-	}
-
-
-	printf("mean squared error = %10.7f\n",mean(meanError));
-
-
-}
-
-
-
-
-
-void perform_GEK_test(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		double *bounds,
-		std::string function_name ,
-		int  number_of_samples_with_only_f_eval,
-		int number_of_samples_with_g_eval,
-		int sampling_method,
-		int method_for_solving_lin_eq,
-		int dim,
-		int linear_regression,
-		std::string python_dir){
-
-	if(dim <= 0){
-		printf("Error: problem dimension must be greater than zero\n");
-		exit(-1);
-	}
-
-
-	vec kriging_weights;
-	vec regression_weights;
-	double reg_param;
-
-
-	int number_of_max_function_evals_for_training = 10000;
-
-	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"+std::to_string(number_of_samples_with_g_eval)+ ".csv";
-
-	printf("input file name : %s\n",input_file_name.c_str());
-
-
-
-	if(dim ==2){
-		/* generate the contour_plot */
-		generate_contour_plot_2D_function(test_function, bounds, function_name);
-
-	}
-
-
-	if(dim ==2){
-		printf("Generating inputs using %d points (%d gradient computations)...\n",number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval,number_of_samples_with_g_eval);
-
-
-		/* generate the input data for test	*/
-		generate_2D_test_function_data_GEK(test_function,
-				test_function_adj,
-				input_file_name,
-				bounds,
-				number_of_samples_with_only_f_eval,
-				number_of_samples_with_g_eval,
-				sampling_method,
-				python_dir);
-
-	}
-
-	/* train the response surface */
-	train_GEK_response_surface(input_file_name,
-			linear_regression,
-			regression_weights,
-			kriging_weights,
-			reg_param,
-			number_of_max_function_evals_for_training,
-			dim,
-			method_for_solving_lin_eq);
-
-
-
-	printf("kriging weights = \n");
-	kriging_weights.print();
-
-
-
-
-	mat data_functional_values; // data matrix for only functional values
-	mat data_gradients;         // data matrix for only functional values + gradient sensitivities
-
-
-	std::ifstream in(input_file_name);
-
-	if(!in) {
-		cout << "Cannot open input file...\n";
-		exit(-1);
-	}
-
-
-	std::vector<double> temp;
-
-
-
-	std::string str;
-	int count_f=0;
-	int count_g=0;
-
-	while (std::getline(in, str)) {
-		// output the line
-		//				std::cout << "line = "<<str << std::endl;
-
-
-		std::string delimiter = ",";
-
-		size_t pos = 0;
-		std::string token;
-		while ((pos = str.find(delimiter)) != std::string::npos) {
-			token = str.substr(0, pos);
-			//			std::cout << "token = "<<token << std::endl;
-
-
-			temp.push_back(atof(token.c_str()));
-
-
-			str.erase(0, pos + delimiter.length());
-		}
-		//				std::cout << "str = "<<str << std::endl;
-		temp.push_back(atof(str.c_str()));
-
-		//		std::cout<<"temp= \n";
-		for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
-
-			//			std::cout<<*it<<std::endl;
-
-
-		}
-
-
-		if(temp.size() == dim+1){ // function values
-
-			rowvec newrow(dim+1);
-			int count=0;
-			for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
-
-				//				std::cout<<*it<<std::endl;
-				newrow(count)=*it;
-				count++;
-
-			}
-			//			newrow.print();
-			count_f++;
-			data_functional_values.resize(count_f, dim+1);
-
-			data_functional_values.row(count_f-1)=newrow;
-
-
-
-		}
-		else{ // function+gradient information
-
-			rowvec newrow(2*dim+1);
-			int count=0;
-			for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
-
-				//				std::cout<<*it<<std::endl;
-				newrow(count)=*it;
-				count++;
-
-			}
-			//			newrow.print();
-			count_g++;
-			data_gradients.resize(count_g, 2*dim+1);
-
-			data_gradients.row(count_g-1)=newrow;
-
-
-		}
-
-
-
-
-		temp.clear();
-
-		// now we loop back and get the next line in 'str'
-	}
-
-
-	printf("data functional values = \n");
-	data_functional_values.print();
-	printf("data gradient sensitivities = \n");
-	data_gradients.print();
-	printf("\n");
-
-	int n_f_evals = data_functional_values.n_rows;
-	int n_g_evals = data_gradients.n_rows;
-
-
-	mat X; /* data matrix */
-	vec ys_func;
-
-	if(n_f_evals>0){
-		X = data_functional_values.submat(0, 0, n_f_evals - 1, data_functional_values.n_cols - 2);
-	}
-	//		X.print();
-
-	if(n_f_evals>0){
-		ys_func = data_functional_values.col(dim);
-	}
-
-	//	ys.print();
-
-
-	if( n_g_evals > 0){
-		X.insert_rows( n_f_evals , data_gradients.submat(0, 0, n_g_evals - 1, dim-1));
-
-		//	X.print();
-
-	}
-
-	ys_func.print();
-
-	vec x_max(dim);
-	x_max.fill(0.0);
-
-	vec x_min(dim);
-	x_min.fill(0.0);
-
-	for (int i = 0; i < dim; i++) {
-		x_max(i) = X.col(i).max();
-		x_min(i) = X.col(i).min();
-
-	}
-
-	printf("maximum = \n");
-	x_max.print();
-
-	printf("minimum = \n");
-	x_min.print();
-
-
-	/* normalize the data matrix */
-	for (unsigned int i = 0; i < X.n_rows; i++) {
-		for (int j = 0; j < dim; j++) {
-			X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-		}
-	}
-
-
-	/* normalize the data sensitivity data matrix */
-	for (unsigned int i = 0; i < data_gradients.n_rows; i++) {
-		for (int j = 0; j < dim; j++) {
-			data_gradients(i, j) = (data_gradients(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-		}
-
-		for (int j = dim+1; j < 2*dim+1; j++) {
-			data_gradients(i, j) = data_gradients(i, j) * (x_max(j-dim-1) - x_min(j-dim-1));
-		}
-	}
-
-
-	if(n_g_evals > 0){
-
-		ys_func.insert_rows(n_f_evals, data_gradients.col(dim));
-
-
-	}
-
-
-	printf("Normalized data = \n");
-	X.print();
-
-	printf("Normalized sensitivity data = \n");
-	data_gradients.print();
-
-
-
-
-
-	/* matrix that holds the gradient sensitivities */
-	mat grad(n_g_evals, dim);
-
-
-	/* copy only gradient sensitivities */
-	if( n_g_evals > 0) {
-		grad = data_gradients.submat(0, dim+1, n_g_evals - 1, 2*dim);
-	}
-
-
-	/* dimension of the correlation matrix R */
-	int dimension_of_R = n_f_evals+n_g_evals+ n_g_evals*dim;
-
-
-
-
-
-	if (linear_regression == 1) { /* if linear regression is on */
-
-		mat augmented_X(X.n_rows, dim + 1);
-
-		for (unsigned int i = 0; i < X.n_rows; i++) {
-			for (int j = 0; j <= dim; j++) {
-				if (j == 0)
-					augmented_X(i, j) = 1.0;
-				else
-					augmented_X(i, j) = X(i, j - 1);
-
-			}
-		}
-
-
-		/* now update the ys_func vector */
-
-		ys_func = ys_func - augmented_X * regression_weights;
-
-		//		printf("Updated ys vector = \n");
-
-		//		ys.print();
-
-	} /* end of linear regression */
-
-
-
-	vec ys(dimension_of_R);
-
-	/* copy n_f_evals+n_g_evals functional values from ys_func */
-	for(int i=0; i<n_f_evals+n_g_evals; i++ ) {
-		ys(i)=ys_func(i);
-	}
-
-
-	/* for each data point with gradient information*/
-	int pos = n_f_evals+n_g_evals;
-
-	for(int j=0; j<dim; j++){ /* for each design variable */
-		for(int i=0; i<n_g_evals; i++ ) {
-
-
-			ys(pos + n_g_evals*j+i) = grad(i,j);
-
-		}
-
-	}
-
-
-	printf("ys = \n");
-	ys.print();
-
-
-
-
-	/* allocate the correlation matrix */
-	mat R= eye(dimension_of_R, dimension_of_R);
-	//	R.fill(0.0);
-
-
-
-
-	/* initialize the diagonal to 1.0 plus a small regularization term*/
-	//	for (int i = 0; i < dimension_of_R; i++) {
-	//		R(i, i) = 1.0 + REGULARIZATION_TERM;
-	//	}
-
-
-
-
-	vec theta = kriging_weights.head(dim);
-
-
-	compute_R_matrix_GEK(theta, reg_param, R, X,grad);
-
-	//	R.print();
-
-	//	printf("R = \n");
-	//	R.print();
-
-
-
-	printf("condition number of R = %10.7e\n", cond(R));
-
-
-	//	mat Rinv = inv_sympd(R);
-
-
-
-
-
-
-	//		Rinv.print();
-
-
-
-
-
-
-
-	mat U(dimension_of_R, dimension_of_R);
-	mat D(dimension_of_R, dimension_of_R);
-	mat L(dimension_of_R, dimension_of_R);
-	mat V(dimension_of_R, dimension_of_R);
-	mat Ut(dimension_of_R, dimension_of_R);
-
-	vec s(dimension_of_R);
-	vec sinv(dimension_of_R);
-
-	/* allocate the F vector */
-	vec F(dimension_of_R);
-	F.fill(0.0);
-
-	/* set first n_f_evals entries to one */
-	for(int i=0; i<n_f_evals+n_g_evals ;i++) F(i)=1.0;
-
-
-
-
-	//	printf("F = \n");
-	//	F.print();
-	//	printf("\n");
-
-
-	if( method_for_solving_lin_eq == SVD){
-		int flag_svd = svd( U, s, V, R );
-
-		if (flag_svd == 0) {
-			printf("SVD could not be performed\n");
-
-			exit(-1);
-		}
-
-		sinv = 1.0/s;
-
-		sinv.print();
-
-		double threshold = 10E-08;
-		for(int i=0; i< dimension_of_R; i++){
-			if(s(i)  < threshold){
-				sinv(i) = 0.0;
-			}
-
-		}
-
-		printf("sinv = \n");
-		sinv.print();
-		printf("\n");
-
-
-		Ut = trans(U);
-
-		D.fill(0.0);
-		for(int i=0; i< dimension_of_R;i++){
-
-			D(i,i) = sinv(i);
-
-
-		}
-
-	}
-
-
-	if( method_for_solving_lin_eq == CHOLESKY){
-
-		/* compute Cholesky decomposition */
-		int flag = chol(U, R);
-
-		if (flag == 0) {
-			printf("Ill conditioned correlation matrix in Cholesky decomposition\n");
-
-			exit(-1);
-		}
-
-		L = trans(U);
-
-
-
-	}
-
-
-	vec R_inv_ys(dimension_of_R); /* R^-1* ys */
-	vec R_inv_F (dimension_of_R); /* R^-1* F */
-	vec R_inv_ys_min_beta(dimension_of_R); /* R^-1* (ys-beta0*F) */
-
-	if( method_for_solving_lin_eq == SVD){
-		R_inv_ys =V*D*Ut*ys;
-		R_inv_F  =V*D*Ut*F;
-	}
-
-	if( method_for_solving_lin_eq == CHOLESKY){
-
-		solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys);
-		solve_linear_system_by_Cholesky(U, L, R_inv_F, F);
-	}
-
-
-	/*
-		vec res1 = R*R_inv_F-F;
-
-		printf("check = R*R_inv_F-F = \n");
-		res1.print();
-		printf("\n");
-
-		vec res2 = R*R_inv_ys-ys;
-
-		printf("check = R*R_inv_ys-ys = \n");
-		res2.print();
-		printf("\n");
-
-	 */
-
-	double beta0 = (1.0/dot(F,R_inv_F)) * (dot(F,R_inv_ys));
-
-
-	vec ys_min_betaF = ys-beta0*F;
-
-	if( method_for_solving_lin_eq == CHOLESKY){
-
-		solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaF);
-
-	}
-
-	if( method_for_solving_lin_eq == SVD){
-		R_inv_ys_min_beta = V*D*Ut*ys_min_betaF;
-
-	}
-
-
-	/*
-
-		vec res3 = R*R_inv_ys_min_beta-ys_min_betaF;
-
-		printf("check R*R_inv_ys_min_beta-(ys-beta0*F) = \n");
-		res3.print();
-		printf("\n");
-
-	 */
-
-
-
-	printf("beta0 = %10.7f\n",beta0);
-
-
-
-	double in_sample_error = 0.0;
-	for(int i=0;i<X.n_rows;i++){
-
-		rowvec x = X.row(i);
-		rowvec xp = X.row(i);
-
-
-		printf("\nData point = %d\n", i+1);
-		printf("calling f_tilde at x = %10.7f y = %10.7f\n",
-				x(0)* (x_max(0) - x_min(0))+x_min(0),
-				x(1)* (x_max(1) - x_min(1))+x_min(1));
-		double func_val = calculate_f_tilde_GEK(x,
-				X,
-				beta0,
-				regression_weights,
-				R_inv_ys_min_beta,
-				theta,
-				n_g_evals );
-
-		/* perturb the first design point */
-		xp(0)+= 0.000001;
-
-		double func_valp = calculate_f_tilde_GEK(xp,
-				X,
-				beta0,
-				regression_weights,
-				R_inv_ys_min_beta,
-				theta,
-				n_g_evals );
-
-		double der_val1 = (func_valp-func_val)/0.000001;
-		xp(0)-= 0.000001;
-
-		/* perturb the second design point */
-		xp(1)+= 0.000001;
-
-		func_valp = calculate_f_tilde_GEK(xp,
-				X,
-				beta0,
-				regression_weights,
-				R_inv_ys_min_beta,
-				theta,
-				n_g_evals );
-
-		double der_val2 = (func_valp-func_val)/0.000001;
-
-
-		/* change to original coordinates before calling the original function */
-		x(0) = x(0)* (x_max(0) - x_min(0))+x_min(0);
-		x(1) = x(1)* (x_max(1) - x_min(1))+x_min(1);
-
-		double func_val_exact = test_function(x.memptr());
-
-		x(0) += 0.000001;
-
-		double func_val_exactp = test_function(x.memptr());
-
-		double der_val_f1 = (func_val_exactp-func_val_exact)/0.000001;
-		x(0) -= 0.000001;
-
-		x(1) += 0.000001;
-
-		func_val_exactp = test_function(x.memptr());
-
-		double der_val_f2 = (func_val_exactp-func_val_exact)/0.000001;
-
-
-		printf("func_val (approx) = %10.7f\n", func_val);
-		printf("func_val (exact) = %10.7f\n", func_val_exact);
-		printf("der_val1  (approx) = %10.7f\n", der_val1/(x_max(0) - x_min(0)));
-		printf("der_valf1  (approx) = %10.7f\n", der_val_f1);
-		printf("der_val2  (approx) = %10.7f\n", der_val2/(x_max(1) - x_min(1)));
-		printf("der_valf2  (approx) = %10.7f\n\n", der_val_f2);
-
-
-		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-
-		printf("in sample error = %10.7f\n", in_sample_error);
-
-	}
-
-	in_sample_error = sqrt(in_sample_error/X.n_rows);
-
-	printf("in sample error = %10.7f\n",in_sample_error);
-
-
-
-
-	if(dim ==2){
-
-		int resolution =100;
-
-
-		std::string kriging_response_surface_file_name = function_name+"_"+"kriging_response_surface_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"+std::to_string(number_of_samples_with_g_eval)+".dat";
-
-		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
-
-		double dx,dy; /* step sizes in x and y directions */
-		rowvec x(2);
-		rowvec xnorm(2);
-
-		double func_val;
-		dx = (x_max(0) - x_min(0))/(resolution-1);
-		dy = (x_max(1) - x_min(1))/(resolution-1);
-
-		dx = (80.0 - 20.0)/(resolution-1);
-		dy = (80.0 - 20.0)/(resolution-1);
-
-
-		double out_sample_error = 0.0;
-
-		x[0] = x_min(0);
-		x[0] = 20.0;
-		for(int i=0;i<resolution;i++){
-			x[1] = x_min(1);
-			x[1] = 20.0;
-			for(int j=0;j<resolution;j++){
-
-				/* normalize x */
-				xnorm(0)= (x(0)- x_min(0)) / (x_max(0) - x_min(0));
-				xnorm(1)= (x(1)- x_min(1)) / (x_max(1) - x_min(1));
-
-				//				printf("calling f_tilde at x = %10.7f y = %10.7f\n", x(0),x(1));
-				func_val = calculate_f_tilde_GEK(xnorm,
-						X,
-						beta0,
-						regression_weights,
-						R_inv_ys_min_beta,
-						kriging_weights,
-						n_g_evals );
-
-				double func_val_exact = test_function(x.memptr());
-
-				out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-				//				printf("out of sample error = %10.7f\n",out_sample_error);
-				//				printf("x = %10.7f y = %10.7f ftilde = %10.7f fexact = %10.7f\n",x(0),x(1),func_val,func_val_exact);
-				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
-
-				x[1]+=dy;
-			}
-			x[0]+= dx;
-
-		}
-		fclose(kriging_response_surface_file);
-
-		out_sample_error = sqrt(out_sample_error/(resolution*resolution));
-
-		printf("out of sample error = %10.7f\n",out_sample_error);
-
-
-		/* plot the kriging response surface */
-
-		std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
-		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-
-		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
-
-
-
-		FILE *figure_out = popen(python_command.c_str(), "r");
-
-
-		fprintf(figure_out, "\n");
-
-
-	}
-
-
-}
-
-
-
-
-
-
-
-
-
-void generate_2D_test_function_data(double (*test_function)(double *),
-		std::string filename,
-		double bounds[4],
-		int number_of_function_evals,
-		int sampling_method){
-
-	if(sampling_method == EXISTING_FILE){
-		/* do nothing */
-
-
-	}
-
-
-	if(sampling_method == RANDOM_SAMPLING){
-
-		FILE *outp;
-
-		//	printf("opening file %s for input...\n",filename.c_str() );
-		outp = fopen(filename.c_str(), "w");
-
-
-
-		double xs = bounds[0];
-		double xe = bounds[1];
-
-		double ys = bounds[2];
-		double ye = bounds[3];
-
-		double x[2];
-
-		for(int i=0; i<number_of_function_evals;i++ ){
-
-			x[0] = RandomDouble(xs, xe);
-			x[1] = RandomDouble(ys, ye);
-			double f_val = test_function(x);
-
-			fprintf(outp,"%10.7f %10.7f %10.7f\n",x[0],x[1],f_val);
-
-		}
-
-		fclose(outp);
-	}
-
-
-	if(sampling_method == LHS_CENTER){
-
-		double x[2];
-		double xs = bounds[0];
-		double xe = bounds[1];
-
-		double ys = bounds[2];
-		double ye = bounds[3];
-
-		std::string lhs_filename = "lhs_points.dat";
-		std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ "2" + " "+ std::to_string(number_of_function_evals)+ " center" ;
-
-		system(python_command.c_str());
-
-		FILE *inp= fopen("lhs_points.dat","r");
-		FILE *outp = fopen(filename.c_str(), "w");
-
-		for(int i=0; i<number_of_function_evals;i++ ){
-
-			fscanf(inp,"%lf %lf",&x[0],&x[1]);
-			x[0] = x[0]*(xe-xs)+xs;
-			x[1] = x[1]*(ye-ys)+ys;
-			double f_val = test_function(x);
-
-			fprintf(outp,"%10.7f %10.7f %10.7f\n",x[0],x[1],f_val);
-
-		}
-
-		fclose(inp);
-		fclose(outp);
-
-
-	}
-
-	if(sampling_method == LHS_RANDOM){
-
-		double x[2];
-		double xs = bounds[0];
-		double xe = bounds[1];
-
-		double ys = bounds[2];
-		double ye = bounds[3];
-
-		std::string lhs_filename = "lhs_points.dat";
-		std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ "2" + " "+ std::to_string(number_of_function_evals)+ " None" ;
-
-		system(python_command.c_str());
-
-		FILE *inp= fopen("lhs_points.dat","r");
-		FILE *outp = fopen(filename.c_str(), "w");
-
-		for(int i=0; i<number_of_function_evals;i++ ){
-
-			fscanf(inp,"%lf %lf",&x[0],&x[1]);
-			x[0] = x[0]*(xe-xs)+xs;
-			x[1] = x[1]*(ye-ys)+ys;
-			double f_val = test_function(x);
-
-			fprintf(outp,"%10.7f %10.7f %10.7f\n",x[0],x[1],f_val);
-
-		}
-
-		fclose(inp);
-		fclose(outp);
-
-
-	}
-
-}
-
-
-void generate_test_function_data(double (*test_function)(double *),
-		std::string filename,
-		double * bounds,
-		int number_of_function_evals,
-		int sampling_method,
-		int problem_dimension){
-
-
-	double *xs = new double[problem_dimension];
-	double *xe = new double[problem_dimension];
-	double *x  = new double[problem_dimension];
-
-	int count=0;
-	for(int i=0;i<problem_dimension;i++){
-		xs[i] = bounds[count];
-		count++;
-		xe[i] = bounds[count];
-		count++;
-
-	}
-
-
-	if(sampling_method == RANDOM_SAMPLING){
-
-		FILE *outp;
-#if 0
-		printf("opening file %s for input...\n",filename.c_str() );
-#endif
-		outp = fopen(filename.c_str(), "w");
-
-
-
-		for(int i=0; i<number_of_function_evals;i++ ){
-
-			for(int j=0;j<problem_dimension;j++) x[j] = RandomDouble(xs[j], xe[j]);
-
-			double f_val = test_function(x);
-
-			for(int j=0;j<problem_dimension;j++) fprintf(outp,"%10.7f, ",x[j]);
-
-			fprintf(outp,"%10.7f\n",f_val);
-
-		}
-
-		fclose(outp);
-	}
-
-
-	if(sampling_method == LHS_CENTER){
-
-
-		std::string str_problem_dim = std::to_string(problem_dimension);
-		std::string lhs_filename = "lhs_points.dat";
-		std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(number_of_function_evals)+ " center" ;
-
-		system(python_command.c_str());
-
-		FILE *inp= fopen("lhs_points.dat","r");
-		FILE *outp = fopen(filename.c_str(), "w");
-
-		for(int i=0; i<number_of_function_evals;i++ ){
-
-			for(int j=0;j<problem_dimension;j++) fscanf(inp,"%lf",&x[j]);
-
-			for(int j=0;j<problem_dimension;j++) x[j] = x[j]*(xe[j]-xs[j])+xs[j];
-
-
-			double f_val = test_function(x);
-
-			for(int j=0;j<problem_dimension;j++) fprintf(outp,"%10.7f, ",x[j]);
-
-			fprintf(outp,"%10.7f\n",f_val);
-
-		}
-
-		fclose(inp);
-		fclose(outp);
-
-
-
-
-	}
-
-	if(sampling_method == LHS_RANDOM){
-
-
-		std::string str_problem_dim = std::to_string(problem_dimension);
-		std::string lhs_filename = "lhs_points.dat";
-		std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(number_of_function_evals)+ " None" ;
-
-		system(python_command.c_str());
-
-		FILE *inp= fopen("lhs_points.dat","r");
-		FILE *outp = fopen(filename.c_str(), "w");
-
-		for(int i=0; i<number_of_function_evals;i++ ){
-
-			for(int j=0;j<problem_dimension;j++) fscanf(inp,"%lf",&x[j]);
-
-			for(int j=0;j<problem_dimension;j++) x[j] = x[j]*(xe[j]-xs[j])+xs[j];
-
-
-			double f_val = test_function(x);
-
-			for(int j=0;j<problem_dimension;j++) fprintf(outp,"%10.7f, ",x[i]);
-
-			fprintf(outp,"%10.7f\n",f_val);
-
-		}
-
-		fclose(inp);
-		fclose(outp);
-
-
-
-
-	}
-
-	if(sampling_method == EXISTING_FILE){
-		/* do nothing */
-
-
-	}
-
-}
-
-
-
-
-void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		std::string filename,
-		double *bounds,
-		int dim,
-		int number_of_samples_with_only_f_eval,
-		int number_of_samples_with_g_eval,
-		int sampling_method){
-
-#if 0
-	printf("generate_highdim_test_function_data_GEK...\n");
-	printf("dim = %d\n",dim);
-#endif
-
-	int number_of_function_evals  =  number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval;
-
-
-	if(sampling_method == EXISTING_FILE){
-
-		/* do nothing */
-
-	}
-
-	if(sampling_method == RANDOM_SAMPLING){
-
-		FILE *outp;
-#if 0
-		printf("opening file %s for input...\n",filename.c_str() );
-#endif
-		outp = fopen(filename.c_str(), "w");
-
-		double *x = new double[dim];
-		double *xb = new double[dim];
-
-		/* write functional values to the output file */
-		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
-
-			for(int j=0; j<dim;j++){
-#if 0
-				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
-				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
-#endif
-				x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
-			}
-
-			double f_val = test_function(x);
-
-			for(int j=0; j<dim;j++){
-				printf("%10.7f, ",x[j]);
-				fprintf(outp,"%10.7f, ",x[j]);
-			}
-			printf("%10.7f\n",f_val);
-			fprintf(outp,"%10.7f\n",f_val);
-
-
-		}
-
-
-		/* write functional values and the gradient sensitivities to the output file */
-
-		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
-
-			for(int j=0; j<dim;j++){
-#if 0
-				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
-				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
-#endif
-
-				x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
-				xb[j]=0.0;
-			}
-
-			double f_val = test_function_adj(x,xb);
-
-#if 0
-			double f_val_original = test_function(x);
-
-			printf("fval = %10.7f\n",f_val);
-			printf("fval(original) = %10.7f\n",f_val_original);
-
-			for(int j=0; j<dim;j++){
-				double eps = x[j]*0.0001;
-				x[j]+= eps;
-				double fplus = test_function(x);
-				x[j]-= eps;
-
-				double fdval = (fplus-f_val_original)/eps;
-				printf("fd = %10.7f\n",fdval);
-				printf("adj = %10.7f\n",xb[j]);
-
-
-			}
-#endif
-
-
-
-			for(int j=0; j<dim;j++){
-#if 0
-				printf("%10.7f, ",x[j]);
-#endif
-				fprintf(outp,"%10.7f, ",x[j]);
-			}
-#if 0
-			printf("%10.7f, ",f_val);
-#endif
-			fprintf(outp,"%10.7f, ",f_val);
-
-			for(int j=0; j<dim-1;j++){
-#if 0
-				printf("%10.7f, ",xb[j]);
-#endif
-				fprintf(outp,"%10.7f, ",xb[j]);
-			}
-#if 0
-			printf("%10.7f\n",xb[dim-1]);
-#endif
-			fprintf(outp,"%10.7f\n",xb[dim-1]);
-
-
-		}
-
-		fclose(outp);
-
-		delete[] x;
-		delete[] xb;
-
-	}
-
-
-}
-
-
-void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
-		std::string filename,
-		double *bounds,
-		int number_of_samples,
-		int dim){
-
-#if 0
-	printf("generate_highdim_test_function_data...\n");
-	printf("dim = %d\n",dim);
-#endif
-
-	FILE *outp;
-#if 0
-	printf("opening file %s for input...\n",filename.c_str() );
-#endif
-	outp = fopen(filename.c_str(), "w");
-
-	double *x = new double[dim];
-
-
-	/* write functional values to the output file */
-	for(int i=0; i<number_of_samples;i++ ){
-
-		for(int j=0; j<dim;j++){
-#if 0
-			printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
-			printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
-#endif
-			x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
-		}
-
-		double f_val = test_function(x);
-
-		for(int j=0; j<dim;j++){
-#if 0
-			printf("%10.7f, ",x[j]);
-#endif
-			fprintf(outp,"%10.7f, ",x[j]);
-		}
-#if 0
-		printf("%10.7f\n",f_val);
-#endif
-		fprintf(outp,"%10.7f\n",f_val);
-
-
-	}
-
-	fclose(outp);
-
-	delete[] x;
-
-}
-
-
-
-
-void generate_2D_test_function_data_GEK(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		std::string filename,
-		double bounds[4],
-		int number_of_samples_with_only_f_eval,
-		int number_of_samples_with_g_eval,
-		int sampling_method,
-		std::string python_dir){
-
-
-	int number_of_function_evals  =  number_of_samples_with_only_f_eval
-			+ number_of_samples_with_g_eval;
-
-
-	if(sampling_method == EXISTING_FILE){
-
-		/* do nothing */
-
-	}
-
-
-	if(sampling_method == LHS_CENTER){
-		printf("Generating LHS_CENTER samples ...\n");
-
-		vec x(number_of_function_evals);
-		vec y(number_of_function_evals);
-		double xs = bounds[0];
-		double xe = bounds[1];
-
-		double ys = bounds[2];
-		double ye = bounds[3];
-
-		std::string lhs_filename = "lhs_points.dat";
-		std::string python_command = "python -W ignore "+ python_dir+"/lhs.py "
-				+ lhs_filename+ " "+ "2" + " "
-				+ std::to_string(number_of_function_evals)
-		+ " center" ;
-
-#if 0
-		printf("python_command = %s\n",python_command.c_str());
-#endif
-
-		system(python_command.c_str());
-
-		FILE *inp= fopen("lhs_points.dat","r");
-		FILE *outp = fopen(filename.c_str(), "w");
-
-
-		for(int i=0; i<number_of_function_evals;i++ ){
-
-			fscanf(inp,"%lf %lf\n",&x(i),&y(i));
-
-
-		}
-		fclose(inp);
-
-
-		/* write functional values to the output file */
-		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
-
-			double xin[2];
-			xin[0]=x[i]*(xe-xs)+xs;
-			xin[1]=y[i]*(ye-ys)+ys;
-			double f_val = test_function(xin);
-#if 0
-			printf("%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
-#endif
-			fprintf(outp,"%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
-
-		}
-
-		/* write functional values and the gradient sensitivities to the output file */
-
-		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
-
-			double xin[2];
-			double xb[2];
-			xb[0]=0.0;
-			xb[1]=0.0;
-			xin[0]=x[i]*(xe-xs)+xs;
-			xin[1]=y[i]*(ye-ys)+ys;
-			double f_val = test_function_adj(xin,xb);
-
-#if 0
-			printf("%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",xin[0],xin[1],f_val,xb[0],xb[1]);
-#endif
-			fprintf(outp,"%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",xin[0],xin[1],f_val,xb[0],xb[1]);
-
-		}
-
-
-
-
-		fclose(outp);
-
-
-
-
-	}
-
-
-
-
-
-	if(sampling_method == RANDOM_SAMPLING){
-#if 0
-		printf("Generating random samples ...\n");
-#endif
-		FILE *outp;
-#if 0
-		printf("opening file %s for input...\n",filename.c_str() );
-#endif
-		outp = fopen(filename.c_str(), "w");
-
-
-
-		/* parameter bounds */
-		double xs = bounds[0];
-		double xe = bounds[1];
-
-		double ys = bounds[2];
-		double ye = bounds[3];
-
-
-		vec x(number_of_function_evals);
-		vec y(number_of_function_evals);
-
-		/* generate random points */
-		for(int i=0; i<number_of_function_evals;i++ ){
-
-			x[i] = RandomDouble(xs, xe);
-			y[i] = RandomDouble(ys, ye);
-
-
-		}
-
-
-
-
-		/* write functional values to the output file */
-		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
-
-			double xin[2];
-			xin[0]=x[i];
-			xin[1]=y[i];
-			double f_val = test_function(xin);
-#if 0
-			printf("%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
-#endif
-			fprintf(outp,"%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
-
-		}
-
-
-		/* write functional values and the gradient sensitivities to the output file */
-
-		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
-
-			double xin[2];
-			double xb[2];
-			xb[0]=0.0;
-			xb[1]=0.0;
-			xin[0]=x[i];
-			xin[1]=y[i];
-			double f_val = test_function_adj(xin,xb);
-
-#if 0
-			printf("%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",x[i],y[i],f_val,xb[0],xb[1]);
-#endif
-			fprintf(outp,"%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",x[i],y[i],f_val,xb[0],xb[1]);
-
-		}
-
-
-
-		fclose(outp);
-
-
-
-	} /* end of random sampling */
-
-
-
-
-
-}
-
-
-void generate_1D_test_function_data_GEK(double (*test_function)(double *),
-		double (*test_function_adj)(double *, double *),
-		std::string filename,
-		double *bounds,
-		int number_of_samples_with_only_f_eval,
-		int number_of_samples_with_g_eval,
-		int sampling_method,
-		double *locations_func,
-		double *locations_grad){
-
-
-	int number_of_function_evals  =  number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval;
-
-
-	if(sampling_method == PREDEFINED_LOCATIONS){
-
-
-		double max = -LARGE;
-		double min =  LARGE;
-
-		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
-
-			if(locations_func[i] > max) max = locations_func[i];
-			if(locations_func[i] < min) min = locations_func[i];
-		}
-
-
-
-		for(int i=0; i<number_of_samples_with_g_eval;i++ ){
-
-			if(locations_grad[i] > max) max = locations_grad[i];
-			if(locations_grad[i] < min) min = locations_grad[i];
-		}
-
-
-
-
-		FILE *outp;
-
-		printf("opening file %s for input...\n",filename.c_str() );
-		outp = fopen(filename.c_str(), "w");
-
-
-
-		double x;
-
-		/* write functional values to the output file */
-		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
-
-			x = locations_func[i];
-
-			double f_val = test_function(&x);
-
-			fprintf(outp,"%10.7f, %10.7f\n",x,f_val);
-			printf("%d %10.7f %10.7f\n",i,x,f_val);
-
-		}
-
-		double xb;
-
-		/* write functional values and the gradient sensitivites to the output file */
-		for(int i=0; i<number_of_samples_with_g_eval;i++ ){
-
-			xb=0.0;
-
-			x = locations_grad[i];
-			double f_val = test_function_adj(&x,&xb);
-
-
-
-
-			fprintf(outp,"%10.7f, %10.7f, %10.7f\n",x,f_val,xb);
-			printf("%d %10.7f, %10.7f, %10.7f\n",i,x,f_val,xb);
-
-		}
-
-
-
-		fclose(outp);
-
-
-	}
-
-
-
-	if(sampling_method == RANDOM_SAMPLING){
-
-		FILE *outp;
-
-		printf("opening file %s for input...\n",filename.c_str() );
-		outp = fopen(filename.c_str(), "w");
-
-
-
-		double xs = bounds[0];
-		double xe = bounds[1];
-
-
-		vec x(number_of_samples_with_only_f_eval+number_of_samples_with_g_eval);
-
-		for(int i=0; i<number_of_samples_with_only_f_eval+number_of_samples_with_g_eval;i++ ){
-
-			x(i) = RandomDouble(xs, xe);
-
-
-		}
-
-		/* write functional values to the output file */
-		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
-
-			double f_val = test_function(&x(i));
-
-			fprintf(outp,"%10.7f, %10.7f\n",x(i),f_val);
-
-		}
-
-		double xb;
-
-		/* write functional values and the gradient sensitivites to the output file */
-		for(int i=number_of_samples_with_only_f_eval; i<number_of_samples_with_g_eval+number_of_samples_with_only_f_eval;i++ ){
-
-			xb=0.0;
-
-			double f_val = test_function_adj(&x(i),&xb);
-
-			fprintf(outp,"%10.7f, %10.7f, %10.7f\n",x(i),f_val,xb);
-
-		}
-
-		fclose(outp);
-
-
-	} /* end of random sampling */
-
-
-}
+//void perform_kriging_test(double (*test_function)(double *),
+//		double *bounds,
+//		std::string function_name ,
+//		int  number_of_samples,
+//		int sampling_method,
+//		int problem_dimension,
+//		int linear_regression){
+//
+//
+//	const int number_of_function_validation_points = 100;
+//
+//	vec kriging_weights;
+//	vec regression_weights;
+//
+//	double reg_param = pow(10.0, -8.0);
+//
+//	int number_of_max_function_evals_for_training = 10000;
+//
+//
+//	/* file name for data points in csv (comma separated values) format */
+//	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples )+".csv";
+//
+//	printf("input file name : %s\n",input_file_name.c_str());
+//
+//
+//
+//	/* generate the contour_plot for 2D data*/
+//	if(problem_dimension==2){
+//		generate_contour_plot_2D_function(test_function, bounds, function_name);
+//	}
+//
+//
+//	/* generate the function plot for 1D data*/
+//	if(problem_dimension==1){
+//		generate_plot_1D_function(test_function, bounds, function_name);
+//
+//	}
+//	printf("Generating inputs using %d sample points...\n",number_of_samples );
+//	/* generate the input data for test	*/
+//	generate_test_function_data(test_function,
+//			input_file_name,
+//			bounds,
+//			number_of_samples,
+//			sampling_method,
+//			problem_dimension);
+//
+//
+//	/* train response surface with maximum likelihood principle */
+//
+//	printf("training kriging hyperparameters...\n");
+//
+//
+//	train_kriging_response_surface(input_file_name,
+//			"None",
+//			linear_regression,
+//			regression_weights,
+//			kriging_weights,
+//			reg_param,
+//			number_of_max_function_evals_for_training,
+//			RAW_ASCII);
+//
+//
+//#if 0
+//
+//	printf("kriging weights = \n");
+//	kriging_weights.print();
+//	printf("regression weights = \n");
+//	regression_weights.print();
+//
+//
+//	printf("reg_param = %20.15f\n", reg_param);
+//#endif
+//
+//	mat data; /* data matrix */
+//	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
+//
+//	//	data.print();
+//
+//	int nrows = data.n_rows;
+//	int ncols = data.n_cols;
+//	int dim = ncols - 1;
+//
+//
+//	int dimension_of_R = nrows;
+//
+//	double beta0=0.0;
+//
+//
+//	mat X = data.submat(0, 0, nrows - 1, ncols - 2);
+//#if 0
+//	X.print();
+//#endif
+//	vec ys = data.col(dim);
+//
+//#if 0
+//	ys.print();
+//#endif
+//	vec x_max(dim);
+//	x_max.fill(0.0);
+//
+//	vec x_min(dim);
+//	x_min.fill(0.0);
+//
+//	for (int i = 0; i < dim; i++) {
+//		x_max(i) = data.col(i).max();
+//		x_min(i) = data.col(i).min();
+//
+//	}
+//
+//#if 0
+//	printf("maximum = \n");
+//	x_max.print();
+//
+//	printf("minimum = \n");
+//	x_min.print();
+//#endif
+//
+//
+//	/* normalize data */
+//	for (int i = 0; i < nrows; i++) {
+//		for (int j = 0; j < dim; j++) {
+//			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+//		}
+//	}
+//
+//
+//	if (linear_regression == LINEAR_REGRESSION_ON) { /* if linear regression is on */
+//
+//		mat augmented_X(X.n_rows, dim + 1);
+//
+//		for (unsigned int i = 0; i < X.n_rows; i++) {
+//			for (int j = 0; j <= dim; j++) {
+//				if (j == 0)
+//					augmented_X(i, j) = 1.0;
+//				else
+//					augmented_X(i, j) = X(i, j - 1);
+//
+//			}
+//		}
+//
+//
+//
+//		/* now update the ys_func vector */
+//
+//		ys = ys - augmented_X * regression_weights;
+//
+//		//		printf("Updated ys vector = \n");
+//
+//		//		ys.print();
+//
+//	} /* end of linear regression */
+//
+//
+//
+//
+//
+//
+//
+//	/* allocate the correlation matrix */
+//	mat R =zeros(dimension_of_R, dimension_of_R);
+//
+//
+//	//	R.print();
+//
+//	vec theta = kriging_weights.head(dim);
+//	vec gamma = kriging_weights.tail(dim);
+//
+//
+//
+//
+//	/* evaluate the correlation matrix for the given theta and gamma */
+//	compute_R_matrix(theta,gamma, reg_param, R, X);
+//
+//
+//
+//	mat Rinv = inv(R);
+//	/* vector of ones */
+//	vec I = ones(dimension_of_R);
+//
+//	beta0 = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys));
+//	vec R_inv_ys_min_beta = Rinv* (ys-beta0* I);
+//
+//
+//	printf("beta0 = %10.7f\n",beta0);
+//
+//
+//#if 0
+//	printf("R_inv_ys_min_beta =\n");
+//	R_inv_ys_min_beta.print();
+//#endif
+//
+//
+//
+//	/* check in-sample error */
+//
+//	double in_sample_error = 0.0;
+//	for(unsigned int i=0;i<X.n_rows;i++){
+//
+//		rowvec x = X.row(i);
+//
+//
+//		double func_val = calculate_f_tilde(x,
+//				X,
+//				beta0,
+//				regression_weights,
+//				R_inv_ys_min_beta,
+//				kriging_weights);
+//
+//		for(int j=0; j<dim;j++) {
+//
+//			x(j) = dim* x(j)* (x_max(j) - x_min(j))+x_min(j);
+//		}
+//
+//		double func_val_exact = test_function(x.memptr());
+//
+//		printf("\n");
+//		x.print();
+//		printf("\n");
+//		printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
+//
+//		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
+//
+//
+//	}
+//
+//	in_sample_error = sqrt(in_sample_error/X.n_rows);
+//
+//	printf("in sample error = %10.7f\n",in_sample_error);
+//
+//
+//
+//
+//
+//
+//	/* visualize with contour plot if the problem is 2D */
+//	if (problem_dimension == 2){
+//		int resolution =100;
+//
+//		std::string kriging_response_surface_file_name = function_name+"_"+"kriging_response_surface_"+ std::to_string(number_of_samples )+".dat";
+//
+//		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
+//
+//		double dx,dy; /* step sizes in x and y directions */
+//		rowvec x(2);
+//		rowvec xnorm(2);
+//
+//		double func_val;
+//		dx = (bounds[1]-bounds[0])/(resolution-1);
+//		dy = (bounds[3]-bounds[2])/(resolution-1);
+//
+//		double out_sample_error=0.0;
+//
+//		x[0] = bounds[0];
+//		for(int i=0;i<resolution;i++){
+//			x[1] = bounds[2];
+//			for(int j=0;j<resolution;j++){
+//
+//				/* normalize x */
+//				xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
+//				xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
+//
+//				func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights, R_inv_ys_min_beta, kriging_weights);
+//				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
+//
+//				double func_val_exact = test_function(x.memptr());
+//
+//				out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
+//
+//
+//
+//				x[1]+=dy;
+//			}
+//			x[0]+= dx;
+//
+//		}
+//		fclose(kriging_response_surface_file);
+//
+//		out_sample_error = sqrt(out_sample_error/(resolution*resolution));
+//
+//		printf("out of sample error = %10.7f\n",out_sample_error);
+//
+//
+//
+//		/* plot the kriging response surface */
+//
+//		std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
+//		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+//
+//		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
+//
+//
+//
+//		FILE* in = popen(python_command.c_str(), "r");
+//
+//
+//		fprintf(in, "\n");
+//
+//
+//	}
+//
+//
+//	/* visualize with line plot if the problem is 1D */
+//	if (problem_dimension == 1){
+//		int resolution =1000;
+//
+//
+//		std::string kriging_response_surface_file_name =
+//				function_name+"_"+"kriging_response_surface_"
+//				+ std::to_string(number_of_samples )
+//		+".dat";
+//
+//		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
+//
+//		double dx; /* step sizes in x */
+//		rowvec x(1);
+//		rowvec xnorm(1);
+//
+//		double func_val;
+//		double func_val_exact;
+//		double final_validation_error=0.0;
+//
+//		dx = (bounds[1]-bounds[0])/(resolution-1);
+//
+//
+//		x(0) = bounds[0];
+//		for(int i=0;i<resolution;i++){
+//
+//
+//			/* normalize x */
+//			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
+//			func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights,
+//					R_inv_ys_min_beta, kriging_weights);
+//
+//			func_val_exact = test_function(x.memptr());
+//
+//			printf("%10.7f %10.7f %10.7f\n",x(0),func_val,func_val_exact);
+//			fprintf(kriging_response_surface_file,"%10.7f %10.7f\n",x(0),func_val);
+//			final_validation_error+=sqrt(pow((func_val_exact-func_val),2.0));
+//
+//			x(0)+= dx;
+//
+//		}
+//		fclose(kriging_response_surface_file);
+//
+//
+//		printf("final validation error(L2) : %10.7f\n",final_validation_error );
+//
+//
+//
+//		/* plot the kriging response surface */
+//
+//		std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
+//		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+//
+//		std::string python_command = "python -W ignore plot_1d_function.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
+//
+//
+//		FILE* in_python = popen(python_command.c_str(), "r");
+//
+//
+//		fprintf(in_python, "\n");
+//	}
+//
+//
+//
+//	if (problem_dimension > 2){
+//
+//		rowvec xs(problem_dimension);
+//		rowvec xe(problem_dimension);
+//		rowvec x(problem_dimension);
+//		rowvec xnorm(problem_dimension);
+//
+//		double func_val;
+//		double func_val_exact;
+//		double final_validation_error=0.0;
+//
+//
+//		int count=0;
+//		for(int i=0;i<problem_dimension;i++){
+//			xs(i) = bounds[count];
+//			count++;
+//			xe(i) = bounds[count];
+//			count++;
+//
+//		}
+//
+//
+//		for(int i=0; i<number_of_function_validation_points;i++ ){
+//
+//			for(int j=0;j<problem_dimension;j++) {
+//
+//				x(j) = RandomDouble(xs(j), xe(j));
+//			}
+//#if 1
+//			printf("x = \n");
+//			x.print();
+//#endif
+//			/* normalize x */
+//			for(int j=0;j<problem_dimension;j++) {
+//
+//				xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
+//			}
+//
+//
+//			func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights,
+//					R_inv_ys_min_beta, kriging_weights);
+//
+//			func_val_exact = test_function(x.memptr());
+//
+//			printf("f_exact = %10.7f, f_tilde =  %10.7f\n",func_val_exact,func_val);
+//
+//			final_validation_error+=pow((func_val_exact-func_val),2.0);
+//
+//
+//
+//
+//		} /* end of validation loop */
+//
+//		final_validation_error = final_validation_error/number_of_function_validation_points;
+//
+//		printf("final validation error(L2) : %10.7f\n",final_validation_error );
+//
+//
+//
+//
+//	}
+//
+//
+//}
+
+
+
+
+
+//void perform_NNregression_test(double (*test_function)(double *),
+//		double *bounds,
+//		std::string function_name ,
+//		int  number_of_samples,
+//		int sampling_method,
+//		int problem_dimension,
+//		int number_of_trials){
+//
+//	FILE *NNinput;
+//
+//	vec meanError(number_of_trials);
+//	meanError.fill(0.0);
+//	vec stdError(number_of_trials);
+//
+//
+//	for(int trial=0; trial <number_of_trials; trial ++ ){
+//
+//		/* file name for data points in csv (comma separated values) format */
+//		std::string input_file_name = function_name+"_"
+//				+ std::to_string(number_of_samples )
+//		+".csv";
+//
+//		printf("input file name : %s\n",input_file_name.c_str());
+//		printf("Generating inputs using %d sample points...\n",number_of_samples );
+//
+//
+//		/* generate the input data for test	*/
+//		generate_test_function_data(test_function,
+//				input_file_name,
+//				bounds,
+//				number_of_samples,
+//				sampling_method,
+//				problem_dimension);
+//
+//
+//		/* run Neural Network Regression */
+//
+//		std::string python_command = "python -W ignore "+settings.python_dir+"/NeuralNetworkReg.py "+ input_file_name+ " > python.out";
+//#if 1
+//		printf("python_command : %s\n",python_command.c_str());
+//#endif
+//
+//
+//
+//		system(python_command.c_str());
+//
+//
+//
+//		NNinput = fopen("NNoutput.dat", "r");
+//
+//		fscanf(NNinput,"%lf",&stdError(trial));
+//		fscanf(NNinput,"%lf",&meanError(trial));
+//
+//		fclose(NNinput);
+//
+//		printf("it = %d, MSE = %10.7f, mean(MSE) = %10.7f\n",trial,meanError(trial), sum(meanError)/(trial+1));
+//
+//	}
+//
+//
+//	printf("mean squared error = %10.7f\n",mean(meanError));
+//
+//
+//}
+
+
+
+
+
+//void perform_GEK_test(double (*test_function)(double *),
+//		double (*test_function_adj)(double *, double *),
+//		double *bounds,
+//		std::string function_name ,
+//		int  number_of_samples_with_only_f_eval,
+//		int number_of_samples_with_g_eval,
+//		int sampling_method,
+//		int method_for_solving_lin_eq,
+//		int dim,
+//		int linear_regression,
+//		std::string python_dir){
+//
+//	if(dim <= 0){
+//		printf("Error: problem dimension must be greater than zero\n");
+//		exit(-1);
+//	}
+//
+//
+//	vec kriging_weights;
+//	vec regression_weights;
+//	double reg_param;
+//
+//
+//	int number_of_max_function_evals_for_training = 10000;
+//
+//	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"+std::to_string(number_of_samples_with_g_eval)+ ".csv";
+//
+//	printf("input file name : %s\n",input_file_name.c_str());
+//
+//
+//
+//	if(dim ==2){
+//		/* generate the contour_plot */
+//		generate_contour_plot_2D_function(test_function, bounds, function_name);
+//
+//	}
+//
+//
+//	if(dim ==2){
+//		printf("Generating inputs using %d points (%d gradient computations)...\n",number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval,number_of_samples_with_g_eval);
+//
+//
+//		/* generate the input data for test	*/
+//		generate_2D_test_function_data_GEK(test_function,
+//				test_function_adj,
+//				input_file_name,
+//				bounds,
+//				number_of_samples_with_only_f_eval,
+//				number_of_samples_with_g_eval,
+//				sampling_method,
+//				python_dir);
+//
+//	}
+//
+//	/* train the response surface */
+//	train_GEK_response_surface(input_file_name,
+//			linear_regression,
+//			regression_weights,
+//			kriging_weights,
+//			reg_param,
+//			number_of_max_function_evals_for_training,
+//			dim,
+//			method_for_solving_lin_eq);
+//
+//
+//
+//	printf("kriging weights = \n");
+//	kriging_weights.print();
+//
+//
+//
+//
+//	mat data_functional_values; // data matrix for only functional values
+//	mat data_gradients;         // data matrix for only functional values + gradient sensitivities
+//
+//
+//	std::ifstream in(input_file_name);
+//
+//	if(!in) {
+//		cout << "Cannot open input file...\n";
+//		exit(-1);
+//	}
+//
+//
+//	std::vector<double> temp;
+//
+//
+//
+//	std::string str;
+//	int count_f=0;
+//	int count_g=0;
+//
+//	while (std::getline(in, str)) {
+//		// output the line
+//		//				std::cout << "line = "<<str << std::endl;
+//
+//
+//		std::string delimiter = ",";
+//
+//		size_t pos = 0;
+//		std::string token;
+//		while ((pos = str.find(delimiter)) != std::string::npos) {
+//			token = str.substr(0, pos);
+//			//			std::cout << "token = "<<token << std::endl;
+//
+//
+//			temp.push_back(atof(token.c_str()));
+//
+//
+//			str.erase(0, pos + delimiter.length());
+//		}
+//		//				std::cout << "str = "<<str << std::endl;
+//		temp.push_back(atof(str.c_str()));
+//
+//		//		std::cout<<"temp= \n";
+//		for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
+//
+//			//			std::cout<<*it<<std::endl;
+//
+//
+//		}
+//
+//
+//		if(temp.size() == dim+1){ // function values
+//
+//			rowvec newrow(dim+1);
+//			int count=0;
+//			for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
+//
+//				//				std::cout<<*it<<std::endl;
+//				newrow(count)=*it;
+//				count++;
+//
+//			}
+//			//			newrow.print();
+//			count_f++;
+//			data_functional_values.resize(count_f, dim+1);
+//
+//			data_functional_values.row(count_f-1)=newrow;
+//
+//
+//
+//		}
+//		else{ // function+gradient information
+//
+//			rowvec newrow(2*dim+1);
+//			int count=0;
+//			for (std::vector<double>::iterator it = temp.begin() ; it != temp.end(); ++it){
+//
+//				//				std::cout<<*it<<std::endl;
+//				newrow(count)=*it;
+//				count++;
+//
+//			}
+//			//			newrow.print();
+//			count_g++;
+//			data_gradients.resize(count_g, 2*dim+1);
+//
+//			data_gradients.row(count_g-1)=newrow;
+//
+//
+//		}
+//
+//
+//
+//
+//		temp.clear();
+//
+//		// now we loop back and get the next line in 'str'
+//	}
+//
+//
+//	printf("data functional values = \n");
+//	data_functional_values.print();
+//	printf("data gradient sensitivities = \n");
+//	data_gradients.print();
+//	printf("\n");
+//
+//	int n_f_evals = data_functional_values.n_rows;
+//	int n_g_evals = data_gradients.n_rows;
+//
+//
+//	mat X; /* data matrix */
+//	vec ys_func;
+//
+//	if(n_f_evals>0){
+//		X = data_functional_values.submat(0, 0, n_f_evals - 1, data_functional_values.n_cols - 2);
+//	}
+//	//		X.print();
+//
+//	if(n_f_evals>0){
+//		ys_func = data_functional_values.col(dim);
+//	}
+//
+//	//	ys.print();
+//
+//
+//	if( n_g_evals > 0){
+//		X.insert_rows( n_f_evals , data_gradients.submat(0, 0, n_g_evals - 1, dim-1));
+//
+//		//	X.print();
+//
+//	}
+//
+//	ys_func.print();
+//
+//	vec x_max(dim);
+//	x_max.fill(0.0);
+//
+//	vec x_min(dim);
+//	x_min.fill(0.0);
+//
+//	for (int i = 0; i < dim; i++) {
+//		x_max(i) = X.col(i).max();
+//		x_min(i) = X.col(i).min();
+//
+//	}
+//
+//	printf("maximum = \n");
+//	x_max.print();
+//
+//	printf("minimum = \n");
+//	x_min.print();
+//
+//
+//	/* normalize the data matrix */
+//	for (unsigned int i = 0; i < X.n_rows; i++) {
+//		for (int j = 0; j < dim; j++) {
+//			X(i, j) = (X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+//		}
+//	}
+//
+//
+//	/* normalize the data sensitivity data matrix */
+//	for (unsigned int i = 0; i < data_gradients.n_rows; i++) {
+//		for (int j = 0; j < dim; j++) {
+//			data_gradients(i, j) = (data_gradients(i, j) - x_min(j)) / (x_max(j) - x_min(j));
+//		}
+//
+//		for (int j = dim+1; j < 2*dim+1; j++) {
+//			data_gradients(i, j) = data_gradients(i, j) * (x_max(j-dim-1) - x_min(j-dim-1));
+//		}
+//	}
+//
+//
+//	if(n_g_evals > 0){
+//
+//		ys_func.insert_rows(n_f_evals, data_gradients.col(dim));
+//
+//
+//	}
+//
+//
+//	printf("Normalized data = \n");
+//	X.print();
+//
+//	printf("Normalized sensitivity data = \n");
+//	data_gradients.print();
+//
+//
+//
+//
+//
+//	/* matrix that holds the gradient sensitivities */
+//	mat grad(n_g_evals, dim);
+//
+//
+//	/* copy only gradient sensitivities */
+//	if( n_g_evals > 0) {
+//		grad = data_gradients.submat(0, dim+1, n_g_evals - 1, 2*dim);
+//	}
+//
+//
+//	/* dimension of the correlation matrix R */
+//	int dimension_of_R = n_f_evals+n_g_evals+ n_g_evals*dim;
+//
+//
+//
+//
+//
+//	if (linear_regression == 1) { /* if linear regression is on */
+//
+//		mat augmented_X(X.n_rows, dim + 1);
+//
+//		for (unsigned int i = 0; i < X.n_rows; i++) {
+//			for (int j = 0; j <= dim; j++) {
+//				if (j == 0)
+//					augmented_X(i, j) = 1.0;
+//				else
+//					augmented_X(i, j) = X(i, j - 1);
+//
+//			}
+//		}
+//
+//
+//		/* now update the ys_func vector */
+//
+//		ys_func = ys_func - augmented_X * regression_weights;
+//
+//		//		printf("Updated ys vector = \n");
+//
+//		//		ys.print();
+//
+//	} /* end of linear regression */
+//
+//
+//
+//	vec ys(dimension_of_R);
+//
+//	/* copy n_f_evals+n_g_evals functional values from ys_func */
+//	for(int i=0; i<n_f_evals+n_g_evals; i++ ) {
+//		ys(i)=ys_func(i);
+//	}
+//
+//
+//	/* for each data point with gradient information*/
+//	int pos = n_f_evals+n_g_evals;
+//
+//	for(int j=0; j<dim; j++){ /* for each design variable */
+//		for(int i=0; i<n_g_evals; i++ ) {
+//
+//
+//			ys(pos + n_g_evals*j+i) = grad(i,j);
+//
+//		}
+//
+//	}
+//
+//
+//	printf("ys = \n");
+//	ys.print();
+//
+//
+//
+//
+//	/* allocate the correlation matrix */
+//	mat R= eye(dimension_of_R, dimension_of_R);
+//	//	R.fill(0.0);
+//
+//
+//
+//
+//	/* initialize the diagonal to 1.0 plus a small regularization term*/
+//	//	for (int i = 0; i < dimension_of_R; i++) {
+//	//		R(i, i) = 1.0 + REGULARIZATION_TERM;
+//	//	}
+//
+//
+//
+//
+//	vec theta = kriging_weights.head(dim);
+//
+//
+//	compute_R_matrix_GEK(theta, reg_param, R, X,grad);
+//
+//	//	R.print();
+//
+//	//	printf("R = \n");
+//	//	R.print();
+//
+//
+//
+//	printf("condition number of R = %10.7e\n", cond(R));
+//
+//
+//	//	mat Rinv = inv_sympd(R);
+//
+//
+//
+//
+//
+//
+//	//		Rinv.print();
+//
+//
+//
+//
+//
+//
+//
+//	mat U(dimension_of_R, dimension_of_R);
+//	mat D(dimension_of_R, dimension_of_R);
+//	mat L(dimension_of_R, dimension_of_R);
+//	mat V(dimension_of_R, dimension_of_R);
+//	mat Ut(dimension_of_R, dimension_of_R);
+//
+//	vec s(dimension_of_R);
+//	vec sinv(dimension_of_R);
+//
+//	/* allocate the F vector */
+//	vec F(dimension_of_R);
+//	F.fill(0.0);
+//
+//	/* set first n_f_evals entries to one */
+//	for(int i=0; i<n_f_evals+n_g_evals ;i++) F(i)=1.0;
+//
+//
+//
+//
+//	//	printf("F = \n");
+//	//	F.print();
+//	//	printf("\n");
+//
+//
+//	if( method_for_solving_lin_eq == SVD){
+//		int flag_svd = svd( U, s, V, R );
+//
+//		if (flag_svd == 0) {
+//			printf("SVD could not be performed\n");
+//
+//			exit(-1);
+//		}
+//
+//		sinv = 1.0/s;
+//
+//		sinv.print();
+//
+//		double threshold = 10E-08;
+//		for(int i=0; i< dimension_of_R; i++){
+//			if(s(i)  < threshold){
+//				sinv(i) = 0.0;
+//			}
+//
+//		}
+//
+//		printf("sinv = \n");
+//		sinv.print();
+//		printf("\n");
+//
+//
+//		Ut = trans(U);
+//
+//		D.fill(0.0);
+//		for(int i=0; i< dimension_of_R;i++){
+//
+//			D(i,i) = sinv(i);
+//
+//
+//		}
+//
+//	}
+//
+//
+//	if( method_for_solving_lin_eq == CHOLESKY){
+//
+//		/* compute Cholesky decomposition */
+//		int flag = chol(U, R);
+//
+//		if (flag == 0) {
+//			printf("Ill conditioned correlation matrix in Cholesky decomposition\n");
+//
+//			exit(-1);
+//		}
+//
+//		L = trans(U);
+//
+//
+//
+//	}
+//
+//
+//	vec R_inv_ys(dimension_of_R); /* R^-1* ys */
+//	vec R_inv_F (dimension_of_R); /* R^-1* F */
+//	vec R_inv_ys_min_beta(dimension_of_R); /* R^-1* (ys-beta0*F) */
+//
+//	if( method_for_solving_lin_eq == SVD){
+//		R_inv_ys =V*D*Ut*ys;
+//		R_inv_F  =V*D*Ut*F;
+//	}
+//
+//	if( method_for_solving_lin_eq == CHOLESKY){
+//
+//		solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys);
+//		solve_linear_system_by_Cholesky(U, L, R_inv_F, F);
+//	}
+//
+//
+//	/*
+//		vec res1 = R*R_inv_F-F;
+//
+//		printf("check = R*R_inv_F-F = \n");
+//		res1.print();
+//		printf("\n");
+//
+//		vec res2 = R*R_inv_ys-ys;
+//
+//		printf("check = R*R_inv_ys-ys = \n");
+//		res2.print();
+//		printf("\n");
+//
+//	 */
+//
+//	double beta0 = (1.0/dot(F,R_inv_F)) * (dot(F,R_inv_ys));
+//
+//
+//	vec ys_min_betaF = ys-beta0*F;
+//
+//	if( method_for_solving_lin_eq == CHOLESKY){
+//
+//		solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaF);
+//
+//	}
+//
+//	if( method_for_solving_lin_eq == SVD){
+//		R_inv_ys_min_beta = V*D*Ut*ys_min_betaF;
+//
+//	}
+//
+//
+//	/*
+//
+//		vec res3 = R*R_inv_ys_min_beta-ys_min_betaF;
+//
+//		printf("check R*R_inv_ys_min_beta-(ys-beta0*F) = \n");
+//		res3.print();
+//		printf("\n");
+//
+//	 */
+//
+//
+//
+//	printf("beta0 = %10.7f\n",beta0);
+//
+//
+//
+//	double in_sample_error = 0.0;
+//	for(int i=0;i<X.n_rows;i++){
+//
+//		rowvec x = X.row(i);
+//		rowvec xp = X.row(i);
+//
+//
+//		printf("\nData point = %d\n", i+1);
+//		printf("calling f_tilde at x = %10.7f y = %10.7f\n",
+//				x(0)* (x_max(0) - x_min(0))+x_min(0),
+//				x(1)* (x_max(1) - x_min(1))+x_min(1));
+//		double func_val = calculate_f_tilde_GEK(x,
+//				X,
+//				beta0,
+//				regression_weights,
+//				R_inv_ys_min_beta,
+//				theta,
+//				n_g_evals );
+//
+//		/* perturb the first design point */
+//		xp(0)+= 0.000001;
+//
+//		double func_valp = calculate_f_tilde_GEK(xp,
+//				X,
+//				beta0,
+//				regression_weights,
+//				R_inv_ys_min_beta,
+//				theta,
+//				n_g_evals );
+//
+//		double der_val1 = (func_valp-func_val)/0.000001;
+//		xp(0)-= 0.000001;
+//
+//		/* perturb the second design point */
+//		xp(1)+= 0.000001;
+//
+//		func_valp = calculate_f_tilde_GEK(xp,
+//				X,
+//				beta0,
+//				regression_weights,
+//				R_inv_ys_min_beta,
+//				theta,
+//				n_g_evals );
+//
+//		double der_val2 = (func_valp-func_val)/0.000001;
+//
+//
+//		/* change to original coordinates before calling the original function */
+//		x(0) = x(0)* (x_max(0) - x_min(0))+x_min(0);
+//		x(1) = x(1)* (x_max(1) - x_min(1))+x_min(1);
+//
+//		double func_val_exact = test_function(x.memptr());
+//
+//		x(0) += 0.000001;
+//
+//		double func_val_exactp = test_function(x.memptr());
+//
+//		double der_val_f1 = (func_val_exactp-func_val_exact)/0.000001;
+//		x(0) -= 0.000001;
+//
+//		x(1) += 0.000001;
+//
+//		func_val_exactp = test_function(x.memptr());
+//
+//		double der_val_f2 = (func_val_exactp-func_val_exact)/0.000001;
+//
+//
+//		printf("func_val (approx) = %10.7f\n", func_val);
+//		printf("func_val (exact) = %10.7f\n", func_val_exact);
+//		printf("der_val1  (approx) = %10.7f\n", der_val1/(x_max(0) - x_min(0)));
+//		printf("der_valf1  (approx) = %10.7f\n", der_val_f1);
+//		printf("der_val2  (approx) = %10.7f\n", der_val2/(x_max(1) - x_min(1)));
+//		printf("der_valf2  (approx) = %10.7f\n\n", der_val_f2);
+//
+//
+//		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
+//
+//		printf("in sample error = %10.7f\n", in_sample_error);
+//
+//	}
+//
+//	in_sample_error = sqrt(in_sample_error/X.n_rows);
+//
+//	printf("in sample error = %10.7f\n",in_sample_error);
+//
+//
+//
+//
+//	if(dim ==2){
+//
+//		int resolution =100;
+//
+//
+//		std::string kriging_response_surface_file_name = function_name+"_"+"kriging_response_surface_"+ std::to_string(number_of_samples_with_only_f_eval)+"_"+std::to_string(number_of_samples_with_g_eval)+".dat";
+//
+//		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
+//
+//		double dx,dy; /* step sizes in x and y directions */
+//		rowvec x(2);
+//		rowvec xnorm(2);
+//
+//		double func_val;
+//		dx = (x_max(0) - x_min(0))/(resolution-1);
+//		dy = (x_max(1) - x_min(1))/(resolution-1);
+//
+//		dx = (80.0 - 20.0)/(resolution-1);
+//		dy = (80.0 - 20.0)/(resolution-1);
+//
+//
+//		double out_sample_error = 0.0;
+//
+//		x[0] = x_min(0);
+//		x[0] = 20.0;
+//		for(int i=0;i<resolution;i++){
+//			x[1] = x_min(1);
+//			x[1] = 20.0;
+//			for(int j=0;j<resolution;j++){
+//
+//				/* normalize x */
+//				xnorm(0)= (x(0)- x_min(0)) / (x_max(0) - x_min(0));
+//				xnorm(1)= (x(1)- x_min(1)) / (x_max(1) - x_min(1));
+//
+//				//				printf("calling f_tilde at x = %10.7f y = %10.7f\n", x(0),x(1));
+//				func_val = calculate_f_tilde_GEK(xnorm,
+//						X,
+//						beta0,
+//						regression_weights,
+//						R_inv_ys_min_beta,
+//						kriging_weights,
+//						n_g_evals );
+//
+//				double func_val_exact = test_function(x.memptr());
+//
+//				out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
+//				//				printf("out of sample error = %10.7f\n",out_sample_error);
+//				//				printf("x = %10.7f y = %10.7f ftilde = %10.7f fexact = %10.7f\n",x(0),x(1),func_val,func_val_exact);
+//				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
+//
+//				x[1]+=dy;
+//			}
+//			x[0]+= dx;
+//
+//		}
+//		fclose(kriging_response_surface_file);
+//
+//		out_sample_error = sqrt(out_sample_error/(resolution*resolution));
+//
+//		printf("out of sample error = %10.7f\n",out_sample_error);
+//
+//
+//		/* plot the kriging response surface */
+//
+//		std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
+//		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
+//
+//		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
+//
+//
+//
+//		FILE *figure_out = popen(python_command.c_str(), "r");
+//
+//
+//		fprintf(figure_out, "\n");
+//
+//
+//	}
+//
+//
+//}
+
+
+
+
+
+
+
+
+
+//void generate_2D_test_function_data(double (*test_function)(double *),
+//		std::string filename,
+//		double bounds[4],
+//		int number_of_function_evals,
+//		int sampling_method){
+//
+//	if(sampling_method == EXISTING_FILE){
+//		/* do nothing */
+//
+//
+//	}
+//
+//
+//	if(sampling_method == RANDOM_SAMPLING){
+//
+//		FILE *outp;
+//
+//		//	printf("opening file %s for input...\n",filename.c_str() );
+//		outp = fopen(filename.c_str(), "w");
+//
+//
+//
+//		double xs = bounds[0];
+//		double xe = bounds[1];
+//
+//		double ys = bounds[2];
+//		double ye = bounds[3];
+//
+//		double x[2];
+//
+//		for(int i=0; i<number_of_function_evals;i++ ){
+//
+//			x[0] = RandomDouble(xs, xe);
+//			x[1] = RandomDouble(ys, ye);
+//			double f_val = test_function(x);
+//
+//			fprintf(outp,"%10.7f %10.7f %10.7f\n",x[0],x[1],f_val);
+//
+//		}
+//
+//		fclose(outp);
+//	}
+//
+//
+//	if(sampling_method == LHS_CENTER){
+//
+//		double x[2];
+//		double xs = bounds[0];
+//		double xe = bounds[1];
+//
+//		double ys = bounds[2];
+//		double ye = bounds[3];
+//
+//		std::string lhs_filename = "lhs_points.dat";
+//		std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ "2" + " "+ std::to_string(number_of_function_evals)+ " center" ;
+//
+//		system(python_command.c_str());
+//
+//		FILE *inp= fopen("lhs_points.dat","r");
+//		FILE *outp = fopen(filename.c_str(), "w");
+//
+//		for(int i=0; i<number_of_function_evals;i++ ){
+//
+//			fscanf(inp,"%lf %lf",&x[0],&x[1]);
+//			x[0] = x[0]*(xe-xs)+xs;
+//			x[1] = x[1]*(ye-ys)+ys;
+//			double f_val = test_function(x);
+//
+//			fprintf(outp,"%10.7f %10.7f %10.7f\n",x[0],x[1],f_val);
+//
+//		}
+//
+//		fclose(inp);
+//		fclose(outp);
+//
+//
+//	}
+//
+//	if(sampling_method == LHS_RANDOM){
+//
+//		double x[2];
+//		double xs = bounds[0];
+//		double xe = bounds[1];
+//
+//		double ys = bounds[2];
+//		double ye = bounds[3];
+//
+//		std::string lhs_filename = "lhs_points.dat";
+//		std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ "2" + " "+ std::to_string(number_of_function_evals)+ " None" ;
+//
+//		system(python_command.c_str());
+//
+//		FILE *inp= fopen("lhs_points.dat","r");
+//		FILE *outp = fopen(filename.c_str(), "w");
+//
+//		for(int i=0; i<number_of_function_evals;i++ ){
+//
+//			fscanf(inp,"%lf %lf",&x[0],&x[1]);
+//			x[0] = x[0]*(xe-xs)+xs;
+//			x[1] = x[1]*(ye-ys)+ys;
+//			double f_val = test_function(x);
+//
+//			fprintf(outp,"%10.7f %10.7f %10.7f\n",x[0],x[1],f_val);
+//
+//		}
+//
+//		fclose(inp);
+//		fclose(outp);
+//
+//
+//	}
+//
+//}
+
+
+//void generate_test_function_data(double (*test_function)(double *),
+//		std::string filename,
+//		double * bounds,
+//		int number_of_function_evals,
+//		int sampling_method,
+//		int problem_dimension){
+//
+//
+//	double *xs = new double[problem_dimension];
+//	double *xe = new double[problem_dimension];
+//	double *x  = new double[problem_dimension];
+//
+//	int count=0;
+//	for(int i=0;i<problem_dimension;i++){
+//		xs[i] = bounds[count];
+//		count++;
+//		xe[i] = bounds[count];
+//		count++;
+//
+//	}
+//
+//
+//	if(sampling_method == RANDOM_SAMPLING){
+//
+//		FILE *outp;
+//#if 0
+//		printf("opening file %s for input...\n",filename.c_str() );
+//#endif
+//		outp = fopen(filename.c_str(), "w");
+//
+//
+//
+//		for(int i=0; i<number_of_function_evals;i++ ){
+//
+//			for(int j=0;j<problem_dimension;j++) x[j] = RandomDouble(xs[j], xe[j]);
+//
+//			double f_val = test_function(x);
+//
+//			for(int j=0;j<problem_dimension;j++) fprintf(outp,"%10.7f, ",x[j]);
+//
+//			fprintf(outp,"%10.7f\n",f_val);
+//
+//		}
+//
+//		fclose(outp);
+//	}
+//
+//
+//	if(sampling_method == LHS_CENTER){
+//
+//
+//		std::string str_problem_dim = std::to_string(problem_dimension);
+//		std::string lhs_filename = "lhs_points.dat";
+//		std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(number_of_function_evals)+ " center" ;
+//
+//		system(python_command.c_str());
+//
+//		FILE *inp= fopen("lhs_points.dat","r");
+//		FILE *outp = fopen(filename.c_str(), "w");
+//
+//		for(int i=0; i<number_of_function_evals;i++ ){
+//
+//			for(int j=0;j<problem_dimension;j++) fscanf(inp,"%lf",&x[j]);
+//
+//			for(int j=0;j<problem_dimension;j++) x[j] = x[j]*(xe[j]-xs[j])+xs[j];
+//
+//
+//			double f_val = test_function(x);
+//
+//			for(int j=0;j<problem_dimension;j++) fprintf(outp,"%10.7f, ",x[j]);
+//
+//			fprintf(outp,"%10.7f\n",f_val);
+//
+//		}
+//
+//		fclose(inp);
+//		fclose(outp);
+//
+//
+//
+//
+//	}
+//
+//	if(sampling_method == LHS_RANDOM){
+//
+//
+//		std::string str_problem_dim = std::to_string(problem_dimension);
+//		std::string lhs_filename = "lhs_points.dat";
+//		std::string python_command = "python -W ignore lhs.py "+ lhs_filename+ " "+ str_problem_dim + " "+ std::to_string(number_of_function_evals)+ " None" ;
+//
+//		system(python_command.c_str());
+//
+//		FILE *inp= fopen("lhs_points.dat","r");
+//		FILE *outp = fopen(filename.c_str(), "w");
+//
+//		for(int i=0; i<number_of_function_evals;i++ ){
+//
+//			for(int j=0;j<problem_dimension;j++) fscanf(inp,"%lf",&x[j]);
+//
+//			for(int j=0;j<problem_dimension;j++) x[j] = x[j]*(xe[j]-xs[j])+xs[j];
+//
+//
+//			double f_val = test_function(x);
+//
+//			for(int j=0;j<problem_dimension;j++) fprintf(outp,"%10.7f, ",x[i]);
+//
+//			fprintf(outp,"%10.7f\n",f_val);
+//
+//		}
+//
+//		fclose(inp);
+//		fclose(outp);
+//
+//
+//
+//
+//	}
+//
+//	if(sampling_method == EXISTING_FILE){
+//		/* do nothing */
+//
+//
+//	}
+//
+//}
+
+
+
+
+//void generate_highdim_test_function_data_GEK(double (*test_function)(double *),
+//		double (*test_function_adj)(double *, double *),
+//		std::string filename,
+//		double *bounds,
+//		int dim,
+//		int number_of_samples_with_only_f_eval,
+//		int number_of_samples_with_g_eval,
+//		int sampling_method){
+//
+//#if 0
+//	printf("generate_highdim_test_function_data_GEK...\n");
+//	printf("dim = %d\n",dim);
+//#endif
+//
+//	int number_of_function_evals  =  number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval;
+//
+//
+//	if(sampling_method == EXISTING_FILE){
+//
+//		/* do nothing */
+//
+//	}
+//
+//	if(sampling_method == RANDOM_SAMPLING){
+//
+//		FILE *outp;
+//#if 0
+//		printf("opening file %s for input...\n",filename.c_str() );
+//#endif
+//		outp = fopen(filename.c_str(), "w");
+//
+//		double *x = new double[dim];
+//		double *xb = new double[dim];
+//
+//		/* write functional values to the output file */
+//		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
+//
+//			for(int j=0; j<dim;j++){
+//#if 0
+//				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
+//				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
+//#endif
+//				x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+//			}
+//
+//			double f_val = test_function(x);
+//
+//			for(int j=0; j<dim;j++){
+//				printf("%10.7f, ",x[j]);
+//				fprintf(outp,"%10.7f, ",x[j]);
+//			}
+//			printf("%10.7f\n",f_val);
+//			fprintf(outp,"%10.7f\n",f_val);
+//
+//
+//		}
+//
+//
+//		/* write functional values and the gradient sensitivities to the output file */
+//
+//		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
+//
+//			for(int j=0; j<dim;j++){
+//#if 0
+//				printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
+//				printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
+//#endif
+//
+//				x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+//				xb[j]=0.0;
+//			}
+//
+//			double f_val = test_function_adj(x,xb);
+//
+//#if 0
+//			double f_val_original = test_function(x);
+//
+//			printf("fval = %10.7f\n",f_val);
+//			printf("fval(original) = %10.7f\n",f_val_original);
+//
+//			for(int j=0; j<dim;j++){
+//				double eps = x[j]*0.0001;
+//				x[j]+= eps;
+//				double fplus = test_function(x);
+//				x[j]-= eps;
+//
+//				double fdval = (fplus-f_val_original)/eps;
+//				printf("fd = %10.7f\n",fdval);
+//				printf("adj = %10.7f\n",xb[j]);
+//
+//
+//			}
+//#endif
+//
+//
+//
+//			for(int j=0; j<dim;j++){
+//#if 0
+//				printf("%10.7f, ",x[j]);
+//#endif
+//				fprintf(outp,"%10.7f, ",x[j]);
+//			}
+//#if 0
+//			printf("%10.7f, ",f_val);
+//#endif
+//			fprintf(outp,"%10.7f, ",f_val);
+//
+//			for(int j=0; j<dim-1;j++){
+//#if 0
+//				printf("%10.7f, ",xb[j]);
+//#endif
+//				fprintf(outp,"%10.7f, ",xb[j]);
+//			}
+//#if 0
+//			printf("%10.7f\n",xb[dim-1]);
+//#endif
+//			fprintf(outp,"%10.7f\n",xb[dim-1]);
+//
+//
+//		}
+//
+//		fclose(outp);
+//
+//		delete[] x;
+//		delete[] xb;
+//
+//	}
+//
+//
+//}
+//
+//
+//void generate_highdim_test_function_data_cuda(double (*test_function)(double *),
+//		std::string filename,
+//		double *bounds,
+//		int number_of_samples,
+//		int dim){
+//
+//#if 0
+//	printf("generate_highdim_test_function_data...\n");
+//	printf("dim = %d\n",dim);
+//#endif
+//
+//	FILE *outp;
+//#if 0
+//	printf("opening file %s for input...\n",filename.c_str() );
+//#endif
+//	outp = fopen(filename.c_str(), "w");
+//
+//	double *x = new double[dim];
+//
+//
+//	/* write functional values to the output file */
+//	for(int i=0; i<number_of_samples;i++ ){
+//
+//		for(int j=0; j<dim;j++){
+//#if 0
+//			printf("bounds[%d] = %10.7f\n",j*2,bounds[j*2]);
+//			printf("bounds[%d] = %10.7f\n",j*2+1,bounds[j*2+1]);
+//#endif
+//			x[j] = RandomDouble(bounds[j*2], bounds[j*2+1]);
+//		}
+//
+//		double f_val = test_function(x);
+//
+//		for(int j=0; j<dim;j++){
+//#if 0
+//			printf("%10.7f, ",x[j]);
+//#endif
+//			fprintf(outp,"%10.7f, ",x[j]);
+//		}
+//#if 0
+//		printf("%10.7f\n",f_val);
+//#endif
+//		fprintf(outp,"%10.7f\n",f_val);
+//
+//
+//	}
+//
+//	fclose(outp);
+//
+//	delete[] x;
+//
+//}
+//
+//
+//
+//
+//void generate_2D_test_function_data_GEK(double (*test_function)(double *),
+//		double (*test_function_adj)(double *, double *),
+//		std::string filename,
+//		double bounds[4],
+//		int number_of_samples_with_only_f_eval,
+//		int number_of_samples_with_g_eval,
+//		int sampling_method,
+//		std::string python_dir){
+//
+//
+//	int number_of_function_evals  =  number_of_samples_with_only_f_eval
+//			+ number_of_samples_with_g_eval;
+//
+//
+//	if(sampling_method == EXISTING_FILE){
+//
+//		/* do nothing */
+//
+//	}
+//
+//
+//	if(sampling_method == LHS_CENTER){
+//		printf("Generating LHS_CENTER samples ...\n");
+//
+//		vec x(number_of_function_evals);
+//		vec y(number_of_function_evals);
+//		double xs = bounds[0];
+//		double xe = bounds[1];
+//
+//		double ys = bounds[2];
+//		double ye = bounds[3];
+//
+//		std::string lhs_filename = "lhs_points.dat";
+//		std::string python_command = "python -W ignore "+ python_dir+"/lhs.py "
+//				+ lhs_filename+ " "+ "2" + " "
+//				+ std::to_string(number_of_function_evals)
+//		+ " center" ;
+//
+//#if 0
+//		printf("python_command = %s\n",python_command.c_str());
+//#endif
+//
+//		system(python_command.c_str());
+//
+//		FILE *inp= fopen("lhs_points.dat","r");
+//		FILE *outp = fopen(filename.c_str(), "w");
+//
+//
+//		for(int i=0; i<number_of_function_evals;i++ ){
+//
+//			fscanf(inp,"%lf %lf\n",&x(i),&y(i));
+//
+//
+//		}
+//		fclose(inp);
+//
+//
+//		/* write functional values to the output file */
+//		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
+//
+//			double xin[2];
+//			xin[0]=x[i]*(xe-xs)+xs;
+//			xin[1]=y[i]*(ye-ys)+ys;
+//			double f_val = test_function(xin);
+//#if 0
+//			printf("%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
+//#endif
+//			fprintf(outp,"%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
+//
+//		}
+//
+//		/* write functional values and the gradient sensitivities to the output file */
+//
+//		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
+//
+//			double xin[2];
+//			double xb[2];
+//			xb[0]=0.0;
+//			xb[1]=0.0;
+//			xin[0]=x[i]*(xe-xs)+xs;
+//			xin[1]=y[i]*(ye-ys)+ys;
+//			double f_val = test_function_adj(xin,xb);
+//
+//#if 0
+//			printf("%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",xin[0],xin[1],f_val,xb[0],xb[1]);
+//#endif
+//			fprintf(outp,"%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",xin[0],xin[1],f_val,xb[0],xb[1]);
+//
+//		}
+//
+//
+//
+//
+//		fclose(outp);
+//
+//
+//
+//
+//	}
+//
+//
+//
+//
+//
+//	if(sampling_method == RANDOM_SAMPLING){
+//#if 0
+//		printf("Generating random samples ...\n");
+//#endif
+//		FILE *outp;
+//#if 0
+//		printf("opening file %s for input...\n",filename.c_str() );
+//#endif
+//		outp = fopen(filename.c_str(), "w");
+//
+//
+//
+//		/* parameter bounds */
+//		double xs = bounds[0];
+//		double xe = bounds[1];
+//
+//		double ys = bounds[2];
+//		double ye = bounds[3];
+//
+//
+//		vec x(number_of_function_evals);
+//		vec y(number_of_function_evals);
+//
+//		/* generate random points */
+//		for(int i=0; i<number_of_function_evals;i++ ){
+//
+//			x[i] = RandomDouble(xs, xe);
+//			y[i] = RandomDouble(ys, ye);
+//
+//
+//		}
+//
+//
+//
+//
+//		/* write functional values to the output file */
+//		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
+//
+//			double xin[2];
+//			xin[0]=x[i];
+//			xin[1]=y[i];
+//			double f_val = test_function(xin);
+//#if 0
+//			printf("%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
+//#endif
+//			fprintf(outp,"%10.7f, %10.7f, %10.7f \n",x[i],y[i],f_val);
+//
+//		}
+//
+//
+//		/* write functional values and the gradient sensitivities to the output file */
+//
+//		for(int i=number_of_samples_with_only_f_eval; i<number_of_function_evals;i++ ){
+//
+//			double xin[2];
+//			double xb[2];
+//			xb[0]=0.0;
+//			xb[1]=0.0;
+//			xin[0]=x[i];
+//			xin[1]=y[i];
+//			double f_val = test_function_adj(xin,xb);
+//
+//#if 0
+//			printf("%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",x[i],y[i],f_val,xb[0],xb[1]);
+//#endif
+//			fprintf(outp,"%10.7f, %10.7f, %10.7f, %10.7f, %10.7f\n",x[i],y[i],f_val,xb[0],xb[1]);
+//
+//		}
+//
+//
+//
+//		fclose(outp);
+//
+//
+//
+//	} /* end of random sampling */
+//
+//
+//
+//
+//
+//}
+//
+//
+//void generate_1D_test_function_data_GEK(double (*test_function)(double *),
+//		double (*test_function_adj)(double *, double *),
+//		std::string filename,
+//		double *bounds,
+//		int number_of_samples_with_only_f_eval,
+//		int number_of_samples_with_g_eval,
+//		int sampling_method,
+//		double *locations_func,
+//		double *locations_grad){
+//
+//
+//	int number_of_function_evals  =  number_of_samples_with_only_f_eval+ number_of_samples_with_g_eval;
+//
+//
+//	if(sampling_method == PREDEFINED_LOCATIONS){
+//
+//
+//		double max = -LARGE;
+//		double min =  LARGE;
+//
+//		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
+//
+//			if(locations_func[i] > max) max = locations_func[i];
+//			if(locations_func[i] < min) min = locations_func[i];
+//		}
+//
+//
+//
+//		for(int i=0; i<number_of_samples_with_g_eval;i++ ){
+//
+//			if(locations_grad[i] > max) max = locations_grad[i];
+//			if(locations_grad[i] < min) min = locations_grad[i];
+//		}
+//
+//
+//
+//
+//		FILE *outp;
+//
+//		printf("opening file %s for input...\n",filename.c_str() );
+//		outp = fopen(filename.c_str(), "w");
+//
+//
+//
+//		double x;
+//
+//		/* write functional values to the output file */
+//		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
+//
+//			x = locations_func[i];
+//
+//			double f_val = test_function(&x);
+//
+//			fprintf(outp,"%10.7f, %10.7f\n",x,f_val);
+//			printf("%d %10.7f %10.7f\n",i,x,f_val);
+//
+//		}
+//
+//		double xb;
+//
+//		/* write functional values and the gradient sensitivites to the output file */
+//		for(int i=0; i<number_of_samples_with_g_eval;i++ ){
+//
+//			xb=0.0;
+//
+//			x = locations_grad[i];
+//			double f_val = test_function_adj(&x,&xb);
+//
+//
+//
+//
+//			fprintf(outp,"%10.7f, %10.7f, %10.7f\n",x,f_val,xb);
+//			printf("%d %10.7f, %10.7f, %10.7f\n",i,x,f_val,xb);
+//
+//		}
+//
+//
+//
+//		fclose(outp);
+//
+//
+//	}
+//
+//
+//
+//	if(sampling_method == RANDOM_SAMPLING){
+//
+//		FILE *outp;
+//
+//		printf("opening file %s for input...\n",filename.c_str() );
+//		outp = fopen(filename.c_str(), "w");
+//
+//
+//
+//		double xs = bounds[0];
+//		double xe = bounds[1];
+//
+//
+//		vec x(number_of_samples_with_only_f_eval+number_of_samples_with_g_eval);
+//
+//		for(int i=0; i<number_of_samples_with_only_f_eval+number_of_samples_with_g_eval;i++ ){
+//
+//			x(i) = RandomDouble(xs, xe);
+//
+//
+//		}
+//
+//		/* write functional values to the output file */
+//		for(int i=0; i<number_of_samples_with_only_f_eval;i++ ){
+//
+//			double f_val = test_function(&x(i));
+//
+//			fprintf(outp,"%10.7f, %10.7f\n",x(i),f_val);
+//
+//		}
+//
+//		double xb;
+//
+//		/* write functional values and the gradient sensitivites to the output file */
+//		for(int i=number_of_samples_with_only_f_eval; i<number_of_samples_with_g_eval+number_of_samples_with_only_f_eval;i++ ){
+//
+//			xb=0.0;
+//
+//			double f_val = test_function_adj(&x(i),&xb);
+//
+//			fprintf(outp,"%10.7f, %10.7f, %10.7f\n",x(i),f_val,xb);
+//
+//		}
+//
+//		fclose(outp);
+//
+//
+//	} /* end of random sampling */
+//
+//
+//}
 
 
 //void perform_trust_region_GEK_test(double (*test_function)(double *),

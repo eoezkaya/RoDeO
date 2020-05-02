@@ -1,4 +1,4 @@
-VERSION = 0.1
+VERSION = 0.2
 #CC      = nvcc -arch compute_61 
 NVCC      = nvcc -arch=sm_52
 CPP     = g++

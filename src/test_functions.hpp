@@ -3,103 +3,38 @@
 #include "Rodeo_macros.hpp"
 #include <string>
 
-class Function_param {
-public:
-    unsigned int number_of_independents;
+#include <armadillo>
 
+
+
+using namespace arma;
+
+
+class TestFunction {
+
+public:
+	bool ifNoisy;
+	bool ifAdjointFunctionExist;
+    unsigned int numberOfInputParams;
     std::string function_name;
-    std::string adjoint_function_name;
     double (*func_ptr)(double *);
     double (*adj_ptr)(double *, double *);
     double noise_level;
 
-    /* x is between bounds[0] and bounds[1]; y is between bounds[2] and bounds[3] and so on  */
-    double *bounds;
+    vec lower_bound;
+    vec upper_bound;
 
-    Function_param (){
+    TestFunction(std::string name,int dimension);
+    void plot(void);
+    void print(void);
+    void generateRandomSamples(unsigned int nsamples, std::string filename);
+    void testKrigingModel(int nsamples, bool ifVisualize = false);
+    void testEGO(int nsamplesTrainingData, int maxnsamples, bool ifVisualize = false, bool ifWarmStart = false);
 
-        number_of_independents = 0;
-        function_name = "None";
-        adjoint_function_name = "None";
-        func_ptr = NULL;
-        bounds=NULL;
-        adj_ptr=NULL;
-        noise_level = 0.0;
-
-    }
-
-
-    Function_param (int num){
-
-            number_of_independents = num;
-            function_name = "None";
-            adjoint_function_name = "None";
-            func_ptr = NULL;
-            printf("allocating array for bound\n");
-            bounds= (double *) malloc(sizeof(double)*2*num);
-            adj_ptr=NULL;
-            noise_level = 0.0;
-
-    }
-
-
-
-    void print(void){
-        printf("printing function information...\n");
-        printf("function name = %s\n",function_name.c_str());
-        printf("Number of independent variables = %d\n",number_of_independents);
-
-
-    }
 } ;
 
 
-class Classifier_Function_param {
-public:
-    unsigned int number_of_independents;
-    std::string function_name;
-    void (*func_ptr)(double *, double *, double *);
-    double noise_level;
 
-    /* x is between bounds[0] and bounds[1]; y is between bounds[2] and bounds[3] and so on  */
-    double *bounds;
-
-    Classifier_Function_param (){
-
-        number_of_independents = 0;
-        function_name = "None";
-        func_ptr = NULL;
-        bounds=NULL;
-        noise_level = 0.0;
-
-    }
-
-
-    Classifier_Function_param (int num){
-
-            number_of_independents = num;
-            function_name = "None";
-            func_ptr = NULL;
-            bounds= (double *) malloc(sizeof(double)*2*num);
-            noise_level = 0.0;
-
-    }
-
-
-
-    void print(void){
-        printf("printing function information...\n");
-        printf("function name = %s\n",function_name.c_str());
-        printf("Number of independent variables = %d\n",number_of_independents);
-
-
-    }
-} ;
-
-/* classification test functions */
-void classification_test1(double *, double *, double *);
-void classification_test2(double *x, double *label, double *y);
-/* classification test functions */
 
 
 
@@ -179,7 +114,7 @@ double WingweightAdj(double *xin, double *xb);
 
 
 double empty(double *x);
-double empty(double *x, double *xb);
+double emptyAdj(double *x, double *xb);
 
 /* regression test functions */
 

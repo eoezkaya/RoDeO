@@ -58,18 +58,45 @@ int main(void){
 
 
 
+//	KrigingModel EggholderModel("Eggholder",2);
+//	EggholderModel.test(Eggholder);
+
+//
+//
+//
+	TestFunction EggholderFunc("Eggholder",2);
+	EggholderFunc.func_ptr = Eggholder;
+////	EggholderFunc.adj_ptr = Eggholder_adj;
+////	EggholderFunc.ifAdjointFunctionExist = true;;
+	EggholderFunc.lower_bound.fill(0.0);
+	EggholderFunc.upper_bound.fill(200.0);
+	EggholderFunc.print();
+	EggholderFunc.testEGO(400,100);
+
+//	EggholderFunc.plot();
+//	EggholderFunc.testKrigingModel(500);
+
+//	EggholderFunc.generateRandomSamples(500,"Eggholder500.csv");
 
 
-	OptimizationData OptimizationSettings(2);
+
+
+	return 0;
 
 
 
-	OptimizationSettings.name = "Eggholder";
-	OptimizationSettings.max_number_of_samples = 100;
-	OptimizationSettings.lower_bound_dv.fill(0);
-	OptimizationSettings.upper_bound_dv.fill(200);
 
-	GlobalOptimization(OptimizationSettings);
+
+	OptimizerWithGradients OptimizationStudy("Eggholder400",2);
+
+	OptimizationStudy.adj_fun = Eggholder_adj;
+	OptimizationStudy.max_number_of_samples = 100;
+	OptimizationStudy.lower_bound_dv.fill(0);
+	OptimizationStudy.upper_bound_dv.fill(200.0);
+	OptimizationStudy.doesValidationFileExist = true;
+
+	OptimizationStudy.EfficientGlobalOptimization();
+
 
 
 

@@ -62,12 +62,14 @@ double pdf(double x, double mu, double sigma);
 /* Returns the probability of [-inf,x] of a gaussian distribution */
 double cdf(double x, double mu, double sigma);
 
-double RandomDouble(double a, double b);
-float RandomFloat(float a, float b);
 
-int RandomInt(int a, int b);
 
-void RandomVector(rowvec &x);
+
+double randomDouble(double a, double b);
+float randomFloat(float a, float b);
+int randomInt(int a, int b);
+void randomVector(rowvec &x);
+void randomVector(rowvec &x, vec lb, vec ub);
 
 double random_number(double xs, double xe, double sigma_factor);
 
@@ -196,5 +198,14 @@ void findKNeighbours(mat &data,
 int getPopularlabel(int* labels, int size);
 
 void testLPnorm(void);
+
+double compute_R(rowvec x_i, rowvec x_j, vec theta, vec gamma);
+void compute_R_matrix(vec theta, vec gamma, double reg_param,mat& R, mat &X);
+
+//void compute_R_matrix_GEK(vec theta, double reg_param, mat& R, mat &X, mat &grad);
+
+
+double compute_R_Gauss(rowvec x_i, rowvec x_j, vec theta);
+double compR_dxi(rowvec x_i, rowvec x_j, vec theta, int k);
 
 #endif
