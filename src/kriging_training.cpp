@@ -2,10 +2,16 @@
 #include<iostream>
 #include<fstream>
 #include<string>
+#include <cassert>
+
 #include "kriging_training.hpp"
 #include "linear_regression.hpp"
 #include "auxilliary_functions.hpp"
 #include "Rodeo_macros.hpp"
+
+#include "Rodeo_globals.hpp"
+#include "Rodeo_macros.hpp"
+
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -19,63 +25,44 @@ int total_number_of_function_evals;
 double population_overall_max = -10E14;
 int population_overall_max_tread_id = -1;
 
+KrigingModel::KrigingModel():SurrogateModel(){
+#if 0
+	printf("Calling KrigingModel()\n");
+#endif
+}
 
 
+KrigingModel::KrigingModel(std::string name, unsigned int dimension):SurrogateModel(name, dimension),linearModel(name, dimension){
 
-KrigingModel::KrigingModel(std::string name, int dimension){
+	printf("Initializing settings for training %s data (Kriging model)...\n",name.c_str());
 
-
-	label = name;
-	printf("Initializing settings for training %s data...\n",name.c_str());
-	input_filename = name +".csv";
-	kriging_hyperparameters_filename = name + "_Kriging_Hyperparameters.csv";
-	regression_weights.zeros(dimension);
 	kriging_weights.zeros(2*dimension);
-	epsilon_kriging = 10E-06;
+	epsilonKriging = 10E-12;
+	epsilonKriging = 0;
 	max_number_of_kriging_iterations = 10000;
-	dim = dimension;
-	linear_regression = true;
 
-	bool status = data.load(input_filename.c_str(), csv_ascii);
-	if(status == true)
-	{
-		printf("Data input is done\n");
-	}
-	else
-	{
-		printf("Problem with data the input (cvs ascii format)\n");
-		exit(-1);
-	}
+	linear_regression = false;
 
 
-	N = data.n_rows;
+	for(unsigned int i=0; i<data.n_rows; i++){
 
-	I = ones(N);
+		rowvec sample1 = data.row(i);
 
-	X = data.submat(0, 0, N - 1, dim - 1);
+		for(unsigned int j=i+1; j<data.n_rows; j++){
 
-	XnotNormalized = X;
+			rowvec sample2 = data.row(j);
 
+			if(ifTooCLose(sample1, sample2)) {
 
-	xmax = zeros(dim);
-	xmin = zeros(dim);
+				printf("ERROR: Two samples in the training data are too close to each other!\n");
+				exit(-1);
 
-	for (unsigned int i = 0; i < dim; i++) {
+			}
 
-		xmax(i) = data.col(i).max();
-		xmin(i) = data.col(i).min();
-
-	}
-
-	/* normalize data matrix */
-
-	for (unsigned int i = 0; i < N; i++) {
-
-		for (unsigned int j = 0; j < dim; j++) {
-
-			X(i, j) = (1.0/dim)*(X(i, j) - xmin(j)) / (xmax(j) - xmin(j));
 		}
+
 	}
+
 
 	sigma_sqr = 0.0;
 	beta0 = 0.0;
@@ -87,20 +74,117 @@ KrigingModel::KrigingModel(std::string name, int dimension){
 	R_inv_I.zeros(N);
 	I.ones(N);
 
-	ymin = min(data.col(dim));
-	ymax = max(data.col(dim));
-	yave = mean(data.col(dim));
+	std::cout<<"Kriging model initialization is done...\n"<<std::endl;
+
+#if 0
+
+	this->print();
+	std::cout<<"Kriging model initialization is done...\n"<<std::endl;
+#endif
+
+
 
 
 }
 
-void KrigingModel::print(void){
+double KrigingModel::getyMin(void) const{
+
+	return ymin;
+
+}
+
+
+
+
+
+
+void KrigingModel::setNumberOfTrainingIterations(unsigned int iter){
+
+	max_number_of_kriging_iterations = iter;
+
+}
+
+
+void KrigingModel::setEpsilon(double inp){
+
+	assert(inp>0);
+	epsilonKriging = inp;
+
+
+}
+
+void KrigingModel::setLinearRegressionOn(void){
+	linear_regression = true;
+
+}
+void KrigingModel::setLinearRegressionOff(void){
+	linear_regression = false;
+
+}
+
+
+
+
+/** Adds the rowvector newsample to the data of the Kriging model and updates model parameters
+ * @param[in] newsample
+ *
+ */
+
+int KrigingModel::addNewSampleToData(rowvec newsample){
+
+
+	/* avoid points that are too close to each other */
+
+	bool flagTooClose=false;
+	for(unsigned int i=0; i<data.n_rows; i++){
+
+		rowvec sample = data.row(i);
+
+		if(ifTooCLose(sample, newsample)) {
+
+			flagTooClose = true;
+		}
+
+	}
+
+	if(!flagTooClose){
+
+		data.resize(N+1, dim+1);
+
+		data.row(N) = newsample;
+		data.save(input_filename,csv_ascii);
+
+		updateWithNewData();
+		return 0;
+	}
+	else{
+
+		std::cout<<"Warning: the new sample is too close to a sample in the training data, it is discarded!\n";
+		return -1;
+	}
+
+}
+
+
+void KrigingModel::print(void) const{
 	printf("\n");
-	printf("Kriging model: %s\n",label.c_str());
-	printf("kriging_hyperparameters_filename: %s\n",kriging_hyperparameters_filename.c_str());
+	cout << "Kriging Surrogate model:"<< endl;
+	cout<< "Number of samples: "<<N<<endl;
+	cout<<"Number of input parameters: "<<dim<<endl;
+	cout<<"Raw Data:\n";
+	data.print();
+	cout<<"xmin =";
+	trans(xmin).print();
+	cout<<"xmax =";
+	trans(xmax).print();
+	cout<<"ymin = "<<ymin<<endl;
+	cout<<"ymax = "<<ymax<<endl;
+	cout<<"ymean = "<<yave<<endl;
+
+	printf("hyperparameters_filename: %s\n",hyperparameters_filename.c_str());
 	printf("input_filename: %s\n",input_filename.c_str());
 	printf("max_number_of_kriging_iterations = %d\n",max_number_of_kriging_iterations);
-	printf("epsilon_kriging = %15.10f\n",epsilon_kriging);
+	printf("epsilonKriging = %15.10e\n",epsilonKriging);
 	printf("\n");
 
 
@@ -110,73 +194,56 @@ void KrigingModel::updateModelParams(void){
 
 	vec ys = data.col(dim);
 
+	if(linear_regression){
+
+		vec ysLinearRegression = linearModel.interpolateAll(X);
+		ys = ys - ysLinearRegression;
+
+	}
+
 
 
 	/* train linear regression */
-	if (linear_regression) { // if linear regression is on
 
+	//	if (linear_regression) {
+	//
+	//		mat augmented_X(N, dim + 1);
+	//
+	//		for (unsigned int i = 0; i < N; i++) {
+	//
+	//			for (unsigned int j = 0; j <= dim; j++) {
+	//
+	//				if (j == 0){
+	//
+	//					augmented_X(i, j) = 1.0;
+	//				}
+	//				else {
+	//
+	//					augmented_X(i, j) = X(i, j - 1);
+	//
+	//				}
+	//			}
+	//		}
+	//
+	//		/* now update the ys vector */
+	//
+	//		vec ysLinearRegression = augmented_X * regression_weights;
+	//
+	//#if 0
+	//		for(unsigned int i=0; i<ys.size(); i++){
+	//
+	//			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
+	//		}
+	//#endif
+	//		ys = ys - ysLinearRegression;
+	//
+	//#if 0
+	//		printf("Updated ys vector = \n");
+	//#endif
+	//
+	//	} /* end of linear regression */
 
-		train_linear_regression(X, ys, regression_weights, 10E-6);
-
-
-		mat augmented_X(N, dim + 1);
-
-		for (unsigned int i = 0; i < N; i++) {
-
-			for (unsigned int j = 0; j <= dim; j++) {
-
-				if (j == 0){
-
-					augmented_X(i, j) = 1.0;
-				}
-				else {
-
-					augmented_X(i, j) = X(i, j - 1);
-
-				}
-			}
-		}
-
-		/* now update the ys vector */
-
-		vec ys_reg = augmented_X * regression_weights;
-
-#if 0
-		for(unsigned int i=0; i<ys.size(); i++){
-
-			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
-		}
-#endif
-		ys = ys - ys_reg;
-
-#if 0
-		printf("Updated ys vector = \n");
-#endif
-
-		for(unsigned int i=0; i<regression_weights.size();i++ ){
-
-			if(fabs(regression_weights(i)) > 10E5){
-
-				printf("WARNING: Linear regression coefficients are too large! \n");
-				printf("regression_weights(%d) = %10.7f\n",i,regression_weights(i));
-			}
-
-		}
-
-
-
-	} /* end of linear regression */
-
-	vec theta = kriging_weights.head(dim);
-	vec gamma = kriging_weights.tail(dim);
-
-
-	compute_R_matrix(theta,
-			gamma,
-			epsilon_kriging,
-			R ,
-			X);
-
+	computeCorrelationMatrix();
 
 	/* Cholesky decomposition R = LDL^T */
 
@@ -184,7 +251,7 @@ void KrigingModel::updateModelParams(void){
 	int cholesky_return = chol(U, R);
 
 	if (cholesky_return == 0) {
-		printf("Error: Ill conditioned correlation matrix, Cholesky decomposition failed at %s, line %d.\n",__FILE__, __LINE__);
+		printf("ERROR: Ill conditioned correlation matrix, Cholesky decomposition failed at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -229,7 +296,6 @@ void KrigingModel::updateWithNewData(void){
 	R_inv_I.reset();
 	R_inv_ys_min_beta.reset();
 	X.reset();
-	XnotNormalized.reset();
 	data.reset();
 	I.reset();
 
@@ -252,19 +318,13 @@ void KrigingModel::updateWithNewData(void){
 		exit(-1);
 	}
 
-	if(dim != data.n_cols - 1){
-
-		printf("Dimensions of the data matrix do not match!, dim = %d, data.n_cols = %d at %s, line %d.\n",dim, int(data.n_cols), __FILE__, __LINE__);
-		exit(-1);
-
-	}
-
+	assert(dim == data.n_cols - 1);
 
 	N = data.n_rows;
-
+#if 1
+	printf("%s model has now %d training samples\n",label.c_str(),N);
+#endif
 	X = data.submat(0, 0, N - 1, dim - 1);
-
-	XnotNormalized = X;
 
 	for (unsigned int i = 0; i < dim; i++) {
 
@@ -273,7 +333,7 @@ void KrigingModel::updateWithNewData(void){
 
 	}
 
-	/* normalize data matrix */
+	/* normalize input matrix */
 
 	for (unsigned int i = 0; i < N; i++) {
 
@@ -300,8 +360,9 @@ void KrigingModel::updateWithNewData(void){
 	ymax = max(data.col(dim));
 	yave = mean(data.col(dim));
 
-
-
+#if 1
+	printf("ymin = %15.10f, ymax = %15.10f, yave = %15.10f\n",ymin,ymax,yave);
+#endif
 	updateModelParams();
 
 }
@@ -312,7 +373,7 @@ void KrigingModel::updateWithNewData(void){
  * @return y=ftilde(xp)
  *
  * */
-double KrigingModel::ftilde(rowvec xp){
+double KrigingModel::interpolate(rowvec xp) const{
 
 	vec r(N);
 
@@ -324,108 +385,117 @@ double KrigingModel::ftilde(rowvec xp){
 	double f_kriging = 0.0;
 
 
-	/* if linear regression is on */
 	if(linear_regression){
 
-		for(unsigned int i=0; i<dim; i++){
-
-			f_regression += xp(i)*regression_weights(i+1);
-		}
-
-		f_regression += regression_weights(0);
-
+		f_regression = linearModel.interpolate(xp);
 	}
-#if 0
+
+	//	/* if linear regression is on */
+	//	if(linear_regression){
+	//
+	//		for(unsigned int i=0; i<dim; i++){
+	//
+	//			f_regression += xp(i)*regression_weights(i+1);
+	//		}
+	//
+	//		/* add bias term */
+	//		f_regression += regression_weights(0);
+	//
+	//	}
+#if 1
 	printf("f_regression = %10.7f\n",f_regression);
 #endif
 
+
+
 	for(unsigned int i=0;i<N;i++){
 
-		r(i) = compute_R(xp, X.row(i), theta, gamma);
+		r(i) = computeCorrelation(xp, X.row(i), theta, gamma);
 
 	}
 
-#if 0
-	printf("size of vector r = %d\n",r.size());
-	printf("r = \n",f_regression);
+#if 1
+	printf("size of vector r = %d\n",int(r.size()));
+	printf("r: \n");
 	trans(r).print();
-	printf("size of vector R_inv_ys_min_beta = %d\n",R_inv_ys_min_beta.size());
-	printf("R_inv_ys_min_beta = \n",f_regression);
+	printf("size of vector R_inv_ys_min_beta = %d\n",int(R_inv_ys_min_beta.size()));
+	printf("R_inv_ys_min_beta: \n");
 	trans(R_inv_ys_min_beta).print();
 #endif
 
 	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
+#if 0
+	printf("f_kriging = %15.10f\n", f_kriging);
+#endif
 
 	double ftilde = f_regression+f_kriging;
+#if 1
+	printf("ftilde = %15.10f\n", ftilde);
+#endif
 
 	return ftilde;
 
 }
 
 /*
- * Evaluates the surrogate model at x = xp
- * @param[in] xp (not normalized)
- * @return y=ftilde(xp)
+ * Evaluates the expected improvement value surrogate model at x = xp
+ * @param[in] xp (normalized)
+ * @return y=EI(xp)
  *
  * */
 
 
-double KrigingModel::calculateEI(rowvec xp){
+double KrigingModel::calculateExpectedImprovement(rowvec xp){
 
 
 	double ftilde = 0.0;
 	double ssqr   = 0.0;
 
-	ftilde_and_ssqr(xp,&ftilde,&ssqr);
+	interpolateWithVariance(xp,&ftilde,&ssqr);
 
 #if 0
 	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
 #endif
 
-	double	standart_error = sqrt(ssqr)	;
+	double	sigma = sqrt(ssqr)	;
+
+#if 0
+	printf("standart_ERROR = %15.10f\n",sigma);
+#endif
 
 	double EI = 0.0;
 
-	if(standart_error!=0.0){
 
-		double	EIfac = (ymin - ftilde)/standart_error;
+	if(sigma!=0.0){
+
+
+		double	Z = (ymin - ftilde)/sigma;
+#if 0
+		printf("EIfac = %15.10f\n",EIfac);
+		printf("ymin = %15.10f\n",ymin);
+#endif
+
 
 		/* calculate the Expected Improvement value */
-		EI = (ymin - ftilde)*cdf(EIfac,0.0,1.0)+ standart_error * pdf(EIfac,0.0,1.0);
+		EI = (ymin - ftilde)*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
 	}
 	else{
 
 		EI = 0.0;
 
 	}
-
+#if 0
+	printf("EI = %15.10f\n",EI);
+#endif
 	return EI;
 
 }
 
 
-double KrigingModel::ftildeNotNormalized(rowvec xp){
-
-	/* first normalize xp */
-
-	rowvec xpNormalized(N);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		xpNormalized(i) = (1.0/dim)*(xp(i) - xmin(i)) / (xmax(i) - xmin(i));
-
-	}
-
-
-	double ftildeVal = ftilde(xpNormalized);
-
-	return ftildeVal;
-
-}
 
 
 
-void KrigingModel::ftilde_and_ssqr(rowvec xp,double *ftildeVal,double *ssqr){
+void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeVal,double *ssqr) const{
 
 	vec r(N);
 
@@ -441,7 +511,7 @@ void KrigingModel::ftilde_and_ssqr(rowvec xp,double *ftildeVal,double *ssqr){
 
 
 
-	*ftildeVal =  ftilde(xp);;
+	*ftildeVal =  interpolate(xp);
 
 	vec R_inv_r(N);
 
@@ -456,69 +526,105 @@ void KrigingModel::ftilde_and_ssqr(rowvec xp,double *ftildeVal,double *ssqr){
 }
 
 
+double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j, vec theta, vec gamma) const {
+
+
+	double sum = 0.0;
+	for (unsigned int k = 0; k < dim; k++) {
+
+		sum += theta(k) * pow(fabs(x_i(k) - x_j(k)), gamma(k));
+
+	}
+
+	return exp(-sum);
+}
+
+
+void KrigingModel::computeCorrelationMatrix(void)  {
+
+	vec theta = kriging_weights.head(dim);
+	vec gamma = kriging_weights.tail(dim);
+
+	for (unsigned int i = 0; i < N; i++) {
+		for (unsigned int j = i + 1; j < N; j++) {
+
+			double corrVal = computeCorrelation(X.row(i), X.row(j), theta, gamma);
+			R(i, j) = corrVal;
+			R(j, i) = corrVal;
+		}
+
+	}
+
+	R = R + eye(N,N) + eye(N,N)*epsilonKriging;
+
+} /* end of compute_R_matrix */
+
+
+
 void KrigingModel::train(void){
 
 	printf("\nTraining Kriging response surface for the data : %s\n",input_filename.c_str());
 
 	vec ys = data.col(dim);
 
-	/* train linear regression */
-	if (linear_regression) { // if linear regression is on
 
-		printf("Performing linear regression...\n");
+	if(linear_regression){
 
-		train_linear_regression(X, ys, regression_weights, 10E-6);
+		linearModel.train();
 
-		printf("regression weights:\n");
-		trans(regression_weights).print();
+		vec ysLinearModel = linearModel.interpolateAll(X);
 
-		mat augmented_X(N, dim + 1);
-
-		for (unsigned int i = 0; i < N; i++) {
-
-			for (unsigned int j = 0; j <= dim; j++) {
-
-				if (j == 0){
-
-					augmented_X(i, j) = 1.0;
-				}
-				else {
-
-					augmented_X(i, j) = X(i, j - 1);
-
-				}
-			}
-		}
-
-		/* now update the ys vector */
-
-		vec ys_reg = augmented_X * regression_weights;
-
-#if 0
-		for(unsigned int i=0; i<ys.size(); i++){
-
-			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
-		}
-#endif
-		ys = ys - ys_reg;
-
-#if 0
-		printf("Updated ys vector = \n");
-#endif
-
-		for(unsigned int i=0; i<regression_weights.size();i++ ){
-
-			if(fabs(regression_weights(i)) > 10E5){
-
-				printf("WARNING: Linear regression coefficients are too large= \n");
-				printf("regression_weights(%d) = %10.7f\n",i,regression_weights(i));
-			}
-
-		}
+		ys = ys - ysLinearModel;
+	}
 
 
 
-	} /* end of linear regression */
+	//	/* train linear regression */
+	//	if (linear_regression) {
+	//
+	//		printf("Performing linear regression...\n");
+	//
+	//		train_linear_regression(X, ys, regression_weights, 10E-6);
+	//
+	//		printf("regression weights:\n");
+	//		trans(regression_weights).print();
+	//
+	//		mat augmented_X(N, dim + 1);
+	//
+	//		for (unsigned int i = 0; i < N; i++) {
+	//
+	//			for (unsigned int j = 0; j <= dim; j++) {
+	//
+	//				if (j == 0){
+	//
+	//					augmented_X(i, j) = 1.0;
+	//				}
+	//				else {
+	//
+	//					augmented_X(i, j) = X(i, j - 1);
+	//
+	//				}
+	//			}
+	//		}
+	//
+	//		/* now update the ys vector */
+	//
+	//		vec ys_reg = augmented_X * regression_weights;
+	//
+	//#if 0
+	//		for(unsigned int i=0; i<ys.size(); i++){
+	//
+	//			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
+	//		}
+	//#endif
+	//		ys = ys - ys_reg;
+	//
+	//#if 0
+	//		printf("Updated ys vector = \n");
+	//#endif
+	//
+	//
+	//	} /* end of linear regression */
 
 
 	int max_number_of_function_calculations = max_number_of_kriging_iterations;
@@ -574,7 +680,7 @@ void KrigingModel::train(void){
 		vec ys = data.col(dim);
 
 		unsigned int d = dim;
-		double epsilon = epsilon_kriging;
+		double epsilon = epsilonKriging;
 
 
 		double Jnormalization_factor = 0.0;
@@ -589,20 +695,20 @@ void KrigingModel::train(void){
 
 				EAdesign initial_design(d);
 
-				if(file_exist(kriging_hyperparameters_filename.c_str())){
+				if(file_exist(hyperparameters_filename.c_str())){
 #pragma omp master
 					{
-						printf("Hyperparameter file: %s exists...\n",kriging_hyperparameters_filename.c_str() );
+						printf("Hyperparameter file: %s exists...\n",hyperparameters_filename.c_str() );
 					}
 
 
 					vec weights_read_from_file;
 
-					bool status = weights_read_from_file.load(kriging_hyperparameters_filename.c_str(),csv_ascii);
+					bool status = weights_read_from_file.load(hyperparameters_filename.c_str(),csv_ascii);
 
 					if(status == false)
 					{
-						fprintf(stderr, "Error: Some problem with the hyperparameter input! at %s, line %d.\n",__FILE__, __LINE__);
+						fprintf(stderr, "ERROR: Some problem with the hyperparameter input! at %s, line %d.\n",__FILE__, __LINE__);
 						exit(-1);
 
 					}
@@ -849,7 +955,7 @@ void KrigingModel::train(void){
 			}
 
 
-			kriging_weights.save(kriging_hyperparameters_filename.c_str(),csv_ascii);
+			kriging_weights.save(hyperparameters_filename.c_str(),csv_ascii);
 
 		}
 
@@ -878,8 +984,15 @@ void KrigingModel::validate(std::string filename, bool ifVisualize){
 	}
 	else
 	{
-		printf("Problem with data the input (cvs ascii format)\n");
+		printf("Problem with data the input (cvs ascii format) at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
+	}
+
+	if(dataValidation.n_cols != dim+1){
+
+		fprintf(stderr, "ERROR: number of rows in the validation data does not match with dim! at %s, line %d.\n",__FILE__, __LINE__);
+		exit(-1);
+
 	}
 
 
@@ -887,12 +1000,14 @@ void KrigingModel::validate(std::string filename, bool ifVisualize){
 
 	mat XValidation = dataValidation.submat(0, 0, NValidation - 1, dim - 1);
 
+	vec fexact = dataValidation.col(dim);
+
 	mat XnotNormalizedValidation = XValidation;
 
 
 	/* normalize data matrix for the Validation */
 
-	for (unsigned int i = 0; i < N; i++) {
+	for (unsigned int i = 0; i < NValidation; i++) {
 
 		for (unsigned int j = 0; j < dim; j++) {
 
@@ -900,6 +1015,112 @@ void KrigingModel::validate(std::string filename, bool ifVisualize){
 		}
 	}
 
+	mat validationKriging(NValidation,2);
+
+
+	genErrorKriging = 0;
+	for(unsigned int i=0; i<NValidation; i++){
+
+		rowvec xp = XValidation.row(i);
+
+		double fValKriging = interpolate(xp);
+		double squaredError = (fValKriging-fexact(i)) * (fValKriging-fexact(i));
+		validationKriging(i,0) = fexact(i);
+		validationKriging(i,1) = fValKriging;
+
+		genErrorKriging+=squaredError;
+	}
+
+
+	/* compute MSE */
+	genErrorKriging = genErrorKriging/NValidation;
+
+	printf("Generalization Error for the Kriging model (MSE) = %15.10f\n",genErrorKriging);
+
+	if(ifVisualize){
+
+		validationKriging.save("visualizeKriging.dat",raw_ascii);
+
+		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKriging.dat visualizeKernelRegression.png" ;
+		python_command += " Kriging model value prediction";
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+
+
+	}
+
+}
+
+
+void KrigingModel::validate(mat dataValidation, bool ifVisualize){
+
+
+	if(dataValidation.n_cols != dim+1){
+
+		fprintf(stderr, "ERROR: number of rows in the validation data does not match with dim! at %s, line %d.\n",__FILE__, __LINE__);
+		exit(-1);
+
+	}
+
+
+	unsigned int NValidation = dataValidation.n_rows;
+
+	mat XValidation = dataValidation.submat(0, 0, NValidation - 1, dim - 1);
+
+	vec fexact = dataValidation.col(dim);
+
+	mat XnotNormalizedValidation = XValidation;
+
+
+	/* normalize data matrix for the Validation */
+
+	for (unsigned int i = 0; i < NValidation; i++) {
+
+		for (unsigned int j = 0; j < dim; j++) {
+
+			XValidation(i, j) = (1.0/dim)*(XValidation(i, j) - xmin(j)) / (xmax(j) - xmin(j));
+		}
+	}
+
+	mat validationKriging(NValidation,2);
+
+
+	genErrorKriging = 0;
+	for(unsigned int i=0; i<NValidation; i++){
+
+		rowvec xp = XValidation.row(i);
+
+		double fValKriging = interpolate(xp);
+		double squaredError = (fValKriging-fexact(i)) * (fValKriging-fexact(i));
+		validationKriging(i,0) = fexact(i);
+		validationKriging(i,1) = fValKriging;
+
+		genErrorKriging+=squaredError;
+	}
+
+
+	/* compute MSE */
+	genErrorKriging = genErrorKriging/NValidation;
+
+	printf("Generalization ERROR for the Kriging model (MSE) = %15.10f\n",genErrorKriging);
+
+	if(ifVisualize){
+
+		validationKriging.save("visualizeKriging.dat",raw_ascii);
+
+		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKriging.dat visualizeKernelRegression.png" ;
+		python_command += " Kriging model value prediction";
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+
+
+	}
 
 }
 
@@ -1211,64 +1432,64 @@ void print_population(std::vector<EAdesign> population){
  * @param[in] R_inv_ys_min_beta = R^-1*(ys-beta0*I)
  * @param[out] f_tilde : surrogate prediction
  */
-double calculate_f_tilde(rowvec xp,
-		mat &X,
-		double beta0,
-		vec regression_weights,
-		vec R_inv_ys_min_beta,
-		vec kriging_weights){
-
-
-	int dim = xp.size();
-#if 0
-	printf("dim = %d\n",dim);
-#endif
-
-	vec r(X.n_rows);
-
-	vec theta = kriging_weights.head(dim);
-	vec gamma = kriging_weights.tail(dim);
-
-
-	double f_regression = 0.0;
-	double f_kriging = 0.0;
-
-
-	/* if there exists linear regression part */
-	if(regression_weights.size() !=0){
-
-		for(unsigned int i=0;i<xp.size();i++){
-
-			f_regression += xp(i)*regression_weights(i+1);
-		}
-
-		f_regression += regression_weights(0);
-
-	}
-#if 0
-	printf("f_regression = %10.7f\n",f_regression);
-#endif
-
-	for(unsigned int i=0;i<X.n_rows;i++){
-
-		r(i) = compute_R(xp, X.row(i), theta, gamma);
-
-	}
-#if 0
-	printf("size of vector r = %d\n",r.size());
-	printf("r = \n",f_regression);
-	trans(r).print();
-	printf("size of vector R_inv_ys_min_beta = %d\n",R_inv_ys_min_beta.size());
-	printf("R_inv_ys_min_beta = \n",f_regression);
-	trans(R_inv_ys_min_beta).print();
-#endif
-
-	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
-
-
-	return f_regression+f_kriging;
-
-}
+//double calculate_f_tilde(rowvec xp,
+//		mat &X,
+//		double beta0,
+//		vec regression_weights,
+//		vec R_inv_ys_min_beta,
+//		vec kriging_weights){
+//
+//
+//	int dim = xp.size();
+//#if 0
+//	printf("dim = %d\n",dim);
+//#endif
+//
+//	vec r(X.n_rows);
+//
+//	vec theta = kriging_weights.head(dim);
+//	vec gamma = kriging_weights.tail(dim);
+//
+//
+//	double f_regression = 0.0;
+//	double f_kriging = 0.0;
+//
+//
+//	/* if there exists linear regression part */
+//	if(regression_weights.size() !=0){
+//
+//		for(unsigned int i=0;i<xp.size();i++){
+//
+//			f_regression += xp(i)*regression_weights(i+1);
+//		}
+//
+//		f_regression += regression_weights(0);
+//
+//	}
+//#if 0
+//	printf("f_regression = %10.7f\n",f_regression);
+//#endif
+//
+//	for(unsigned int i=0;i<X.n_rows;i++){
+//
+//		r(i) = compute_R(xp, X.row(i), theta, gamma);
+//
+//	}
+//#if 0
+//	printf("size of vector r = %d\n",r.size());
+//	printf("r = \n",f_regression);
+//	trans(r).print();
+//	printf("size of vector R_inv_ys_min_beta = %d\n",R_inv_ys_min_beta.size());
+//	printf("R_inv_ys_min_beta = \n",f_regression);
+//	trans(R_inv_ys_min_beta).print();
+//#endif
+//
+//	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
+//
+//
+//	return f_regression+f_kriging;
+//
+//}
 
 
 /** compute the f_tilde and ssqr for the Kriging model
@@ -1284,145 +1505,145 @@ double calculate_f_tilde(rowvec xp,
  * @param[out] f_tilde : surrogate prediction
  * @param[out] ssqr: kriging variance
  */
-void calculate_f_tilde_and_ssqr(
-		rowvec xp,
-		mat &X,
-		double beta0,
-		double sigma_sqr,
-		vec regression_weights,
-		vec R_inv_ys_min_beta,
-		vec R_inv_I,
-		vec I,
-		vec kriging_weights,
-		mat &U,
-		mat &L,
-		double *f_tilde,
-		double *ssqr){
-
-
-	int dim = xp.size();
-	vec r(X.n_rows);
-
-	vec theta = kriging_weights.head(dim);
-	vec gamma = kriging_weights.tail(dim);
-
-
-
-	double f_regression = 0.0;
-	double f_kriging = 0.0;
-
-
-	if(regression_weights.size() !=0){
-
-		for(unsigned int i=0;i<xp.size();i++){
-
-			f_regression += xp(i)*regression_weights(i+1);
-		}
-
-		f_regression += regression_weights(0);
-
-	}
-
-
-	for(unsigned int i=0;i<X.n_rows;i++){
-
-		r(i) = compute_R(xp, X.row(i), theta, gamma);
-
-	}
-
-	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
-
-
-
-	*f_tilde =  f_regression+f_kriging;
-
-	vec R_inv_r(X.n_rows);
-
-
-	/* solve the linear system R x = r by Cholesky matrices U and L*/
-	solve_linear_system_by_Cholesky(U, L, R_inv_r, r);
-
-
-	*ssqr = sigma_sqr*( 1.0 - dot(r,R_inv_r)
-			+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(I,R_inv_I) ) );
-
-
-
-}
+//void calculate_f_tilde_and_ssqr(
+//		rowvec xp,
+//		mat &X,
+//		double beta0,
+//		double sigma_sqr,
+//		vec regression_weights,
+//		vec R_inv_ys_min_beta,
+//		vec R_inv_I,
+//		vec I,
+//		vec kriging_weights,
+//		mat &U,
+//		mat &L,
+//		double *f_tilde,
+//		double *ssqr){
+//
+//
+//	int dim = xp.size();
+//	vec r(X.n_rows);
+//
+//	vec theta = kriging_weights.head(dim);
+//	vec gamma = kriging_weights.tail(dim);
+//
+//
+//
+//	double f_regression = 0.0;
+//	double f_kriging = 0.0;
+//
+//
+//	if(regression_weights.size() !=0){
+//
+//		for(unsigned int i=0;i<xp.size();i++){
+//
+//			f_regression += xp(i)*regression_weights(i+1);
+//		}
+//
+//		f_regression += regression_weights(0);
+//
+//	}
+//
+//
+//	for(unsigned int i=0;i<X.n_rows;i++){
+//
+//		r(i) = compute_R(xp, X.row(i), theta, gamma);
+//
+//	}
+//
+//	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
+//
+//
+//
+//	*f_tilde =  f_regression+f_kriging;
+//
+//	vec R_inv_r(X.n_rows);
+//
+//
+//	/* solve the linear system R x = r by Cholesky matrices U and L*/
+//	solve_linear_system_by_Cholesky(U, L, R_inv_r, r);
+//
+//
+//	*ssqr = sigma_sqr*( 1.0 - dot(r,R_inv_r)
+//			+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(I,R_inv_I) ) );
+//
+//
+//
+//}
 
 
 // IMPORTANT : vector x should be normalized!!!
-double calculate_f_tilde_GEK(rowvec &x,
-		mat &X,
-		double beta0,
-		vec regression_weights,
-		vec R_inv_ys_min_beta,
-		vec kriging_weights,
-		int Ngrad){
-
-
-#if 0
-	printf("calculate_f_tilde_GEK...\n");
-#endif
-
-	int dim = x.size();
-
-	int Ntotal =X.n_rows;
-	int Nfunc = Ntotal-Ngrad;
-
-	int dimension_R = Nfunc+Ngrad+ dim*Ngrad;
-
-	vec r(dimension_R);
-
-	vec theta = kriging_weights.head(dim);
-
-
-#if 0
-	theta.raw_print(cout, "theta:");
-	x.raw_print(cout, "x:");
-	regression_weights.raw_print(cout, "regression_weights:");
-#endif
-
-
-
-	double f_regression = 0.0;
-	double f_kriging = 0.0;
-
-	/* if there exists some regression weights, than perform linear regression */
-	if (regression_weights.size() > 0){
-
-		for(unsigned int i=0; i<x.size(); i++){
-
-			f_regression += x(i)*regression_weights(i+1);
-		}
-
-		f_regression += regression_weights(0);
-	}
-
-
-	/* first Nfunc+Ngrad elements are normal functional correlations */
-	for(int k=0; k<Nfunc+Ngrad; k++) {
-
-		r(k)= compute_R_Gauss(X.row(k),x,theta);
-	}
-
-	int count=Nfunc+Ngrad;
-
-
-
-	for(int k=Nfunc;k<Nfunc+Ngrad;k++) {
-
-		for(int l=0;l<dim;l++) {
-
-			r(count+l*Ngrad+k)= compR_dxi(X.row(k), x, theta, l) ;
-		}
-	}
-
-	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
-
-	return f_regression+f_kriging;
-
-}
+//double calculate_f_tilde_GEK(rowvec &x,
+//		mat &X,
+//		double beta0,
+//		vec regression_weights,
+//		vec R_inv_ys_min_beta,
+//		vec kriging_weights,
+//		int Ngrad){
+//
+//
+//#if 0
+//	printf("calculate_f_tilde_GEK...\n");
+//#endif
+//
+//	int dim = x.size();
+//
+//	int Ntotal =X.n_rows;
+//	int Nfunc = Ntotal-Ngrad;
+//
+//	int dimension_R = Nfunc+Ngrad+ dim*Ngrad;
+//
+//	vec r(dimension_R);
+//
+//	vec theta = kriging_weights.head(dim);
+//
+//
+//#if 0
+//	theta.raw_print(cout, "theta:");
+//	x.raw_print(cout, "x:");
+//	regression_weights.raw_print(cout, "regression_weights:");
+//#endif
+//
+//
+//
+//	double f_regression = 0.0;
+//	double f_kriging = 0.0;
+//
+//	/* if there exists some regression weights, than perform linear regression */
+//	if (regression_weights.size() > 0){
+//
+//		for(unsigned int i=0; i<x.size(); i++){
+//
+//			f_regression += x(i)*regression_weights(i+1);
+//		}
+//
+//		f_regression += regression_weights(0);
+//	}
+//
+//
+//	/* first Nfunc+Ngrad elements are normal functional correlations */
+//	for(int k=0; k<Nfunc+Ngrad; k++) {
+//
+//		r(k)= compute_R_Gauss(X.row(k),x,theta);
+//	}
+//
+//	int count=Nfunc+Ngrad;
+//
+//
+//
+//	for(int k=Nfunc;k<Nfunc+Ngrad;k++) {
+//
+//		for(int l=0;l<dim;l++) {
+//
+//			r(count+l*Ngrad+k)= compR_dxi(X.row(k), x, theta, l) ;
+//		}
+//	}
+//
+//	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
+//
+//	return f_regression+f_kriging;
+//
+//}
 
 
 
@@ -1497,7 +1718,7 @@ double calculate_f_tilde_GEK(rowvec &x,
 //
 //		if (flag_svd == 0) {
 //
-//			printf("Error: SVD could not be performed\n");
+//			printf("ERROR: SVD could not be performed\n");
 //			exit(-1);
 //		}
 //
@@ -1589,9 +1810,9 @@ double calculate_f_tilde_GEK(rowvec &x,
 //
 //	vec R_inv_ys_check=Rinv*ys;
 //
-//	double R_inv_ys_error= norm((R_inv_ys-R_inv_ys_check), 2);
+//	double R_inv_ys_ERROR= norm((R_inv_ys-R_inv_ys_check), 2);
 //
-//	if(R_inv_ys_error > TOL) {
+//	if(R_inv_ys_ERROR > TOL) {
 //		printf("R_inv_ys is wrong\n");
 //
 //		for(unsigned int i=0; i<R_inv_ys.size();i++){
@@ -1613,11 +1834,11 @@ double calculate_f_tilde_GEK(rowvec &x,
 //
 //	//v2_check.raw_print(cout, "v2_check:");
 //
-//	double R_inv_F_error= norm((R_inv_F-R_inv_F_check), 2);
+//	double R_inv_F_ERROR= norm((R_inv_F-R_inv_F_check), 2);
 //
-//	if(R_inv_F_error > TOL) {
+//	if(R_inv_F_ERROR > TOL) {
 //		printf("R_inv_F is wrong\n");
-//		printf("R_inv_F error = %10.7f\n",R_inv_F_error);
+//		printf("R_inv_F ERROR = %10.7f\n",R_inv_F_ERROR);
 //
 //		for(unsigned int i=0; i<R_inv_F.size();i++){
 //			printf("%10.7f %10.7f\n",R_inv_F(i),R_inv_F_check(i));
@@ -1652,14 +1873,14 @@ double calculate_f_tilde_GEK(rowvec &x,
 //
 //#ifdef calculate_fitness_CHECK
 //
-//	double R_inv_ys_min_beta_check_error;
+//	double R_inv_ys_min_beta_check_ERROR;
 //	vec R_inv_ys_min_beta_check=Rinv*(ys_min_betaF);
 //
 //	//v2_check.raw_print(cout, "v2_check:");
 //
-//	R_inv_ys_min_beta_check_error= norm((R_inv_ys_min_beta_check-R_inv_ys_min_beta_check), 2);
+//	R_inv_ys_min_beta_check_ERROR= norm((R_inv_ys_min_beta_check-R_inv_ys_min_beta_check), 2);
 //
-//	if(R_inv_ys_min_beta_check_error > TOL) {
+//	if(R_inv_ys_min_beta_check_ERROR > TOL) {
 //		printf("R_inv_ys_min_beta_check is wrong\n");
 //
 //
@@ -1714,129 +1935,129 @@ double calculate_f_tilde_GEK(rowvec &x,
 //}
 
 /* calculate the fitness of a member with the given theta and gamma  */
-int calculate_fitness(EAdesign &new_born,
-		double &reg_param,
-		mat &R,
-		mat &U,
-		mat &L,
-		mat &X,
-		vec &ys,
-		vec &I) {
-
-	//#define calculate_fitness_CHECK
-
-	//	printf("calling calculate_fitness function...\n");
-	double beta0, ssqr;
-	double logdetR;
-	double obj_val;
-
-	int M = X.n_rows;  /* number of samples */
-	int dimension_of_R = R.n_rows;
-
-	// compute the correlation matrix R
-
-	//	double reg_param = pow(10.0,-1.0*new_born.log_regularization_parameter);
-
-	compute_R_matrix(new_born.theta,
-			new_born.gamma,
-			reg_param,
-			R,
-			X);
-
-
-	//		R.raw_print(cout, "R:");
-
-
-	// compute Cholesky decomposition
-	int flag = chol(U, R);
-
-	if (flag == 0) {
-		printf("Ill conditioned correlation matrix\n");
-		new_born.objective_val = -LARGE;
-		total_number_of_function_evals++;
-		return 0;
-	}
-
-	L = trans(U);
-
-	//L.raw_print(cout, "L:");
-
-	//U.raw_print(cout, "U:");
-
-	vec U_diagonal = U.diag();
-
-	//U_diagonal.raw_print(cout, "diag(U):");
-
-	logdetR = 0.0;
-	for (int i = 0; i < M; i++) {
-		if (U_diagonal(i) < 0) {
-
-			new_born.objective_val = -LARGE;
-			total_number_of_function_evals++;
-			return 0;
-		}
-
-		logdetR += log(U_diagonal(i));
-
-		//		printf("%d %30.25f %30.25f\n",i,logdetR,log(U_diagonal(i)));
-	}
-
-	logdetR = 2.0 * logdetR;
-
-	vec R_inv_ys(dimension_of_R);
-	vec R_inv_I(dimension_of_R);
-
-
-
-	solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys); /* solve R x = ys */
-	solve_linear_system_by_Cholesky(U, L, R_inv_I, I);   /* solve R x = I */
-
-
-
-
-	beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
-	//	printf("beta0= %20.15f\n",beta0);
-
-	vec ys_min_betaI = ys-beta0*I;
-
-	vec R_inv_ys_min_beta(dimension_of_R);
-
-
-	/* solve R x = ys-beta0*I */
-	solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaI);
-
-
-	double fac = dot(ys_min_betaI, R_inv_ys_min_beta);
-
-	ssqr = (1.0 / dimension_of_R) * fac;
-
-
-	if(ssqr > 0 ){
-		obj_val = (-dimension_of_R / 2.0) * log(ssqr);
-		obj_val -= 0.5 * logdetR;
-	}
-	else{
-		new_born.objective_val = -LARGE;
-		total_number_of_function_evals++;
-		return 0;
-	}
-
-#ifdef calculate_fitness_CHECK
-	printf("\n");
-	printf("objective function value = %10.7f\n",obj_val);
-	printf("s^2= %20.15f\n",ssqr);
-	printf("(-M/2.0)* log(ssqr) = %10.7f\n",(-dimension_of_R/2.0)* log(ssqr));
-	printf("-0.5*logdetR = %10.7f\n",-0.5*logdetR);
-	printf("\n");
-#endif
-
-
-	total_number_of_function_evals++;
-
-	new_born.objective_val = obj_val;
-
-	return 1;
-}
+//int calculate_fitness(EAdesign &new_born,
+//		double &reg_param,
+//		mat &R,
+//		mat &U,
+//		mat &L,
+//		mat &X,
+//		vec &ys,
+//		vec &I) {
+//
+//	//#define calculate_fitness_CHECK
+//
+//	//	printf("calling calculate_fitness function...\n");
+//	double beta0, ssqr;
+//	double logdetR;
+//	double obj_val;
+//
+//	int M = X.n_rows;  /* number of samples */
+//	int dimension_of_R = R.n_rows;
+//
+//	// compute the correlation matrix R
+//
+//	//	double reg_param = pow(10.0,-1.0*new_born.log_regularization_parameter);
+//
+//	compute_R_matrix(new_born.theta,
+//			new_born.gamma,
+//			reg_param,
+//			R,
+//			X);
+//
+//
+//	//		R.raw_print(cout, "R:");
+//
+//
+//	// compute Cholesky decomposition
+//	int flag = chol(U, R);
+//
+//	if (flag == 0) {
+//		printf("Ill conditioned correlation matrix\n");
+//		new_born.objective_val = -LARGE;
+//		total_number_of_function_evals++;
+//		return 0;
+//	}
+//
+//	L = trans(U);
+//
+//	//L.raw_print(cout, "L:");
+//
+//	//U.raw_print(cout, "U:");
+//
+//	vec U_diagonal = U.diag();
+//
+//	//U_diagonal.raw_print(cout, "diag(U):");
+//
+//	logdetR = 0.0;
+//	for (int i = 0; i < M; i++) {
+//		if (U_diagonal(i) < 0) {
+//
+//			new_born.objective_val = -LARGE;
+//			total_number_of_function_evals++;
+//			return 0;
+//		}
+//
+//		logdetR += log(U_diagonal(i));
+//
+//		//		printf("%d %30.25f %30.25f\n",i,logdetR,log(U_diagonal(i)));
+//	}
+//
+//	logdetR = 2.0 * logdetR;
+//
+//	vec R_inv_ys(dimension_of_R);
+//	vec R_inv_I(dimension_of_R);
+//
+//
+//
+//	solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys); /* solve R x = ys */
+//	solve_linear_system_by_Cholesky(U, L, R_inv_I, I);   /* solve R x = I */
+//
+//
+//
+//
+//	beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
+//	//	printf("beta0= %20.15f\n",beta0);
+//
+//	vec ys_min_betaI = ys-beta0*I;
+//
+//	vec R_inv_ys_min_beta(dimension_of_R);
+//
+//
+//	/* solve R x = ys-beta0*I */
+//	solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaI);
+//
+//
+//	double fac = dot(ys_min_betaI, R_inv_ys_min_beta);
+//
+//	ssqr = (1.0 / dimension_of_R) * fac;
+//
+//
+//	if(ssqr > 0 ){
+//		obj_val = (-dimension_of_R / 2.0) * log(ssqr);
+//		obj_val -= 0.5 * logdetR;
+//	}
+//	else{
+//		new_born.objective_val = -LARGE;
+//		total_number_of_function_evals++;
+//		return 0;
+//	}
+//
+//#ifdef calculate_fitness_CHECK
+//	printf("\n");
+//	printf("objective function value = %10.7f\n",obj_val);
+//	printf("s^2= %20.15f\n",ssqr);
+//	printf("(-M/2.0)* log(ssqr) = %10.7f\n",(-dimension_of_R/2.0)* log(ssqr));
+//	printf("-0.5*logdetR = %10.7f\n",-0.5*logdetR);
+//	printf("\n");
+//#endif
+//
+//
+//	total_number_of_function_evals++;
+//
+//	new_born.objective_val = obj_val;
+//
+//	return 1;
+//}
 
 /* crossover function of two designs */
 void crossover_kriging(EAdesign &father, EAdesign &mother, EAdesign &child) {

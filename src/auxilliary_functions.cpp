@@ -40,7 +40,7 @@ void generateKRandomInt(uvec &numbers, unsigned int N, unsigned int k){
 }
 
 
-void normalize_vector(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax){
+void normalizeVector(rowvec xp, rowvec &xpnorm, vec xmin, vec xmax){
 
 	int dim = xp.size();
 
@@ -54,12 +54,12 @@ void normalize_vector(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax){
 
 }
 
-void normalize_vector_back(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax){
+void normalizeVectorBack(rowvec &xp, rowvec xpnorm, vec xmin, vec xmax){
 
-	int dim = xp.size();
+	int dim = xpnorm.size();
 
 	for(int i=0; i<dim; i++){
-
+		assert(xmax(i) > xmin(i));
 		xp(i) = xpnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
 
 
@@ -263,7 +263,7 @@ int is_in_the_list(unsigned int entry, uvec &list){
  * @param[in] b
  *
  */
-void solve_linear_system_by_Cholesky(mat &U, mat &L, vec &x, vec &b){
+void solve_linear_system_by_Cholesky(mat U, mat L, vec &x, vec b){
 
 	int dim = x.size();
 
@@ -356,11 +356,11 @@ int randomInt(int a, int b) {
 	return a + random;
 }
 
-void randomVector(rowvec &x){
+void randomVector(rowvec &x, double scale){
 
 	for(unsigned int i=0; i<x.size(); i++) {
 
-		x(i) = randomDouble(0.0, 1.0);
+		x(i) = scale* randomDouble(0.0, 1.0);
 	}
 
 
@@ -592,7 +592,16 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 }
 
+bool ifTooCLose(rowvec v1, rowvec v2){
 
+	rowvec diff = v1 - v2;
+
+	double distance = L1norm(diff, v1.size());
+
+	if(distance < 10E-6) return true;
+	else return false;
+
+}
 
 
 

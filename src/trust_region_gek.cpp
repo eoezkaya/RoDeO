@@ -343,7 +343,7 @@ double AggregationModel::ftildeKriging(rowvec xp){
 
 
 	/* if linear regression is on */
-	if(linear_regression == LINEAR_REGRESSION_ON){
+	if(linear_regression){
 
 		for(unsigned int i=0; i<dim; i++){
 

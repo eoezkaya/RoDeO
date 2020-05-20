@@ -12,6 +12,10 @@ using namespace arma;
 
 class TestFunction {
 
+private:
+	vec lb;
+	vec ub;
+
 public:
 	bool ifNoisy;
 	bool ifAdjointFunctionExist;
@@ -19,17 +23,21 @@ public:
     std::string function_name;
     double (*func_ptr)(double *);
     double (*adj_ptr)(double *, double *);
-    double noise_level;
+    double noiseLevel;
 
-    vec lower_bound;
-    vec upper_bound;
+
 
     TestFunction(std::string name,int dimension);
-    void plot(void);
+    void plot(int resolution = 100);
     void print(void);
-    void generateRandomSamples(unsigned int nsamples, std::string filename);
-    void testKrigingModel(int nsamples, bool ifVisualize = false);
-    void testEGO(int nsamplesTrainingData, int maxnsamples, bool ifVisualize = false, bool ifWarmStart = false);
+    void generateRandomSamples(mat &sampleMatrix, unsigned int nsamples, std::string filename);
+    void testSurrogateModel(unsigned int modelId, unsigned int nsamples, bool ifVisualize = false);
+    void testEfficientGlobalOptimization(int nsamplesTrainingData, int maxnsamples, bool ifVisualize = false, bool ifWarmStart = false, bool ifMinimize = true);
+
+    void evaluateGlobalExtrema(void) const;
+    void setBoxConstraints(double lowerBound, double upperBound);
+    void setBoxConstraints(vec lowerBound, vec upperBound);
+
 
 } ;
 
@@ -40,8 +48,10 @@ public:
 
 
 /* regression test functions */
-double test_function1D(double *x);
-double test_function1D_adj(double *x, double *xb);
+
+double TestFunction1D(double *x);
+double TestFunction1DAdj(double *xin, double *xb);
+
 
 double test_function1KernelReg(double *x);
 double test_function1KernelRegAdj(double *xin, double *xb);

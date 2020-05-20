@@ -37,14 +37,92 @@ TestFunction::TestFunction(std::string name,int dimension){
 	function_name = name;
 	func_ptr = empty;
 	adj_ptr  = emptyAdj;
-	noise_level = 0.0;
+	noiseLevel = 0.0;
 	ifNoisy = false;
 	ifAdjointFunctionExist = false;
-	lower_bound.zeros(dimension);
-	upper_bound.zeros(dimension);
+	lb.zeros(dimension);
+	ub.zeros(dimension);
 
 
 }
+
+void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
+
+	if(lowerBound >= upperBound){
+
+		fprintf(stderr, "Error: lowerBound cannot be equal or greater than the upperBound! at %s, line %d.\n",__FILE__, __LINE__);
+		exit(-1);
+
+	}
+	lb.fill(lowerBound);
+	ub.fill(upperBound);
+
+
+}
+
+
+void TestFunction::setBoxConstraints(vec lowerBound, vec upperBound){
+
+
+	for(unsigned int i=0; i<numberOfInputParams; i++){
+
+		if(lowerBound(i) >= upperBound(i)){
+
+			fprintf(stderr, "Error: lowerBound cannot be equal or greater than the upperBound! at %s, line %d.\n",__FILE__, __LINE__);
+			exit(-1);
+
+		}
+		else{
+
+			lb(i) = lowerBound(i);
+			ub(i) = upperBound(i);
+
+		}
+
+	}
+
+
+}
+
+void TestFunction::evaluateGlobalExtrema(void) const{
+
+	rowvec x(numberOfInputParams);
+	rowvec maxx(numberOfInputParams);
+	rowvec minx(numberOfInputParams);
+
+	double globalMin = LARGE;
+	double globalMax = -LARGE;
+
+	const int numberOfBruteForceIterations = 10000;
+	for(unsigned int i=0; i<numberOfBruteForceIterations; i++ ){
+
+		randomVector(x, lb, ub);
+		double fVal = func_ptr(x.memptr());
+
+		if(fVal < globalMin){
+
+			globalMin = fVal;
+			minx = x;
+		}
+
+		if(fVal > globalMax){
+
+			globalMax = fVal;
+			maxx = x;
+		}
+
+	}
+
+	printf("Brute Force Results:\n");
+	printf("Function has minimum at x:\n");
+	minx.print();
+	printf("Function value at maximum = %10.7f\n",globalMin);
+	printf("Function has maximum at x:\n");
+	maxx.print();
+	printf("Function value at maximum = %10.7f\n",globalMax);
+
+}
+
 
 void TestFunction::print(void){
 
@@ -55,25 +133,25 @@ void TestFunction::print(void){
 
 	for(unsigned int i=0; i<numberOfInputParams; i++){
 
-		printf("x[%d]: %15.10f , %15.10f\n",i,lower_bound(i),upper_bound(i));
+		printf("x[%d]: %15.10f , %15.10f\n",i,lb(i),ub(i));
 
 	}
 
 
 }
 
-void TestFunction::plot(void){
+void TestFunction::plot(int resolution){
 
-	if(numberOfInputParams !=2){
+	if(numberOfInputParams !=2 && numberOfInputParams !=1){
 
-		fprintf(stderr, "Error: only 2D functions can be plotted! at %s, line %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "Error: only 1D or 2D functions can be plotted! at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
 
 	}
 
 	for(unsigned int j=0; j<numberOfInputParams;j++) {
 
-		if(lower_bound(j) == upper_bound(j)){
+		if(lb(j) >= ub(j)){
 
 			fprintf(stderr, "Error: Parameter bounds are not set correctly! at %s, line %d.\n",__FILE__, __LINE__);
 			exit(-1);
@@ -81,94 +159,250 @@ void TestFunction::plot(void){
 		}
 	}
 
-	const int resolution = 100;
+	std::string filename= function_name +"_FunctionPlot.csv";
 
-	std::string filename= function_name +".dat";
-
-
-	std::string file_name_for_plot = function_name+".png";
+	if(numberOfInputParams == 1){
 
 
-
-	printf("opening file %s for output...\n",filename.c_str());
-	FILE *test_function_data=fopen(filename.c_str(),"w");
-
+		const int resolution = 1000;
+		mat visualizationData(resolution,2);
 
 
-	double dx,dy; /* step sizes in x and y directions */
-	double x[2];
-	double func_val;
-	dx = (upper_bound(0)-lower_bound(0))/(resolution-1);
-	dy = (upper_bound(1)-lower_bound(1))/(resolution-1);
+		double dx; /* step sizes in x direction */
+		double x;
+		double func_val;
+		dx = (ub(0)-lb(0))/(resolution-1);
 
-	x[0] = lower_bound(0);
-	for(int i=0;i<resolution;i++){
-		x[1] = lower_bound(1);
-		for(int j=0;j<resolution;j++){
-			func_val = func_ptr(x);
-			fprintf(test_function_data,"%10.7f %10.7f %10.7f\n",x[0],x[1],func_val);
+		x = lb(0);
+		for(int i=0;i<resolution;i++){
 
 
-			x[1]+=dy;
+			func_val = func_ptr(&x);
+
+			visualizationData(i,0) = x;
+			visualizationData(i,1) = func_val;
+
+			x+= dx;
+
 		}
-		x[0]+= dx;
+
+		visualizationData.save(filename,csv_ascii);
+
+
+		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function.py "+ function_name;
+
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
+
+
+
 
 	}
 
-	fclose(test_function_data);
+	if(numberOfInputParams == 2){
+
+
+		const int resolution = 100;
+		mat visualizationData(resolution*resolution,3);
+
+
+		double dx,dy; /* step sizes in x and y directions */
+		double x[2];
+		double func_val;
+		dx = (ub(0)-lb(0))/(resolution-1);
+		dy = (ub(1)-lb(1))/(resolution-1);
+
+		x[0] = lb(0);
+		for(int i=0;i<resolution;i++){
+			x[1] = lb(1);
+			for(int j=0;j<resolution;j++){
+				func_val = func_ptr(x);
+
+				visualizationData(i*resolution+j,0) = x[0];
+				visualizationData(i*resolution+j,1) = x[1];
+				visualizationData(i*resolution+j,2) = func_val;
+
+
+				x[1]+=dy;
+			}
+			x[0]+= dx;
+
+		}
+
+
+		visualizationData.save(filename,csv_ascii);
+
+		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_2d_surface.py "+ function_name;
+		FILE* in = popen(python_command.c_str(), "r");
+
+
+		fprintf(in, "\n");
 
 
 
-	std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_2d_surface.py "+ filename+ " "+ file_name_for_plot + " "+ function_name ;
-
-	FILE* in = popen(python_command.c_str(), "r");
-
-
-	fprintf(in, "\n");
+	}
 
 
 }
 
-void TestFunction::testKrigingModel(int nsamples, bool ifVisualize){
+void TestFunction::testSurrogateModel(unsigned int model, unsigned int nsamples, bool ifVisualize){
 
-	printf("Testing Kriging Model with the %s function...\n", function_name.c_str());
+	printf("Testing surrogate model with the %s function...\n", function_name.c_str());
+	printf("Model Id: %d\n",model);
 
-	std::string filenameKrigingTest = function_name + "KrigingTest"+ std::to_string(nsamples)+".csv";
-	generateRandomSamples(nsamples, filenameKrigingTest);
+	std::string label = function_name + "_SurrogateTest";
 
-	KrigingModel TestFunSurrogate(function_name + "KrigingTest"+ std::to_string(nsamples),numberOfInputParams);
-	TestFunSurrogate.print();
-	TestFunSurrogate.train();
+	std::string filenameKrigingTest = label+".csv";
+
+	mat sampleMatrix;
+
+	generateRandomSamples(sampleMatrix, nsamples, filenameKrigingTest);
+
+
+//	vec xmin(numberOfInputParams);
+//	vec xmax(numberOfInputParams);
+//
+//	for(unsigned int i=0; i<numberOfInputParams; i++){
+//
+//		xmin(i) = min(sampleMatrix.col(i));
+//		xmax(i) = max(sampleMatrix.col(i));
+//	}
+
+	SurrogateModel *TestFunSurrogate;
+
+
+	KrigingModel TestFunModelKriging;
+
+	if(model == KRIGING){
+
+		TestFunModelKriging = KrigingModel(label,numberOfInputParams);
+		TestFunSurrogate = &TestFunModelKriging;
+
+
+	}
+
+
+	TestFunSurrogate->print();
+
+	TestFunSurrogate->train();
+
+
 
 	double in_sample_error = 0.0;
 
-	for(unsigned int i=0;i<TestFunSurrogate.N;i++){
+	for(unsigned int i=0;i<nsamples;i++){
 
-		rowvec xp = TestFunSurrogate.X.row(i);
-		rowvec x = TestFunSurrogate.XnotNormalized.row(i);
+		rowvec xp = TestFunSurrogate->getRowX(i);
 
+		rowvec x(numberOfInputParams);
 
+		normalizeVectorBack(x, xp, lb, ub);
+
+#if 1
 		printf("\nData point = %d\n", i+1);
 		printf("calling f_tilde at x:\n");
 		x.print();
-
-		double func_val = TestFunSurrogate.ftilde(xp);
+#endif
+		double func_val = TestFunSurrogate->interpolate(xp);
 
 		double func_val_exact = func_ptr(x.memptr());
 
-		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f\n", func_val_exact,func_val);
 
 		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-#if 0
+#if 1
+		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f\n", func_val_exact,func_val);
 		printf("in sample error = %15.10f\n", in_sample_error);
 #endif
 	}
 
-	in_sample_error = in_sample_error/TestFunSurrogate.N;
+	in_sample_error = in_sample_error/nsamples;
 
 	printf("In sample error (MSE) for the Kriging model = %15.10f\n",in_sample_error);
 
 
+	exit(1);
+
+	if (numberOfInputParams == 1){
+
+		int resolution =10000;
+
+		std::string kriging_response_surface_file_name = function_name+"_"+"KrigingTestOutput.csv";
+
+
+		double dx; /* step sizes in x and y directions */
+		rowvec x(1);
+		rowvec xp(1);
+
+		mat outputData(resolution,7);
+
+		dx = (ub(0)-lb(0))/(resolution-1);
+
+		double out_sample_error=0.0;
+
+		int count = 1;
+		x(0) = lb(0);
+		for(int i=0;i<resolution;i++){
+#if 0
+			printf("\ncalling f_tilde at x = %10.7f\n",x(0));
+#endif
+			/* normalize x */
+			xp(0)= (x(0)- lb(0)) / (ub(0) - lb(0));
+
+			double funcVal = 0;
+			double ssqr = 0;
+
+			TestFunSurrogate->interpolateWithVariance(xp,&funcVal,&ssqr);
+
+
+			double funcValExact = func_ptr(x.memptr());
+			double squaredError = (funcValExact-funcVal)*(funcValExact-funcVal);
+
+			outputData(i,0) = x(0);
+			outputData(i,1) = funcValExact;
+			outputData(i,2) = funcVal;
+			outputData(i,3) = sqrt(squaredError);
+			outputData(i,4) = sqrt(ssqr);
+			outputData(i,5) = funcVal-outputData(i,4);
+			outputData(i,6) = funcVal+outputData(i,4);
+
+
+			out_sample_error+= squaredError;
+#if 0
+			printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", funcValExact,funcVal,squaredError);
+			printf("out_sample_error = %10.7f\n",out_sample_error/count);
+#endif
+
+
+			count++;
+			x+=dx;
+
+		}
+
+		out_sample_error = out_sample_error/count;
+
+		printf("Mean out of sample error (MSE) for the Kriging model = %15.10f\n",out_sample_error);
+
+		outputData.save(kriging_response_surface_file_name,csv_ascii);
+
+
+		if(ifVisualize){
+
+			std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1D_KrigingTest.py "+ function_name;
+
+			FILE* in = popen(python_command.c_str(), "r");
+			fprintf(in, "\n");
+
+
+			exit(1);
+
+
+		}
+
+
+
+	}
 
 	/* visualize with surface plot if the problem is 2D */
 
@@ -187,23 +421,24 @@ void TestFunction::testKrigingModel(int nsamples, bool ifVisualize){
 		rowvec xp(2);
 
 		double func_val;
-		dx = (upper_bound(0)-lower_bound(0))/(resolution-1);
-		dy = (upper_bound(1)-lower_bound(1))/(resolution-1);
+		dx = (ub(0)-lb(0))/(resolution-1);
+		dy = (ub(1)-lb(1))/(resolution-1);
 
 		double out_sample_error=0.0;
 		int count = 1;
-		x[0] = lower_bound(0);
+		x[0] = lb(0);
 		for(int i=0;i<resolution;i++){
-			x[1] = lower_bound(1);
+			x[1] = lb(1);
 			for(int j=0;j<resolution;j++){
-
+#if 0
 				printf("\ncalling f_tilde at x:\n");
 				x.print();
+#endif
 				/* normalize x */
-				xp(0)= (1.0/TestFunSurrogate.dim)*(x(0)- TestFunSurrogate.xmin(0)) / (TestFunSurrogate.xmax(0) - TestFunSurrogate.xmin(0));
-				xp(1)= (1.0/TestFunSurrogate.dim)*(x(1)- TestFunSurrogate.xmin(1)) / (TestFunSurrogate.xmax(1) - TestFunSurrogate.xmin(1));
+				xp(0)= (1.0/2)*(x(0)- lb(0)) / (ub(0) - lb(0));
+				xp(1)= (1.0/2)*(x(1)- lb(1)) / (ub(1) - lb(1));
 
-				func_val = TestFunSurrogate.ftilde(xp);
+				func_val = TestFunSurrogate->interpolate(xp);
 				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
 
 				double func_val_exact = func_ptr(x.memptr());
@@ -211,9 +446,9 @@ void TestFunction::testKrigingModel(int nsamples, bool ifVisualize){
 				fprintf(kriging_error_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),squaredError);
 
 
-				printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", func_val_exact,func_val,squaredError);
 				out_sample_error+= squaredError;
-#if 1
+#if 0
+				printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", func_val_exact,func_val,squaredError);
 				printf("out_sample_error = %10.7f\n",out_sample_error/count);
 #endif
 
@@ -266,16 +501,38 @@ void TestFunction::testKrigingModel(int nsamples, bool ifVisualize){
 
 
 
+	} /* end of 2D validation */
+
+
+	if (numberOfInputParams > 2){
+
+		unsigned int resolution = 10000;
+		mat validationData(resolution, numberOfInputParams+1);
+
+		rowvec x(numberOfInputParams);
+
+
+		for(unsigned int i=0; i<resolution; i++){
+
+			randomVector(x, lb , ub);
+			double funcValExact = func_ptr(x.memptr());
+
+			for(unsigned int j=0; j<numberOfInputParams; j++) {
+
+				validationData(i, j) = x(j);
+			}
+
+			validationData(i, numberOfInputParams) = funcValExact;
+
+
+
+
+		}
+
+		TestFunSurrogate->validate(validationData,ifVisualize);
+
+
 	}
-
-
-
-
-
-
-
-
-
 
 
 
@@ -283,13 +540,23 @@ void TestFunction::testKrigingModel(int nsamples, bool ifVisualize){
 }
 
 
-void TestFunction::generateRandomSamples(unsigned int nsamples, std::string filename){
+void TestFunction::generateRandomSamples(mat &sampleMatrix, unsigned int nsamples, std::string filename){
+
+	if (remove(filename.c_str()) != 0){
+
+		cout << "File:"<<filename<<" does not exist in directory\n";
+
+	}
+	else{
+
+		cout << "File deleted successfully\n";
+	}
 
 	printf("Generating %d random samples for the function: %s\n",nsamples,function_name.c_str());
 
 	for(unsigned int j=0; j<numberOfInputParams;j++) {
 
-		if(lower_bound(j) == upper_bound(j)){
+		if(lb(j) == ub(j)){
 
 			fprintf(stderr, "Error: Parameter bounds are not set correctly! at %s, line %d.\n",__FILE__, __LINE__);
 			exit(-1);
@@ -301,7 +568,7 @@ void TestFunction::generateRandomSamples(unsigned int nsamples, std::string file
 
 	if(!ifAdjointFunctionExist){
 
-		mat data(nsamples, numberOfInputParams+1);
+		sampleMatrix = zeros(nsamples,numberOfInputParams+1 );
 
 		double *x  = new double[numberOfInputParams];
 
@@ -309,39 +576,47 @@ void TestFunction::generateRandomSamples(unsigned int nsamples, std::string file
 
 			for(unsigned int j=0; j<numberOfInputParams;j++) {
 
-				x[j] = randomDouble(lower_bound(j), upper_bound(j));
+				x[j] = randomDouble(lb(j), ub(j));
+
+				if(ifNoisy){
+
+					x[j] += random_number(-1.0, 1.0, noiseLevel);
+
+				}
 			}
 
 			double fVal = func_ptr(x);
 
 			for(unsigned int j=0;j<numberOfInputParams;j++){
 
-				data(i,j) = x[j];
+				sampleMatrix(i,j) = x[j];
 
 			}
 
-			data(i,numberOfInputParams) = fVal;
+			sampleMatrix(i,numberOfInputParams) = fVal;
 
 
 		}
 		printf("Generating the file: %s\n",filename.c_str());
-		data.save(filename.c_str(), csv_ascii);
+		sampleMatrix.save(filename.c_str(), csv_ascii);
+
 
 		delete[] x;
 
 	}
 	else{
 
+		sampleMatrix = zeros(nsamples,2*numberOfInputParams+1 );
+
 		double *x   = new double[numberOfInputParams];
 		double *xb  = new double[numberOfInputParams];
 
-		mat data(nsamples, 2*numberOfInputParams+1);
 
 		for(unsigned int i=0; i<nsamples; i++ ){
 
 			for(unsigned int j=0; j<numberOfInputParams;j++) {
 
-				x[j] = randomDouble(lower_bound(j), upper_bound(j));
+				x[j] = randomDouble(lb(j), ub(j));
 			}
 
 			for(unsigned int k=0; k<numberOfInputParams;k++) xb[k] = 0.0;
@@ -350,22 +625,22 @@ void TestFunction::generateRandomSamples(unsigned int nsamples, std::string file
 
 			for(unsigned int j=0;j<numberOfInputParams;j++){
 
-				data(i,j) = x[j];
+				sampleMatrix(i,j) = x[j];
 
 			}
 
-			data(i,numberOfInputParams) = fVal;
+			sampleMatrix(i,numberOfInputParams) = fVal;
 
 
 			for(unsigned int j=numberOfInputParams+1;j<2*numberOfInputParams+1;j++){
 
-				data(i,j) = xb[j-numberOfInputParams-1];
+				sampleMatrix(i,j) = xb[j-numberOfInputParams-1];
 
 			}
 
 		}
 		printf("Generating the file: %s\n",filename.c_str());
-		data.save(filename.c_str(), csv_ascii);
+		sampleMatrix.save(filename.c_str(), csv_ascii);
 
 		delete[] x;
 		delete[] xb;
@@ -378,29 +653,53 @@ void TestFunction::generateRandomSamples(unsigned int nsamples, std::string file
 
 }
 
-void TestFunction::testEGO(int nsamplesTrainingData, int maxnsamples, bool ifVisualize, bool ifWarmStart){
+void TestFunction::testEfficientGlobalOptimization(int nsamplesTrainingData, int maxnsamples, bool ifVisualize, bool ifWarmStart, bool ifMinimize){
 
 	printf("Testing Efficient Global Optimization with the %s function...\n", function_name.c_str());
 
-	std::string labelTest = function_name + "EGOTest_"+std::to_string(nsamplesTrainingData) + "_" + std::to_string(maxnsamples);
+	std::string filenameEGOTest = function_name+".csv";
 
-	std::string filenameEGOTest = labelTest+".csv";
+	mat samplesMatrix;
 
 	if(!ifWarmStart) {
 
-		generateRandomSamples(nsamplesTrainingData, filenameEGOTest);
+		generateRandomSamples(samplesMatrix, nsamplesTrainingData, filenameEGOTest);
 
 	}
 
+	std::string problemType;
 
-	Optimizer OptimizationStudy(labelTest,numberOfInputParams);
+	if(ifMinimize){
 
-	OptimizationStudy.obj_fun = func_ptr;
-	OptimizationStudy.max_number_of_samples = maxnsamples;
-	OptimizationStudy.lower_bound_dv = lower_bound;
-	OptimizationStudy.upper_bound_dv = upper_bound;
+		problemType = "minimize";
+
+	}
+	else{
+		problemType = "maximize";
+
+	}
+
+	Optimizer OptimizationStudy(function_name,numberOfInputParams,problemType);
+
+	if(ifVisualize) {
+
+		OptimizationStudy.ifVisualize = true;
+	}
+
+
+	std::cout<<"Initializing the objective function..."<<std::endl;
+
+	ObjectiveFunction objFunc(function_name, func_ptr, numberOfInputParams);
+
+	OptimizationStudy.addObjectFunction(objFunc);
+
+	OptimizationStudy.maxNumberOfSamples = maxnsamples;
+
+	OptimizationStudy.setBoxConstraints(lb,ub);
 
 	OptimizationStudy.EfficientGlobalOptimization();
+
+	evaluateGlobalExtrema();
 
 
 
@@ -492,11 +791,38 @@ double test_function2KernelRegAdj(double *xin,double *xb){
 
 
 
-double test_function1D(double *x){
+double TestFunction1D(double *x){
 
 	return sin(2*x[0])+ 0.5* sin(10*x[0]) + x[0]*x[0] ;
 
 }
+
+double TestFunction1DAdj(double *xin, double *xb){
+
+	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+	tape.setActive();
+	codi::RealReverse *x = new codi::RealReverse[1];
+
+	tape.registerInput(x[0]);
+
+	codi::RealReverse result = sin(2*x[0])+ 0.5* sin(10*x[0]) + x[0]*x[0] ;
+	tape.registerOutput(result);
+
+	tape.setPassive();
+	result.setGradient(1.0);
+	tape.evaluate();
+
+
+	xb[0]=x[0].getGradient();
+
+
+	delete[] x;
+	tape.reset();
+	return result.getValue();
+
+}
+
+
 
 
 double Griewank2D(double *x){
@@ -1574,437 +1900,6 @@ void generate_plot_1D_function(double (*test_function)(double *), double *bounds
 
 
 }
-
-
-//void perform_kriging_test(double (*test_function)(double *),
-//		double *bounds,
-//		std::string function_name ,
-//		int  number_of_samples,
-//		int sampling_method,
-//		int problem_dimension,
-//		int linear_regression){
-//
-//
-//	const int number_of_function_validation_points = 100;
-//
-//	vec kriging_weights;
-//	vec regression_weights;
-//
-//	double reg_param = pow(10.0, -8.0);
-//
-//	int number_of_max_function_evals_for_training = 10000;
-//
-//
-//	/* file name for data points in csv (comma separated values) format */
-//	std::string input_file_name = function_name+"_"+ std::to_string(number_of_samples )+".csv";
-//
-//	printf("input file name : %s\n",input_file_name.c_str());
-//
-//
-//
-//	/* generate the contour_plot for 2D data*/
-//	if(problem_dimension==2){
-//		generate_contour_plot_2D_function(test_function, bounds, function_name);
-//	}
-//
-//
-//	/* generate the function plot for 1D data*/
-//	if(problem_dimension==1){
-//		generate_plot_1D_function(test_function, bounds, function_name);
-//
-//	}
-//	printf("Generating inputs using %d sample points...\n",number_of_samples );
-//	/* generate the input data for test	*/
-//	generate_test_function_data(test_function,
-//			input_file_name,
-//			bounds,
-//			number_of_samples,
-//			sampling_method,
-//			problem_dimension);
-//
-//
-//	/* train response surface with maximum likelihood principle */
-//
-//	printf("training kriging hyperparameters...\n");
-//
-//
-//	train_kriging_response_surface(input_file_name,
-//			"None",
-//			linear_regression,
-//			regression_weights,
-//			kriging_weights,
-//			reg_param,
-//			number_of_max_function_evals_for_training,
-//			RAW_ASCII);
-//
-//
-//#if 0
-//
-//	printf("kriging weights = \n");
-//	kriging_weights.print();
-//	printf("regression weights = \n");
-//	regression_weights.print();
-//
-//
-//	printf("reg_param = %20.15f\n", reg_param);
-//#endif
-//
-//	mat data; /* data matrix */
-//	data.load(input_file_name.c_str(), raw_ascii); /* force loading in raw_ascii format */
-//
-//	//	data.print();
-//
-//	int nrows = data.n_rows;
-//	int ncols = data.n_cols;
-//	int dim = ncols - 1;
-//
-//
-//	int dimension_of_R = nrows;
-//
-//	double beta0=0.0;
-//
-//
-//	mat X = data.submat(0, 0, nrows - 1, ncols - 2);
-//#if 0
-//	X.print();
-//#endif
-//	vec ys = data.col(dim);
-//
-//#if 0
-//	ys.print();
-//#endif
-//	vec x_max(dim);
-//	x_max.fill(0.0);
-//
-//	vec x_min(dim);
-//	x_min.fill(0.0);
-//
-//	for (int i = 0; i < dim; i++) {
-//		x_max(i) = data.col(i).max();
-//		x_min(i) = data.col(i).min();
-//
-//	}
-//
-//#if 0
-//	printf("maximum = \n");
-//	x_max.print();
-//
-//	printf("minimum = \n");
-//	x_min.print();
-//#endif
-//
-//
-//	/* normalize data */
-//	for (int i = 0; i < nrows; i++) {
-//		for (int j = 0; j < dim; j++) {
-//			X(i, j) = (1.0/dim)*(X(i, j) - x_min(j)) / (x_max(j) - x_min(j));
-//		}
-//	}
-//
-//
-//	if (linear_regression == LINEAR_REGRESSION_ON) { /* if linear regression is on */
-//
-//		mat augmented_X(X.n_rows, dim + 1);
-//
-//		for (unsigned int i = 0; i < X.n_rows; i++) {
-//			for (int j = 0; j <= dim; j++) {
-//				if (j == 0)
-//					augmented_X(i, j) = 1.0;
-//				else
-//					augmented_X(i, j) = X(i, j - 1);
-//
-//			}
-//		}
-//
-//
-//
-//		/* now update the ys_func vector */
-//
-//		ys = ys - augmented_X * regression_weights;
-//
-//		//		printf("Updated ys vector = \n");
-//
-//		//		ys.print();
-//
-//	} /* end of linear regression */
-//
-//
-//
-//
-//
-//
-//
-//	/* allocate the correlation matrix */
-//	mat R =zeros(dimension_of_R, dimension_of_R);
-//
-//
-//	//	R.print();
-//
-//	vec theta = kriging_weights.head(dim);
-//	vec gamma = kriging_weights.tail(dim);
-//
-//
-//
-//
-//	/* evaluate the correlation matrix for the given theta and gamma */
-//	compute_R_matrix(theta,gamma, reg_param, R, X);
-//
-//
-//
-//	mat Rinv = inv(R);
-//	/* vector of ones */
-//	vec I = ones(dimension_of_R);
-//
-//	beta0 = (1.0/dot(I,Rinv*I)) * (dot(I,Rinv*ys));
-//	vec R_inv_ys_min_beta = Rinv* (ys-beta0* I);
-//
-//
-//	printf("beta0 = %10.7f\n",beta0);
-//
-//
-//#if 0
-//	printf("R_inv_ys_min_beta =\n");
-//	R_inv_ys_min_beta.print();
-//#endif
-//
-//
-//
-//	/* check in-sample error */
-//
-//	double in_sample_error = 0.0;
-//	for(unsigned int i=0;i<X.n_rows;i++){
-//
-//		rowvec x = X.row(i);
-//
-//
-//		double func_val = calculate_f_tilde(x,
-//				X,
-//				beta0,
-//				regression_weights,
-//				R_inv_ys_min_beta,
-//				kriging_weights);
-//
-//		for(int j=0; j<dim;j++) {
-//
-//			x(j) = dim* x(j)* (x_max(j) - x_min(j))+x_min(j);
-//		}
-//
-//		double func_val_exact = test_function(x.memptr());
-//
-//		printf("\n");
-//		x.print();
-//		printf("\n");
-//		printf("ftilde = %10.7f fexact= %10.7f\n",func_val,func_val_exact );
-//
-//		in_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-//
-//
-//	}
-//
-//	in_sample_error = sqrt(in_sample_error/X.n_rows);
-//
-//	printf("in sample error = %10.7f\n",in_sample_error);
-//
-//
-//
-//
-//
-//
-//	/* visualize with contour plot if the problem is 2D */
-//	if (problem_dimension == 2){
-//		int resolution =100;
-//
-//		std::string kriging_response_surface_file_name = function_name+"_"+"kriging_response_surface_"+ std::to_string(number_of_samples )+".dat";
-//
-//		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
-//
-//		double dx,dy; /* step sizes in x and y directions */
-//		rowvec x(2);
-//		rowvec xnorm(2);
-//
-//		double func_val;
-//		dx = (bounds[1]-bounds[0])/(resolution-1);
-//		dy = (bounds[3]-bounds[2])/(resolution-1);
-//
-//		double out_sample_error=0.0;
-//
-//		x[0] = bounds[0];
-//		for(int i=0;i<resolution;i++){
-//			x[1] = bounds[2];
-//			for(int j=0;j<resolution;j++){
-//
-//				/* normalize x */
-//				xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
-//				xnorm(1)= (1.0/dim)*(x(1)- x_min(1)) / (x_max(1) - x_min(1));
-//
-//				func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights, R_inv_ys_min_beta, kriging_weights);
-//				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
-//
-//				double func_val_exact = test_function(x.memptr());
-//
-//				out_sample_error+= (func_val_exact-func_val)*(func_val_exact-func_val);
-//
-//
-//
-//				x[1]+=dy;
-//			}
-//			x[0]+= dx;
-//
-//		}
-//		fclose(kriging_response_surface_file);
-//
-//		out_sample_error = sqrt(out_sample_error/(resolution*resolution));
-//
-//		printf("out of sample error = %10.7f\n",out_sample_error);
-//
-//
-//
-//		/* plot the kriging response surface */
-//
-//		std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
-//		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-//
-//		std::string python_command = "python -W ignore plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
-//
-//
-//
-//		FILE* in = popen(python_command.c_str(), "r");
-//
-//
-//		fprintf(in, "\n");
-//
-//
-//	}
-//
-//
-//	/* visualize with line plot if the problem is 1D */
-//	if (problem_dimension == 1){
-//		int resolution =1000;
-//
-//
-//		std::string kriging_response_surface_file_name =
-//				function_name+"_"+"kriging_response_surface_"
-//				+ std::to_string(number_of_samples )
-//		+".dat";
-//
-//		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
-//
-//		double dx; /* step sizes in x */
-//		rowvec x(1);
-//		rowvec xnorm(1);
-//
-//		double func_val;
-//		double func_val_exact;
-//		double final_validation_error=0.0;
-//
-//		dx = (bounds[1]-bounds[0])/(resolution-1);
-//
-//
-//		x(0) = bounds[0];
-//		for(int i=0;i<resolution;i++){
-//
-//
-//			/* normalize x */
-//			xnorm(0)= (1.0/dim)*(x(0)- x_min(0)) / (x_max(0) - x_min(0));
-//			func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights,
-//					R_inv_ys_min_beta, kriging_weights);
-//
-//			func_val_exact = test_function(x.memptr());
-//
-//			printf("%10.7f %10.7f %10.7f\n",x(0),func_val,func_val_exact);
-//			fprintf(kriging_response_surface_file,"%10.7f %10.7f\n",x(0),func_val);
-//			final_validation_error+=sqrt(pow((func_val_exact-func_val),2.0));
-//
-//			x(0)+= dx;
-//
-//		}
-//		fclose(kriging_response_surface_file);
-//
-//
-//		printf("final validation error(L2) : %10.7f\n",final_validation_error );
-//
-//
-//
-//		/* plot the kriging response surface */
-//
-//		std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
-//		file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-//
-//		std::string python_command = "python -W ignore plot_1d_function.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot ;
-//
-//
-//		FILE* in_python = popen(python_command.c_str(), "r");
-//
-//
-//		fprintf(in_python, "\n");
-//	}
-//
-//
-//
-//	if (problem_dimension > 2){
-//
-//		rowvec xs(problem_dimension);
-//		rowvec xe(problem_dimension);
-//		rowvec x(problem_dimension);
-//		rowvec xnorm(problem_dimension);
-//
-//		double func_val;
-//		double func_val_exact;
-//		double final_validation_error=0.0;
-//
-//
-//		int count=0;
-//		for(int i=0;i<problem_dimension;i++){
-//			xs(i) = bounds[count];
-//			count++;
-//			xe(i) = bounds[count];
-//			count++;
-//
-//		}
-//
-//
-//		for(int i=0; i<number_of_function_validation_points;i++ ){
-//
-//			for(int j=0;j<problem_dimension;j++) {
-//
-//				x(j) = RandomDouble(xs(j), xe(j));
-//			}
-//#if 1
-//			printf("x = \n");
-//			x.print();
-//#endif
-//			/* normalize x */
-//			for(int j=0;j<problem_dimension;j++) {
-//
-//				xnorm(j)= (1.0/dim)*(x(j)- x_min(j)) / (x_max(j) - x_min(j));
-//			}
-//
-//
-//			func_val = calculate_f_tilde(xnorm, X, beta0, regression_weights,
-//					R_inv_ys_min_beta, kriging_weights);
-//
-//			func_val_exact = test_function(x.memptr());
-//
-//			printf("f_exact = %10.7f, f_tilde =  %10.7f\n",func_val_exact,func_val);
-//
-//			final_validation_error+=pow((func_val_exact-func_val),2.0);
-//
-//
-//
-//
-//		} /* end of validation loop */
-//
-//		final_validation_error = final_validation_error/number_of_function_validation_points;
-//
-//		printf("final validation error(L2) : %10.7f\n",final_validation_error );
-//
-//
-//
-//
-//	}
-//
-//
-//}
 
 
 

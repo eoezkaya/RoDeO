@@ -5,11 +5,12 @@
 #include <vector>
 #include <map>
 #include <math.h>
+#include <cassert>
 using namespace arma;
 
 
-void normalize_vector(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax);
-void normalize_vector_back(rowvec &xp, rowvec &xpnorm, vec xmin, vec xmax);
+void normalizeVector(rowvec xp, rowvec &xpnorm, vec xmin, vec xmax);
+void normalizeVectorBack(rowvec &xp, rowvec xpnorm, vec xmin, vec xmax);
 
 
 void perturbVectorUniform(frowvec &xp,float sigmaPert);
@@ -68,12 +69,12 @@ double cdf(double x, double mu, double sigma);
 double randomDouble(double a, double b);
 float randomFloat(float a, float b);
 int randomInt(int a, int b);
-void randomVector(rowvec &x);
+void randomVector(rowvec &x, double scale = 1.0);
 void randomVector(rowvec &x, vec lb, vec ub);
 
 double random_number(double xs, double xe, double sigma_factor);
 
-void solve_linear_system_by_Cholesky(mat &U, mat &L, vec &x, vec &b);
+void solve_linear_system_by_Cholesky(mat U, mat L, vec &x, vec b);
 
 bool file_exist(const char *fileName);
 
@@ -95,6 +96,8 @@ void generate_validation_set(uvec &indices, int size);
 void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod);
 void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod, uvec &map);
 
+
+bool ifTooCLose(rowvec v1, rowvec v2);
 
 /* distance functions */
 

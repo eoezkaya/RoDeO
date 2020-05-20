@@ -11,6 +11,7 @@
 #include "read_settings.hpp"
 
 #include "kernel_regression.hpp"
+#include "surrogate_model.hpp"
 
 #ifdef GPU_VERSION
 #include "kernel_regression_cuda.h"
@@ -58,23 +59,56 @@ int main(void){
 
 
 
+
+
 //	KrigingModel EggholderModel("Eggholder",2);
 //	EggholderModel.test(Eggholder);
 
 //
 //
 //
+
+
+//	TestFunction TestFunc1D("TestFunction1D",1);
+//	TestFunc1D.func_ptr = TestFunction1D;
+////	////	EggholderFunc.adj_ptr = Eggholder_adj;
+////	////	EggholderFunc.ifAdjointFunctionExist = true;;
+//	TestFunc1D.setBoxConstraints(0.0,10.0);
+//	TestFunc1D.print();
+////	TestFunc1D.plot();
+////	TestFunc1D.testEGO(100,100);
+//
+////	TestFunc1D.plot();
+//	TestFunc1D.testKrigingModel(20,true);
+//
+//	exit(1);
+
+
+	TestFunction HimmelblauFunc("Himmelblau",2);
+	HimmelblauFunc.func_ptr = Himmelblau;
+	////	EggholderFunc.adj_ptr = Eggholder_adj;
+	////	EggholderFunc.ifAdjointFunctionExist = true;;
+	HimmelblauFunc.setBoxConstraints(-5.0,5.0);
+	HimmelblauFunc.print();
+	HimmelblauFunc.plot();
+	HimmelblauFunc.testSurrogateModel(KRIGING,50,true);
+
+//	HimmelblauFunc.testEfficientGlobalOptimization(20,20, true);
+	exit(1);
+
+
 	TestFunction EggholderFunc("Eggholder",2);
 	EggholderFunc.func_ptr = Eggholder;
 ////	EggholderFunc.adj_ptr = Eggholder_adj;
 ////	EggholderFunc.ifAdjointFunctionExist = true;;
-	EggholderFunc.lower_bound.fill(0.0);
-	EggholderFunc.upper_bound.fill(200.0);
+	EggholderFunc.setBoxConstraints(-512.0,512.0);
 	EggholderFunc.print();
-	EggholderFunc.testEGO(400,100);
+	EggholderFunc.plot();
+
+//	EggholderFunc.testEfficientGlobalOptimization(50,100, true);
 
 //	EggholderFunc.plot();
-//	EggholderFunc.testKrigingModel(500);
+//	EggholderFunc.testKrigingModel(50);
 
 //	EggholderFunc.generateRandomSamples(500,"Eggholder500.csv");
 

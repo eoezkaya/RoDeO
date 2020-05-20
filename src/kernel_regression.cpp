@@ -8,6 +8,81 @@
 
 using namespace arma;
 
+
+KernelRegressionModel::KernelRegressionModel(std::string name,int dimension){
+
+	assert(dimension < 100);
+
+	label = name;
+	printf("Initializing settings for training %s data...\n",name.c_str());
+	input_filename = name +".csv";
+	kriging_hyperparameters_filename = name + "_Kriging_Hyperparameters.csv";
+
+	epsilonKriging = 10E-12;
+	max_number_of_kriging_iterations = 10000;
+	dim = dimension;
+
+
+#if 1
+	std::cout<<"Loading data...\n"<<std::endl;
+#endif
+	bool status = data.load(input_filename.c_str(), csv_ascii);
+	if(status == true)
+	{
+		printf("Data input is done\n");
+	}
+	else
+	{
+		printf("ERROR: Problem with data the input (cvs ascii format) at %s, line %d.\n",__FILE__, __LINE__);
+		exit(-1);
+	}
+
+
+
+	assert(data.n_cols == dim+1);
+
+	/* set number of sample points */
+	N = data.n_rows;
+
+	if(N < 5*dim){
+
+		printf("ERROR: Too few samples in the training data!\n");
+		exit(-1);
+
+	}
+
+
+	X = data.submat(0, 0, N - 1, dim - 1);
+
+
+	xmax = zeros(dim);
+	xmin = zeros(dim);
+
+	for (unsigned int i = 0; i < dim; i++) {
+
+		xmax(i) = data.col(i).max();
+		xmin(i) = data.col(i).min();
+
+	}
+
+	/* normalize data matrix */
+
+	for (unsigned int i = 0; i < N; i++) {
+
+		for (unsigned int j = 0; j < dim; j++) {
+
+			X(i, j) = (1.0/dim)*(X(i, j) - xmin(j)) / (xmax(j) - xmin(j));
+		}
+	}
+
+
+
+
+
+}
+
+
+
 /*
  * calculates the generalized Mahalanobis distance between two points
  *
@@ -112,7 +187,7 @@ double calcMetric(double *xi, double *xj, double ** M, int dim) {
 
 	if (sum < 0.0) {
 
-		fprintf(stderr, "Error: metric is negative! at FILE = %s, LINE = %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "ERROR: metric is negative! at FILE = %s, LINE = %d.\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -225,7 +300,7 @@ codi::RealReverse calcMetric(double *xi, double *xj, codi::RealReverse **M,
 
 	if (sum < 0.0) {
 
-		fprintf(stderr, "Error: metric is negative! at %s, line %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "ERROR: metric is negative! at %s, line %d.\n",__FILE__, __LINE__);
 		fprintf(stderr, "metric val = %10.7f\n",sum.getValue());
 
 
@@ -302,7 +377,7 @@ codi::RealForward calcMetric(double *xi, double *xj, codi::RealForward ** M,
 
 	if (sum < 0.0) {
 
-		fprintf(stderr, "Error: metric is negative! at %s, line %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "ERROR: metric is negative! at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -360,13 +435,13 @@ double gaussianKernel(double *xi, double *xj, double sigma, double **M,
 
 	if(isnan(kernelVal)){
 
-		fprintf(stderr, "Error: kernel value is NaN! at %s, line %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "ERROR: kernel value is NaN! at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
 	if(kernelVal < 0.0){
 
-		fprintf(stderr, "Error: kernel value is negative! at %s, line %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "ERROR: kernel value is negative! at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
@@ -396,7 +471,7 @@ codi::RealReverse gaussianKernel(double *xi, double *xj,
 
 	if(isnan(kernelVal.getValue())){
 
-		fprintf(stderr, "Error: kernel value is NaN! at %s, line %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "ERROR: kernel value is NaN! at %s, line %d.\n",__FILE__, __LINE__);
 
 		printf("sigma = %10.7f\n",sigma.getValue());
 
@@ -422,7 +497,7 @@ codi::RealReverse gaussianKernel(double *xi, double *xj,
 
 	if(kernelVal.getValue() < 0.0){
 
-		fprintf(stderr, "Error: kernel value is negative or zero! at %s, line %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "ERROR: kernel value is negative or zero! at %s, line %d.\n",__FILE__, __LINE__);
 		fprintf(stderr, "kernelVal = %20.15f\n",kernelVal.getValue() );
 		fprintf(stderr, "metric val = %20.15f\n",metricVal.getValue());
 		fprintf(stderr, "sigma = %20.15f\n",sigma.getValue());
@@ -470,7 +545,7 @@ codi::RealForward gaussianKernel(double *xi, double *xj,
 	double sqr_two_pi = sqrt(2.0 * datum::pi);
 
 	codi::RealForward kernelVal = (1.0 / (sigma * sqr_two_pi))
-																																																																																																													* exp(-metricVal / (2 * sigma * sigma));
+																																																																																																															* exp(-metricVal / (2 * sigma * sigma));
 #if 0
 	printf("kernelVal = %10.7f\n",kernelVal);
 #endif
@@ -710,7 +785,7 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wLoss,double wSvd, double
 		for (int j = 0; j < dim; j++) {
 
 			X(i, j) = (1.0 / dim) * (X(i, j) - x_min(j))
-																																																																																																															/ (x_max(j) - x_min(j));
+																																																																																																																	/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -752,7 +827,7 @@ double dsvd(mat &Lin, mat& data, double &sigma, double wLoss,double wSvd, double
 
 	if (m != n) {
 
-		fprintf(stderr, "Error: The matrix M is not square!\n");
+		fprintf(stderr, "ERROR: The matrix M is not square!\n");
 		exit(-1);
 
 	}
@@ -1231,7 +1306,7 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 
 	} else {
 
-		fprintf(stderr, "Error: invalid indexes indx1=%d, indx2=%d\n", indx1,
+		fprintf(stderr, "ERROR: invalid indexes indx1=%d, indx2=%d\n", indx1,
 				indx2);
 
 	}
@@ -1309,7 +1384,7 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 		for (int j = 0; j < dim; j++) {
 
 			X(i, j) = (1.0 / dim) * (X(i, j) - x_min(j))
-																																																																																																															/ (x_max(j) - x_min(j));
+																																																																																																																	/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -1343,7 +1418,7 @@ double dsvdTL(mat &Lin, mat &data, double sigma, int indx1, int indx2,
 
 	if (m != n) {
 
-		fprintf(stderr, "Error: The matrix M is not square!\n");
+		fprintf(stderr, "ERROR: The matrix M is not square!\n");
 		exit(-1);
 
 	}
@@ -1830,7 +1905,7 @@ double dsvdAdj(int iteration,mat &Lin, mat &data, double &sigma, mat &Mgradient,
 		for (int j = 0; j < dim; j++) {
 
 			X(i, j) = (1.0 / dim) * (X(i, j) - x_min(j))
-																																																																																																															/ (x_max(j) - x_min(j));
+																																																																																																																	/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -1866,7 +1941,7 @@ double dsvdAdj(int iteration,mat &Lin, mat &data, double &sigma, mat &Mgradient,
 
 	if (m != n) {
 
-		fprintf(stderr, "Error: The matrix M is not square!\n");
+		fprintf(stderr, "ERROR: The matrix M is not square!\n");
 		exit(-1);
 
 	}
@@ -2021,7 +2096,7 @@ double dsvdAdj(int iteration,mat &Lin, mat &data, double &sigma, mat &Mgradient,
 
 		if(kernelSum.getValue() == 0.0){
 
-			fprintf(stderr, "Error: kernelSum is zero! at %s, line %d.\n",__FILE__, __LINE__);
+			fprintf(stderr, "ERROR: kernelSum is zero! at %s, line %d.\n",__FILE__, __LINE__);
 			exit(-1);
 
 
@@ -2401,7 +2476,7 @@ double dsvdAdj(int iteration,mat &Lin, mat &data, double &sigma, mat &Mgradient,
 
 	if(isnan(result.getValue())){
 
-		fprintf(stderr, "Error: result value is NaN! at %s, line %d.\n",__FILE__, __LINE__);
+		fprintf(stderr, "ERROR: result value is NaN! at %s, line %d.\n",__FILE__, __LINE__);
 
 
 
@@ -2470,7 +2545,7 @@ int trainMahalanobisDistance_v2(mat &M, mat &data, double &sigma, double &wSvd, 
 
 	if(M.n_cols != M.n_rows){
 
-		fprintf(stderr,"Error: The Mahalanobis matrix is not square!\n");
+		fprintf(stderr,"ERROR: The Mahalanobis matrix is not square!\n");
 		exit(-1);
 	}
 
@@ -2577,7 +2652,7 @@ int trainMahalanobisDistance_v2(mat &M, mat &data, double &sigma, double &wSvd, 
 		for (unsigned int j = 0; j < n; j++) {
 
 			XValidation(i, j) = (1.0 / n) * (XValidation(i, j) - x_min(j))
-																																																																																																															/ (x_max(j) - x_min(j));
+																																																																																																																	/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -2586,7 +2661,7 @@ int trainMahalanobisDistance_v2(mat &M, mat &data, double &sigma, double &wSvd, 
 		for (unsigned int j = 0; j < n; j++) {
 
 			XTraining (i, j) = (1.0 / n) * (XTraining (i, j) - x_min(j))
-																																																																																																																/ (x_max(j) - x_min(j));
+																																																																																																																		/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -2602,7 +2677,7 @@ int trainMahalanobisDistance_v2(mat &M, mat &data, double &sigma, double &wSvd, 
 #endif
 
 	vec ysTraining;
-    ysTraining = dataTraining.col(n);
+	ysTraining = dataTraining.col(n);
 
 
 	vec ysValidation;
@@ -2686,12 +2761,12 @@ int trainMahalanobisDistance_v2(mat &M, mat &data, double &sigma, double &wSvd, 
 	printf("reverse AD results =\n");
 	adjoint_res.print();
 
-	printf("error  between forward AD and fd=\n");
-	mat errorForAD = fd - forward_res;
-	errorForAD.print();
-	printf("error  between forward AD and reverse AD=\n");
-	mat errorRevAD = forward_res-adjoint_res;
-	errorRevAD.print();
+	printf("ERROR  between forward AD and fd=\n");
+	mat ERRORForAD = fd - forward_res;
+	ERRORForAD.print();
+	printf("ERROR  between forward AD and reverse AD=\n");
+	mat ERRORRevAD = forward_res-adjoint_res;
+	ERRORRevAD.print();
 
 	printf("derivative of sigma (adjoint) = %10.7f\n",sigma_derivative);
 
@@ -2720,7 +2795,7 @@ int trainMahalanobisDistance_v2(mat &M, mat &data, double &sigma, double &wSvd, 
 	w12trial.randu();
 
 
-	double bestValidationError = 10E14;
+	double bestValidationERROR = 10E14;
 	double bestwSvd = 0.0;
 	double bestw12 = 0.0;
 
@@ -2885,9 +2960,9 @@ int trainMahalanobisDistance_v2(mat &M, mat &data, double &sigma, double &wSvd, 
 		s.print();
 #endif
 
-		/* compute the error for the validation set */
+		/* compute the ERROR for the validation set */
 
-		double ErrorValidation=0.0;
+		double ERRORValidation=0.0;
 
 		for(unsigned int j=0; j<NvalSet;j++){
 
@@ -2895,29 +2970,29 @@ int trainMahalanobisDistance_v2(mat &M, mat &data, double &sigma, double &wSvd, 
 			double yApprox = kernelRegressor(XTraining, ysTraining, xp, M, sigma);
 			double yExact = ysValidation(j);
 
-			/* accumulate the squared error */
-			ErrorValidation += (yApprox-yExact)*(yApprox-yExact);
+			/* accumulate the squared ERROR */
+			ERRORValidation += (yApprox-yExact)*(yApprox-yExact);
 
 #if 0
 			printf("xp = \n");
 			xp.print();
 			printf("yApprox = %10.7f\n",yApprox );
 			printf("yExact  = %10.7f\n",yExact  );
-			printf("Validation Error = %10.7f\n",ErrorValidation );
+			printf("Validation ERROR = %10.7f\n",ERRORValidation );
 
 #endif
 		}
 
-		/* compute the mean squared error (MSE) */
-		ErrorValidation = ErrorValidation/NvalSet;
-		printf("Validation Error (MSE) = %10.7f\n",ErrorValidation );
+		/* compute the mean squared ERROR (MSE) */
+		ERRORValidation = ERRORValidation/NvalSet;
+		printf("Validation ERROR (MSE) = %10.7f\n",ERRORValidation );
 
-		if (ErrorValidation  < bestValidationError){
+		if (ERRORValidation  < bestValidationERROR){
 
 			bestM = M;
 			bestwSvd = wSvd;
 			bestw12 = w12;
-			bestValidationError = ErrorValidation;
+			bestValidationERROR = ERRORValidation;
 		}
 
 
@@ -2957,7 +3032,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 
 	if(M.n_cols != M.n_rows){
 
-		fprintf(stderr,"Error: The Mahalanobis matrix is not square!\n");
+		fprintf(stderr,"ERROR: The Mahalanobis matrix is not square!\n");
 		exit(-1);
 	}
 
@@ -3064,7 +3139,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 		for (unsigned int j = 0; j < n; j++) {
 
 			XValidation(i, j) = (1.0 / n) * (XValidation(i, j) - x_min(j))
-																																																																																																															/ (x_max(j) - x_min(j));
+																																																																																																																	/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -3073,7 +3148,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 		for (unsigned int j = 0; j < n; j++) {
 
 			XTraining (i, j) = (1.0 / n) * (XTraining (i, j) - x_min(j))
-																																																																																																																/ (x_max(j) - x_min(j));
+																																																																																																																		/ (x_max(j) - x_min(j));
 		}
 	}
 
@@ -3089,7 +3164,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 #endif
 
 	vec ysTraining;
-    ysTraining = dataTraining.col(n);
+	ysTraining = dataTraining.col(n);
 
 
 	vec ysValidation;
@@ -3173,12 +3248,12 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 	printf("reverse AD results =\n");
 	adjoint_res.print();
 
-	printf("error  between forward AD and fd=\n");
-	mat errorForAD = fd - forward_res;
-	errorForAD.print();
-	printf("error  between forward AD and reverse AD=\n");
-	mat errorRevAD = forward_res-adjoint_res;
-	errorRevAD.print();
+	printf("ERROR  between forward AD and fd=\n");
+	mat ERRORForAD = fd - forward_res;
+	ERRORForAD.print();
+	printf("ERROR  between forward AD and reverse AD=\n");
+	mat ERRORRevAD = forward_res-adjoint_res;
+	ERRORRevAD.print();
 
 	printf("derivative of sigma (adjoint) = %10.7f\n",sigma_derivative);
 
@@ -3207,7 +3282,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 	w12trial.randu();
 
 
-	double bestValidationError = 10E14;
+	double bestValidationERROR = 10E14;
 	double bestwSvd = 0.0;
 	double bestw12 = 0.0;
 
@@ -3372,9 +3447,9 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 		s.print();
 #endif
 
-		/* compute the error for the validation set */
+		/* compute the ERROR for the validation set */
 
-		double ErrorValidation=0.0;
+		double ERRORValidation=0.0;
 
 		for(unsigned int j=0; j<NvalSet;j++){
 
@@ -3382,29 +3457,29 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 			double yApprox = kernelRegressor(XTraining, ysTraining, xp, M, sigma);
 			double yExact = ysValidation(j);
 
-			/* accumulate the squared error */
-			ErrorValidation += (yApprox-yExact)*(yApprox-yExact);
+			/* accumulate the squared ERROR */
+			ERRORValidation += (yApprox-yExact)*(yApprox-yExact);
 
 #if 0
 			printf("xp = \n");
 			xp.print();
 			printf("yApprox = %10.7f\n",yApprox );
 			printf("yExact  = %10.7f\n",yExact  );
-			printf("Validation Error = %10.7f\n",ErrorValidation );
+			printf("Validation error = %10.7f\n",ERRORValidation );
 
 #endif
 		}
 
-		/* compute the mean squared error (MSE) */
-		ErrorValidation = ErrorValidation/NvalSet;
-		printf("Validation Error (MSE) = %10.7f\n",ErrorValidation );
+		/* compute the mean squared ERROR (MSE) */
+		ERRORValidation = ERRORValidation/NvalSet;
+		printf("Validation error (MSE) = %10.7f\n",ERRORValidation );
 
-		if (ErrorValidation  < bestValidationError){
+		if (ERRORValidation  < bestValidationERROR){
 
 			bestM = M;
 			bestwSvd = wSvd;
 			bestw12 = w12;
-			bestValidationError = ErrorValidation;
+			bestValidationERROR = ERRORValidation;
 		}
 
 
@@ -3423,7 +3498,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
 }
 
 /*
- * compute the generalization error for a given function
+ * compute the generalization ERROR for a given function
  *
  *
  * @param[in] test_function: pointer to a function
@@ -3436,7 +3511,7 @@ int trainMahalanobisDistance(mat &M, mat &data, double &sigma, double &wSvd, dou
  * @param[in] sigma: bandwidth parameter for the Gaussian kernel
  * */
 
-double computeGenErrorKernelReg(double (*test_function)(double *),
+double computeGenERRORKernelReg(double (*test_function)(double *),
 		double *bounds,
 		int dim,
 		int number_of_samples,
@@ -3478,7 +3553,7 @@ double computeGenErrorKernelReg(double (*test_function)(double *),
 	out_sample_error = out_sample_error/(number_of_samples);
 
 
-    return(out_sample_error);
+	return(out_sample_ERROR);
 
 
 }
