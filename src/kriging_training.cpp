@@ -36,12 +36,15 @@ KrigingModel::KrigingModel(std::string name, unsigned int dimension):SurrogateMo
 
 	printf("Initializing settings for training %s data (Kriging model)...\n",name.c_str());
 
+	modelID = KRIGING;
+
 	kriging_weights.zeros(2*dimension);
 	epsilonKriging = 10E-12;
 	epsilonKriging = 0;
 	max_number_of_kriging_iterations = 10000;
 
 	linear_regression = false;
+	ifUsesGradients = false;
 
 
 	for(unsigned int i=0; i<data.n_rows; i++){
@@ -173,6 +176,8 @@ void KrigingModel::print(void) const{
 	cout<<"Number of input parameters: "<<dim<<endl;
 	cout<<"Raw Data:\n";
 	data.print();
+	cout<<"X:\n";
+	X.print();
 	cout<<"xmin =";
 	trans(xmin).print();
 	cout<<"xmax =";
@@ -201,49 +206,8 @@ void KrigingModel::updateModelParams(void){
 
 	}
 
-
-
-	/* train linear regression */
-
-	//	if (linear_regression) {
-	//
-	//		mat augmented_X(N, dim + 1);
-	//
-	//		for (unsigned int i = 0; i < N; i++) {
-	//
-	//			for (unsigned int j = 0; j <= dim; j++) {
-	//
-	//				if (j == 0){
-	//
-	//					augmented_X(i, j) = 1.0;
-	//				}
-	//				else {
-	//
-	//					augmented_X(i, j) = X(i, j - 1);
-	//
-	//				}
-	//			}
-	//		}
-	//
-	//		/* now update the ys vector */
-	//
-	//		vec ysLinearRegression = augmented_X * regression_weights;
-	//
-	//#if 0
-	//		for(unsigned int i=0; i<ys.size(); i++){
-	//
-	//			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
-	//		}
-	//#endif
-	//		ys = ys - ysLinearRegression;
-	//
-	//#if 0
-	//		printf("Updated ys vector = \n");
-	//#endif
-	//
-	//	} /* end of linear regression */
-
 	computeCorrelationMatrix();
+
 
 	/* Cholesky decomposition R = LDL^T */
 
@@ -257,30 +221,22 @@ void KrigingModel::updateModelParams(void){
 
 	L = trans(U);
 
-	vec R_inv_ys(N);
+	vec R_inv_ys(N); R_inv_ys.fill(0.0);
 
 
-	solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys);    /* solve R x = ys */
-#if 0
-	printf("R_inv_ys =\n");
-	trans(R_inv_ys).print();
-#endif
+	solveLinearSystemCholesky(U, L, R_inv_ys, ys);    /* solve R x = ys */
 
 	R_inv_I = zeros(N);
 
+	solveLinearSystemCholesky(U, L, R_inv_I, I);      /* solve R x = I */
 
-	solve_linear_system_by_Cholesky(U, L, R_inv_I, I);      /* solve R x = I */
-#if 0
-	printf("R_inv_I =\n");
-	trans(R_inv_I).print();
-#endif
 
 	beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
 
 	vec ys_min_betaI = ys - beta0*I;
 
 	/* solve R x = ys-beta0*I */
-	solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta , ys_min_betaI);
+	solveLinearSystemCholesky(U, L, R_inv_ys_min_beta , ys_min_betaI);
 
 
 	sigma_sqr = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
@@ -367,52 +323,49 @@ void KrigingModel::updateWithNewData(void){
 
 }
 
-/*
- * Evaluates the surrogate model at x = xp
- * @param[in] xp (normalized)
- * @return y=ftilde(xp)
- *
- * */
-double KrigingModel::interpolate(rowvec xp) const{
+vec KrigingModel::computeCorrelationVector(rowvec x) const{
+
 
 	vec r(N);
 
 	vec theta = kriging_weights.head(dim);
 	vec gamma = kriging_weights.tail(dim);
 
+	for(unsigned int i=0;i<N;i++){
 
-	double f_regression = 0.0;
-	double f_kriging = 0.0;
+		r(i) = computeCorrelation(x, X.row(i), theta, gamma);
+
+	}
+	return r;
+
+}
+
+/*
+ * Evaluates the surrogate model at x = xp
+ * @param[in] xp (normalized)
+ * @return y=ftilde(xp)
+ *
+ * */
+
+
+
+double KrigingModel::interpolate(rowvec xp) const{
+
+	double fLinearRegression = 0.0;
+	double fKriging = 0.0;
 
 
 	if(linear_regression){
 
-		f_regression = linearModel.interpolate(xp);
+		fLinearRegression = linearModel.interpolate(xp);
 	}
 
-	//	/* if linear regression is on */
-	//	if(linear_regression){
-	//
-	//		for(unsigned int i=0; i<dim; i++){
-	//
-	//			f_regression += xp(i)*regression_weights(i+1);
-	//		}
-	//
-	//		/* add bias term */
-	//		f_regression += regression_weights(0);
-	//
-	//	}
+
 #if 1
-	printf("f_regression = %10.7f\n",f_regression);
+	printf("fLinearRegression = %10.7f\n",fLinearRegression);
 #endif
 
-
-
-	for(unsigned int i=0;i<N;i++){
-
-		r(i) = computeCorrelation(xp, X.row(i), theta, gamma);
-
-	}
+	vec r = computeCorrelationVector(xp);
 
 #if 1
 	printf("size of vector r = %d\n",int(r.size()));
@@ -421,14 +374,18 @@ double KrigingModel::interpolate(rowvec xp) const{
 	printf("size of vector R_inv_ys_min_beta = %d\n",int(R_inv_ys_min_beta.size()));
 	printf("R_inv_ys_min_beta: \n");
 	trans(R_inv_ys_min_beta).print();
+	printf("ys: \n");
+	trans(data.col(dim)).print();
+
+
 #endif
 
-	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
+	fKriging = beta0+ dot(r,R_inv_ys_min_beta);
 #if 0
 	printf("f_kriging = %15.10f\n", f_kriging);
 #endif
 
-	double ftilde = f_regression+f_kriging;
+	double ftilde = fLinearRegression+fKriging;
 #if 1
 	printf("ftilde = %15.10f\n", ftilde);
 #endif
@@ -517,7 +474,7 @@ void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeVal,double *s
 
 
 	/* solve the linear system R x = r by Cholesky matrices U and L*/
-	solve_linear_system_by_Cholesky(U, L, R_inv_r, r);
+	solveLinearSystemCholesky(U, L, R_inv_r, r);
 
 
 	*ssqr = sigma_sqr*( 1.0 - dot(r,R_inv_r)+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(I,R_inv_I) ) );
@@ -579,52 +536,7 @@ void KrigingModel::train(void){
 
 
 
-	//	/* train linear regression */
-	//	if (linear_regression) {
-	//
-	//		printf("Performing linear regression...\n");
-	//
-	//		train_linear_regression(X, ys, regression_weights, 10E-6);
-	//
-	//		printf("regression weights:\n");
-	//		trans(regression_weights).print();
-	//
-	//		mat augmented_X(N, dim + 1);
-	//
-	//		for (unsigned int i = 0; i < N; i++) {
-	//
-	//			for (unsigned int j = 0; j <= dim; j++) {
-	//
-	//				if (j == 0){
-	//
-	//					augmented_X(i, j) = 1.0;
-	//				}
-	//				else {
-	//
-	//					augmented_X(i, j) = X(i, j - 1);
-	//
-	//				}
-	//			}
-	//		}
-	//
-	//		/* now update the ys vector */
-	//
-	//		vec ys_reg = augmented_X * regression_weights;
-	//
-	//#if 0
-	//		for(unsigned int i=0; i<ys.size(); i++){
-	//
-	//			printf("%10.7f %10.7f\n",ys(i),ys_reg(i));
-	//		}
-	//#endif
-	//		ys = ys - ys_reg;
-	//
-	//#if 0
-	//		printf("Updated ys vector = \n");
-	//#endif
-	//
-	//
-	//	} /* end of linear regression */
+
 
 
 	int max_number_of_function_calculations = max_number_of_kriging_iterations;
@@ -971,6 +883,49 @@ void KrigingModel::train(void){
 }
 
 
+double KrigingModel::calculateInSampleError(void) const{
+
+	vec ys = data.col(dim);
+
+	double meanSquaredError = 0.0;
+
+
+	for(unsigned int i=0;i<N;i++){
+
+		rowvec xp = getRowX(i);
+
+		rowvec x  = getRowXRaw(i);
+
+#if 1
+		printf("\nData point = %d\n", i+1);
+		printf("calling f_tilde at x:\n");
+		x.print();
+		printf("xnorm:\n");
+		xp.print();
+#endif
+		double functionValueSurrogate = interpolate(xp);
+
+		double functionValueExact = ys(i);
+
+		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
+
+		meanSquaredError+= squaredError;
+#if 1
+		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
+		printf("in sample error = %15.10f\n", meanSquaredError);
+#endif
+	}
+
+	meanSquaredError = meanSquaredError/N;
+
+	printf("In sample error (MSE) for the Kriging model = %15.10f\n",meanSquaredError);
+
+	return meanSquaredError;
+
+
+}
+
+
 void KrigingModel::validate(std::string filename, bool ifVisualize){
 
 	mat dataValidation;
@@ -1218,8 +1173,8 @@ int EAdesign::calculate_fitness(double epsilon, mat &X,vec &ys){
 
 
 
-	solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys); /* solve R x = ys */
-	solve_linear_system_by_Cholesky(U, L, R_inv_I, I);   /* solve R x = I */
+	solveLinearSystemCholesky(U, L, R_inv_ys, ys); /* solve R x = ys */
+	solveLinearSystemCholesky(U, L, R_inv_I, I);   /* solve R x = I */
 
 
 
@@ -1233,7 +1188,7 @@ int EAdesign::calculate_fitness(double epsilon, mat &X,vec &ys){
 
 
 	/* solve R x = ys-beta0*I */
-	solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaI);
+	solveLinearSystemCholesky(U, L, R_inv_ys_min_beta, ys_min_betaI);
 
 
 	double fac = dot(ys_min_betaI, R_inv_ys_min_beta);

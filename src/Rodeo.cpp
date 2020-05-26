@@ -91,7 +91,7 @@ int main(void){
 	HimmelblauFunc.setBoxConstraints(-5.0,5.0);
 	HimmelblauFunc.print();
 	HimmelblauFunc.plot();
-	HimmelblauFunc.testSurrogateModel(KRIGING,50,true);
+	HimmelblauFunc.testSurrogateModel(LINEAR_REGRESSION,100,true);
 
 //	HimmelblauFunc.testEfficientGlobalOptimization(20,20, true);
 	exit(1);

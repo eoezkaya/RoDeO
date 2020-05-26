@@ -1,6 +1,8 @@
 #ifndef TEST_FUNCTIONS_HPP
 #define TEST_FUNCTIONS_HPP
 #include "Rodeo_macros.hpp"
+#include "surrogate_model.hpp"
+
 #include <string>
 
 #include <armadillo>
@@ -17,7 +19,7 @@ private:
 	vec ub;
 
 public:
-	bool ifNoisy;
+	bool ifFunctionIsNoisy;
 	bool ifAdjointFunctionExist;
     unsigned int numberOfInputParams;
     std::string function_name;
@@ -28,10 +30,17 @@ public:
 
 
     TestFunction(std::string name,int dimension);
-    void plot(int resolution = 100);
+    void plot(int resolution = 100) const;
+
+    void visualizeSurrogate1D(SurrogateModel *TestFunSurrogate, unsigned int resolution=1000) const;
+    void visualizeSurrogate2D(SurrogateModel *TestFunSurrogate, unsigned int resolution=100) const;
+
     void print(void);
-    void generateRandomSamples(mat &sampleMatrix, unsigned int nsamples, std::string filename);
-    void testSurrogateModel(unsigned int modelId, unsigned int nsamples, bool ifVisualize = false);
+    mat  generateRandomSamples(unsigned int howManySamples);
+    mat  generateRandomSamplesWithGradients(unsigned int nsamples);
+
+    mat  generateUniformSamples(unsigned int howManySamples) const;
+    void testSurrogateModel(SURROGATE_MODEL modelId, unsigned int nsamples, bool ifVisualize = false);
     void testEfficientGlobalOptimization(int nsamplesTrainingData, int maxnsamples, bool ifVisualize = false, bool ifWarmStart = false, bool ifMinimize = true);
 
     void evaluateGlobalExtrema(void) const;

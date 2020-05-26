@@ -9,9 +9,10 @@ using namespace arma;
 
 LinearModel::LinearModel(std::string name, unsigned int dimension):SurrogateModel(name,dimension){
 
+	modelID = LINEAR_REGRESSION;
 	weights = zeros(dim+1);
 	regularizationParam = 10E-6;
-
+	ifUsesGradients = false;
 
 }
 
@@ -56,7 +57,7 @@ void LinearModel::train(void){
 		}
 	}
 
-#if 1
+#if 0
 	printf("augmented_X:\n");
 	augmented_X.print();
 #endif
@@ -100,16 +101,13 @@ void LinearModel::train(void){
 	printf("Linear regression weights:\n");
 	trans(weights).print();
 
-	double err = calculateInSampleError();
-	printf("In sample error for the linear model: %15.10f\n",err);
-
-
 #endif
 
 }
 
 double LinearModel::calculateInSampleError(void) const{
 
+	printf("Calculating in-sample error for the linear regression...\n");
 	vec ys = data.col(dim);
 
 	double inSampleError = 0;

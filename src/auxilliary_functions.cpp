@@ -6,6 +6,14 @@
 #include <vector>
 
 
+void executePythonScript(std::string command){
+
+	FILE* in = popen(command.c_str(), "r");
+	fprintf(in, "\n");
+
+}
+
+
 void generateKRandomInt(uvec &numbers, unsigned int N, unsigned int k){
 
 	unsigned int numbersGenerated = 0;
@@ -40,31 +48,33 @@ void generateKRandomInt(uvec &numbers, unsigned int N, unsigned int k){
 }
 
 
-void normalizeVector(rowvec xp, rowvec &xpnorm, vec xmin, vec xmax){
+rowvec normalizeRowVector(rowvec x, vec xmin, vec xmax){
 
-	int dim = xp.size();
+	unsigned int dim = x.size();
+	rowvec xnorm(dim);
 
-	for(int i=0; i<dim; i++){
+	for(unsigned int i=0; i<dim; i++){
 
-		xpnorm(i) = (1.0/dim)*(xp(i) - xmin(i)) / (xmax(i) - xmin(i));
+		xnorm(i) = (1.0/dim)*(x(i) - xmin(i)) / (xmax(i) - xmin(i));
 
 	}
 
-
+	return xnorm;
 
 }
 
-void normalizeVectorBack(rowvec &xp, rowvec xpnorm, vec xmin, vec xmax){
+rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax){
 
-	int dim = xpnorm.size();
+	unsigned int dim = xnorm.size();
+	rowvec xp(dim);
 
-	for(int i=0; i<dim; i++){
+	for(unsigned int i=0; i<dim; i++){
+
 		assert(xmax(i) > xmin(i));
-		xp(i) = xpnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
-
+		xp(i) = xnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
 
 	}
-
+	return xp;
 }
 
 
@@ -82,12 +92,6 @@ void perturbVectorUniform(frowvec &xp,float sigmaPert){
 
 
 	}
-
-
-
-
-
-
 
 }
 
@@ -263,11 +267,11 @@ int is_in_the_list(unsigned int entry, uvec &list){
  * @param[in] b
  *
  */
-void solve_linear_system_by_Cholesky(mat U, mat L, vec &x, vec b){
+void solveLinearSystemCholesky(mat U, mat L, vec &x, vec b){
 
-	int dim = x.size();
+	unsigned int dim = x.size();
 
-	if(dim != int(U.n_rows)){
+	if(dim != U.n_rows || dim != b.size()){
 		fprintf(stderr, "Error: dimensions does not match! at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
 
@@ -276,16 +280,15 @@ void solve_linear_system_by_Cholesky(mat U, mat L, vec &x, vec b){
 
 	x.fill(0.0);
 
-	vec y(dim);
+	vec y(dim); y.fill(0.0);
 
 	/* forward subst. L y = b */
 
-	y.fill(0.0);
-
-	for (int i = 0; i < dim; i++) {
+	for (unsigned int i = 0; i < dim; i++) {
 
 		double residual = 0.0;
-		for (int j = 0; j < i; j++) {
+
+		for (unsigned int j = 0; j < i; j++) {
 
 			residual = residual + L(i, j) * y(j);
 
@@ -296,10 +299,11 @@ void solve_linear_system_by_Cholesky(mat U, mat L, vec &x, vec b){
 
 	/* back subst. U x = y */
 
-	for (int i = dim - 1; i >= 0; i--) {
+	for (unsigned int i = dim - 1; i >= 0; i--) {
 
 		double residual = 0.0;
-		for (int j = dim - 1; j > i; j--){
+
+		for (unsigned int j = dim - 1; j > i; j--){
 
 			residual += U(i, j) * x(j);
 		}
@@ -366,14 +370,33 @@ void randomVector(rowvec &x, double scale){
 
 }
 
-void randomVector(rowvec &x, vec lb, vec ub){
-
-	for(unsigned int i=0; i<x.size(); i++) {
-
+rowvec randomVector(vec lb, vec ub){
+	unsigned int dim = lb.size();
+	rowvec x(dim);
+	for(unsigned int i=0; i<dim; i++) {
+		assert(lb(i) <= ub(i));
 		x(i) = randomDouble(lb(i), ub(i));
 	}
+	return x;
+
+}
+
+bool checkLinearSystem(mat A, vec x, vec b, double tol){
+
+	vec r = A*x-b;
+	double norm = L1norm(r, r.size());
+
+	if(norm > tol) return false;
+	else return true;
+
+}
 
 
+vec calculateResidual(mat A, vec x, vec b){
+
+	vec r = A*x-b;
+
+	return r;
 }
 
 

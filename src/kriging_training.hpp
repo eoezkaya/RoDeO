@@ -33,6 +33,7 @@ private:
 	void updateWithNewData(void);
 	void updateModelParams(void);
 	void computeCorrelationMatrix(void);
+	vec computeCorrelationVector(rowvec x) const;
 	double computeCorrelation(rowvec x_i, rowvec x_j, vec theta, vec gamma) const;
 
 public:
@@ -53,6 +54,10 @@ public:
 
 
 	double calculateExpectedImprovement(rowvec xp);
+
+	double calculateInSampleError(void) const;
+
+
 
 	double getyMin(void) const;
 

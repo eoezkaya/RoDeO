@@ -8,10 +8,10 @@
 #include <cassert>
 using namespace arma;
 
+void executePythonScript(std::string command);
 
-void normalizeVector(rowvec xp, rowvec &xpnorm, vec xmin, vec xmax);
-void normalizeVectorBack(rowvec &xp, rowvec xpnorm, vec xmin, vec xmax);
-
+rowvec normalizeRowVector(rowvec x, vec xmin, vec xmax);
+rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax);
 
 void perturbVectorUniform(frowvec &xp,float sigmaPert);
 
@@ -70,11 +70,12 @@ double randomDouble(double a, double b);
 float randomFloat(float a, float b);
 int randomInt(int a, int b);
 void randomVector(rowvec &x, double scale = 1.0);
-void randomVector(rowvec &x, vec lb, vec ub);
+
+rowvec randomVector(vec lb, vec ub);
 
 double random_number(double xs, double xe, double sigma_factor);
 
-void solve_linear_system_by_Cholesky(mat U, mat L, vec &x, vec b);
+void solveLinearSystemCholesky(mat U, mat L, vec &x, vec b);
 
 bool file_exist(const char *fileName);
 
@@ -98,6 +99,11 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 
 bool ifTooCLose(rowvec v1, rowvec v2);
+
+bool checkLinearSystem(mat A, vec x, vec b, double tol);
+vec calculateResidual(mat A, vec x, vec b);
+
+
 
 /* distance functions */
 
