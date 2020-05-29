@@ -12,6 +12,7 @@
 #include "trust_region_gek.hpp"
 #include "kernel_regression.hpp"
 #include "optimization.hpp"
+#include "random_functions.hpp"
 #ifdef GPU_VERSION
 #include "kernel_regression_cuda.h"
 #endif
@@ -96,7 +97,7 @@ void TestFunction::evaluateGlobalExtrema(void) const{
 
 	for(unsigned int i=0; i<numberOfBruteForceIterations; i++ ){
 
-		rowvec x = randomVector(lb, ub);
+		rowvec x = generateRandomRowVector(lb, ub);
 		double functionValue = func_ptr(x.memptr());
 
 		if(functionValue < globalMin){
@@ -136,232 +137,6 @@ void TestFunction::print(void){
 		printf("x[%d]: %15.10f , %15.10f\n",i,lb(i),ub(i));
 
 	}
-
-
-}
-
-mat TestFunction::generateUniformSamples(unsigned int resolution) const{
-
-	assert(numberOfInputParams<=2);
-
-	unsigned int howManyTotalSamples;
-	if(numberOfInputParams == 1) howManyTotalSamples = resolution;
-	if(numberOfInputParams == 2) howManyTotalSamples = resolution*resolution;
-
-	mat samples(howManyTotalSamples, numberOfInputParams);
-	rowvec x(numberOfInputParams);
-	if(numberOfInputParams == 1){
-
-		x(0) = lb(0);
-		double dx = (ub(0)-lb(0))/(resolution-1);
-		for(unsigned int i=0;i<resolution;i++){
-
-			samples.row(i) = x;
-			x(0)+=dx;
-		}
-	}
-
-	if(numberOfInputParams == 2){
-
-		double dx = (ub(0)-lb(0))/(resolution-1);
-		double dy = (ub(1)-lb(1))/(resolution-1);
-
-		x[0] = lb(0);
-
-		for(unsigned int i=0;i<resolution;i++){
-			x[1] = lb(1);
-			for(unsigned int j=0;j<resolution;j++){
-
-				samples.row(i*resolution+j) = x;
-				x[1]+=dy;
-			}
-			x[0]+= dx;
-
-		}
-	}
-#if 0
-	printf("samples:\n");
-	samples.print();
-#endif
-
-	return samples;
-}
-
-void TestFunction::visualizeSurrogate1D(SurrogateModel *TestFunSurrogate, unsigned int resolution) const{
-
-	assert(numberOfInputParams == 1);
-
-	std::string response_surface_file_name = function_name+"_"+"SurrogateOutput.csv";
-
-	mat samplesUsed = generateUniformSamples(resolution);
-	mat outputData;
-
-
-	if(TestFunSurrogate->modelID == KRIGING) {
-
-		outputData.set_size( samplesUsed.n_rows,7);
-	}
-	else{
-
-		outputData.set_size( samplesUsed.n_rows,4);
-	}
-
-	for(unsigned int i=0;i<samplesUsed.n_rows;i++){
-
-		rowvec x = samplesUsed.row(i);
-		rowvec xp = normalizeRowVectorBack(x,lb,ub);
-#if 0
-		printf("\ncalling f_tilde at x = %10.7f\n",x(0));
-#endif
-
-		double funcVal = 0;
-		double ssqr = 0;
-
-		if(TestFunSurrogate->modelID == KRIGING) {
-
-			/* The Kriging model can evaluate variance as well as the surrogate value (Exceptionally) */
-			TestFunSurrogate->interpolateWithVariance(xp,&funcVal,&ssqr);
-
-		}
-		else{
-
-			/* All the other surrogate models evaluate only the functional value */
-
-			funcVal = TestFunSurrogate->interpolate(xp);
-		}
-
-		double funcValExact = func_ptr(x.memptr());
-		double squaredError = (funcValExact-funcVal)*(funcValExact-funcVal);
-
-		outputData(i,0) = x(0);
-		outputData(i,1) = funcValExact;
-		outputData(i,2) = funcVal;
-		outputData(i,3) = sqrt(squaredError);
-
-		if(TestFunSurrogate->modelID == KRIGING) {
-
-			/* standard deviation */
-			outputData(i,4) = sqrt(ssqr);
-
-			/* confidence intervals */
-			outputData(i,5) = funcVal-outputData(i,4);
-			outputData(i,6) = funcVal+outputData(i,4);
-
-		}
-
-#if 0
-		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", funcValExact,funcVal,squaredError);
-#endif
-
-
-	}
-
-	outputData.save(response_surface_file_name,csv_ascii);
-
-
-	std::string python_command;
-	if(TestFunSurrogate->modelID == KRIGING) {
-
-		python_command = "python -W ignore "+ settings.python_dir + "/plot_1D_KrigingTest.py "+ function_name;
-
-	}
-	else{
-
-		python_command = "python -W ignore "+ settings.python_dir + "/plot_1D_Surrogate.py "+ function_name;
-
-	}
-
-	executePythonScript(python_command);
-
-
-}
-
-void TestFunction::visualizeSurrogate2D(SurrogateModel *TestFunSurrogate, unsigned int resolution) const{
-
-	assert(numberOfInputParams == 2);
-
-	std::string response_surface_file_name = function_name+"_"+"SurrogateOutput.csv";
-
-	mat samplesUsed = generateUniformSamples(resolution);
-	mat outputData;
-
-
-	if(TestFunSurrogate->modelID == KRIGING) {
-
-		outputData.set_size( samplesUsed.n_rows,8);
-	}
-	else{
-
-		outputData.set_size( samplesUsed.n_rows,5);
-	}
-
-	for(unsigned int i=0;i<samplesUsed.n_rows;i++){
-
-		rowvec x = samplesUsed.row(i);
-		rowvec xp = normalizeRowVectorBack(x,lb,ub);
-#if 1
-		printf("\ncalling f_tilde at x = ");
-		x.print();
-#endif
-
-		double funcVal = 0;
-		double ssqr = 0;
-
-		if(TestFunSurrogate->modelID == KRIGING) {
-
-			/* The Kriging model can evaluate variance as well as the surrogate value (Exceptionally) */
-			TestFunSurrogate->interpolateWithVariance(xp,&funcVal,&ssqr);
-
-		}
-		else{
-
-			/* All the other surrogate models evaluate only the functional value */
-
-			funcVal = TestFunSurrogate->interpolate(xp);
-		}
-
-		double funcValExact = func_ptr(x.memptr());
-		double squaredError = (funcValExact-funcVal)*(funcValExact-funcVal);
-
-		outputData(i,0) = x(0);
-		outputData(i,1) = x(1);
-		outputData(i,2) = funcValExact;
-		outputData(i,3) = funcVal;
-		outputData(i,4) = sqrt(squaredError);
-
-		if(TestFunSurrogate->modelID == KRIGING) {
-
-			/* standard deviation */
-			outputData(i,5) = sqrt(ssqr);
-
-			/* confidence intervals */
-			outputData(i,6) = funcVal-outputData(i,4);
-			outputData(i,7) = funcVal+outputData(i,4);
-
-		}
-
-#if 1
-		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", funcValExact,funcVal,squaredError);
-#endif
-
-
-	}
-
-	outputData.save(response_surface_file_name,csv_ascii);
-
-	std::string python_command;
-	if(TestFunSurrogate->modelID == KRIGING) {
-
-		python_command = "python -W ignore "+ settings.python_dir + "/plot_2D_KrigingTest.py "+ function_name;
-
-	}
-	else{
-
-		python_command = "python -W ignore "+ settings.python_dir + "/plot_2D_Surrogate.py "+ function_name;
-
-	}
-
-	executePythonScript(python_command);
 
 
 }
@@ -480,9 +255,9 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 	printf("Testing surrogate model with the %s function...\n", function_name.c_str());
 	printf("ModelId: %d\n",modelID);
 
-	std::string label = function_name + "_SurrogateTest";
+	std::string label = function_name;
 
-	std::string filenameKrigingTest = label+".csv";
+	std::string filenameSurrogateTest = label+".csv";
 
 	mat sampleMatrix;
 
@@ -495,7 +270,7 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 	}
 
 
-	sampleMatrix.save(filenameKrigingTest.c_str(), csv_ascii);
+	sampleMatrix.save(filenameSurrogateTest.c_str(), csv_ascii);
 
 
 
@@ -532,151 +307,33 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 	printf("inSampleError = %15.10f\n",inSampleError);
 #endif
 
+	mat testSet = generateRandomSamples(20000);
+	mat testResults = TestFunSurrogate->tryModelOnTestSet(testSet);
+
+	label = function_name + "_SurrogateTestResults";
+
+	std::string filenameSurrogateTestResults = label+".csv";
+
+
+	testResults.save(filenameSurrogateTestResults.c_str(), csv_ascii);
+
+	double testError = mean(testResults.col(numberOfInputParams+2));
+#if 1
+	printf("Test Error (MSE)= %15.10f\n",testError);
+#endif
+
+
 	if(ifVisualize){
-		if(numberOfInputParams == 2) visualizeSurrogate2D(TestFunSurrogate);
-		if(numberOfInputParams == 1) visualizeSurrogate1D(TestFunSurrogate);
-	}
-	else{
 
-
+		TestFunSurrogate->visualizeTestResults(testResults);
 
 	}
-
-	exit(1);
-
-
-	/* visualize with surface plot if the problem is 2D */
-
-	if (numberOfInputParams == 2){
-
-		int resolution =100;
-
-		std::string kriging_response_surface_file_name = function_name+"_"+"kriging_response_surface.dat";
-		std::string kriging_error_file_name = function_name+"_"+"kriging_error.dat";
-
-		FILE *kriging_response_surface_file = fopen(kriging_response_surface_file_name.c_str(),"w");
-		FILE *kriging_error_file = fopen(kriging_error_file_name.c_str(),"w");
-
-		double dx,dy; /* step sizes in x and y directions */
-		rowvec x(2);
-		rowvec xp(2);
-
-		double func_val;
-		dx = (ub(0)-lb(0))/(resolution-1);
-		dy = (ub(1)-lb(1))/(resolution-1);
-
-		double out_sample_error=0.0;
-		int count = 1;
-		x[0] = lb(0);
-		for(int i=0;i<resolution;i++){
-			x[1] = lb(1);
-			for(int j=0;j<resolution;j++){
-#if 0
-				printf("\ncalling f_tilde at x:\n");
-				x.print();
-#endif
-				/* normalize x */
-				xp(0)= (1.0/2)*(x(0)- lb(0)) / (ub(0) - lb(0));
-				xp(1)= (1.0/2)*(x(1)- lb(1)) / (ub(1) - lb(1));
-
-				func_val = TestFunSurrogate->interpolate(xp);
-				fprintf(kriging_response_surface_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),func_val);
-
-				double func_val_exact = func_ptr(x.memptr());
-				double squaredError = (func_val_exact-func_val)*(func_val_exact-func_val);
-				fprintf(kriging_error_file,"%10.7f %10.7f %10.7f\n",x(0),x(1),squaredError);
-
-
-				out_sample_error+= squaredError;
-#if 0
-				printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", func_val_exact,func_val,squaredError);
-				printf("out_sample_error = %10.7f\n",out_sample_error/count);
-#endif
-
-
-				count++;
-				x[1]+=dy;
-			}
-			x[0]+= dx;
-
-		}
-		fclose(kriging_response_surface_file);
-		fclose(kriging_error_file);
-
-		out_sample_error = out_sample_error/count;
-
-		printf("Mean out of sample error (MSE) for the Kriging model = %15.10f\n",out_sample_error);
-
-
-		if(ifVisualize){
-			/* plot the kriging response surface */
-
-			std::string file_name_for_plot = function_name+"_"+"kriging_response_surface_";
-			file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-
-			std::string titlePlot = function_name + "_Kriging_surface";
-			std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_2d_surface.py "+ kriging_response_surface_file_name+ " "+ file_name_for_plot + " "+titlePlot ;
-
-
-			FILE* in = popen(python_command.c_str(), "r");
-
-
-			fprintf(in, "\n");
-
-			std::string file_name_for_plot2 = function_name+"_"+"kriging_error_";
-			file_name_for_plot2 += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-
-			std::string titlePlot2 = function_name + "_Kriging_squared_error";
-			std::string python_command2 = "python -W ignore "+ settings.python_dir + "/plot_2d_surface.py "+ kriging_error_file_name+ " "+ file_name_for_plot2 + " "+titlePlot2 ;
-
-
-			FILE* in2 = popen(python_command2.c_str(), "r");
-
-
-			fprintf(in2, "\n");
-
-		}
-
-
-
-
-
-
-	} /* end of 2D validation */
-
-
-	if (numberOfInputParams > 2){
-
-		unsigned int resolution = 10000;
-		mat validationData(resolution, numberOfInputParams+1);
-
-
-		for(unsigned int i=0; i<resolution; i++){
-
-			rowvec x = randomVector(lb , ub);
-			double funcValExact = func_ptr(x.memptr());
-
-			for(unsigned int j=0; j<numberOfInputParams; j++) {
-
-				validationData(i, j) = x(j);
-			}
-
-			validationData(i, numberOfInputParams) = funcValExact;
-
-
-
-
-		}
-
-		TestFunSurrogate->validate(validationData,ifVisualize);
-
-
-	}
-
-
 
 
 }
+
+
+
 
 
 mat TestFunction::generateRandomSamples(unsigned int howManySamples){
@@ -694,11 +351,11 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 
 		for(unsigned int j=0; j<numberOfInputParams;j++) {
 
-			x[j] = randomDouble(lb(j), ub(j));
+			x[j] = generateRandomDouble(lb(j), ub(j));
 
 			if(ifFunctionIsNoisy){
 
-				double noiseAdded = random_number(-1.0, 1.0, noiseLevel);
+				double noiseAdded = noiseLevel*generateRandomDoubleFromNormalDist(-1.0, 1.0, 1.0);
 				x[j] += noiseAdded;
 
 			}
@@ -742,9 +399,10 @@ mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples
 
 	for(unsigned int i=0; i<howManySamples; i++ ){
 
+
 		for(unsigned int j=0; j<numberOfInputParams;j++) {
 
-			x[j] = randomDouble(lb(j), ub(j));
+			x[j] = generateRandomDouble(lb(j), ub(j));
 		}
 
 		for(unsigned int k=0; k<numberOfInputParams;k++) xb[k] = 0.0;

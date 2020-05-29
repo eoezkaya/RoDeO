@@ -48,52 +48,25 @@ void generateKRandomInt(uvec &numbers, unsigned int N, unsigned int k){
 }
 
 
-rowvec normalizeRowVector(rowvec x, vec xmin, vec xmax){
-
-	unsigned int dim = x.size();
-	rowvec xnorm(dim);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		xnorm(i) = (1.0/dim)*(x(i) - xmin(i)) / (xmax(i) - xmin(i));
-
-	}
-
-	return xnorm;
-
-}
-
-rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax){
-
-	unsigned int dim = xnorm.size();
-	rowvec xp(dim);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		assert(xmax(i) > xmin(i));
-		xp(i) = xnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
-
-	}
-	return xp;
-}
 
 
 
-void perturbVectorUniform(frowvec &xp,float sigmaPert){
 
-
-	int size = xp.size();
-
-	for(int i=0; i<size; i++){
-
-		float eps = sigmaPert* randomFloat(-1.0, 1.0);
-
-		xp(i) += eps;
-
-
-	}
-
-}
+//void perturbVectorUniform(frowvec &xp,float sigmaPert){
+//
+//
+//	int size = xp.size();
+//
+//	for(int i=0; i<size; i++){
+//
+//		float eps = sigmaPert* randomFloat(-1.0, 1.0);
+//
+//		xp(i) += eps;
+//
+//
+//	}
+//
+//}
 
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
 
@@ -259,15 +232,16 @@ int is_in_the_list(unsigned int entry, uvec &list){
 
 
 
-/** solve a linear system Ax=b, with a given Cholesky decomposition of A: U and L
+/** solve a linear system Ax=b, with a given Cholesky decomposition of A
  *
  * @param[in] U
- * @param[in] L
  * @param[out] x
  * @param[in] b
  *
  */
-void solveLinearSystemCholesky(mat U, mat L, vec &x, vec b){
+void solveLinearSystemCholesky(mat U, vec &x, vec b){
+
+	mat L = trans(U);
 
 	unsigned int dim = x.size();
 
@@ -280,7 +254,7 @@ void solveLinearSystemCholesky(mat U, mat L, vec &x, vec b){
 
 	x.fill(0.0);
 
-	vec y(dim); y.fill(0.0);
+	vec y(dim,fill::zeros);
 
 	/* forward subst. L y = b */
 
@@ -297,13 +271,14 @@ void solveLinearSystemCholesky(mat U, mat L, vec &x, vec b){
 		y(i) = (b(i) - residual) / L(i, i);
 	}
 
+
 	/* back subst. U x = y */
 
-	for (unsigned int i = dim - 1; i >= 0; i--) {
+	for (int i = dim - 1; i >= 0; i--) {
 
 		double residual = 0.0;
 
-		for (unsigned int j = dim - 1; j > i; j--){
+		for (int j = dim - 1; j > i; j--){
 
 			residual += U(i, j) * x(j);
 		}
@@ -321,13 +296,6 @@ void solveLinearSystemCholesky(mat U, mat L, vec &x, vec b){
  * @return random number between a and b
  *
  */
-double randomDouble(double a, double b) {
-
-	double random = ((double) rand()) / (double) RAND_MAX;
-	double diff = b - a;
-	double r = random * diff;
-	return a + r;
-}
 
 /** generate a random number between a and b
  *
@@ -352,34 +320,25 @@ float randomFloat(float a, float b) {
  * @return random number in the interval [a,b]
  *
  */
-int randomInt(int a, int b) {
+//int randomInt(int a, int b) {
+//
+//	b++;
+//	int diff = b-a;
+//	int random = rand() % diff;
+//	return a + random;
+//}
 
-	b++;
-	int diff = b-a;
-	int random = rand() % diff;
-	return a + random;
-}
-
-void randomVector(rowvec &x, double scale){
-
-	for(unsigned int i=0; i<x.size(); i++) {
-
-		x(i) = scale* randomDouble(0.0, 1.0);
-	}
+//void randomVector(rowvec &x, double scale){
+//
+//	for(unsigned int i=0; i<x.size(); i++) {
+//
+//		x(i) = scale* randomDouble(0.0, 1.0);
+//	}
+//
+//
+//}
 
 
-}
-
-rowvec randomVector(vec lb, vec ub){
-	unsigned int dim = lb.size();
-	rowvec x(dim);
-	for(unsigned int i=0; i<dim; i++) {
-		assert(lb(i) <= ub(i));
-		x(i) = randomDouble(lb(i), ub(i));
-	}
-	return x;
-
-}
 
 bool checkLinearSystem(mat A, vec x, vec b, double tol){
 
@@ -400,26 +359,7 @@ vec calculateResidual(mat A, vec x, vec b){
 }
 
 
-/** generate a random number between xs and xe using the normal distribution
- *
- * @param[in] a
- * @param[in] b
- * @return random number between a and b
- *
- */
-double random_number(double xs, double xe, double sigma_factor){
 
-	double sigma=fabs((xe-xs))/sigma_factor;
-	double mu=(xe+xs)/2.0;
-
-	if (sigma == 0.0) sigma=1.0;
-
-	/* construct a trivial random generator engine from a time-based seed */
-	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-	std::default_random_engine generator (seed);
-	std::normal_distribution<double> distribution (mu,sigma);
-	return distribution(generator);
-}
 
 
 /** randomly generates the indices of a validation set

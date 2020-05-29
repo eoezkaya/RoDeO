@@ -7,6 +7,7 @@
 
 using namespace arma;
 
+
 class SurrogateModel{
 
 protected:
@@ -25,7 +26,7 @@ protected:
 	double ymin,ymax,yave;
 	vec xmin;
 	vec xmax;
-	bool ifUsesGradients;
+
 
 public:
 
@@ -33,6 +34,9 @@ public:
 
 	SurrogateModel();
 	SurrogateModel(std::string name, unsigned int dimension);
+
+	void normalizeInputMatrix(void);
+
 	virtual void print(void) const;
 	virtual void train(void);
 	virtual double interpolate(rowvec x) const;
@@ -43,7 +47,8 @@ public:
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
 
-	virtual void validate(mat dataValidation, bool ifVisualize);
+	mat tryModelOnTestSet(mat testSet) const;
+	void visualizeTestResults(mat testResults) const;
 
 
 

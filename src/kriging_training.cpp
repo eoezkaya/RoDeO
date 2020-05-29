@@ -7,6 +7,7 @@
 #include "kriging_training.hpp"
 #include "linear_regression.hpp"
 #include "auxilliary_functions.hpp"
+#include "random_functions.hpp"
 #include "Rodeo_macros.hpp"
 
 #include "Rodeo_globals.hpp"
@@ -25,6 +26,9 @@ int total_number_of_function_evals;
 double population_overall_max = -10E14;
 int population_overall_max_tread_id = -1;
 
+
+
+
 KrigingModel::KrigingModel():SurrogateModel(){
 #if 0
 	printf("Calling KrigingModel()\n");
@@ -40,11 +44,10 @@ KrigingModel::KrigingModel(std::string name, unsigned int dimension):SurrogateMo
 
 	kriging_weights.zeros(2*dimension);
 	epsilonKriging = 10E-12;
-	epsilonKriging = 0;
-	max_number_of_kriging_iterations = 10000;
+	max_number_of_kriging_iterations = 20000;
 
 	linear_regression = false;
-	ifUsesGradients = false;
+
 
 
 	for(unsigned int i=0; i<data.n_rows; i++){
@@ -67,15 +70,19 @@ KrigingModel::KrigingModel(std::string name, unsigned int dimension):SurrogateMo
 	}
 
 
-	sigma_sqr = 0.0;
+	sigmaSquared = 0.0;
 	beta0 = 0.0;
 
-	R.zeros(N,N);
-	L.zeros(N,N);
-	U.zeros(N,N);
-	R_inv_ys_min_beta.zeros(N);
-	R_inv_I.zeros(N);
-	I.ones(N);
+	correlationMatrix.set_size(N,N);
+	correlationMatrix.fill(0.0);
+	upperDiagonalMatrix.set_size(N,N);
+	upperDiagonalMatrix.fill(0.0);
+	R_inv_ys_min_beta.set_size(N);
+	R_inv_ys_min_beta.fill(0.0);
+	R_inv_I.set_size(N);
+	R_inv_I.fill(0.0);
+	vectorOfOnes.set_size(N);
+	vectorOfOnes.fill(1.0);
 
 	std::cout<<"Kriging model initialization is done...\n"<<std::endl;
 
@@ -212,52 +219,50 @@ void KrigingModel::updateModelParams(void){
 	/* Cholesky decomposition R = LDL^T */
 
 
-	int cholesky_return = chol(U, R);
+	int cholesky_return = chol(upperDiagonalMatrix, correlationMatrix);
 
 	if (cholesky_return == 0) {
 		printf("ERROR: Ill conditioned correlation matrix, Cholesky decomposition failed at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
-	L = trans(U);
 
 	vec R_inv_ys(N); R_inv_ys.fill(0.0);
 
 
-	solveLinearSystemCholesky(U, L, R_inv_ys, ys);    /* solve R x = ys */
+	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_ys, ys);    /* solve R x = ys */
 
 	R_inv_I = zeros(N);
 
-	solveLinearSystemCholesky(U, L, R_inv_I, I);      /* solve R x = I */
+	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_I, vectorOfOnes);      /* solve R x = I */
 
 
-	beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
+	beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
 
-	vec ys_min_betaI = ys - beta0*I;
+	vec ys_min_betaI = ys - beta0*vectorOfOnes;
 
 	/* solve R x = ys-beta0*I */
-	solveLinearSystemCholesky(U, L, R_inv_ys_min_beta , ys_min_betaI);
+	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_ys_min_beta , ys_min_betaI);
 
 
-	sigma_sqr = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
+	sigmaSquared = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
 
 
 }
 
 void KrigingModel::updateWithNewData(void){
 
-	R.reset();
-	U.reset();
-	L.reset();
+	correlationMatrix.reset();
+	upperDiagonalMatrix.reset();
 	R_inv_I.reset();
 	R_inv_ys_min_beta.reset();
 	X.reset();
 	data.reset();
-	I.reset();
+	vectorOfOnes.reset();
 
 
 	beta0 = 0.0;
-	sigma_sqr = 0.0;
+	sigmaSquared = 0.0;
 
 
 
@@ -305,12 +310,16 @@ void KrigingModel::updateWithNewData(void){
 #endif
 
 
-	R.zeros(N,N);
-	L.zeros(N,N);
-	U.zeros(N,N);
-	R_inv_ys_min_beta.zeros(N);
-	R_inv_I.zeros(N);
-	I.ones(N);
+	correlationMatrix.set_size(N,N);
+	correlationMatrix.fill(0.0);
+	upperDiagonalMatrix.set_size(N,N);
+	upperDiagonalMatrix.fill(0.0);
+	R_inv_ys_min_beta.set_size(N);
+	R_inv_ys_min_beta.fill(0.0);
+	R_inv_I.set_size(N);
+	R_inv_I.fill(0.0);
+	vectorOfOnes.set_size(N);
+	vectorOfOnes.fill(1.0);
 
 	ymin = min(data.col(dim));
 	ymax = max(data.col(dim));
@@ -351,6 +360,7 @@ vec KrigingModel::computeCorrelationVector(rowvec x) const{
 
 double KrigingModel::interpolate(rowvec xp) const{
 
+
 	double fLinearRegression = 0.0;
 	double fKriging = 0.0;
 
@@ -361,13 +371,13 @@ double KrigingModel::interpolate(rowvec xp) const{
 	}
 
 
-#if 1
+#if 0
 	printf("fLinearRegression = %10.7f\n",fLinearRegression);
 #endif
 
 	vec r = computeCorrelationVector(xp);
 
-#if 1
+#if 0
 	printf("size of vector r = %d\n",int(r.size()));
 	printf("r: \n");
 	trans(r).print();
@@ -385,12 +395,11 @@ double KrigingModel::interpolate(rowvec xp) const{
 	printf("f_kriging = %15.10f\n", f_kriging);
 #endif
 
-	double ftilde = fLinearRegression+fKriging;
-#if 1
-	printf("ftilde = %15.10f\n", ftilde);
+#if 0
+	printf("ftilde = %15.10f\n", fLinearRegression+fKriging);
 #endif
 
-	return ftilde;
+	return fLinearRegression+fKriging;;
 
 }
 
@@ -403,6 +412,7 @@ double KrigingModel::interpolate(rowvec xp) const{
 
 
 double KrigingModel::calculateExpectedImprovement(rowvec xp){
+
 
 
 	double ftilde = 0.0;
@@ -452,32 +462,19 @@ double KrigingModel::calculateExpectedImprovement(rowvec xp){
 
 
 
-void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeVal,double *ssqr) const{
+void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const{
 
-	vec r(N);
-
-	vec theta = kriging_weights.head(dim);
-	vec gamma = kriging_weights.tail(dim);
-
-
-	for(unsigned int i=0; i<N; i++){
-
-		r(i) = compute_R(xp, X.row(i), theta, gamma);
-
-	}
-
-
-
-	*ftildeVal =  interpolate(xp);
+	*ftildeOutput =  interpolate(xp);
 
 	vec R_inv_r(N);
 
+	vec r = computeCorrelationVector(xp);
 
 	/* solve the linear system R x = r by Cholesky matrices U and L*/
-	solveLinearSystemCholesky(U, L, R_inv_r, r);
+	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_r, r);
 
 
-	*ssqr = sigma_sqr*( 1.0 - dot(r,R_inv_r)+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(I,R_inv_I) ) );
+	*sSqrOutput = sigmaSquared*( 1.0 - dot(r,R_inv_r)+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(vectorOfOnes,R_inv_I) ) );
 
 
 }
@@ -506,13 +503,13 @@ void KrigingModel::computeCorrelationMatrix(void)  {
 		for (unsigned int j = i + 1; j < N; j++) {
 
 			double corrVal = computeCorrelation(X.row(i), X.row(j), theta, gamma);
-			R(i, j) = corrVal;
-			R(j, i) = corrVal;
+			correlationMatrix(i, j) = corrVal;
+			correlationMatrix(j, i) = corrVal;
 		}
 
 	}
 
-	R = R + eye(N,N) + eye(N,N)*epsilonKriging;
+	correlationMatrix = correlationMatrix + eye(N,N) + eye(N,N)*epsilonKriging;
 
 } /* end of compute_R_matrix */
 
@@ -522,22 +519,22 @@ void KrigingModel::train(void){
 
 	printf("\nTraining Kriging response surface for the data : %s\n",input_filename.c_str());
 
-	vec ys = data.col(dim);
+	vec ysKriging = data.col(dim);
 
 
 	if(linear_regression){
+		printf("Linear regression is active...\n");
 
 		linearModel.train();
 
 		vec ysLinearModel = linearModel.interpolateAll(X);
 
-		ys = ys - ysLinearModel;
+		ysKriging = ysKriging - ysLinearModel;
 	}
+	else{
 
-
-
-
-
+		printf("Linear regression is not active...\n");
+	}
 
 	int max_number_of_function_calculations = max_number_of_kriging_iterations;
 
@@ -564,7 +561,10 @@ void KrigingModel::train(void){
 
 	int number_of_initial_population = dim * 16 / number_of_treads;
 
-	if(number_of_initial_population < 100) number_of_initial_population = 100;
+	if(number_of_initial_population < 100) {
+
+		number_of_initial_population = 100;
+	}
 
 
 #pragma omp parallel
@@ -580,16 +580,11 @@ void KrigingModel::train(void){
 		int population_max_index = -1;
 
 
-
-		mat Rmatrix= zeros(N,N);
-		mat Umatrix= zeros(N,N);
-		mat Lmatrix= zeros(N,N);
-
 		mat Xmatrix = X;
 
 
-		vec Ivector = I;
-		vec ys = data.col(dim);
+		vec Ivector = vectorOfOnes;
+		vec ys = ysKriging;
 
 		unsigned int d = dim;
 		double epsilon = epsilonKriging;
@@ -599,126 +594,93 @@ void KrigingModel::train(void){
 
 
 
+		EAdesign initial_design(d);
+
+		initial_design.theta = generateRandomVector(0.0, 10.0, d);
+		initial_design.gamma = generateRandomVector(0.0, 2.0, d);
+
+		if(file_exist(hyperparameters_filename.c_str())){
+#pragma omp master
+			{
+				printf("Hyperparameter file: %s exists...\n",hyperparameters_filename.c_str() );
+			}
+
+
+			vec weights_read_from_file;
+
+			bool status = weights_read_from_file.load(hyperparameters_filename.c_str(),csv_ascii);
+
+			if(status == false)
+			{
+				fprintf(stderr, "ERROR: Some problem with the hyperparameter input! at %s, line %d.\n",__FILE__, __LINE__);
+				exit(-1);
+
+			}
+
+#if 1
+#pragma omp master
+			{
+				printf("hyperparameters read from the file (theta; gamma)^T:\n");
+				trans(weights_read_from_file).print();
+			}
+#endif
+
+			if(weights_read_from_file.size() != 2*d){
+#if 1
+#pragma omp master
+				{
+					printf("Warning: hyper parameters read from the file do not match the problem dimensions!\n");
+				}
+#endif
+
+			}
+
+			else{
+
+				for(unsigned int i=0; i<d;i++) {
+
+					if(weights_read_from_file(i) < 100.0){
+
+						initial_design.theta(i) = weights_read_from_file(i);
+					}
+
+				}
+				for(unsigned int i=d; i<2*d;i++) {
+
+					if( weights_read_from_file(i) < 2.0) {
+
+						initial_design.gamma(i-d) = weights_read_from_file(i);
+
+					}
+				}
+
+			}
+
+
+		}
+#if 1
+#pragma omp master
+			{
+		printf("Initial design:\n");
+		initial_design.theta.print();
+		initial_design.gamma.print();
+			}
+#endif
+
+		initial_design.calculate_fitness(epsilon,Xmatrix,ys);
+
+
+		if (initial_design.objective_val != -LARGE) {
+
+			Jnormalization_factor = initial_design.objective_val;
+			initial_design.objective_val = 0.0;
+			initial_design.id = population_size;
+			population.push_back(initial_design);
+			population_size++;
+
+		}
 
 		for (int i = 0; i < max_number_of_function_calculations; i++) {
-
-
-			if(i==0){
-
-				EAdesign initial_design(d);
-
-				if(file_exist(hyperparameters_filename.c_str())){
-#pragma omp master
-					{
-						printf("Hyperparameter file: %s exists...\n",hyperparameters_filename.c_str() );
-					}
-
-
-					vec weights_read_from_file;
-
-					bool status = weights_read_from_file.load(hyperparameters_filename.c_str(),csv_ascii);
-
-					if(status == false)
-					{
-						fprintf(stderr, "ERROR: Some problem with the hyperparameter input! at %s, line %d.\n",__FILE__, __LINE__);
-						exit(-1);
-
-					}
-
-#if 1
-#pragma omp master
-					{
-						printf("hyperparameters read from the file (theta; gamma)^T:\n");
-						trans(weights_read_from_file).print();
-					}
-#endif
-
-					if(weights_read_from_file.size() != 2*d){
-#if 1
-#pragma omp master
-						{
-							printf("hyper parameters do not match the problem dimensions!\n");
-						}
-#endif
-						for (unsigned int j = 0; j < d; j++) {
-
-							initial_design.theta(j) = randomDouble(0, 10); //theta
-							initial_design.gamma(j) = randomDouble(0, 2); //gamma
-
-						}
-
-					}
-
-					else{
-
-						for(unsigned i=0; i<d;i++) {
-
-							if(weights_read_from_file(i) < 100.0){
-
-								initial_design.theta(i) = weights_read_from_file(i);
-							}
-							else{
-
-								initial_design.theta(i) = 1.0;
-							}
-
-
-						}
-						for(unsigned i=dim; i<2*d;i++) {
-
-							if( weights_read_from_file(i) < 2.0) {
-
-								initial_design.gamma(i-dim) = weights_read_from_file(i);
-
-							}
-							else{
-
-								initial_design.gamma(i-dim) = 1.0;
-							}
-						}
-
-					}
-
-
-				}
-				else{ /* assign random parameters if there is no file */
-
-					for (unsigned int j = 0; j < d; j++) {
-
-						initial_design.theta(j) = randomDouble(0, 10); //theta
-						initial_design.gamma(j) = randomDouble(0, 2); //gamma
-
-					}
-
-
-				}
-#if 0
-				initial_design.theta.print();
-				initial_design.gamma.print();
-
-#endif
-
-				initial_design.calculate_fitness(epsilon,Xmatrix,ys);
-
-
-				if (initial_design.objective_val != -LARGE) {
-
-					Jnormalization_factor = initial_design.objective_val;
-					initial_design.objective_val = 0.0;
-					initial_design.id = population_size;
-					population.push_back(initial_design);
-					population_size++;
-
-				}
-
-
-				continue;
-
-
-			} /* i=0 */
-
-
-
 
 			/* update population properties after initital iterations */
 			if (i >= number_of_initial_population) {
@@ -743,8 +705,8 @@ void KrigingModel::train(void){
 
 				for (unsigned int j = 0; j < d; j++) {
 
-					new_born.theta(j) = randomDouble(0, 10); //theta
-					new_born.gamma(j) = randomDouble(0, 2); //gamma
+					new_born.theta(j) = generateRandomDouble(0, 10); //theta
+					new_born.gamma(j) = generateRandomDouble(0, 2); //gamma
 
 				}
 
@@ -880,6 +842,8 @@ void KrigingModel::train(void){
 
 	updateModelParams();
 
+
+
 }
 
 
@@ -926,161 +890,6 @@ double KrigingModel::calculateInSampleError(void) const{
 }
 
 
-void KrigingModel::validate(std::string filename, bool ifVisualize){
-
-	mat dataValidation;
-
-	printf("\nValidating Kriging response surface for the data : %s\n",filename.c_str());
-
-	bool status = dataValidation.load(input_filename.c_str(), csv_ascii);
-	if(status == true)
-	{
-		printf("Data input is done\n");
-	}
-	else
-	{
-		printf("Problem with data the input (cvs ascii format) at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
-	}
-
-	if(dataValidation.n_cols != dim+1){
-
-		fprintf(stderr, "ERROR: number of rows in the validation data does not match with dim! at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
-
-	}
-
-
-	unsigned int NValidation = dataValidation.n_rows;
-
-	mat XValidation = dataValidation.submat(0, 0, NValidation - 1, dim - 1);
-
-	vec fexact = dataValidation.col(dim);
-
-	mat XnotNormalizedValidation = XValidation;
-
-
-	/* normalize data matrix for the Validation */
-
-	for (unsigned int i = 0; i < NValidation; i++) {
-
-		for (unsigned int j = 0; j < dim; j++) {
-
-			XValidation(i, j) = (1.0/dim)*(XValidation(i, j) - xmin(j)) / (xmax(j) - xmin(j));
-		}
-	}
-
-	mat validationKriging(NValidation,2);
-
-
-	genErrorKriging = 0;
-	for(unsigned int i=0; i<NValidation; i++){
-
-		rowvec xp = XValidation.row(i);
-
-		double fValKriging = interpolate(xp);
-		double squaredError = (fValKriging-fexact(i)) * (fValKriging-fexact(i));
-		validationKriging(i,0) = fexact(i);
-		validationKriging(i,1) = fValKriging;
-
-		genErrorKriging+=squaredError;
-	}
-
-
-	/* compute MSE */
-	genErrorKriging = genErrorKriging/NValidation;
-
-	printf("Generalization Error for the Kriging model (MSE) = %15.10f\n",genErrorKriging);
-
-	if(ifVisualize){
-
-		validationKriging.save("visualizeKriging.dat",raw_ascii);
-
-		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKriging.dat visualizeKernelRegression.png" ;
-		python_command += " Kriging model value prediction";
-
-		FILE* in = popen(python_command.c_str(), "r");
-
-
-		fprintf(in, "\n");
-
-
-	}
-
-}
-
-
-void KrigingModel::validate(mat dataValidation, bool ifVisualize){
-
-
-	if(dataValidation.n_cols != dim+1){
-
-		fprintf(stderr, "ERROR: number of rows in the validation data does not match with dim! at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
-
-	}
-
-
-	unsigned int NValidation = dataValidation.n_rows;
-
-	mat XValidation = dataValidation.submat(0, 0, NValidation - 1, dim - 1);
-
-	vec fexact = dataValidation.col(dim);
-
-	mat XnotNormalizedValidation = XValidation;
-
-
-	/* normalize data matrix for the Validation */
-
-	for (unsigned int i = 0; i < NValidation; i++) {
-
-		for (unsigned int j = 0; j < dim; j++) {
-
-			XValidation(i, j) = (1.0/dim)*(XValidation(i, j) - xmin(j)) / (xmax(j) - xmin(j));
-		}
-	}
-
-	mat validationKriging(NValidation,2);
-
-
-	genErrorKriging = 0;
-	for(unsigned int i=0; i<NValidation; i++){
-
-		rowvec xp = XValidation.row(i);
-
-		double fValKriging = interpolate(xp);
-		double squaredError = (fValKriging-fexact(i)) * (fValKriging-fexact(i));
-		validationKriging(i,0) = fexact(i);
-		validationKriging(i,1) = fValKriging;
-
-		genErrorKriging+=squaredError;
-	}
-
-
-	/* compute MSE */
-	genErrorKriging = genErrorKriging/NValidation;
-
-	printf("Generalization ERROR for the Kriging model (MSE) = %15.10f\n",genErrorKriging);
-
-	if(ifVisualize){
-
-		validationKriging.save("visualizeKriging.dat",raw_ascii);
-
-		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function_scatter.py visualizeKriging.dat visualizeKernelRegression.png" ;
-		python_command += " Kriging model value prediction";
-
-		FILE* in = popen(python_command.c_str(), "r");
-
-
-		fprintf(in, "\n");
-
-
-	}
-
-}
-
-
-
 EAdesign::EAdesign(int dimension){
 
 	theta = zeros(dimension);
@@ -1110,14 +919,13 @@ int EAdesign::calculate_fitness(double epsilon, mat &X,vec &ys){
 	double logdetR = 0.0;
 	double objVal = 0.0;
 
-	int N = X.n_rows;  /* number of samples */
+	unsigned int N = X.n_rows;  /* number of samples */
 
 
-	mat R = zeros(N,N);
-	mat L = zeros(N,N);
-	mat U = zeros(N,N);
+	mat R(N,N,fill::zeros);
+	mat U(N,N,fill::zeros);
 
-	vec I = ones(N);
+	vec I(N,fill::ones);
 
 	// compute the correlation matrix R
 
@@ -1125,8 +933,9 @@ int EAdesign::calculate_fitness(double epsilon, mat &X,vec &ys){
 
 	compute_R_matrix(theta, gamma,epsilon,R,X);
 
-
-	//		R.raw_print(cout, "R:");
+#if 0
+	R.raw_print(cout, "R:");
+#endif
 
 
 	// compute Cholesky decomposition
@@ -1140,19 +949,15 @@ int EAdesign::calculate_fitness(double epsilon, mat &X,vec &ys){
 		return 0;
 	}
 
-	L = trans(U);
 
-	//L.raw_print(cout, "L:");
-
-	//U.raw_print(cout, "U:");
 
 	vec U_diagonal = U.diag();
-
-	//U_diagonal.raw_print(cout, "diag(U):");
-
+#if 0
+	U_diagonal.raw_print(cout, "diag(U):");
+#endif
 	logdetR = 0.0;
 
-	for (int i = 0; i < N; i++) {
+	for (unsigned int i = 0; i < N; i++) {
 
 		if (U_diagonal(i) < 0) {
 
@@ -1168,36 +973,39 @@ int EAdesign::calculate_fitness(double epsilon, mat &X,vec &ys){
 
 	logdetR = 2.0 * logdetR;
 
-	vec R_inv_ys(N);
-	vec R_inv_I(N);
+	vec R_inv_ys(N,fill::zeros);
+	vec R_inv_I(N,fill::zeros);
 
-
-
-	solveLinearSystemCholesky(U, L, R_inv_ys, ys); /* solve R x = ys */
-	solveLinearSystemCholesky(U, L, R_inv_I, I);   /* solve R x = I */
-
+	solveLinearSystemCholesky(U, R_inv_ys, ys); /* solve R x = ys */
+	solveLinearSystemCholesky(U, R_inv_I, I);   /* solve R x = I */
 
 
 
 	beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
-	//	printf("beta0= %20.15f\n",beta0);
+#if 0
+	printf("beta0= %20.15f\n",beta0);
+#endif
+
 
 	vec ys_min_betaI = ys-beta0*I;
 
-	vec R_inv_ys_min_beta(N);
+	vec R_inv_ys_min_beta(N,fill::zeros);
 
 
 	/* solve R x = ys-beta0*I */
-	solveLinearSystemCholesky(U, L, R_inv_ys_min_beta, ys_min_betaI);
+	solveLinearSystemCholesky(U, R_inv_ys_min_beta, ys_min_betaI);
 
 
 	double fac = dot(ys_min_betaI, R_inv_ys_min_beta);
 
-	ssqr = (1.0 / N) * fac;
+	double oneOverN = 1.0/double(N);
+	double NoverTwo = double(N)/2.0;
+
+	ssqr = oneOverN * fac;
 
 
 	if(ssqr > 0 ){
-		objVal = (- N / 2.0) * log(ssqr);
+		objVal = (- NoverTwo) * log(ssqr);
 		objVal -= 0.5 * logdetR;
 	}
 	else{
@@ -1207,11 +1015,12 @@ int EAdesign::calculate_fitness(double epsilon, mat &X,vec &ys){
 		return 0;
 	}
 
-#ifdef calculate_fitness_CHECK
+#if 0
 	printf("\n");
-	printf("objective function value = %10.7f\n",obj_val);
+	printf("objective function value = %10.7f\n",objective_val);
 	printf("s^2= %20.15f\n",ssqr);
-	printf("(-M/2.0)* log(ssqr) = %10.7f\n",(-dimension_of_R/2.0)* log(ssqr));
+	printf("(-N/2.0)* log(ssqr) = %10.7f\n",(-NoverTwo)* log(ssqr));
+	printf("log(ssqr) = %10.7f\n",log(ssqr));
 	printf("-0.5*logdetR = %10.7f\n",-0.5*logdetR);
 	printf("\n");
 #endif
@@ -1252,768 +1061,6 @@ void print_population(std::vector<EAdesign> population){
 
 
 
-
-
-
-/* implementation according to the Forrester book */
-//void compute_R_matrix_GEK(vec theta,
-//		double reg_param,
-//		mat& R,
-//		mat &X,
-//		mat &grad) {
-//
-//
-//
-//
-//	int k = X.n_cols;
-//	int n = X.n_rows;
-//
-//
-//	mat Psi=zeros(n,n);
-//	mat PsiDot=zeros(n,n);
-//
-//
-//	mat Rfull;
-//
-//	for(int row = -1; row < k; row++){
-//
-//		if(row == -1){ /* first row */
-//
-//			for(int i=0; i<n;i++){
-//				for(int j=i+1;j<n;j++){
-//					Psi(i,j)=compute_R_Gauss(X.row(i),X.row(j), theta);
-//
-//				}
-//			}
-//
-//			Psi = Psi+ trans(Psi)+ eye(n,n);
-//
-//			Rfull=Psi;
-//
-//
-//			PsiDot=zeros(n,n);
-//			for(int l=0;l<k; l++){
-//
-//
-//				for(int i=0; i<n;i++){
-//					for(int j=0;j<n;j++){
-//						PsiDot(i,j)=2.0*theta(l)* (X(i,l)-X(j,l))*Psi(i,j);
-//
-//					}
-//				}
-//				Rfull = join_rows(Rfull,PsiDot);
-//
-//			}
-//
-//		}
-//
-//		else{ /* other rows */
-//
-//			mat Rrow;
-//
-//			PsiDot=zeros(n,n);
-//
-//			for(int i=0; i<n;i++){
-//				for(int j=0;j<n;j++){
-//					PsiDot(i,j)=-2.0*theta(row)* (X(i,row)-X(j,row))*Psi(i,j);
-//
-//				}
-//			}
-//
-//
-//
-//			Rrow = PsiDot;
-//
-//
-//			for(int l=0; l<k;l++){
-//				mat PsiDot2=zeros(n,n);
-//
-//				if(l == row){
-//					for(int i=0; i<n;i++){
-//						for(int j=0;j<n;j++){
-//							PsiDot2(i,j)=
-//									(2.0*theta(l)-4.0*theta(l)*theta(l)* pow((X(i,l)-X(j,l)),2.0))*Psi(i,j);
-//
-//						}
-//					}
-//
-//				}
-//
-//				else{
-//
-//
-//					for(int i=0; i<n;i++){
-//						for(int j=0;j<n;j++){
-//							PsiDot2(i,j)=
-//									(-4.0*theta(row)*theta(l)*(X(i,row)-X(j,row))*(X(i,l)-X(j,l)))*Psi(i,j);
-//
-//						}
-//					}
-//				}
-//
-//
-//				Rrow = join_rows(Rrow,PsiDot2);
-//
-//			}
-//
-//
-//
-//			Rfull = join_cols(Rfull,Rrow);
-//		}
-//
-//
-//
-//
-//	} /* end of for loop for rows */
-//
-//
-//
-//	R = Rfull + reg_param*eye(n*(k+1),n*(k+1));
-//
-//
-//
-//} /* end of compute_R_matrix_GEK */
-//
-
-
-
-
-/** compute the f_tilde for the Kriging model
- * @param[in] xp : point of evaluation
- * @param[in] X : normalized data matrix
- * @param[in] beta0 = [I^T*R^-1*I]^-1 [I^T*R^-1*ys]
- * @param[in] sigma_sqr
- * @param[in] regression weights
- * @param[in] R_inv_ys_min_beta = R^-1*(ys-beta0*I)
- * @param[out] f_tilde : surrogate prediction
- */
-//double calculate_f_tilde(rowvec xp,
-//		mat &X,
-//		double beta0,
-//		vec regression_weights,
-//		vec R_inv_ys_min_beta,
-//		vec kriging_weights){
-//
-//
-//	int dim = xp.size();
-//#if 0
-//	printf("dim = %d\n",dim);
-//#endif
-//
-//	vec r(X.n_rows);
-//
-//	vec theta = kriging_weights.head(dim);
-//	vec gamma = kriging_weights.tail(dim);
-//
-//
-//	double f_regression = 0.0;
-//	double f_kriging = 0.0;
-//
-//
-//	/* if there exists linear regression part */
-//	if(regression_weights.size() !=0){
-//
-//		for(unsigned int i=0;i<xp.size();i++){
-//
-//			f_regression += xp(i)*regression_weights(i+1);
-//		}
-//
-//		f_regression += regression_weights(0);
-//
-//	}
-//#if 0
-//	printf("f_regression = %10.7f\n",f_regression);
-//#endif
-//
-//	for(unsigned int i=0;i<X.n_rows;i++){
-//
-//		r(i) = compute_R(xp, X.row(i), theta, gamma);
-//
-//	}
-//#if 0
-//	printf("size of vector r = %d\n",r.size());
-//	printf("r = \n",f_regression);
-//	trans(r).print();
-//	printf("size of vector R_inv_ys_min_beta = %d\n",R_inv_ys_min_beta.size());
-//	printf("R_inv_ys_min_beta = \n",f_regression);
-//	trans(R_inv_ys_min_beta).print();
-//#endif
-//
-//	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
-//
-//
-//	return f_regression+f_kriging;
-//
-//}
-
-
-/** compute the f_tilde and ssqr for the Kriging model
- * @param[in] xp : point of evaluation
- * @param[in] X : normalized data matrix
- * @param[in] beta0 = [I^T*R^-1*I]^-1 [I^T*R^-1*ys]
- * @param[in] sigma_sqr
- * @param[in] I : identity vector
- * @param[in] R_inv_ys_min_beta = R^-1*(ys-beta0*I)
- * @param[in] R_inv_I = R^-1* I
- * @param[in] U (Cloesky decomposition of R)
- * @param[in] L (Cloesky decomposition of R)
- * @param[out] f_tilde : surrogate prediction
- * @param[out] ssqr: kriging variance
- */
-//void calculate_f_tilde_and_ssqr(
-//		rowvec xp,
-//		mat &X,
-//		double beta0,
-//		double sigma_sqr,
-//		vec regression_weights,
-//		vec R_inv_ys_min_beta,
-//		vec R_inv_I,
-//		vec I,
-//		vec kriging_weights,
-//		mat &U,
-//		mat &L,
-//		double *f_tilde,
-//		double *ssqr){
-//
-//
-//	int dim = xp.size();
-//	vec r(X.n_rows);
-//
-//	vec theta = kriging_weights.head(dim);
-//	vec gamma = kriging_weights.tail(dim);
-//
-//
-//
-//	double f_regression = 0.0;
-//	double f_kriging = 0.0;
-//
-//
-//	if(regression_weights.size() !=0){
-//
-//		for(unsigned int i=0;i<xp.size();i++){
-//
-//			f_regression += xp(i)*regression_weights(i+1);
-//		}
-//
-//		f_regression += regression_weights(0);
-//
-//	}
-//
-//
-//	for(unsigned int i=0;i<X.n_rows;i++){
-//
-//		r(i) = compute_R(xp, X.row(i), theta, gamma);
-//
-//	}
-//
-//	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
-//
-//
-//
-//	*f_tilde =  f_regression+f_kriging;
-//
-//	vec R_inv_r(X.n_rows);
-//
-//
-//	/* solve the linear system R x = r by Cholesky matrices U and L*/
-//	solve_linear_system_by_Cholesky(U, L, R_inv_r, r);
-//
-//
-//	*ssqr = sigma_sqr*( 1.0 - dot(r,R_inv_r)
-//			+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(I,R_inv_I) ) );
-//
-//
-//
-//}
-
-
-// IMPORTANT : vector x should be normalized!!!
-//double calculate_f_tilde_GEK(rowvec &x,
-//		mat &X,
-//		double beta0,
-//		vec regression_weights,
-//		vec R_inv_ys_min_beta,
-//		vec kriging_weights,
-//		int Ngrad){
-//
-//
-//#if 0
-//	printf("calculate_f_tilde_GEK...\n");
-//#endif
-//
-//	int dim = x.size();
-//
-//	int Ntotal =X.n_rows;
-//	int Nfunc = Ntotal-Ngrad;
-//
-//	int dimension_R = Nfunc+Ngrad+ dim*Ngrad;
-//
-//	vec r(dimension_R);
-//
-//	vec theta = kriging_weights.head(dim);
-//
-//
-//#if 0
-//	theta.raw_print(cout, "theta:");
-//	x.raw_print(cout, "x:");
-//	regression_weights.raw_print(cout, "regression_weights:");
-//#endif
-//
-//
-//
-//	double f_regression = 0.0;
-//	double f_kriging = 0.0;
-//
-//	/* if there exists some regression weights, than perform linear regression */
-//	if (regression_weights.size() > 0){
-//
-//		for(unsigned int i=0; i<x.size(); i++){
-//
-//			f_regression += x(i)*regression_weights(i+1);
-//		}
-//
-//		f_regression += regression_weights(0);
-//	}
-//
-//
-//	/* first Nfunc+Ngrad elements are normal functional correlations */
-//	for(int k=0; k<Nfunc+Ngrad; k++) {
-//
-//		r(k)= compute_R_Gauss(X.row(k),x,theta);
-//	}
-//
-//	int count=Nfunc+Ngrad;
-//
-//
-//
-//	for(int k=Nfunc;k<Nfunc+Ngrad;k++) {
-//
-//		for(int l=0;l<dim;l++) {
-//
-//			r(count+l*Ngrad+k)= compR_dxi(X.row(k), x, theta, l) ;
-//		}
-//	}
-//
-//	f_kriging = beta0+ dot(r,R_inv_ys_min_beta);
-//
-//	return f_regression+f_kriging;
-//
-//}
-
-
-
-///* calculate the fitness of a member with the given theta (only for GEK)*/
-//int calculate_fitness_GEK(member &new_born,
-//		double reg_param,
-//		mat &R,
-//		mat &X,
-//		vec &ys,
-//		vec &F,
-//		mat &grad,
-//		int eqn_sol_method ) {
-//
-//	int Mtotal = X.n_rows;    /* number of total data points */
-//	int Mgrad  = grad.n_rows; /* number of data points with only function value */
-//	int Mfunc = Mtotal-Mgrad; /* number of data points with gradient information */
-//	int dim = X.n_cols;
-//	int dimension_of_R = Mfunc+Mgrad+dim*Mgrad; /* dimension of the correlation matrix */
-//
-//
-//	double logdetR=0.0;
-//
-//	mat U(dimension_of_R, dimension_of_R);
-//	mat D(dimension_of_R, dimension_of_R);
-//	mat L(dimension_of_R, dimension_of_R);
-//	mat V(dimension_of_R, dimension_of_R);
-//	mat Ut(dimension_of_R, dimension_of_R);
-//
-//	vec s(dimension_of_R);
-//	vec sinv(dimension_of_R);
-//
-//
-//	// compute the correlation matrix R
-//
-//	//	double reg_param = pow(10.0, -1.0* new_born.log_regularization_parameter );
-//
-//	compute_R_matrix_GEK(new_born.theta, reg_param,R,X,grad);
-//
-//	//	R.print();
-//
-//#ifdef calculate_fitness_CHECK
-//	mat Rinv= inv(R);
-//#endif
-//	//	invR.print();
-//
-//	//	mat check =(R*invR);
-//	//	check.print();
-//
-//	//	exit(1);
-//
-//	if(eqn_sol_method == CHOLESKY){
-//		/* compute Cholesky decomposition of the correlation matrix R */
-//		int flag = chol(U, R);
-//
-//		if (flag == 0) {
-//			printf("Ill conditioned correlation matrix in Cholesky decomposition...\n");
-//			new_born.objective_val = -LARGE;
-//			total_number_of_function_evals++;
-//			return 0;
-//		}
-//
-//
-//		/* calculate upper triangular from U */
-//		L = trans(U);
-//
-//
-//	}
-//
-//
-//	if( eqn_sol_method == SVD){
-//		int flag_svd = svd( U, s, V, R );
-//
-//		if (flag_svd == 0) {
-//
-//			printf("ERROR: SVD could not be performed\n");
-//			exit(-1);
-//		}
-//
-//		sinv = 1.0/s;
-//#if 0
-//		printf("inverse singular values = \n");
-//		sinv.print();
-//#endif
-//		double threshold = 10E-8;
-//		for(int i=0; i< dimension_of_R; i++){
-//			if(s(i)  < threshold){
-//				sinv(i) = 0.0;
-//			}
-//
-//		}
-//#if 0
-//		printf("inverse singular values after thresholding= \n");
-//		sinv.print();
-//		printf("\n");
-//#endif
-//
-//		Ut = trans(U);
-//
-//		D.fill(0.0);
-//		for(int i=0; i< dimension_of_R; i++){
-//
-//			D(i,i) = sinv(i);
-//		}
-//
-//	}
-//
-//
-//	/* calculate the determinant of R after Cholesky decomposition*/
-//	if(eqn_sol_method == CHOLESKY){
-//		vec U_diagonal = U.diag();
-//
-//		//U_diagonal.raw_print(cout, "diag(U):");
-//
-//		logdetR = 0.0;
-//		for (int i = 0; i < dimension_of_R; i++) {
-//			if (U_diagonal(i) < 0) {
-//
-//				new_born.objective_val = -LARGE;
-//				return 0;
-//			}
-//
-//			logdetR += log(U_diagonal(i));
-//
-//			//		printf("%d %30.25f %30.25f\n",i,logdetR,log(U_diagonal(i)));
-//		}
-//
-//		logdetR = 2.0 * logdetR;
-//
-//	}
-//
-//	if(eqn_sol_method == SVD){
-//
-//		logdetR = 0.0;
-//		for (int i = 0; i < dimension_of_R; i++) {
-//
-//			logdetR += log(s(i));
-//
-//		}
-//
-//	}
-//
-//
-//
-//
-//
-//
-//	vec R_inv_ys(dimension_of_R);
-//	vec R_inv_F(dimension_of_R);
-//
-//	if( eqn_sol_method == CHOLESKY){
-//
-//		solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys);
-//		solve_linear_system_by_Cholesky(U, L, R_inv_F, F);
-//	}
-//
-//
-//	if( eqn_sol_method == SVD){
-//		R_inv_ys =V*D*Ut*ys;
-//		R_inv_F  =V*D*Ut*F;
-//	}
-//
-//
-//#ifdef calculate_fitness_CHECK
-//
-//	vec R_inv_ys_check=Rinv*ys;
-//
-//	double R_inv_ys_ERROR= norm((R_inv_ys-R_inv_ys_check), 2);
-//
-//	if(R_inv_ys_ERROR > TOL) {
-//		printf("R_inv_ys is wrong\n");
-//
-//		for(unsigned int i=0; i<R_inv_ys.size();i++){
-//			printf("%10.7f %10.7f\n",R_inv_ys(i),R_inv_ys_check(i));
-//
-//
-//		}
-//
-//		exit(-1);
-//	}
-//
-//#endif
-//
-//
-//
-//#ifdef calculate_fitness_CHECK
-//
-//	vec R_inv_F_check=Rinv*F;
-//
-//	//v2_check.raw_print(cout, "v2_check:");
-//
-//	double R_inv_F_ERROR= norm((R_inv_F-R_inv_F_check), 2);
-//
-//	if(R_inv_F_ERROR > TOL) {
-//		printf("R_inv_F is wrong\n");
-//		printf("R_inv_F ERROR = %10.7f\n",R_inv_F_ERROR);
-//
-//		for(unsigned int i=0; i<R_inv_F.size();i++){
-//			printf("%10.7f %10.7f\n",R_inv_F(i),R_inv_F_check(i));
-//
-//
-//		}
-//
-//
-//		exit(-1);
-//	}
-//
-//#endif
-//
-//	double beta0 = (1.0/dot(F,R_inv_F)) * (dot(F,R_inv_ys));
-//	printf("beta0= %10.7f\n",beta0);
-//
-//	vec ys_min_betaF = ys-beta0*F;
-//
-//	vec R_inv_ys_min_beta(dimension_of_R);
-//
-//	if( eqn_sol_method == CHOLESKY){
-//
-//		solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaF);
-//
-//	}
-//
-//	if( eqn_sol_method == SVD){
-//		R_inv_ys_min_beta = V*D*Ut*ys_min_betaF;
-//
-//	}
-//
-//
-//#ifdef calculate_fitness_CHECK
-//
-//	double R_inv_ys_min_beta_check_ERROR;
-//	vec R_inv_ys_min_beta_check=Rinv*(ys_min_betaF);
-//
-//	//v2_check.raw_print(cout, "v2_check:");
-//
-//	R_inv_ys_min_beta_check_ERROR= norm((R_inv_ys_min_beta_check-R_inv_ys_min_beta_check), 2);
-//
-//	if(R_inv_ys_min_beta_check_ERROR > TOL) {
-//		printf("R_inv_ys_min_beta_check is wrong\n");
-//
-//
-//		for(unsigned int i=0; i<R_inv_ys_min_beta.size();i++){
-//			printf("%10.7f %10.7f\n",R_inv_ys_min_beta(i),R_inv_ys_min_beta_check(i));
-//
-//
-//		}
-//
-//		exit(-1);
-//	}
-//
-//#endif
-//
-//	double fac = dot(ys_min_betaF, R_inv_ys_min_beta);
-//
-//	double ssqr = (1.0 / dimension_of_R) * fac;
-//
-//	double obj_val;
-//
-//#if 0
-//	printf("s^2= %10.7f\n",ssqr);
-//#endif
-//
-//	if(ssqr > 0 ){
-//		obj_val = (-dimension_of_R / 2.0) * log(ssqr);
-//		obj_val -= 0.5 * logdetR;
-//	}
-//	else{
-//		new_born.objective_val = -LARGE;
-//		total_number_of_function_evals++;
-//		return 0;
-//	}
-//
-//#if 0
-//	printf("\n");
-//	printf("objective function value = %10.7f\n",obj_val);
-//	printf("(-M/2.0)* log(ssqr) = %10.7f\n",(-dimension_of_R/2.0)* log(ssqr));
-//	printf("-0.5*logdetR = %10.7f\n",-0.5*logdetR);
-//	printf("\n");
-//#endif
-//
-//
-//	total_number_of_function_evals++;
-//
-//	new_born.objective_val = obj_val;
-//
-//	return 1;
-//
-//
-//
-//}
-
-/* calculate the fitness of a member with the given theta and gamma  */
-//int calculate_fitness(EAdesign &new_born,
-//		double &reg_param,
-//		mat &R,
-//		mat &U,
-//		mat &L,
-//		mat &X,
-//		vec &ys,
-//		vec &I) {
-//
-//	//#define calculate_fitness_CHECK
-//
-//	//	printf("calling calculate_fitness function...\n");
-//	double beta0, ssqr;
-//	double logdetR;
-//	double obj_val;
-//
-//	int M = X.n_rows;  /* number of samples */
-//	int dimension_of_R = R.n_rows;
-//
-//	// compute the correlation matrix R
-//
-//	//	double reg_param = pow(10.0,-1.0*new_born.log_regularization_parameter);
-//
-//	compute_R_matrix(new_born.theta,
-//			new_born.gamma,
-//			reg_param,
-//			R,
-//			X);
-//
-//
-//	//		R.raw_print(cout, "R:");
-//
-//
-//	// compute Cholesky decomposition
-//	int flag = chol(U, R);
-//
-//	if (flag == 0) {
-//		printf("Ill conditioned correlation matrix\n");
-//		new_born.objective_val = -LARGE;
-//		total_number_of_function_evals++;
-//		return 0;
-//	}
-//
-//	L = trans(U);
-//
-//	//L.raw_print(cout, "L:");
-//
-//	//U.raw_print(cout, "U:");
-//
-//	vec U_diagonal = U.diag();
-//
-//	//U_diagonal.raw_print(cout, "diag(U):");
-//
-//	logdetR = 0.0;
-//	for (int i = 0; i < M; i++) {
-//		if (U_diagonal(i) < 0) {
-//
-//			new_born.objective_val = -LARGE;
-//			total_number_of_function_evals++;
-//			return 0;
-//		}
-//
-//		logdetR += log(U_diagonal(i));
-//
-//		//		printf("%d %30.25f %30.25f\n",i,logdetR,log(U_diagonal(i)));
-//	}
-//
-//	logdetR = 2.0 * logdetR;
-//
-//	vec R_inv_ys(dimension_of_R);
-//	vec R_inv_I(dimension_of_R);
-//
-//
-//
-//	solve_linear_system_by_Cholesky(U, L, R_inv_ys, ys); /* solve R x = ys */
-//	solve_linear_system_by_Cholesky(U, L, R_inv_I, I);   /* solve R x = I */
-//
-//
-//
-//
-//	beta0 = (1.0/dot(I,R_inv_I)) * (dot(I,R_inv_ys));
-//	//	printf("beta0= %20.15f\n",beta0);
-//
-//	vec ys_min_betaI = ys-beta0*I;
-//
-//	vec R_inv_ys_min_beta(dimension_of_R);
-//
-//
-//	/* solve R x = ys-beta0*I */
-//	solve_linear_system_by_Cholesky(U, L, R_inv_ys_min_beta, ys_min_betaI);
-//
-//
-//	double fac = dot(ys_min_betaI, R_inv_ys_min_beta);
-//
-//	ssqr = (1.0 / dimension_of_R) * fac;
-//
-//
-//	if(ssqr > 0 ){
-//		obj_val = (-dimension_of_R / 2.0) * log(ssqr);
-//		obj_val -= 0.5 * logdetR;
-//	}
-//	else{
-//		new_born.objective_val = -LARGE;
-//		total_number_of_function_evals++;
-//		return 0;
-//	}
-//
-//#ifdef calculate_fitness_CHECK
-//	printf("\n");
-//	printf("objective function value = %10.7f\n",obj_val);
-//	printf("s^2= %20.15f\n",ssqr);
-//	printf("(-M/2.0)* log(ssqr) = %10.7f\n",(-dimension_of_R/2.0)* log(ssqr));
-//	printf("-0.5*logdetR = %10.7f\n",-0.5*logdetR);
-//	printf("\n");
-//#endif
-//
-//
-//	total_number_of_function_evals++;
-//
-//	new_born.objective_val = obj_val;
-//
-//	return 1;
-//}
-
 /* crossover function of two designs */
 void crossover_kriging(EAdesign &father, EAdesign &mother, EAdesign &child) {
 
@@ -2021,15 +1068,21 @@ void crossover_kriging(EAdesign &father, EAdesign &mother, EAdesign &child) {
 	for (int i = 0; i < dim; i++) {
 		//		printf("theta (m) = %10.7f theta (f) = %10.7f\n",mother.theta[i],father.theta[i]);
 		//		printf("gamma (m) = %10.7f gamma (f) = %10.7f\n",mother.gamma[i],father.gamma[i]);
-		child.theta(i) = random_number(father.theta(i), mother.theta(i), 4.0);
-		child.gamma(i) = random_number(father.gamma(i), mother.gamma(i), 4.0);
+		child.theta(i) = generateRandomDoubleFromNormalDist(father.theta(i), mother.theta(i), 4.0);
+		child.gamma(i) = generateRandomDoubleFromNormalDist(father.gamma(i), mother.gamma(i), 4.0);
 
-		if (child.theta(i) < 0)
-			child.theta(i) = randomDouble(0.0, 10.0);
-		if (child.gamma(i) < 0)
-			child.gamma(i) = randomDouble(0.1, 2.0);
-		if (child.gamma(i) > 2.0)
-			child.gamma(i) = randomDouble(0.1, 2.0);
+		if (child.theta(i) < 0){
+			child.theta(i) = generateRandomDouble(0.0, 10.0);
+		}
+
+		if (child.gamma(i) < 0){
+			child.gamma(i) = generateRandomDouble(0.1, 2.0);
+		}
+
+		if (child.gamma(i) > 2.0){
+			child.gamma(i) = generateRandomDouble(0.1, 2.0);
+		}
+
 #if 0
 		if (i==0) printf("theta = %10.7f gamma = %10.7f\n",child.theta[i],child.gamma[i]);
 #endif
@@ -2048,35 +1101,6 @@ void crossover_kriging(EAdesign &father, EAdesign &mother, EAdesign &child) {
 
 
 }
-
-/* crossover function of two designs for GEK (only for theta components)*/
-//void crossover_GEK(member &father, member &mother, member &child) {
-//
-//	int dim = father.theta.size();
-//	for (int i = 0; i < dim; i++) {
-//
-//		child.theta(i) = random_number(father.theta(i), mother.theta(i), 4.0);
-//
-//
-//		if (child.theta(i) < 0)
-//			child.theta(i) = RandomDouble(0.0, 20.0);
-//
-//	}
-//	/*
-//
-//	child.log_regularization_parameter =
-//			random_number(father.log_regularization_parameter,
-//					mother.log_regularization_parameter, 4.0);
-//
-//
-//	if(child.log_regularization_parameter < 0 ) child.log_regularization_parameter=0.0;
-//	if(child.log_regularization_parameter > 14 ) child.log_regularization_parameter=14.0;
-//
-//	 */
-//
-//
-//}
-
 
 
 

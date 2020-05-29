@@ -292,16 +292,16 @@ void AggregationModel::updateKrigingModel(void){
 		exit(-1);
 	}
 
-	L = trans(U);
+
 
 	vec R_inv_ys(N);
-	solveLinearSystemCholesky(U, L, R_inv_ys, ys);    /* solve R x = ys */
+	solveLinearSystemCholesky(U, R_inv_ys, ys);    /* solve R x = ys */
 #if 0
 	printf("R_inv_ys =\n");
 	trans(R_inv_ys).print();
 #endif
 
-	solveLinearSystemCholesky(U, L, R_inv_I, I);      /* solve R x = I */
+	solveLinearSystemCholesky(U, R_inv_I, I);      /* solve R x = I */
 #if 0
 	printf("R_inv_I =\n");
 	trans(R_inv_I).print();
@@ -313,7 +313,7 @@ void AggregationModel::updateKrigingModel(void){
 	vec ys_min_betaI = ys - beta0*I;
 
 	/* solve R x = ys-beta0*I */
-	solveLinearSystemCholesky(U, L, R_inv_ys_min_beta , ys_min_betaI);
+	solveLinearSystemCholesky(U, R_inv_ys_min_beta , ys_min_betaI);
 
 
 	sigma_sqr = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
@@ -538,7 +538,7 @@ void AggregationModel::ftilde_and_ssqr(
 
 
 	/* solve the linear system R x = r by Cholesky matrices U and L*/
-	solveLinearSystemCholesky(U, L, R_inv_r, r);
+	solveLinearSystemCholesky(U, R_inv_r, r);
 
 	/* vector of ones */
 	vec I = ones(N);

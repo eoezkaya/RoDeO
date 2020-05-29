@@ -10,8 +10,6 @@ using namespace arma;
 
 void executePythonScript(std::string command);
 
-rowvec normalizeRowVector(rowvec x, vec xmin, vec xmax);
-rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax);
 
 void perturbVectorUniform(frowvec &xp,float sigmaPert);
 
@@ -66,16 +64,8 @@ double cdf(double x, double mu, double sigma);
 
 
 
-double randomDouble(double a, double b);
-float randomFloat(float a, float b);
-int randomInt(int a, int b);
-void randomVector(rowvec &x, double scale = 1.0);
 
-rowvec randomVector(vec lb, vec ub);
-
-double random_number(double xs, double xe, double sigma_factor);
-
-void solveLinearSystemCholesky(mat U, mat L, vec &x, vec b);
+void solveLinearSystemCholesky(mat U, vec &x, vec b);
 
 bool file_exist(const char *fileName);
 

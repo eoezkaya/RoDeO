@@ -8,19 +8,20 @@
 
 using namespace arma;
 
+
+
 class KrigingModel : public SurrogateModel{
 
 private:
 	vec kriging_weights;
 	vec R_inv_ys_min_beta;
 	vec R_inv_I;
-	vec I;
-	mat R;
-	mat U;
-	mat L;
+	vec vectorOfOnes;
+	mat correlationMatrix;
+	mat upperDiagonalMatrix;
 
 	double beta0;
-	double sigma_sqr;
+	double sigmaSquared;
 
 	bool linear_regression;
 	double epsilonKriging;
@@ -38,13 +39,7 @@ private:
 
 public:
 
-
-
 	unsigned int max_number_of_kriging_iterations;
-
-
-
-
 
 	KrigingModel();
 	KrigingModel(std::string name, unsigned int dimension);
@@ -54,10 +49,7 @@ public:
 
 
 	double calculateExpectedImprovement(rowvec xp);
-
 	double calculateInSampleError(void) const;
-
-
 
 	double getyMin(void) const;
 
@@ -67,8 +59,6 @@ public:
 	void setNumberOfTrainingIterations(unsigned int);
 
 	void train(void);
-	void validate(std::string filename, bool ifVisualize = false);
-	void validate(mat dataValidation, bool ifVisualize = false);
 	void print(void) const;
 	int addNewSampleToData(rowvec newsample);
 

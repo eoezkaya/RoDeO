@@ -90,8 +90,8 @@ int main(void){
 	////	EggholderFunc.ifAdjointFunctionExist = true;;
 	HimmelblauFunc.setBoxConstraints(-5.0,5.0);
 	HimmelblauFunc.print();
-	HimmelblauFunc.plot();
-	HimmelblauFunc.testSurrogateModel(LINEAR_REGRESSION,100,true);
+//	HimmelblauFunc.plot();
+	HimmelblauFunc.testSurrogateModel(KRIGING,200,true);
 
 //	HimmelblauFunc.testEfficientGlobalOptimization(20,20, true);
 	exit(1);

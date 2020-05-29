@@ -12,7 +12,7 @@ LinearModel::LinearModel(std::string name, unsigned int dimension):SurrogateMode
 	modelID = LINEAR_REGRESSION;
 	weights = zeros(dim+1);
 	regularizationParam = 10E-6;
-	ifUsesGradients = false;
+
 
 }
 

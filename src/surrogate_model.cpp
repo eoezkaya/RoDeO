@@ -29,6 +29,7 @@ SurrogateModel::SurrogateModel(){
 
 
 
+
 SurrogateModel::SurrogateModel(std::string name, unsigned int dimension){
 
 	dim = dimension;
@@ -73,15 +74,8 @@ SurrogateModel::SurrogateModel(std::string name, unsigned int dimension){
 
 	}
 
-	/* normalize data matrix */
+	normalizeInputMatrix();
 
-	for (unsigned int i = 0; i < N; i++) {
-
-		for (unsigned int j = 0; j < dim; j++) {
-
-			X(i, j) = (1.0/dim)*(X(i, j) - xmin(j)) / (xmax(j) - xmin(j));
-		}
-	}
 
 
 	ymin = min(data.col(dim));
@@ -90,18 +84,84 @@ SurrogateModel::SurrogateModel(std::string name, unsigned int dimension){
 
 }
 
+void SurrogateModel::normalizeInputMatrix(void){
 
+	for (unsigned int i = 0; i < N; i++) {
+
+			for (unsigned int j = 0; j < dim; j++) {
+
+				X(i, j) = (1.0/dim)*(X(i, j) - xmin(j)) / (xmax(j) - xmin(j));
+			}
+		}
+
+}
+
+
+
+mat SurrogateModel::tryModelOnTestSet(mat testSet) const{
+
+	/* testset should be without gradients */
+	assert(testSet.n_cols == dim+1);
+
+	unsigned int howManySamples = testSet.n_rows;
+
+	vec fSurrogateValue(howManySamples);
+	vec squaredError(howManySamples);
+	vec fExactValue = testSet.col(dim);
+
+	mat xTest = testSet.submat(0, 0, howManySamples - 1, dim - 1);
+
+	/* normalize data matrix for the Validation */
+
+	for (unsigned int i = 0; i < howManySamples; i++) {
+
+		for (unsigned int j = 0; j < dim; j++) {
+
+			xTest(i, j) = (1.0/dim)*(xTest(i, j) - xmin(j)) / (xmax(j) - xmin(j));
+		}
+	}
+
+
+	for(unsigned int i=0; i<howManySamples; i++){
+
+		fSurrogateValue(i) = interpolate(xTest.row(i));
+		squaredError(i) = (fSurrogateValue(i)-fExactValue(i)) * (fSurrogateValue(i)-fExactValue(i));
+#if 1
+		printf("\nx: ");
+		xTest.row(i).print();
+		printf("fExactValue = %15.10f, fExactValue = %15.10f\n",fSurrogateValue(i),fExactValue(i));
+#endif
+
+	}
+
+	mat testResults = testSet;
+	testResults.reshape(howManySamples,dim+3);
+	testResults.col(dim+1) =  fSurrogateValue;
+	testResults.col(dim+2) =  squaredError;
+
+	testResults.print();
+
+
+
+
+	return testResults;
+}
+
+void SurrogateModel::visualizeTestResults(mat testResults) const{
+
+
+	std::string python_command;
+
+	python_command = "python -W ignore "+ settings.python_dir + "/plot_Test_Results.py "+ label;
+
+	executePythonScript(python_command);
+
+
+}
 
 void SurrogateModel::train(void){
 
 	fprintf(stderr, "ERROR: cannot train the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
-	exit(-1);
-
-}
-
-void SurrogateModel::validate(mat dataValidation, bool ifVisualize = false){
-
-	fprintf(stderr, "ERROR: cannot validate using the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
 	exit(-1);
 
 }
@@ -129,7 +189,6 @@ double SurrogateModel::calculateInSampleError(void) const{
 }
 
 void SurrogateModel::print(void) const{
-
 
 	cout << "Surrogate model:"<< endl;
 	cout<< "Number of samples: "<<N<<endl;
@@ -170,7 +229,7 @@ rowvec SurrogateModel::getRowXRaw(unsigned int index) const{
 
 	for(unsigned int i=0; i<dim; i++){
 
-			x(i) = xnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
+		x(i) = xnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
 	}
 
 

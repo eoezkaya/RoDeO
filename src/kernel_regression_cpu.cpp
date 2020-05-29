@@ -6,6 +6,7 @@
 #include <stack>
 
 #include "auxilliary_functions.hpp"
+#include "random_functions.hpp"
 #include "Rodeo_macros.hpp"
 
 using namespace std;
@@ -3915,8 +3916,8 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 
 		for(unsigned int i=0; i<max_cv_iter; i++){
 
-			wSvdtrial(i) = pow(10.0,randomDouble(-2,0.0));
-			w12trial(i) = pow(10.0,randomDouble(-5,0.0));
+			wSvdtrial(i) = pow(10.0,generateRandomDouble(-2,0.0));
+			w12trial(i) = pow(10.0,generateRandomDouble(-5,0.0));
 		}
 #if 0
 		printf("wSvdtrial = \n");
@@ -3978,17 +3979,17 @@ int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, dou
 
 				if(i ==j) { /* main diagonal */
 
-					inputVec[i*d+j] = 1.0+ randomDouble(-0.1,0.1);
+					inputVec[i*d+j] = 1.0+ generateRandomDouble(-0.1,0.1);
 				}
 				else {
 
-					inputVec[i*d+j] = randomDouble(0.0,0.1);
+					inputVec[i*d+j] = generateRandomDouble(0.0,0.1);
 				}
 			}
 		}
 
 		/* assign sigma to a small value between 0 and 0.1 */
-		inputVec[Ldim] = 0.05+ randomDouble(-0.001,0.001);
+		inputVec[Ldim] = 0.05+ generateRandomDouble(-0.001,0.001);
 #if 1
 		printf("Initial values of L:\n");
 
