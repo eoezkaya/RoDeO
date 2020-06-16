@@ -1,6 +1,10 @@
 #ifndef AUX_FUNCTIONS_HPP
 #define AUX_FUNCTIONS_HPP
 #include "Rodeo_macros.hpp"
+#include "Rodeo_globals.hpp"
+#include "matrix_vector_operations.hpp"
+#include "random_functions.hpp"
+#include "metric.hpp"
 #include <armadillo>
 #include <vector>
 #include <map>
@@ -54,7 +58,16 @@ void find_min_with_index(T vec, int size, double *min_val, int *indx){
 
 }
 
+bool checkValue(double value, double expected, double tolerance);
+bool checkValue(double value, double expected);
+bool checkMatrix(mat values, mat expected, double tolerance);
+bool checkMatrix(mat values, mat expected);
 
+void abortIfFalse(bool flag, std::string file, int line);
+void abortIfFalse(bool flag);
+
+
+double calculatePolynomial(const rowvec &x, const vec &coeffs);
 
 double pdf(double x, double mu, double sigma);
 
@@ -76,7 +89,7 @@ int is_in_the_list(int entry, std::vector<int> &list);
 int is_in_the_list(unsigned int entry, uvec &list);
 
 
-void generateKRandomInt(uvec &numbers, unsigned int N, unsigned int k);
+
 
 void compute_max_min_distance_data(mat &x, double &max_distance, double &min_distance);
 
@@ -172,8 +185,6 @@ double Lpnorm(T x, int p, int size,int *index=NULL){
 	return pow(sum,1.0/p);
 }
 
-double calcMetric(rowvec &xi,rowvec &xj, mat M);
-float calcMetric(frowvec &xi,frowvec &xj, fmat M);
 
 void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, unsigned int norm=2);
 

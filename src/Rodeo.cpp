@@ -11,6 +11,7 @@
 #include "read_settings.hpp"
 
 #include "kernel_regression.hpp"
+#include "kernel_regression_test.hpp"
 #include "surrogate_model.hpp"
 
 #ifdef GPU_VERSION
@@ -57,6 +58,9 @@ int main(void){
 	}
 
 
+	testAllKernelRegression();
+
+	exit(1);
 
 
 
@@ -74,6 +78,8 @@ int main(void){
 ////	////	EggholderFunc.adj_ptr = Eggholder_adj;
 ////	////	EggholderFunc.ifAdjointFunctionExist = true;;
 //	TestFunc1D.setBoxConstraints(0.0,10.0);
+//	TestFunc1D.testSurrogateModel(KRIGING,20,true);
+//	exit(1);
 //	TestFunc1D.print();
 ////	TestFunc1D.plot();
 ////	TestFunc1D.testEGO(100,100);
@@ -91,7 +97,7 @@ int main(void){
 	HimmelblauFunc.setBoxConstraints(-5.0,5.0);
 	HimmelblauFunc.print();
 //	HimmelblauFunc.plot();
-	HimmelblauFunc.testSurrogateModel(KRIGING,200,true);
+	HimmelblauFunc.testSurrogateModel(KRIGING,100,true);
 
 //	HimmelblauFunc.testEfficientGlobalOptimization(20,20, true);
 	exit(1);

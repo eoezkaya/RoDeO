@@ -23,40 +23,37 @@ SurrogateModel::SurrogateModel(){
 	dim = 0;
 	label = "None";
 	N = 0;
+	ifInitialized = false;
 
 
 }
 
+void SurrogateModel::ReadDataAndNormalize(void){
 
-
-
-SurrogateModel::SurrogateModel(std::string name, unsigned int dimension){
-
-	dim = dimension;
-
-	label = name;
-	printf("Initiating surrogate model for the %s data (Base model)...\n",name.c_str());
-	input_filename = name +".csv";
-	hyperparameters_filename = name + "_Hyperparameters.csv";
-
-
-#if 1
+#if 0
 	std::cout<<"Loading data from the file "<<input_filename<<"...\n";
 #endif
 	bool status = data.load(input_filename.c_str(), csv_ascii);
+
 	if(status == true)
 	{
+#if 0
 		printf("Data input is done\n");
+#endif
 	}
 	else
 	{
-		printf("Error: Problem with data the input (cvs ascii format) at %s, line %d.\n",__FILE__, __LINE__);
+		printf("ERROR: Problem with data the input (cvs ascii format) at %s, line %d.\n",__FILE__, __LINE__);
 		exit(-1);
 	}
 
+	if(data.n_cols != dim+1){
 
+		printf("ERROR: Number of columns of the data matrix does match with the problem dimension!\n");
+		exit(-1);
 
-	assert(data.n_cols == dim+1);
+	}
+
 
 	/* set number of sample points */
 	N = data.n_rows;
@@ -64,8 +61,8 @@ SurrogateModel::SurrogateModel(std::string name, unsigned int dimension){
 	X = data.submat(0, 0, N - 1, dim - 1);
 
 
-	xmax = zeros(dim);
-	xmin = zeros(dim);
+	xmax.set_size(dim);
+	xmin.set_size(dim);
 
 	for (unsigned int i = 0; i < dim; i++) {
 
@@ -74,25 +71,33 @@ SurrogateModel::SurrogateModel(std::string name, unsigned int dimension){
 
 	}
 
-	normalizeInputMatrix();
+	X = normalizeMatrix(X);
+	X = (1.0/dim)*X;
+
+	vec ySample = data.col(dim);
 
 
+	ymin = min(ySample);
+	ymax = max(ySample);
+	yave = mean(ySample);
 
-	ymin = min(data.col(dim));
-	ymax = max(data.col(dim));
-	yave = mean(data.col(dim));
+
 
 }
 
-void SurrogateModel::normalizeInputMatrix(void){
 
-	for (unsigned int i = 0; i < N; i++) {
+SurrogateModel::SurrogateModel(std::string name, unsigned int dimension){
 
-			for (unsigned int j = 0; j < dim; j++) {
+	dim = dimension;
+	N = 0;
 
-				X(i, j) = (1.0/dim)*(X(i, j) - xmin(j)) / (xmax(j) - xmin(j));
-			}
-		}
+	label = name;
+#if 0
+	printf("Initiating surrogate model for the %s data (Base model)...\n",name.c_str());
+#endif
+	input_filename = name +".csv";
+	hyperparameters_filename = name + "_Hyperparameters.csv";
+	ifInitialized = false;
 
 }
 
@@ -126,7 +131,7 @@ mat SurrogateModel::tryModelOnTestSet(mat testSet) const{
 
 		fSurrogateValue(i) = interpolate(xTest.row(i));
 		squaredError(i) = (fSurrogateValue(i)-fExactValue(i)) * (fSurrogateValue(i)-fExactValue(i));
-#if 1
+#if 0
 		printf("\nx: ");
 		xTest.row(i).print();
 		printf("fExactValue = %15.10f, fExactValue = %15.10f\n",fSurrogateValue(i),fExactValue(i));
@@ -139,13 +144,13 @@ mat SurrogateModel::tryModelOnTestSet(mat testSet) const{
 	testResults.col(dim+1) =  fSurrogateValue;
 	testResults.col(dim+2) =  squaredError;
 
-	testResults.print();
-
-
-
 
 	return testResults;
 }
+
+
+
+
 
 void SurrogateModel::visualizeTestResults(mat testResults) const{
 
@@ -158,6 +163,16 @@ void SurrogateModel::visualizeTestResults(mat testResults) const{
 
 
 }
+
+void SurrogateModel::initializeSurrogateModel(void){
+
+	fprintf(stderr, "ERROR: cannot initialize the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
+	exit(-1);
+
+
+
+}
+
 
 void SurrogateModel::train(void){
 
@@ -188,7 +203,9 @@ double SurrogateModel::calculateInSampleError(void) const{
 
 }
 
-void SurrogateModel::print(void) const{
+void SurrogateModel::printSurrogateModel(void) const{
+
+	assert(N>0);
 
 	cout << "Surrogate model:"<< endl;
 	cout<< "Number of samples: "<<N<<endl;
@@ -203,6 +220,15 @@ void SurrogateModel::print(void) const{
 	cout<<"ymax = "<<ymax<<endl;
 	cout<<"ymean = "<<yave<<endl;
 }
+
+void SurrogateModel::printHyperParameters(void) const{
+
+	fprintf(stderr, "ERROR: cannot call  printHyperParameters using the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
+	abort();
+
+
+}
+
 
 /** Returns the ith row of the matrix X
  * @param[in] index

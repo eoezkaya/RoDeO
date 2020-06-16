@@ -14,37 +14,125 @@ void executePythonScript(std::string command){
 }
 
 
-void generateKRandomInt(uvec &numbers, unsigned int N, unsigned int k){
+bool checkValue(double value, double expected, double tolerance){
 
-	unsigned int numbersGenerated = 0;
+	assert(tolerance > 0.0);
 
-	numbers.fill(0);
+	if(fabs(value-expected) > tolerance) {
+
+		printf("\nvalue = %10.7f, expected = %10.7f, error = %10.7f, tolerance = %10.7f\n",value, expected,fabs(value-expected),tolerance );
+		return false;
+	}
+	else return true;
 
 
-	while (numbersGenerated != k){
+}
+
+bool checkValue(double value, double expected){
+
+	double tolerance = 0.0;
+	if(fabs(value) < 10E-10){
+
+		tolerance = EPSILON;
+
+	}
+	else{
+
+		tolerance = fabs(value) * 0.001;
+	}
+
+	double error = fabs(value-expected);
+	if(error > tolerance) {
+
+		printf("\nvalue = %10.7f, expected = %10.7f, error = %10.7f, tolerance = %10.7f\n",value, expected,error, tolerance);
+		return false;
+	}
+	else return true;
 
 
-		int r = rand()%N;
-#if 0
-		printf("random number = %d\n",r);
-#endif
-		if (is_in_the_list(r, numbers) == -1 ){
+}
 
-			numbers(numbersGenerated) = r;
-			numbersGenerated++;
-#if 0
-			printf("numbers =\n");
-			numbers.print();
-#endif
+bool checkMatrix(mat values, mat expected, double tolerance){
+	assert(values.n_rows == expected.n_rows);
+	assert(values.n_cols == expected.n_cols);
+	bool result = true;
+
+	for(unsigned int i=0; i<values.n_rows; i++){
+
+		for(unsigned int j=0; j<values.n_cols; j++){
+
+			if(!checkValue(values(i,j), expected(i,j), tolerance)){
+
+				result = false;
+			}
+
 		}
-
-
 
 	}
 
+	return result;
+
+}
+
+
+bool checkMatrix(mat values, mat expected){
+	assert(values.n_rows == expected.n_rows);
+	assert(values.n_cols == expected.n_cols);
+	bool result = true;
+
+	for(unsigned int i=0; i<values.n_rows; i++){
+
+		for(unsigned int j=0; j<values.n_cols; j++){
+
+			if(!checkValue(values(i,j), expected(i,j))){
+
+				result = false;
+			}
+
+		}
+
+	}
+
+	return result;
+
+}
+
+
+void abortIfFalse(bool flag, std::string file, int line){
+
+	if(flag == false){
+
+		printf("Test failed at: at %s, line %d.\n",file.c_str(),line);
+		abort();
+	}
+
+}
+
+
+void abortIfFalse(bool flag){
+
+	if(flag == false){
+
+		printf("Test failed at\n");
+		abort();
+	}
+
+}
 
 
 
+double calculatePolynomial(const rowvec &x, const vec &coeffs){
+
+	assert(x.size() == coeffs.size());
+	double sum = 0.0;
+
+	for(unsigned int i=0; i<x.size(); i++){
+
+		sum += coeffs(i)*pow(x(i),i);
+	}
+
+
+	return sum;
 }
 
 
@@ -288,56 +376,6 @@ void solveLinearSystemCholesky(mat U, vec &x, vec b){
 	}
 
 }
-
-/** generate a random number between a and b
- *
- * @param[in] a
- * @param[in] b
- * @return random number between a and b
- *
- */
-
-/** generate a random number between a and b
- *
- * @param[in] a
- * @param[in] b
- * @return random number between a and b
- *
- */
-float randomFloat(float a, float b) {
-
-	float random = ((float) rand()) / (float) RAND_MAX;
-	float diff = b - a;
-	float r = random * diff;
-	return a + r;
-}
-
-
-/** generate a random number between a and b
- *
- * @param[in] a
- * @param[in] b
- * @return random number in the interval [a,b]
- *
- */
-//int randomInt(int a, int b) {
-//
-//	b++;
-//	int diff = b-a;
-//	int random = rand() % diff;
-//	return a + random;
-//}
-
-//void randomVector(rowvec &x, double scale){
-//
-//	for(unsigned int i=0; i<x.size(); i++) {
-//
-//		x(i) = scale* randomDouble(0.0, 1.0);
-//	}
-//
-//
-//}
-
 
 
 bool checkLinearSystem(mat A, vec x, vec b, double tol){
@@ -676,43 +714,6 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
 
 
 
-double calcMetric(rowvec &xi,rowvec &xj, mat M){
-#if 0
-	printf("calling calcMetric...\n");
-	printf("M = \n");
-	M.print();
-#endif
-	rowvec diff= xi-xj;
-
-#if 0
-	printf("diff = \n");
-	diff.print();
-#endif
-
-	colvec diffT= trans(diff);
-
-	return dot(diff,M*diffT);
-
-}
-
-float calcMetric(frowvec &xi,frowvec &xj, fmat M){
-#if 0
-	printf("calling calcMetric...\n");
-	printf("M = \n");
-	M.print();
-#endif
-	frowvec diff= xi-xj;
-
-#if 0
-	printf("diff = \n");
-	diff.print();
-#endif
-
-	fcolvec diffT= trans(diff);
-
-	return dot(diff,M*diffT);
-
-}
 
 
 
@@ -757,7 +758,7 @@ void findKNeighbours(mat &data,
 #endif
 
 
-		double distance =  calcMetric(x,p, M);
+		double distance =  calculateMetric(x,p, M);
 
 #if 0
 		printf("distance = %10.7f\n", distance);

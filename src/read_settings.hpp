@@ -1,6 +1,7 @@
 #ifndef READ_SETTINGS
 #define READ_SETTINGS
 #include <algorithm>
+#include<iostream>
 class Rodeo_settings {
 public:
 	unsigned int number_of_independents;
@@ -9,14 +10,13 @@ public:
 	std::string python_dir;
 	double lambda;
 	std::string *keywords;
-	const int number_of_keywords = 3;
+	const int number_of_keywords = 2;
 
 	Rodeo_settings(){
 
 		keywords = new std::string[number_of_keywords];
 		keywords[0]="cwd:";
-		keywords[1]="lambda:";
-		keywords[2]="python_dir:";
+		keywords[1]="python_dir:";
 
 	}
 
@@ -27,8 +27,6 @@ public:
 		printf("\nSettings:\n");
 		printf("cwd: %s\n", cwd.c_str());
 		printf("python_dir: %s\n", python_dir.c_str());
-		printf("alpha: %10.7e\n\n", lambda);
-
 
 	}
 
@@ -81,10 +79,6 @@ public:
 							break;
 						}
 						case 1: {
-							lambda =  std::stod(sub_str);
-							break;
-						}
-						case 2: {
 							python_dir = sub_str;
 							break;
 						}

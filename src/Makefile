@@ -11,7 +11,8 @@ LDFLAGS_GPU = -lm -larmadillo -rdc=true -lcudadevrt -lgomp
 LDFLAGS = -lm -larmadillo -lgomp
 
 OBJ = Rodeo.o test_functions.o trust_region_gek.o kriging_training.o optimization.o \
-auxilliary_functions.o linear_regression.o kernel_regression_cpu.o  surrogate_model.o random_functions.o matrix_operations.o
+auxilliary_functions.o linear_regression.o kernel_regression_cpu.o  surrogate_model.o random_functions.o matrix_vector_operations.o \
+kernel_regression_test.o metric.o 
 OBJ_GPU = Rodeo.o test_functions.o trust_region_gek.o kriging_training.o optimization.o \
 auxilliary_functions.o linear_regression.o kernel_regression_cuda.o 
 make: $(OBJ)

@@ -15,15 +15,8 @@ enum SURROGATE_MODEL {
 	NONE,
 	LINEAR_REGRESSION,
 	KRIGING,
+	KERNEL_REGRESSION,
 	AGGREGATION};
 
-
-#define LARGE 10E14
-#define EPSILON 10-14
-#define EPSILON_SINGLE 10E-6
-
-
-//#define MIN(x,y) ((x) <= (y) ? x : y)
-//#define MAX(x,y) ((x) <= (y) ? y : x)
 
 #endif

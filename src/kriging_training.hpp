@@ -2,6 +2,7 @@
 #define TRAIN_KRIGING_HPP
 #include <armadillo>
 #include "Rodeo_macros.hpp"
+#include "surrogate_model.hpp"
 #include "linear_regression.hpp"
 
 
@@ -59,7 +60,7 @@ public:
 	void setNumberOfTrainingIterations(unsigned int);
 
 	void train(void);
-	void print(void) const;
+	void printSurrogateModel(void) const;
 	int addNewSampleToData(rowvec newsample);
 
 

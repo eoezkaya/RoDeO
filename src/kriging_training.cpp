@@ -176,7 +176,7 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 }
 
 
-void KrigingModel::print(void) const{
+void KrigingModel::printSurrogateModel(void) const{
 	printf("\n");
 	cout << "Kriging Surrogate model:"<< endl;
 	cout<< "Number of samples: "<<N<<endl;

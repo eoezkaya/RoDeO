@@ -23,9 +23,12 @@ protected:
 	std::string hyperparameters_filename;
 	std::string input_filename;
 
+
 	double ymin,ymax,yave;
 	vec xmin;
 	vec xmax;
+
+	bool ifInitialized;
 
 
 public:
@@ -35,9 +38,12 @@ public:
 	SurrogateModel();
 	SurrogateModel(std::string name, unsigned int dimension);
 
-	void normalizeInputMatrix(void);
 
-	virtual void print(void) const;
+	void ReadDataAndNormalize(void);
+
+	virtual void initializeSurrogateModel(void);
+	virtual void printSurrogateModel(void) const;
+	virtual void printHyperParameters(void) const;
 	virtual void train(void);
 	virtual double interpolate(rowvec x) const;
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;

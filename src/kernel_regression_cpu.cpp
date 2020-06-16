@@ -5,12 +5,804 @@
 #include <iostream>
 #include <stack>
 
+#include "kernel_regression.hpp"
 #include "auxilliary_functions.hpp"
-#include "random_functions.hpp"
 #include "Rodeo_macros.hpp"
+#include "Rodeo_globals.hpp"
 
 using namespace std;
 using namespace arma;
+
+
+
+
+KernelRegressionModel2::KernelRegressionModel2():SurrogateModel(){
+
+}
+
+
+KernelRegressionModel2::KernelRegressionModel2(std::string name, unsigned int dimension):SurrogateModel(name, dimension){
+
+	modelID = KERNEL_REGRESSION;
+	mahalanobisMatrix.set_size(dimension,dimension);
+	mahalanobisMatrixAdjoint.set_size(dimension,dimension);
+	mahalanobisMatrix.fill(0.0);
+	mahalanobisMatrixAdjoint.fill(0.0);
+
+	lowerDiagonalMatrix.set_size(dimension,dimension);
+	lowerDiagonalMatrixAdjoint.set_size(dimension,dimension);
+	lowerDiagonalMatrix.fill(0.0);
+	lowerDiagonalMatrixAdjoint.fill(0.0);
+
+	sigmaGaussianKernel = 0.0;
+	sigmaGaussianKernelAdjoint = 0.0;
+
+	maximumCrossValidationIterations = 20;
+	maximumInnerOptIterations = 10000;
+
+	lossFunctionType = L2_LOSS_FUNCTION;
+
+	weightL12Regularization = zeros<vec>(maximumCrossValidationIterations);
+	weightL12Regularization.fill(0.0);
+
+
+
+}
+
+
+
+void KernelRegressionModel2::initializeSurrogateModel(void){
+
+	if(label != "None"){
+
+		this->ReadDataAndNormalize();
+
+		this->NvalidationSet = N/5;
+		this->Ntraining = N - NvalidationSet;
+
+		/* divide data into training and validation data, validation data is used for optimizing regularization parameters */
+
+
+		if(NvalidationSet > 0){
+			data = shuffle(data);
+		}
+
+		dataTraining      = data.submat( 0, 0, Ntraining-1, dim );
+		XTraining = dataTraining.submat(0,0,Ntraining-1,dim-1);
+		yTraining = dataTraining.col(dim);
+
+
+		if(NvalidationSet > 0){
+
+			dataValidation    = data.submat( Ntraining, 0, N-1, dim );
+			XValidation = dataValidation.submat(0,0,NvalidationSet-1,dim-1);
+			yValidation = dataValidation.col(dim);
+
+		}
+
+
+	}
+
+	for(unsigned int i=0; i<maximumCrossValidationIterations; i++){
+
+		weightL12Regularization(i) = pow(10.0,generateRandomDouble(-5,0.0));
+	}
+
+
+	sigmaGaussianKernel = 1.0;
+
+	this->lowerDiagonalMatrix.eye();
+	mahalanobisMatrix =  lowerDiagonalMatrix * trans(lowerDiagonalMatrix);
+
+	ifInitialized = true;
+
+
+}
+
+
+
+
+
+
+
+
+
+/* This function initializes sigmaGaussianKernel in a special way:
+ * First we try different values of sigma randomly and find the best value that
+ * maximizes the standard deviation of the kernel values of a sample.
+ * In the second step, we add a small random deviation to sigma to have randomness
+ *
+ *
+ */
+void KernelRegressionModel2::initializeSigmaRandom(void){
+
+	double mean = 0.5;
+	double deviation = 0.0;
+
+	unsigned int nTrials = 100;
+	vec kernelValues(Ntraining, fill::zeros);
+
+	double maxstandardDeviation = 0.0;
+	double bestSigma = 0.0;
+
+	if(XValidation.n_rows > 0){
+
+		for(unsigned int i=0; i<nTrials; i++){
+
+
+			sigmaGaussianKernel = pow(10, generateRandomDouble(-2.0,1.0));
+			rowvec x = XValidation.row(0);
+
+			for(unsigned j=0; j<Ntraining; j++) {
+				rowvec xj = XTraining.row(j);
+				kernelValues(j) = this->calculateGaussianKernel(x,xj);
+
+			}
+#if 0
+			printVector(kernelValues, "kernelValues");
+#endif
+			double standardDeviation = stddev(kernelValues);
+#if 0
+			cout <<"standardDeviation: " <<standardDeviation << std::endl;
+#endif
+			if(standardDeviation > maxstandardDeviation){
+				maxstandardDeviation =  standardDeviation;
+				bestSigma = sigmaGaussianKernel;
+
+
+			}
+
+		}
+		mean = bestSigma;
+
+#if 1
+		cout << "Best value of sigma = " << bestSigma << "\n";
+		cout << "Standard deviation = " << maxstandardDeviation << "\n";
+#endif
+
+	}
+
+	deviation = mean * 0.1;
+	sigmaGaussianKernel = mean+ generateRandomDouble(-deviation,deviation);
+
+}
+
+
+
+
+void KernelRegressionModel2::initializeMahalanobisMatrixRandom(void){
+
+
+	for (unsigned int i = 0; i < dim; i++) {
+
+		for (unsigned int j = 0; j <= i; j++) {
+
+			if(i == j) { /* main diagonal */
+
+				lowerDiagonalMatrix(i,j) = 1.0+ generateRandomDouble(-0.01,0.01);
+			}
+			else {
+
+				lowerDiagonalMatrix(i,j) = generateRandomDouble(0.0,0.1);
+			}
+		}
+	}
+
+	calculateMahalanobisMatrix();
+
+
+
+}
+
+
+void KernelRegressionModel2::calculateMahalanobisMatrix(void){
+
+	mat LT(dim,dim, fill::zeros);
+	mahalanobisMatrix.fill(0.0);
+
+	for(unsigned int i=0; i<dim; i++)
+
+		for(unsigned int j=i; j<dim; j++){
+
+			LT(i,j) = lowerDiagonalMatrix(j,i);
+		}
+
+	/* Multiplying matrix L and LT and storing in M */
+	for(unsigned int i = 0; i < dim; ++i)
+		for(unsigned int j = 0; j < dim; ++j)
+			for(unsigned int k = 0; k < dim; ++k)
+			{
+				mahalanobisMatrix(i,j) += lowerDiagonalMatrix(i,k) * LT(k,j);
+
+			}
+
+}
+
+
+
+void KernelRegressionModel2::calculateMahalanobisMatrixAdjoint(void) {
+
+
+	mat LT(dim,dim, fill::zeros);
+	mat LTb(dim,dim, fill::zeros);
+
+	for(unsigned int i=0; i<dim; i++)
+
+		for(unsigned int j=i; j<dim; j++){
+
+			LT(i,j) = lowerDiagonalMatrix(j,i);
+		}
+
+
+	for (int i = int(dim)-1; i > -1; --i)
+		for (int j = int(dim)-1; j > -1; --j)
+			for (int k = int(dim)-1; k > -1; --k) {
+				lowerDiagonalMatrixAdjoint(i,k) += LT(k,j)*mahalanobisMatrixAdjoint(i,j);
+				LTb(k,j) += lowerDiagonalMatrix(i,k)*mahalanobisMatrixAdjoint(i,j);
+			}
+
+
+	for (int i = int(dim)-1; i > -1; --i)
+		for (int j = int(dim)-1; j > i-1; --j) {
+			lowerDiagonalMatrixAdjoint(j,i) +=  LTb(i,j);
+			LTb(i,j) = 0.0;
+		}
+
+
+
+}
+
+
+
+
+
+void KernelRegressionModel2::updateMahalanobisAndSigma(double learningRate){
+
+
+	for(unsigned int i=0; i<dim; i++)
+
+		for(unsigned int j=0; j<=i; j++){
+
+			lowerDiagonalMatrix(i,j) = lowerDiagonalMatrix(i,j) - learningRate*lowerDiagonalMatrixAdjoint(i,j);
+
+			if(lowerDiagonalMatrix(i,j) < 0.0) {
+
+				lowerDiagonalMatrix(i,j) = 10E-06;
+			}
+
+
+		}
+
+	sigmaGaussianKernel = sigmaGaussianKernel - learningRate*0.01* sigmaGaussianKernelAdjoint;
+
+	if(sigmaGaussianKernel < 0.0){
+
+		sigmaGaussianKernel = 10E-06;
+	}
+
+	calculateMahalanobisMatrix();
+
+}
+
+void KernelRegressionModel2::train(void){
+
+
+	const double learningRate = 0.0001;
+
+	for(unsigned int iterCV=0; iterCV< maximumCrossValidationIterations; iterCV++){
+
+		double weightL12 =  weightL12Regularization(iterCV);
+
+#if 1
+		printf("Outer iteration = %d\n",iterCV);
+		printf("weight for regularization = %10.7f\n",weightL12);
+#endif
+
+		initializeMahalanobisMatrixRandom();
+		initializeSigmaRandom();
+
+		printMatrix(mahalanobisMatrix,"mahalanobisMatrix");
+
+
+
+
+		mat bestM;
+		double bestSigma;
+
+
+		/* optimization loop */
+
+		for(unsigned int iterInnerOpt=0 ; iterInnerOpt < maximumInnerOptIterations; iterInnerOpt++){
+
+			double lossFuncValue = calculateLossFunctionAdjoint();
+			double regularizationTerm = calculateL12RegularizationTermAdjoint(weightL12);
+			double objFun = lossFuncValue +  regularizationTerm;
+#if 1
+			printf("objFun = %10.7f, lossFuncValue = %10.7f, regularizationTerm = %10.7f\n",objFun,lossFuncValue,regularizationTerm);
+#endif
+
+
+			updateMahalanobisAndSigma(learningRate);
+
+		}
+
+
+		abort();
+
+
+	}
+
+
+
+}
+
+
+double KernelRegressionModel2::calculateLossFunction(void){
+
+	if(!ifInitialized){
+
+		std::cout <<"\nERROR: calculateLossFunction cannot be called without model initialization!\n";
+		abort();
+	}
+
+	calculateMahalanobisMatrix();
+
+	assert(sigmaGaussianKernel > 0);
+	assert(checkIfSymmetricPositiveDefinite(mahalanobisMatrix));
+
+	double lossFunctionValue = 0.0;
+	mat kernelValuesMatrix = calculateKernelMatrix();
+#if 0
+	printMatrix(kernelValuesMatrix,"kernelValuesMatrix");
+#endif
+	mat regressionWeightsMatrix = calculateKernelRegressionWeights(kernelValuesMatrix);
+#if 0
+	printMatrix(regressionWeightsMatrix,"regressionWeightsMatrix");
+#endif
+	switch ( lossFunctionType )
+	{
+	case L1_LOSS_FUNCTION:
+		lossFunctionValue = calculateL1Loss(regressionWeightsMatrix);
+		break;
+	case L2_LOSS_FUNCTION:
+		lossFunctionValue = calculateL2Loss(regressionWeightsMatrix);
+		break;
+	default:
+		printf("Error: Unknown lossFunType at %s, line %d\n",__FILE__, __LINE__);
+		abort();
+	}
+
+
+	return lossFunctionValue;
+
+
+}
+
+double KernelRegressionModel2::calculateLossFunctionAdjoint(void){
+
+	calculateMahalanobisMatrix();
+
+	assert(sigmaGaussianKernel > 0);
+	assert(checkIfSymmetricPositiveDefinite(mahalanobisMatrix));
+
+	double lossFunctionValue = 0.0;
+	mat kernelValuesMatrix = calculateKernelMatrix();
+
+	mat regressionWeightsMatrix = calculateKernelRegressionWeights(kernelValuesMatrix);
+
+	mat regressionWeightsMatrixAdj(Ntraining,Ntraining,fill::zeros);
+	mat kernelValuesMatrixAdj(Ntraining,Ntraining,fill::zeros);
+
+	switch ( lossFunctionType )
+	{
+	case L1_LOSS_FUNCTION:
+		lossFunctionValue = calculateL1LossAdjoint(regressionWeightsMatrix,regressionWeightsMatrixAdj);
+		break;
+	case L2_LOSS_FUNCTION:
+		lossFunctionValue = calculateL2LossAdjoint(regressionWeightsMatrix,regressionWeightsMatrixAdj);
+		break;
+	default:
+		printf("Error: Unknown lossFunType at %s, line %d\n",__FILE__, __LINE__);
+		exit(-1);
+	}
+
+	regressionWeightsMatrix = calculateKernelRegressionWeightsAdjoint(kernelValuesMatrix,kernelValuesMatrixAdj,regressionWeightsMatrixAdj);
+
+	calculateKernelMatrixAdjoint(kernelValuesMatrixAdj);
+
+	calculateMahalanobisMatrixAdjoint();
+
+	return lossFunctionValue;
+
+
+}
+
+
+
+
+
+mat KernelRegressionModel2::calculateKernelRegressionWeightsAdjoint(mat kernelValuesMatrix, mat &kernelValuesMatrixb, mat kernelWeightMatrixb) const {
+
+	assert(Ntraining >0);
+
+	mat kernelWeightMatrix(Ntraining,Ntraining,fill::zeros);
+
+	vec kernelSum(Ntraining, fill::zeros);
+	vec kernelSumb(Ntraining, fill::zeros);
+
+
+	for (unsigned int i = 0; i < Ntraining; ++i) {
+		for (unsigned int j = 0; j < Ntraining; ++j) {
+			if (i != j) {
+
+				kernelSum(i) = kernelSum(i) + kernelValuesMatrix(i,j);
+
+			}
+		}
+
+
+		for (unsigned int j = 0; j < Ntraining; ++j) {
+
+			if (i != j) {
+
+				kernelWeightMatrix(i,j) =  kernelValuesMatrix(i,j)/kernelSum(i);
+			}
+
+		}
+	}
+
+	for (int i = Ntraining-1; i > -1; --i) {
+		{
+			double tempb;
+			for (int j = Ntraining-1; j > -1; --j) {
+
+				if (i != j) {
+					tempb = kernelWeightMatrixb(i,j)/kernelSum(i);
+					kernelWeightMatrixb(i,j) = 0.0;
+					kernelValuesMatrixb(i,j) += tempb;
+					kernelSumb(i) = kernelSumb(i) - kernelValuesMatrix(i,j)*tempb/kernelSum(i);
+				}
+			}
+		}
+		for (int j = Ntraining-1; j > -1; --j) {
+			if (i != j) {
+
+				kernelValuesMatrixb(i,j) = kernelValuesMatrixb(i,j) +kernelSumb(i);
+			}
+		}
+	}
+
+	return kernelWeightMatrix;
+}
+
+
+
+
+
+mat KernelRegressionModel2::calculateKernelRegressionWeights(mat kernelValuesMatrix) const{
+
+	assert(Ntraining >0);
+	assert(checkIfSymmetric(kernelValuesMatrix));
+
+	mat kernelWeightMatrix = zeros<mat>(Ntraining,Ntraining);
+
+	vec kernelSum = zeros<vec>(Ntraining);
+
+	for(unsigned int i=0; i<Ntraining; i++){
+
+		for(unsigned int j=0; j<Ntraining; j++){
+
+			if(i!=j) kernelSum(i) +=  kernelValuesMatrix(i,j);
+		}
+
+		for(unsigned int j=0; j<Ntraining; j++){
+
+			if(i!=j) kernelWeightMatrix(i,j) =  kernelValuesMatrix(i,j)/kernelSum(i);
+		}
+	}
+
+	return kernelWeightMatrix;
+}
+
+
+void KernelRegressionModel2::calculateKernelMatrixAdjoint(mat &kernelValuesMatrixb) {
+
+	sigmaGaussianKernelAdjoint = 0.0;
+	mahalanobisMatrixAdjoint.fill(0.0);
+
+
+	for (int i = Ntraining-1; i > -1; --i) {
+		double resb;
+		double tmpb;
+
+		for (int j = Ntraining-1; j > i-1; --j) {
+
+			rowvec xi = XTraining.row(i);
+			rowvec xj = XTraining.row(j);
+
+			tmpb = kernelValuesMatrixb(j,i);
+			kernelValuesMatrixb(j,i) = 0.0;
+			kernelValuesMatrixb(i,j) += tmpb;
+			resb = kernelValuesMatrixb(i,j);
+			kernelValuesMatrixb(i,j) = 0.0;
+			calculateGaussianKernelAdjoint(xi, xj,resb);
+		}
+	}
+
+
+
+}
+
+
+mat KernelRegressionModel2::calculateKernelMatrix(void) const{
+
+	mat kernelValuesMatrix = zeros<mat>(Ntraining,Ntraining);
+
+
+	for(unsigned int i=0; i<Ntraining; i++){
+
+		for(unsigned int j=i; j<Ntraining; j++) {
+
+			rowvec xi = XTraining.row(i);
+			rowvec xj = XTraining.row(j);
+
+			kernelValuesMatrix(i,j) = calculateGaussianKernel(xi, xj);
+			kernelValuesMatrix(j,i) = kernelValuesMatrix(i,j);
+		}
+
+	}
+	return kernelValuesMatrix;
+
+
+}
+
+double KernelRegressionModel2::calculateL1LossAdjoint(mat weights, mat &weightsb) const{
+	double result = 0.0;
+	int branch;
+
+	stack<int> stackBranch;
+	weightsb.fill(0.0);
+
+
+	for (unsigned int i = 0; i < Ntraining; ++i) {
+		double fSurrogateValue = 0.0;
+		for (unsigned int j = 0; j < Ntraining; ++j) {
+
+			if (i != j) {
+				fSurrogateValue = fSurrogateValue + yTraining(j)*weights(i,j);
+				stackBranch.push(1);
+			}
+			else {
+				stackBranch.push(0);
+			}
+
+		}
+
+		double fExact = yTraining[i];
+		result += fabs(fExact-fSurrogateValue);
+		if (fExact - fSurrogateValue >= 0.0){
+			stackBranch.push(0);
+		}
+		else{
+			stackBranch.push(1);
+		}
+
+	}
+
+	for (int i = Ntraining-1; i > -1; --i) {
+
+		double fSurrogateValueb = 0.0;
+		branch = stackBranch.top(); stackBranch.pop();
+		if (branch == 0) {
+
+			fSurrogateValueb = -1.0;
+		} else {
+			fSurrogateValueb = 1.0;
+
+		}
+
+		for (int j = Ntraining-1; j > -1; --j) {
+
+			branch = stackBranch.top(); stackBranch.pop();
+			if (branch != 0) {
+
+				weightsb(i,j) = weightsb(i,j) + yTraining(j)*fSurrogateValueb;
+			}
+		}
+	}
+	assert(stackBranch.empty());
+	return result;
+}
+
+
+double KernelRegressionModel2::calculateL1Loss(mat weights) const{
+
+	double result = 0.0;
+
+	for(unsigned int i=0; i<Ntraining; i++) {
+
+		double fSurrogateValue = 0.0;
+		for(unsigned int j=0; j<Ntraining; j++) {
+
+			if(i!=j) {
+
+				fSurrogateValue += yTraining(j)* weights(i,j);
+			}
+		}
+
+		double fExact = yTraining(i);
+		result += fabs(fExact-fSurrogateValue);
+
+	}
+	return result;
+}
+
+
+
+double KernelRegressionModel2::calculateL2LossAdjoint(mat weights, mat &weightsb) const {
+
+	double result = 0.0;
+	int branch;
+	stack<int> stackBranch;
+	stack<double> stackValues;
+
+	weightsb.fill(0.0);
+
+	/* forward sweep */
+	for (unsigned int i = 0; i < Ntraining; ++i) {
+		double fSurrogateValue = 0.0;
+		for (unsigned int j = 0; j < Ntraining; ++j){
+
+			if (i != j) {
+
+				fSurrogateValue = fSurrogateValue + yTraining(j)*weights(i,j);
+				stackBranch.push(1);
+
+			} else {
+
+				stackBranch.push(0);
+
+			}
+
+		}
+
+		double fExact = yTraining(i);
+
+		result += (fExact-fSurrogateValue) * (fExact-fSurrogateValue);
+		stackValues.push(fSurrogateValue);
+
+	}
+
+	/* adjoint sweep */
+
+
+	for (int i = Ntraining-1; i > -1; --i) {
+
+		double fSurrogateValue;
+		double fSurrogateValueb = 0.0;
+
+
+		fSurrogateValue = stackValues.top(); stackValues.pop();
+
+		double fExact = yTraining(i);
+		fSurrogateValueb = -(2.0*(fExact-fSurrogateValue));
+		for (int j = Ntraining-1; j > -1; --j) {
+			branch = stackBranch.top(); stackBranch.pop();
+
+			if (branch != 0) {
+
+				weightsb(i,j) = weightsb(i,j) + yTraining(j)*fSurrogateValueb;
+			}
+
+		}
+	}
+
+
+	assert(stackBranch.empty());
+	assert(stackValues.empty());
+	return result;
+}
+
+
+double KernelRegressionModel2::calculateL2Loss(mat weights) const{
+
+	double result = 0.0;
+
+	for(unsigned int i=0; i<Ntraining; i++) {
+
+		double fSurrogateValue = 0.0;
+		for(unsigned int j=0; j<Ntraining; j++) {
+
+			if(i!=j) {
+
+				fSurrogateValue += yTraining(j)* weights(i,j);
+
+			}
+		}
+
+		double fExact = yTraining(i);
+		result += (fExact-fSurrogateValue) * (fExact-fSurrogateValue);
+	}
+	return result;
+}
+
+double KernelRegressionModel2::calculateGaussianKernelAdjoint(rowvec xi, rowvec xj,double calculateGaussianKernelb){
+
+	double twoSigmaSqr = 2.0*sigmaGaussianKernel*sigmaGaussianKernel;
+	double twoSigmaSqrb = 0.0;
+	double metricVal;
+	double metricValb;
+	double tempb;
+	double temp;
+	double tempb0;
+
+	metricVal = calculateMetric(xi, xj, mahalanobisMatrix);
+
+	double kernelVal = 1.0/(sigmaGaussianKernel*rootTwoPi)*exp(-metricVal/twoSigmaSqr);
+	kernelVal += EPSILON;
+
+	double kernelValb = calculateGaussianKernelb;
+	temp = metricVal/twoSigmaSqr;
+	tempb = kernelValb/(rootTwoPi*sigmaGaussianKernel);
+	tempb0 = -(exp(-temp)*tempb/twoSigmaSqr);
+	metricValb = tempb0;
+	twoSigmaSqrb = -(temp*tempb0);
+	sigmaGaussianKernelAdjoint += 2.0*sigmaGaussianKernel*2.0*twoSigmaSqrb - exp(-temp)*tempb/sigmaGaussianKernel;
+	metricVal = calculateMetricAdjoint(xi, xj, mahalanobisMatrix, mahalanobisMatrixAdjoint, metricValb);
+	return kernelVal;
+}
+
+double KernelRegressionModel2::calculateGaussianKernel(rowvec xi, rowvec xj) const {
+
+	double twoSigmaSqr = 2.0*sigmaGaussianKernel*sigmaGaussianKernel;
+
+	double metricVal = calculateMetric(xi, xj, mahalanobisMatrix);
+
+
+	double kernelVal = (1.0/(sigmaGaussianKernel*rootTwoPi)) * exp(-metricVal/twoSigmaSqr);
+
+	kernelVal += EPSILON; /* we add some small number to the result for stability */
+
+	return kernelVal;
+
+}
+
+
+
+
+double KernelRegressionModel2::calculateL12RegularizationTerm(double weight) const {
+
+	double regTerm = 0.0;
+
+	for (unsigned int i = 0; i < dim; i++)
+		for (unsigned int j = 0; j < dim; j++) {
+
+			regTerm += mahalanobisMatrix(i,j) * mahalanobisMatrix(i,j);
+		}
+
+	return  weight * regTerm;
+
+}
+
+double KernelRegressionModel2::calculateL12RegularizationTermAdjoint(double weight) {
+
+
+	double regTerm = 0.0;
+
+	for (unsigned int i = 0; i < dim; i++)
+		for (unsigned int j = 0; j < dim; j++) {
+
+			regTerm += mahalanobisMatrix(i,j) * mahalanobisMatrix(i,j);
+		}
+
+	for (unsigned int i = dim-1; i > -1; --i)
+		for (unsigned int j = dim-1; j > -1; --j)
+			mahalanobisMatrixAdjoint(i,j) += 2*mahalanobisMatrix(i,j)*weight;
+
+	return  weight * regTerm;
+}
+
+
 
 
 float MAX(float a, float b){
@@ -163,7 +955,7 @@ double gaussianKernel(rowvec &xi, rowvec &xj, double sigma, mat &M) {
 #endif
 
 	/* calculate distance between xi and xj with the matrix M */
-	double metricVal = calcMetric(xi, xj, M);
+	double metricVal = calculateMetric(xi, xj, M);
 
 
 
@@ -3604,8 +4396,8 @@ double kernelRegressorNotNormalized(mat &X,
 
 		xi = X.row(i);
 #if 1
-	printf("xi:\n");
-	xi.print();
+		printf("xi:\n");
+		xi.print();
 #endif
 
 		kernelVal(i) = gaussianKernel(xi, xpNormalized, sigma, M);

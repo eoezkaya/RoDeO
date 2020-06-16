@@ -15,7 +15,7 @@ public:
 
 	LinearModel();
 	LinearModel(std::string name, unsigned int dimension);
-	void print(void) const;
+	void printSurrogateModel(void) const;
 	void train(void);
 	double interpolate(rowvec x) const;
 	vec interpolateAll(mat X) const;

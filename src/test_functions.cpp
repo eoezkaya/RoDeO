@@ -297,7 +297,7 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 	}
 
 
-	TestFunSurrogate->print();
+	TestFunSurrogate->printSurrogateModel();
 
 	TestFunSurrogate->train();
 
@@ -331,7 +331,6 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 
 
 }
-
 
 
 
@@ -376,6 +375,10 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 
 	delete[] x;
 
+	if(numberOfInputParams == 1){
+
+		sampleMatrix = sort(sampleMatrix);
+	}
 
 	return sampleMatrix;
 
