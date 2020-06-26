@@ -862,9 +862,9 @@ void AggregationModel::train(void) {
 
 		printf("Training the Mahalanobis matrix and sigma with %d iterations...\n",number_of_cv_iterations);
 		/* now train the Mahalanobis matrix */
-		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression,
-				sigma, wSvd, w12, number_of_cv_iterations,L2_LOSS_FUNCTION, minibatchsize,10000);
-
+//		trainMahalanobisDistance(LKernelRegression, inputDataKernelRegression,
+//				sigma, wSvd, w12, number_of_cv_iterations,L2_LOSS_FUNCTION, minibatchsize,10000);
+//
 
 
 

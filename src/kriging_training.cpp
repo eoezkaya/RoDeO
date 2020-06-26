@@ -36,64 +36,77 @@ KrigingModel::KrigingModel():SurrogateModel(){
 }
 
 
-KrigingModel::KrigingModel(std::string name, unsigned int dimension):SurrogateModel(name, dimension),linearModel(name, dimension){
-
-	printf("Initializing settings for training %s data (Kriging model)...\n",name.c_str());
-
-	modelID = KRIGING;
-
-	kriging_weights.zeros(2*dimension);
-	epsilonKriging = 10E-12;
-	max_number_of_kriging_iterations = 20000;
+KrigingModel::KrigingModel(std::string name):SurrogateModel(name),linearModel(name){
 
 	linear_regression = false;
+	modelID = KRIGING;
 
 
+}
 
-	for(unsigned int i=0; i<data.n_rows; i++){
+void KrigingModel::initializeSurrogateModel(void){
 
-		rowvec sample1 = data.row(i);
+	if(label != "None"){
+		printf("Initializing settings for the Kriging model...\n");
 
-		for(unsigned int j=i+1; j<data.n_rows; j++){
+		modelID = KRIGING;
 
-			rowvec sample2 = data.row(j);
+		ReadDataAndNormalize();
 
-			if(ifTooCLose(sample1, sample2)) {
+		kriging_weights =zeros<vec>(2*dim);
+		epsilonKriging = 10E-12;
+		max_number_of_kriging_iterations = 20000;
 
-				printf("ERROR: Two samples in the training data are too close to each other!\n");
-				exit(-1);
+
+		for(unsigned int i=0; i<N; i++){
+
+			rowvec sample1 = X.row(i);
+
+			for(unsigned int j=i+1; j<N; j++){
+
+				rowvec sample2 = X.row(j);
+
+				if(ifTooCLose(sample1, sample2)) {
+
+					printf("ERROR: Two samples in the training data are too close to each other!\n");
+					exit(-1);
+
+				}
 
 			}
 
 		}
 
+
+		sigmaSquared = 0.0;
+		beta0 = 0.0;
+
+		correlationMatrix = zeros<mat>(N,N);
+		upperDiagonalMatrix= zeros<mat>(N,N);
+		R_inv_ys_min_beta = zeros<vec>(N);
+		R_inv_I= zeros<vec>(N);
+		vectorOfOnes= zeros<vec>(N);
+
+		std::cout<<"Kriging model initialization is done...\n"<<std::endl;
+
+
 	}
+}
 
+void KrigingModel::printHyperParameters(void) const{
 
-	sigmaSquared = 0.0;
-	beta0 = 0.0;
+	printVector(kriging_weights);
 
-	correlationMatrix.set_size(N,N);
-	correlationMatrix.fill(0.0);
-	upperDiagonalMatrix.set_size(N,N);
-	upperDiagonalMatrix.fill(0.0);
-	R_inv_ys_min_beta.set_size(N);
-	R_inv_ys_min_beta.fill(0.0);
-	R_inv_I.set_size(N);
-	R_inv_I.fill(0.0);
-	vectorOfOnes.set_size(N);
-	vectorOfOnes.fill(1.0);
+}
+void KrigingModel::saveHyperParameters(void) const{
 
-	std::cout<<"Kriging model initialization is done...\n"<<std::endl;
+	kriging_weights.save(hyperparameters_filename, csv_ascii);
 
-#if 0
+}
 
-	this->print();
-	std::cout<<"Kriging model initialization is done...\n"<<std::endl;
-#endif
+void KrigingModel::loadHyperParameters(void){
 
-
-
+	kriging_weights.load(hyperparameters_filename, csv_ascii);
 
 }
 
@@ -146,9 +159,9 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 	/* avoid points that are too close to each other */
 
 	bool flagTooClose=false;
-	for(unsigned int i=0; i<data.n_rows; i++){
+	for(unsigned int i=0; i<N; i++){
 
-		rowvec sample = data.row(i);
+		rowvec sample = rawData.row(i);
 
 		if(ifTooCLose(sample, newsample)) {
 
@@ -159,10 +172,10 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 
 	if(!flagTooClose){
 
-		data.resize(N+1, dim+1);
+		rawData.resize(N+1, dim+1);
 
-		data.row(N) = newsample;
-		data.save(input_filename,csv_ascii);
+		rawData.row(N) = newsample;
+		rawData.save(input_filename,csv_ascii);
 
 		updateWithNewData();
 		return 0;
@@ -182,7 +195,7 @@ void KrigingModel::printSurrogateModel(void) const{
 	cout<< "Number of samples: "<<N<<endl;
 	cout<<"Number of input parameters: "<<dim<<endl;
 	cout<<"Raw Data:\n";
-	data.print();
+	rawData.print();
 	cout<<"X:\n";
 	X.print();
 	cout<<"xmin =";
@@ -204,7 +217,7 @@ void KrigingModel::printSurrogateModel(void) const{
 }
 void KrigingModel::updateModelParams(void){
 
-	vec ys = data.col(dim);
+	vec ys = y;
 
 	if(linear_regression){
 
@@ -257,7 +270,7 @@ void KrigingModel::updateWithNewData(void){
 	R_inv_I.reset();
 	R_inv_ys_min_beta.reset();
 	X.reset();
-	data.reset();
+	rawData.reset();
 	vectorOfOnes.reset();
 
 
@@ -268,7 +281,7 @@ void KrigingModel::updateWithNewData(void){
 
 	/* data matrix input */
 
-	bool status = data.load(input_filename.c_str(), csv_ascii);
+	bool status = rawData.load(input_filename.c_str(), csv_ascii);
 	if(status == true)
 	{
 		printf("Data input is done\n");
@@ -279,18 +292,18 @@ void KrigingModel::updateWithNewData(void){
 		exit(-1);
 	}
 
-	assert(dim == data.n_cols - 1);
+	assert(dim == rawData.n_cols - 1);
 
-	N = data.n_rows;
+	N = rawData.n_rows;
 #if 1
 	printf("%s model has now %d training samples\n",label.c_str(),N);
 #endif
-	X = data.submat(0, 0, N - 1, dim - 1);
+	X = rawData.submat(0, 0, N - 1, dim - 1);
 
 	for (unsigned int i = 0; i < dim; i++) {
 
-		xmax(i) = data.col(i).max();
-		xmin(i) = data.col(i).min();
+		xmax(i) = rawData.col(i).max();
+		xmin(i) = rawData.col(i).min();
 
 	}
 
@@ -321,9 +334,9 @@ void KrigingModel::updateWithNewData(void){
 	vectorOfOnes.set_size(N);
 	vectorOfOnes.fill(1.0);
 
-	ymin = min(data.col(dim));
-	ymax = max(data.col(dim));
-	yave = mean(data.col(dim));
+	ymin = min(rawData.col(dim));
+	ymax = max(rawData.col(dim));
+	yave = mean(rawData.col(dim));
 
 #if 1
 	printf("ymin = %15.10f, ymax = %15.10f, yave = %15.10f\n",ymin,ymax,yave);
@@ -519,7 +532,7 @@ void KrigingModel::train(void){
 
 	printf("\nTraining Kriging response surface for the data : %s\n",input_filename.c_str());
 
-	vec ysKriging = data.col(dim);
+	vec ysKriging = y;
 
 
 	if(linear_regression){
@@ -660,11 +673,11 @@ void KrigingModel::train(void){
 		}
 #if 1
 #pragma omp master
-			{
-		printf("Initial design:\n");
-		initial_design.theta.print();
-		initial_design.gamma.print();
-			}
+		{
+			printf("Initial design:\n");
+			initial_design.theta.print();
+			initial_design.gamma.print();
+		}
 #endif
 
 		initial_design.calculate_fitness(epsilon,Xmatrix,ys);
@@ -849,7 +862,6 @@ void KrigingModel::train(void){
 
 double KrigingModel::calculateInSampleError(void) const{
 
-	vec ys = data.col(dim);
 
 	double meanSquaredError = 0.0;
 
@@ -869,7 +881,7 @@ double KrigingModel::calculateInSampleError(void) const{
 #endif
 		double functionValueSurrogate = interpolate(xp);
 
-		double functionValueExact = ys(i);
+		double functionValueExact = y(i);
 
 		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
 

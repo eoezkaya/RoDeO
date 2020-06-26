@@ -6,26 +6,7 @@
 using namespace arma;
 
 
-class KernelRegressionModel {
-
-public:
-
-	unsigned int dim;
-	unsigned int N;
-	std::string label;
-	std::string kernelRegHyperParamFilename;
-
-	mat M;
-	mat data;
-	mat X;
-	double sigma;
-
-	KernelRegressionModel(std::string name,int dimension);
-
-};
-
-
-class KernelRegressionModel2 : public SurrogateModel {
+class KernelRegressionModel : public SurrogateModel {
 
 private:
 
@@ -38,20 +19,10 @@ private:
 	mat lowerDiagonalMatrix;
 	mat lowerDiagonalMatrixAdjoint;
 
-	unsigned int maximumCrossValidationIterations;
-	unsigned int maximumInnerOptIterations;
-	unsigned int NvalidationSet;
-	unsigned int Ntraining;
 
 
-	mat dataTraining;
-	mat	dataValidation;
-
-	mat	XTraining;
-	mat	XValidation;
-
-	vec	yTraining;
-	vec	yValidation;
+	PartitionData testDataForInnerOptimizationLoop;
+	PartitionData trainingData;
 
 	vec weightL12Regularization;
 	LOSS_FUNCTION lossFunctionType;
@@ -60,15 +31,26 @@ private:
 
 public:
 
-	KernelRegressionModel2();
-	KernelRegressionModel2(std::string name, unsigned int dimension);
+	unsigned int maximumCrossValidationIterations;
+	unsigned int maximumInnerOptIterations;
+
+	KernelRegressionModel();
+	KernelRegressionModel(std::string name);
 
 	void initializeSurrogateModel(void);
+	void printSurrogateModel(void) const;
+	void printHyperParameters(void) const;
+	void saveHyperParameters(void) const;
+	void loadHyperParameters(void);
+	void train(void);
+	double interpolate(rowvec x) const ;
+	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
+	double calculateInSampleError(void) const;
+
+
 	void initializeMahalanobisMatrixRandom(void);
 	void initializeSigmaRandom(void);
 
-
-	void train(void);
 	void calculateMahalanobisMatrix(void);
 	void calculateMahalanobisMatrixAdjoint(void);
 	void updateMahalanobisAndSigma(double learningRate);
@@ -100,6 +82,7 @@ public:
 	friend void testcalculateLossFunctionAdjointL2(void);
 	friend void testcalculateLossFunctionAdjointL1(void);
 	friend void testcalculateMahalanobisMatrix(void);
+	friend void testcalculateLossFunctions(void);
 
 
 };
@@ -118,14 +101,14 @@ double kernelRegressor(mat &X, vec &y, mat &grad, rowvec &xp, mat &M, double sig
 
 
 double kernelRegressorNotNormalized(mat &X,
-								   mat &XnotNormalized,
-								   vec &y,
-								   mat &grad,
-								   rowvec &xp,
-								   vec &xmin,
-								   vec &xmax,
-								   mat &M,
-								   double sigma);
+		mat &XnotNormalized,
+		vec &y,
+		mat &grad,
+		rowvec &xp,
+		vec &xmin,
+		vec &xmax,
+		mat &M,
+		double sigma);
 
 double kernelRegressorNotNormalized(mat &X,
 		mat &XnotNormalized,

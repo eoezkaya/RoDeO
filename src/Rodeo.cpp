@@ -54,13 +54,13 @@ int main(void){
 	if (ret != 0){
 
 		fprintf(stderr, "Error: cannot change directory! at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
+		abort();
 	}
 
 
-	testAllKernelRegression();
-
-	exit(1);
+//	testAllKernelRegression();
+//
+//	exit(1);
 
 
 
@@ -90,14 +90,14 @@ int main(void){
 //	exit(1);
 
 
-	TestFunction HimmelblauFunc("Himmelblau",2);
-	HimmelblauFunc.func_ptr = Himmelblau;
-	////	EggholderFunc.adj_ptr = Eggholder_adj;
-	////	EggholderFunc.ifAdjointFunctionExist = true;;
-	HimmelblauFunc.setBoxConstraints(-5.0,5.0);
-	HimmelblauFunc.print();
+	TestFunction LinearTestFunc("LinearTF1",2);
+	LinearTestFunc.func_ptr = LinearTF1;
+	LinearTestFunc.adj_ptr = LinearTF1Adj;
+	LinearTestFunc.ifAdjointFunctionExist = true;;
+	LinearTestFunc.setBoxConstraints(-5.0,5.0);
+	LinearTestFunc.print();
 //	HimmelblauFunc.plot();
-	HimmelblauFunc.testSurrogateModel(KRIGING,100,true);
+	LinearTestFunc.testSurrogateModel(GRADIENT_ENHANCED_KERNEL_REGRESSION,100,true);
 
 //	HimmelblauFunc.testEfficientGlobalOptimization(20,20, true);
 	exit(1);

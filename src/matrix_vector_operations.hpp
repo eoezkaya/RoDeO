@@ -16,7 +16,6 @@ rowvec normalizeRowVector(rowvec x, vec xmin, vec xmax);
 rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax);
 
 mat normalizeMatrix(mat matrixIn);
+mat normalizeMatrix(mat matrixIn, vec xmin, vec xmax);
 
-bool checkIfSymmetricPositiveDefinite(const mat &M);
-bool checkIfSymmetric(const mat &M);
 #endif

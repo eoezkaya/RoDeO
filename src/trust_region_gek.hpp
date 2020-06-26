@@ -2,7 +2,22 @@
 #define TRAIN_TR_GEK_HPP
 
 #include "Rodeo_macros.hpp"
+#include "kernel_regression.hpp"
 
+class GradientKernelRegressionModel: public KernelRegressionModel{
+
+private:
+
+	mat gradientData;
+
+
+public:
+
+	GradientKernelRegressionModel();
+	GradientKernelRegressionModel(std::string name);
+
+
+};
 
 class AggregationModel {
 

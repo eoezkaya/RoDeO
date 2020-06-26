@@ -18,8 +18,8 @@ void testAllKernelRegression(void){
 	testcalculateKernelRegressionWeightsAdjoint();
 	testcalculateLossFunctionAdjointL2();
 	testcalculateLossFunctionAdjointL1();
-	testKernelRegressionTrain();
 
+	testKernelRegressionTrain();
 
 }
 /* This function generates a test data for kernel regression using N data points with "dim" dimensional random
@@ -64,9 +64,9 @@ void testcalculateMahalanobisMatrix(void){
 
 	generateRandomTestDataForKernelRegression(dim,N);
 
-	KernelRegressionModel2 testModel("testData",dim);
+	KernelRegressionModel testModel("testData");
 	testModel.initializeMahalanobisMatrixRandom();
-	testModel.calculateMahalanobisMatrix();
+
 	mat lowerDiagTest = testModel.lowerDiagonalMatrix;
 
 	mat mahalanabisMatTest =  lowerDiagTest * trans(lowerDiagTest);
@@ -82,6 +82,7 @@ void testcalculateMahalanobisMatrix(void){
 }
 
 
+
 void testcalculateKernelRegressionWeights(void){
 
 	printf("%s:",__func__ );
@@ -93,9 +94,9 @@ void testcalculateKernelRegressionWeights(void){
 
 
 
-	KernelRegressionModel2 testModel("None",2);
+	KernelRegressionModel testModel("None");
 	testModel.initializeSurrogateModel();
-	testModel.Ntraining =3;
+	testModel.trainingData.numberOfSamples = 3;
 
 	mat weights = testModel.calculateKernelRegressionWeights(kernelMat);
 
@@ -129,9 +130,9 @@ void testcalculateKernelRegressionWeightsAdjoint(void){
 	printf("%s:",__func__ );
 
 	int N = generateRandomInt(5,10);
-	KernelRegressionModel2 testModel("None",2);
+	KernelRegressionModel testModel("None");
 
-	testModel.Ntraining = N;
+	testModel.trainingData.numberOfSamples = N;
 
 	mat kernelMat(N,N,fill::randn);
 	mat kernelMatb(N,N,fill::zeros);
@@ -198,6 +199,7 @@ void testcalculateLossFunctions(void){
 
 	mat testData(3,3,fill::zeros);
 
+
 	testData(0,0) = 0.0; testData(0,1) = 1.0; testData(0,2) = 1.0;
 	testData(1,0) = 1.0; testData(1,1) = 0.0; testData(1,2) = 2.0;
 	testData(2,0) = 3.0; testData(2,1) = 2.0; testData(2,2) = 3.0;
@@ -205,9 +207,10 @@ void testcalculateLossFunctions(void){
 	testData.save(testDataFileName,arma::csv_ascii);
 
 
-	KernelRegressionModel2 testModel("testcalculateLossFunctions",2);
+	KernelRegressionModel testModel("testcalculateLossFunctions");
 	testModel.initializeSurrogateModel();
 
+	testModel.trainingData.yExact = testData.col(2);
 	remove(testDataFileName.c_str());
 
 
@@ -266,13 +269,14 @@ void testcalculateLossFunctionsAdjoint(void){
 
 	testData.save(testDataFileName,arma::csv_ascii);
 
-	KernelRegressionModel2 testModel("testcalculateLossFunctions",dim);
+	KernelRegressionModel testModel("testcalculateLossFunctions");
 	testModel.initializeSurrogateModel();
 
 	remove(testDataFileName.c_str());
 
 
-	unsigned int Ntraining = testModel.Ntraining;
+	unsigned int Ntraining = testModel.trainingData.numberOfSamples;
+
 
 	mat weights = generateRandomWeightMatrix(Ntraining);
 	mat weightsb(Ntraining,Ntraining, fill::zeros);
@@ -347,7 +351,7 @@ void testcalculateGaussianKernel(void){
 
 	printf("%s:",__func__ );
 
-	KernelRegressionModel2 testModel("None",2);
+	KernelRegressionModel testModel("None");
 	testModel.initializeSurrogateModel();
 
 	rowvec x1(3);
@@ -386,7 +390,7 @@ void testcalculateGaussianKernelAdjoint(void){
 	rowvec xi(dim,fill::randn);
 	rowvec xj(dim,fill::randn);
 
-	KernelRegressionModel2 testModel("None",dim);
+	KernelRegressionModel testModel("None");
 	testModel.initializeSurrogateModel();
 	testModel.initializeSigmaRandom();
 	testModel.initializeMahalanobisMatrixRandom();
@@ -522,7 +526,7 @@ void testcalculateLossFunctionAdjointL2(void){
 
 	testData.save("testData.csv",arma::csv_ascii);
 
-	KernelRegressionModel2 testModel("testData",dim);
+	KernelRegressionModel testModel("testData");
 	testModel.initializeSurrogateModel();
 	testModel.initializeMahalanobisMatrixRandom();
 
@@ -544,26 +548,29 @@ void testcalculateLossFunctionAdjointL2(void){
 	abortIfFalse(passTest,__FILE__, __LINE__);
 
 	/* check derivatives w.r.t. to L (only lower diagonal)*/
-	const double epsL = testModel.lowerDiagonalMatrix(0,0)*0.001;
+
 	mat fdValues(dim,dim, fill::zeros);
 	for(int i=0 ; i<dim; i++){
 
-		for(int j=0; j<dim; j++){
-
+		for(int j=0; j<=i; j++){
+			double epsL = testModel.lowerDiagonalMatrix(i,j)*0.001;
 			testModel.lowerDiagonalMatrix(i,j) += epsL;
 			fplus = testModel.calculateLossFunction();
 			testModel.lowerDiagonalMatrix(i,j) -= 2*epsL;
 			fminus = testModel.calculateLossFunction();
 			fdValues(i,j) = (fplus - fminus) /(2*epsL);
 			testModel.lowerDiagonalMatrix(i,j) += epsL;
+			passTest = checkValue(testModel.lowerDiagonalMatrixAdjoint(i,j), fdValues(i,j));
+			abortIfFalse(passTest,__FILE__, __LINE__);
+
+
+
 		}
 
 
 	}
 
 
-	passTest = checkMatrix(testModel.lowerDiagonalMatrixAdjoint, fdValues);
-	abortIfFalse(passTest,__FILE__, __LINE__);
 
 	printf("\t passed\n");
 }
@@ -579,9 +586,10 @@ void testcalculateLossFunctionAdjointL1(void){
 
 	testData.save("testData.csv",arma::csv_ascii);
 
-	KernelRegressionModel2 testModel("testData",dim);
+	KernelRegressionModel testModel("testData");
 	testModel.lossFunctionType = L1_LOSS_FUNCTION;
 	testModel.initializeSurrogateModel();
+	testModel.initializeMahalanobisMatrixRandom();
 
 	double lossFunc = testModel.calculateLossFunction();
 	double lossFuncFromAdj = testModel.calculateLossFunctionAdjoint();
@@ -606,25 +614,24 @@ void testcalculateLossFunctionAdjointL1(void){
 
 
 	/* check derivatives w.r.t. to mahalanobisMatrix */
-	const double epsL = testModel.lowerDiagonalMatrix(0,0)*0.0001;
+
 	mat fdValues(dim,dim);
 	for(int i=0 ; i<dim; i++){
 
-		for(int j=0; j< dim; j++){
-
+		for(int j=0; j<= i; j++){
+			double epsL = testModel.lowerDiagonalMatrix(i,j)*0.001;
 			testModel.lowerDiagonalMatrix(i,j) += epsL;
 			fplus = testModel.calculateLossFunction();
 			testModel.lowerDiagonalMatrix(i,j) -= 2*epsL;
 			fminus = testModel.calculateLossFunction();
 			fdValues(i,j) = (fplus - fminus) /(2*epsL);
 			testModel.lowerDiagonalMatrix(i,j) += epsL;
+			passTest = checkValue(testModel.lowerDiagonalMatrixAdjoint(i,j), fdValues(i,j));
+			abortIfFalse(passTest,__FILE__, __LINE__);
 		}
 
 
 	}
-
-	passTest = checkMatrix(testModel.lowerDiagonalMatrixAdjoint, fdValues);
-	abortIfFalse(passTest,__FILE__, __LINE__);
 #if 0
 	printMatrix(testModel.lowerDiagonalMatrixAdjoint, "lowerDiagonalMatrixAdjoint");
 	printMatrix(fdValues, "Finite Difference Values");
@@ -661,15 +668,18 @@ void testKernelRegressionTrain(void){
 	testData.col(dim) = y;
 	testData.save("testData.csv",arma::csv_ascii);
 
-	KernelRegressionModel2 testModel("testData",dim);
+	KernelRegressionModel testModel("testData");
 	testModel.initializeSurrogateModel();
 
 	printMatrix(testData, "testData");
 
 
+	testModel.maximumCrossValidationIterations = 3;
 	testModel.train();
 
 
 
 }
+
+
 

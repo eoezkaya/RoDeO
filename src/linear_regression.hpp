@@ -14,15 +14,23 @@ class LinearModel : public SurrogateModel {
 public:
 
 	LinearModel();
-	LinearModel(std::string name, unsigned int dimension);
+	LinearModel(std::string name);
+
+	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;
+	void printHyperParameters(void) const;
+	void saveHyperParameters(void) const;
+	void loadHyperParameters(void);
 	void train(void);
-	double interpolate(rowvec x) const;
+	double interpolate(rowvec x) const ;
+	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
+
+	double calculateInSampleError(void) const;
+
 	vec interpolateAll(mat X) const;
 
 	void setRegularizationParam(double value);
 	double getRegularizationParam(void) const;
-	double calculateInSampleError(void) const;
 
 };
 

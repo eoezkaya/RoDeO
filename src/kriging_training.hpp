@@ -43,24 +43,26 @@ public:
 	unsigned int max_number_of_kriging_iterations;
 
 	KrigingModel();
-	KrigingModel(std::string name, unsigned int dimension);
+	KrigingModel(std::string name);
 
-	double interpolate(rowvec xp) const;
+	void initializeSurrogateModel(void);
+	void printSurrogateModel(void) const;
+	void printHyperParameters(void) const;
+	void saveHyperParameters(void) const;
+	void loadHyperParameters(void);
+	void train(void);
+	double interpolate(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
-
-	double calculateExpectedImprovement(rowvec xp);
 	double calculateInSampleError(void) const;
 
+	double calculateExpectedImprovement(rowvec xp);
 	double getyMin(void) const;
-
 	void setEpsilon(double inp);
 	void setLinearRegressionOn(void);
 	void setLinearRegressionOff(void);
 	void setNumberOfTrainingIterations(unsigned int);
 
-	void train(void);
-	void printSurrogateModel(void) const;
 	int addNewSampleToData(rowvec newsample);
 
 

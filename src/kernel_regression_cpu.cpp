@@ -1,6 +1,5 @@
-#include <codi.hpp>
+//#include <codi.hpp>
 #include <math.h>
-#include <stdio.h>
 #include <armadillo>
 #include <iostream>
 #include <stack>
@@ -16,70 +15,64 @@ using namespace arma;
 
 
 
-KernelRegressionModel2::KernelRegressionModel2():SurrogateModel(){
-
-}
+KernelRegressionModel::KernelRegressionModel():SurrogateModel(){}
 
 
-KernelRegressionModel2::KernelRegressionModel2(std::string name, unsigned int dimension):SurrogateModel(name, dimension){
+KernelRegressionModel::KernelRegressionModel(std::string name):SurrogateModel(name),trainingData("TrainingData"),testDataForInnerOptimizationLoop("CrossValidationData"){
 
 	modelID = KERNEL_REGRESSION;
-	mahalanobisMatrix.set_size(dimension,dimension);
-	mahalanobisMatrixAdjoint.set_size(dimension,dimension);
-	mahalanobisMatrix.fill(0.0);
-	mahalanobisMatrixAdjoint.fill(0.0);
-
-	lowerDiagonalMatrix.set_size(dimension,dimension);
-	lowerDiagonalMatrixAdjoint.set_size(dimension,dimension);
-	lowerDiagonalMatrix.fill(0.0);
-	lowerDiagonalMatrixAdjoint.fill(0.0);
-
-	sigmaGaussianKernel = 0.0;
-	sigmaGaussianKernelAdjoint = 0.0;
-
-	maximumCrossValidationIterations = 20;
-	maximumInnerOptIterations = 10000;
-
-	lossFunctionType = L2_LOSS_FUNCTION;
-
-	weightL12Regularization = zeros<vec>(maximumCrossValidationIterations);
-	weightL12Regularization.fill(0.0);
-
-
 
 }
 
-
-
-void KernelRegressionModel2::initializeSurrogateModel(void){
+void KernelRegressionModel::initializeSurrogateModel(void){
 
 	if(label != "None"){
 
-		this->ReadDataAndNormalize();
+		ReadDataAndNormalize();
 
-		this->NvalidationSet = N/5;
-		this->Ntraining = N - NvalidationSet;
+		mahalanobisMatrix = zeros<mat>(dim,dim);
+		mahalanobisMatrixAdjoint = zeros<mat>(dim,dim);
+
+		lowerDiagonalMatrix = zeros<mat>(dim,dim);
+		lowerDiagonalMatrixAdjoint = zeros<mat>(dim,dim);
+		sigmaGaussianKernel = 0.0;
+		sigmaGaussianKernelAdjoint = 0.0;
+
+		maximumCrossValidationIterations = 5;
+		maximumInnerOptIterations = 10000;
+
+		lossFunctionType = L2_LOSS_FUNCTION;
+
+		weightL12Regularization = zeros<vec>(maximumCrossValidationIterations);
+
+
+
+		int NvalidationSet = N/5;
+		int Ntraining = N - NvalidationSet;
 
 		/* divide data into training and validation data, validation data is used for optimizing regularization parameters */
 
-
-		if(NvalidationSet > 0){
-			data = shuffle(data);
-		}
-
-		dataTraining      = data.submat( 0, 0, Ntraining-1, dim );
-		XTraining = dataTraining.submat(0,0,Ntraining-1,dim-1);
-		yTraining = dataTraining.col(dim);
-
-
+		mat shuffledrawData = rawData;
 		if(NvalidationSet > 0){
 
-			dataValidation    = data.submat( Ntraining, 0, N-1, dim );
-			XValidation = dataValidation.submat(0,0,NvalidationSet-1,dim-1);
-			yValidation = dataValidation.col(dim);
-
+			shuffledrawData = shuffle(rawData);
 		}
 
+		mat dataTraining   = shuffledrawData.submat( 0, 0, Ntraining-1, dim );
+		dataTraining.col(dim) = (dataTraining.col(dim) - ymin)/(ymax -ymin);
+
+		trainingData.fillWithData(dataTraining);
+		trainingData.normalizeAndScaleData(xmin,xmax);
+
+		if(NvalidationSet > 0){
+
+			mat dataValidation    = shuffledrawData.submat( Ntraining, 0, N-1, dim );
+			dataValidation.col(dim) = (dataValidation.col(dim) - ymin)/(ymax -ymin);
+			testDataForInnerOptimizationLoop.fillWithData(dataValidation);
+			testDataForInnerOptimizationLoop.normalizeAndScaleData(xmin,xmax);
+
+
+		}
 
 	}
 
@@ -91,17 +84,63 @@ void KernelRegressionModel2::initializeSurrogateModel(void){
 
 	sigmaGaussianKernel = 1.0;
 
-	this->lowerDiagonalMatrix.eye();
+	lowerDiagonalMatrix.eye();
 	mahalanobisMatrix =  lowerDiagonalMatrix * trans(lowerDiagonalMatrix);
 
 	ifInitialized = true;
+
+	printSurrogateModel();
+
+
+}
+
+void KernelRegressionModel::saveHyperParameters(void) const{
+
+	vec saveBuffer(dim*dim+1, fill::zeros);
+
+	for(unsigned int i=0; i<dim; i++)
+		for(unsigned int j=0; j<dim; j++) saveBuffer(i*dim+j) = mahalanobisMatrix(i,j);
+
+	saveBuffer(dim*dim) = sigmaGaussianKernel;
+
+	saveBuffer.save(hyperparameters_filename, csv_ascii);
+}
+
+void KernelRegressionModel::loadHyperParameters(void){
+
+	vec loadBuffer;
+	loadBuffer.load(hyperparameters_filename, csv_ascii);
+
+	assert(loadBuffer.size() == dim*dim+1);
+
+
+	for(unsigned int i=0; i<dim; i++)
+		for(unsigned int j=0; j<dim; j++) mahalanobisMatrix(i,j) = loadBuffer(i*dim+j);
+
+	sigmaGaussianKernel = loadBuffer(dim*dim);
 
 
 }
 
 
+void KernelRegressionModel::printSurrogateModel(void) const{
+
+	cout << "Kernel regression model\n";
+	cout << "N = " << N <<"\n";;
+	cout << "dim = " << dim <<"\n";
+	printMatrix(rawData,"rawData");
+	printMatrix(X,"X");
+	trainingData.print();
+	testDataForInnerOptimizationLoop.print();
 
 
+}
+
+void KernelRegressionModel::printHyperParameters(void) const{
+
+	printMatrix(mahalanobisMatrix,"mahalanobisMatrix");
+	cout << "sigma = " <<sigmaGaussianKernel << "\n";
+}
 
 
 
@@ -114,10 +153,11 @@ void KernelRegressionModel2::initializeSurrogateModel(void){
  *
  *
  */
-void KernelRegressionModel2::initializeSigmaRandom(void){
+void KernelRegressionModel::initializeSigmaRandom(void){
 
 	double mean = 0.5;
 	double deviation = 0.0;
+	int Ntraining = trainingData.numberOfSamples;
 
 	unsigned int nTrials = 100;
 	vec kernelValues(Ntraining, fill::zeros);
@@ -125,17 +165,19 @@ void KernelRegressionModel2::initializeSigmaRandom(void){
 	double maxstandardDeviation = 0.0;
 	double bestSigma = 0.0;
 
-	if(XValidation.n_rows > 0){
+	if(testDataForInnerOptimizationLoop.numberOfSamples > 0){
 
 		for(unsigned int i=0; i<nTrials; i++){
 
 
 			sigmaGaussianKernel = pow(10, generateRandomDouble(-2.0,1.0));
-			rowvec x = XValidation.row(0);
+
+			rowvec x = testDataForInnerOptimizationLoop.getRow(0);
 
 			for(unsigned j=0; j<Ntraining; j++) {
-				rowvec xj = XTraining.row(j);
-				kernelValues(j) = this->calculateGaussianKernel(x,xj);
+
+				rowvec xj = trainingData.getRow(j);
+				kernelValues(j) = calculateGaussianKernel(x,xj);
 
 			}
 #if 0
@@ -155,7 +197,7 @@ void KernelRegressionModel2::initializeSigmaRandom(void){
 		}
 		mean = bestSigma;
 
-#if 1
+#if 0
 		cout << "Best value of sigma = " << bestSigma << "\n";
 		cout << "Standard deviation = " << maxstandardDeviation << "\n";
 #endif
@@ -170,7 +212,7 @@ void KernelRegressionModel2::initializeSigmaRandom(void){
 
 
 
-void KernelRegressionModel2::initializeMahalanobisMatrixRandom(void){
+void KernelRegressionModel::initializeMahalanobisMatrixRandom(void){
 
 
 	for (unsigned int i = 0; i < dim; i++) {
@@ -191,21 +233,37 @@ void KernelRegressionModel2::initializeMahalanobisMatrixRandom(void){
 	calculateMahalanobisMatrix();
 
 
-
 }
 
 
-void KernelRegressionModel2::calculateMahalanobisMatrix(void){
+void KernelRegressionModel::calculateMahalanobisMatrix(void){
 
 	mat LT(dim,dim, fill::zeros);
 	mahalanobisMatrix.fill(0.0);
 
-	for(unsigned int i=0; i<dim; i++)
+	for(unsigned int i=0; i<dim; i++){
+
+		for(unsigned int j=0; j<dim; j++){
+
+			if(lowerDiagonalMatrix(i,j) < 0){
+
+				cout << "ERROR: entries of the lowerDiagonalMatrix cannot be negative!\n";
+				printMatrix(lowerDiagonalMatrix,"lowerDiagonalMatrix");
+				abort();
+
+			}
+		}
+	}
+
+
+
+	for(unsigned int i=0; i<dim; i++){
 
 		for(unsigned int j=i; j<dim; j++){
 
 			LT(i,j) = lowerDiagonalMatrix(j,i);
 		}
+	}
 
 	/* Multiplying matrix L and LT and storing in M */
 	for(unsigned int i = 0; i < dim; ++i)
@@ -220,7 +278,7 @@ void KernelRegressionModel2::calculateMahalanobisMatrix(void){
 
 
 
-void KernelRegressionModel2::calculateMahalanobisMatrixAdjoint(void) {
+void KernelRegressionModel::calculateMahalanobisMatrixAdjoint(void) {
 
 
 	mat LT(dim,dim, fill::zeros);
@@ -256,7 +314,7 @@ void KernelRegressionModel2::calculateMahalanobisMatrixAdjoint(void) {
 
 
 
-void KernelRegressionModel2::updateMahalanobisAndSigma(double learningRate){
+void KernelRegressionModel::updateMahalanobisAndSigma(double learningRate){
 
 
 	for(unsigned int i=0; i<dim; i++)
@@ -284,60 +342,136 @@ void KernelRegressionModel2::updateMahalanobisAndSigma(double learningRate){
 
 }
 
-void KernelRegressionModel2::train(void){
+void KernelRegressionModel::train(void){
+
+	if(!ifInitialized){
+
+		this->initializeSurrogateModel();
+	}
 
 
-	const double learningRate = 0.0001;
+	/* we use only training samples for the interpolations */
+	mat Xsave = X;
+	X = trainingData.X;
+
+	vec ysave = y;
+	y = trainingData.yExact;
+
+	const double learningRate = 0.00001;
+
+	mat bestMOuterLoop;
+	double bestSigmaOuterLoop;
+	double bestMSE = LARGE;
 
 	for(unsigned int iterCV=0; iterCV< maximumCrossValidationIterations; iterCV++){
 
 		double weightL12 =  weightL12Regularization(iterCV);
 
 #if 1
-		printf("Outer iteration = %d\n",iterCV);
-		printf("weight for regularization = %10.7f\n",weightL12);
+		printf("\n\nOuter iteration = %d\n",iterCV);
+		printf("weight for the regularization term = %10.7f\n",weightL12);
 #endif
 
 		initializeMahalanobisMatrixRandom();
 		initializeSigmaRandom();
 
-		printMatrix(mahalanobisMatrix,"mahalanobisMatrix");
-
-
-
-
 		mat bestM;
 		double bestSigma;
 
 
+		weightL12 = 0.0;
 		/* optimization loop */
 
+		double objFunInitiaValue = 0.0;
+		double objFunBest = LARGE;
+
 		for(unsigned int iterInnerOpt=0 ; iterInnerOpt < maximumInnerOptIterations; iterInnerOpt++){
+
+
 
 			double lossFuncValue = calculateLossFunctionAdjoint();
 			double regularizationTerm = calculateL12RegularizationTermAdjoint(weightL12);
 			double objFun = lossFuncValue +  regularizationTerm;
-#if 1
-			printf("objFun = %10.7f, lossFuncValue = %10.7f, regularizationTerm = %10.7f\n",objFun,lossFuncValue,regularizationTerm);
+
+			if(iterInnerOpt == 0){
+
+				objFunInitiaValue = objFun;
+
+			}
+
+			if(iterInnerOpt %100 == 0){
+				double percentIterationsCompleted = ((iterInnerOpt*100.0)/maximumInnerOptIterations);
+				cout <<"\r" <<"iterations completed = %" << percentIterationsCompleted << flush;
+
+			}
+#if 0
+			if(iterInnerOpt %100 == 0){
+
+				cout <<"objFun = "<<objFun <<"\n";
+				cout << "normalized descent in objective function value = "<<objFun/objFunInitiaValue<<"\n";
+
+
+				if(dim < 10){
+
+					printMatrix(mahalanobisMatrix,"mahalanobisMatrix");
+					cout << "sigma = " << sigmaGaussianKernel <<"\n";
+				}
+
+			}
 #endif
+			if(objFun < objFunBest){
+
+				objFunBest = objFun;
+				bestM = mahalanobisMatrix;
+				bestSigma = sigmaGaussianKernel;
+
+			}
 
 
 			updateMahalanobisAndSigma(learningRate);
 
+		} /* inner optimization loop */
+#if 1
+		cout << "\nnormalized descent in objective function value = "<<objFunBest/objFunInitiaValue<<"\n";
+#endif
+		mahalanobisMatrix = bestM;
+		sigmaGaussianKernel = bestSigma;
+
+		tryModelOnTestSet(testDataForInnerOptimizationLoop);
+
+		double MSEInnerOptLoop = testDataForInnerOptimizationLoop.calculateMeanSquaredError();
+
+#if 1
+		cout <<"MSE = "<< MSEInnerOptLoop <<"\n";
+#endif
+		if(MSEInnerOptLoop < bestMSE){
+
+			bestMSE = MSEInnerOptLoop;
+			bestMOuterLoop = mahalanobisMatrix;
+			bestSigmaOuterLoop = sigmaGaussianKernel;
+
+
 		}
 
 
-		abort();
+	} /* outer optimization loop */
 
+	mahalanobisMatrix = bestMOuterLoop;
+	sigmaGaussianKernel = bestSigmaOuterLoop;
 
-	}
+	printHyperParameters();
 
+	/* we retrieve full data for the offline interpolations */
+	X = Xsave;
+	y = ysave;
+
+	saveHyperParameters();
 
 
 }
 
 
-double KernelRegressionModel2::calculateLossFunction(void){
+double KernelRegressionModel::calculateLossFunction(void){
 
 	if(!ifInitialized){
 
@@ -348,7 +482,7 @@ double KernelRegressionModel2::calculateLossFunction(void){
 	calculateMahalanobisMatrix();
 
 	assert(sigmaGaussianKernel > 0);
-	assert(checkIfSymmetricPositiveDefinite(mahalanobisMatrix));
+	assert(mahalanobisMatrix.is_sympd());
 
 	double lossFunctionValue = 0.0;
 	mat kernelValuesMatrix = calculateKernelMatrix();
@@ -378,12 +512,13 @@ double KernelRegressionModel2::calculateLossFunction(void){
 
 }
 
-double KernelRegressionModel2::calculateLossFunctionAdjoint(void){
+double KernelRegressionModel::calculateLossFunctionAdjoint(void){
 
+	int Ntraining = trainingData.numberOfSamples;
 	calculateMahalanobisMatrix();
 
 	assert(sigmaGaussianKernel > 0);
-	assert(checkIfSymmetricPositiveDefinite(mahalanobisMatrix));
+
 
 	double lossFunctionValue = 0.0;
 	mat kernelValuesMatrix = calculateKernelMatrix();
@@ -421,8 +556,9 @@ double KernelRegressionModel2::calculateLossFunctionAdjoint(void){
 
 
 
-mat KernelRegressionModel2::calculateKernelRegressionWeightsAdjoint(mat kernelValuesMatrix, mat &kernelValuesMatrixb, mat kernelWeightMatrixb) const {
+mat KernelRegressionModel::calculateKernelRegressionWeightsAdjoint(mat kernelValuesMatrix, mat &kernelValuesMatrixb, mat kernelWeightMatrixb) const {
 
+	int Ntraining = trainingData.numberOfSamples;
 	assert(Ntraining >0);
 
 	mat kernelWeightMatrix(Ntraining,Ntraining,fill::zeros);
@@ -479,10 +615,11 @@ mat KernelRegressionModel2::calculateKernelRegressionWeightsAdjoint(mat kernelVa
 
 
 
-mat KernelRegressionModel2::calculateKernelRegressionWeights(mat kernelValuesMatrix) const{
+mat KernelRegressionModel::calculateKernelRegressionWeights(mat kernelValuesMatrix) const{
 
+	int Ntraining = trainingData.numberOfSamples;
 	assert(Ntraining >0);
-	assert(checkIfSymmetric(kernelValuesMatrix));
+	assert(kernelValuesMatrix.is_symmetric());
 
 	mat kernelWeightMatrix = zeros<mat>(Ntraining,Ntraining);
 
@@ -505,11 +642,11 @@ mat KernelRegressionModel2::calculateKernelRegressionWeights(mat kernelValuesMat
 }
 
 
-void KernelRegressionModel2::calculateKernelMatrixAdjoint(mat &kernelValuesMatrixb) {
+void KernelRegressionModel::calculateKernelMatrixAdjoint(mat &kernelValuesMatrixb) {
 
+	int Ntraining = trainingData.numberOfSamples;
 	sigmaGaussianKernelAdjoint = 0.0;
 	mahalanobisMatrixAdjoint.fill(0.0);
-
 
 	for (int i = Ntraining-1; i > -1; --i) {
 		double resb;
@@ -517,8 +654,8 @@ void KernelRegressionModel2::calculateKernelMatrixAdjoint(mat &kernelValuesMatri
 
 		for (int j = Ntraining-1; j > i-1; --j) {
 
-			rowvec xi = XTraining.row(i);
-			rowvec xj = XTraining.row(j);
+			rowvec xi = trainingData.getRow(i);
+			rowvec xj = trainingData.getRow(j);
 
 			tmpb = kernelValuesMatrixb(j,i);
 			kernelValuesMatrixb(j,i) = 0.0;
@@ -534,8 +671,9 @@ void KernelRegressionModel2::calculateKernelMatrixAdjoint(mat &kernelValuesMatri
 }
 
 
-mat KernelRegressionModel2::calculateKernelMatrix(void) const{
+mat KernelRegressionModel::calculateKernelMatrix(void) const{
 
+	int Ntraining = trainingData.numberOfSamples;
 	mat kernelValuesMatrix = zeros<mat>(Ntraining,Ntraining);
 
 
@@ -543,8 +681,8 @@ mat KernelRegressionModel2::calculateKernelMatrix(void) const{
 
 		for(unsigned int j=i; j<Ntraining; j++) {
 
-			rowvec xi = XTraining.row(i);
-			rowvec xj = XTraining.row(j);
+			rowvec xi = trainingData.getRow(i);
+			rowvec xj = trainingData.getRow(j);
 
 			kernelValuesMatrix(i,j) = calculateGaussianKernel(xi, xj);
 			kernelValuesMatrix(j,i) = kernelValuesMatrix(i,j);
@@ -556,9 +694,13 @@ mat KernelRegressionModel2::calculateKernelMatrix(void) const{
 
 }
 
-double KernelRegressionModel2::calculateL1LossAdjoint(mat weights, mat &weightsb) const{
+double KernelRegressionModel::calculateL1LossAdjoint(mat weights, mat &weightsb) const{
+
+	int Ntraining = trainingData.numberOfSamples;
 	double result = 0.0;
 	int branch;
+
+	vec yTraining = trainingData.yExact;
 
 	stack<int> stackBranch;
 	weightsb.fill(0.0);
@@ -578,7 +720,7 @@ double KernelRegressionModel2::calculateL1LossAdjoint(mat weights, mat &weightsb
 
 		}
 
-		double fExact = yTraining[i];
+		double fExact = yTraining(i);
 		result += fabs(fExact-fSurrogateValue);
 		if (fExact - fSurrogateValue >= 0.0){
 			stackBranch.push(0);
@@ -615,8 +757,10 @@ double KernelRegressionModel2::calculateL1LossAdjoint(mat weights, mat &weightsb
 }
 
 
-double KernelRegressionModel2::calculateL1Loss(mat weights) const{
+double KernelRegressionModel::calculateL1Loss(mat weights) const{
 
+	int Ntraining = trainingData.numberOfSamples;
+	vec yTraining = trainingData.yExact;
 	double result = 0.0;
 
 	for(unsigned int i=0; i<Ntraining; i++) {
@@ -639,11 +783,12 @@ double KernelRegressionModel2::calculateL1Loss(mat weights) const{
 
 
 
-double KernelRegressionModel2::calculateL2LossAdjoint(mat weights, mat &weightsb) const {
+double KernelRegressionModel::calculateL2LossAdjoint(mat weights, mat &weightsb) const {
 
+	int Ntraining = trainingData.numberOfSamples;
+	vec yTraining = trainingData.yExact;
 	double result = 0.0;
 	int branch;
-	stack<int> stackBranch;
 	stack<double> stackValues;
 
 	weightsb.fill(0.0);
@@ -656,14 +801,8 @@ double KernelRegressionModel2::calculateL2LossAdjoint(mat weights, mat &weightsb
 			if (i != j) {
 
 				fSurrogateValue = fSurrogateValue + yTraining(j)*weights(i,j);
-				stackBranch.push(1);
-
-			} else {
-
-				stackBranch.push(0);
 
 			}
-
 		}
 
 		double fExact = yTraining(i);
@@ -687,9 +826,8 @@ double KernelRegressionModel2::calculateL2LossAdjoint(mat weights, mat &weightsb
 		double fExact = yTraining(i);
 		fSurrogateValueb = -(2.0*(fExact-fSurrogateValue));
 		for (int j = Ntraining-1; j > -1; --j) {
-			branch = stackBranch.top(); stackBranch.pop();
 
-			if (branch != 0) {
+			if (i != j) {
 
 				weightsb(i,j) = weightsb(i,j) + yTraining(j)*fSurrogateValueb;
 			}
@@ -697,14 +835,15 @@ double KernelRegressionModel2::calculateL2LossAdjoint(mat weights, mat &weightsb
 		}
 	}
 
-
-	assert(stackBranch.empty());
 	assert(stackValues.empty());
 	return result;
 }
 
 
-double KernelRegressionModel2::calculateL2Loss(mat weights) const{
+double KernelRegressionModel::calculateL2Loss(mat weights) const{
+
+	int Ntraining = trainingData.numberOfSamples;
+	vec yTraining = trainingData.yExact;
 
 	double result = 0.0;
 
@@ -726,7 +865,7 @@ double KernelRegressionModel2::calculateL2Loss(mat weights) const{
 	return result;
 }
 
-double KernelRegressionModel2::calculateGaussianKernelAdjoint(rowvec xi, rowvec xj,double calculateGaussianKernelb){
+double KernelRegressionModel::calculateGaussianKernelAdjoint(rowvec xi, rowvec xj,double calculateGaussianKernelb){
 
 	double twoSigmaSqr = 2.0*sigmaGaussianKernel*sigmaGaussianKernel;
 	double twoSigmaSqrb = 0.0;
@@ -752,16 +891,14 @@ double KernelRegressionModel2::calculateGaussianKernelAdjoint(rowvec xi, rowvec 
 	return kernelVal;
 }
 
-double KernelRegressionModel2::calculateGaussianKernel(rowvec xi, rowvec xj) const {
+double KernelRegressionModel::calculateGaussianKernel(rowvec xi, rowvec xj) const {
 
 	double twoSigmaSqr = 2.0*sigmaGaussianKernel*sigmaGaussianKernel;
-
 	double metricVal = calculateMetric(xi, xj, mahalanobisMatrix);
-
-
 	double kernelVal = (1.0/(sigmaGaussianKernel*rootTwoPi)) * exp(-metricVal/twoSigmaSqr);
-
 	kernelVal += EPSILON; /* we add some small number to the result for stability */
+
+	assert(kernelVal >= 0);
 
 	return kernelVal;
 
@@ -770,7 +907,7 @@ double KernelRegressionModel2::calculateGaussianKernel(rowvec xi, rowvec xj) con
 
 
 
-double KernelRegressionModel2::calculateL12RegularizationTerm(double weight) const {
+double KernelRegressionModel::calculateL12RegularizationTerm(double weight) const {
 
 	double regTerm = 0.0;
 
@@ -784,7 +921,7 @@ double KernelRegressionModel2::calculateL12RegularizationTerm(double weight) con
 
 }
 
-double KernelRegressionModel2::calculateL12RegularizationTermAdjoint(double weight) {
+double KernelRegressionModel::calculateL12RegularizationTermAdjoint(double weight) {
 
 
 	double regTerm = 0.0;
@@ -803,7 +940,50 @@ double KernelRegressionModel2::calculateL12RegularizationTermAdjoint(double weig
 }
 
 
+double KernelRegressionModel::interpolate(rowvec x) const{
 
+	assert(x.size() == dim);
+
+	unsigned int samplesUsedInInterpolation = X.n_rows;
+
+	vec kernelValues(samplesUsedInInterpolation,fill::zeros);
+
+	for(unsigned int i=0; i<samplesUsedInInterpolation; i++){
+
+		rowvec xi = X.row(i);
+		kernelValues(i) = calculateGaussianKernel(x,xi);
+
+	}
+
+	double kernelSum = sum(kernelValues);
+
+	vec weights(samplesUsedInInterpolation,fill::zeros);
+
+	double weightedSum = 0.0;
+	for(unsigned int i=0; i<samplesUsedInInterpolation; i++){
+
+		weights(i) = kernelValues(i)/kernelSum;
+		weightedSum += weights(i)* y(i);
+	}
+
+	return weightedSum;
+
+}
+
+void KernelRegressionModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
+
+	cout <<"ERROR: interpolateWithVariance does not exist for the kernel regression model\n";
+	abort();
+
+}
+
+double KernelRegressionModel::calculateInSampleError(void) const{
+
+	double result = 0.0;
+
+	return result;
+
+}
 
 float MAX(float a, float b){
 
@@ -813,22 +993,22 @@ float MAX(float a, float b){
 
 }
 
-codi::RealReverse MAX(codi::RealReverse a, codi::RealReverse b){
-
-	if(a >=b) return a;
-	else return b;
-
-
-}
-
-
-codi::RealForward MAX(codi::RealForward a, codi::RealForward b){
-
-	if(a >=b) return a;
-	else return b;
-
-
-}
+//codi::RealReverse MAX(codi::RealReverse a, codi::RealReverse b){
+//
+//	if(a >=b) return a;
+//	else return b;
+//
+//
+//}
+//
+//
+//codi::RealForward MAX(codi::RealForward a, codi::RealForward b){
+//
+//	if(a >=b) return a;
+//	else return b;
+//
+//
+//}
 
 
 /*
@@ -989,25 +1169,25 @@ double SIGN(double a, double b) {
 	}
 }
 
-codi::RealReverse SIGN(codi::RealReverse a, codi::RealReverse b) {
-
-	if (b >= 0.0) {
-		return fabs(a);
-	} else {
-
-		return -fabs(a);
-	}
-}
-
-codi::RealForward SIGN(codi::RealForward a, codi::RealForward b) {
-
-	if (b >= 0.0) {
-		return fabs(a);
-	} else {
-
-		return -fabs(a);
-	}
-}
+//codi::RealReverse SIGN(codi::RealReverse a, codi::RealReverse b) {
+//
+//	if (b >= 0.0) {
+//		return fabs(a);
+//	} else {
+//
+//		return -fabs(a);
+//	}
+//}
+//
+//codi::RealForward SIGN(codi::RealForward a, codi::RealForward b) {
+//
+//	if (b >= 0.0) {
+//		return fabs(a);
+//	} else {
+//
+//		return -fabs(a);
+//	}
+//}
 
 double PYTHAG(double a, double b) {
 	double at = fabs(a), bt = fabs(b), ct, result;
@@ -1023,32 +1203,32 @@ double PYTHAG(double a, double b) {
 	return (result);
 }
 
-codi::RealReverse PYTHAG(codi::RealReverse a, codi::RealReverse b) {
-	codi::RealReverse at = fabs(a), bt = fabs(b), ct, result;
-
-	if (at > bt) {
-		ct = bt / at;
-		result = at * sqrt(1.0 + ct * ct);
-	} else if (bt > 0.0) {
-		ct = at / bt;
-		result = bt * sqrt(1.0 + ct * ct);
-	} else
-		result = 0.0;
-	return (result);
-}
-codi::RealForward PYTHAG(codi::RealForward a, codi::RealForward b) {
-	codi::RealForward at = fabs(a), bt = fabs(b), ct, result;
-
-	if (at > bt) {
-		ct = bt / at;
-		result = at * sqrt(1.0 + ct * ct);
-	} else if (bt > 0.0) {
-		ct = at / bt;
-		result = bt * sqrt(1.0 + ct * ct);
-	} else
-		result = 0.0;
-	return (result);
-}
+//codi::RealReverse PYTHAG(codi::RealReverse a, codi::RealReverse b) {
+//	codi::RealReverse at = fabs(a), bt = fabs(b), ct, result;
+//
+//	if (at > bt) {
+//		ct = bt / at;
+//		result = at * sqrt(1.0 + ct * ct);
+//	} else if (bt > 0.0) {
+//		ct = at / bt;
+//		result = bt * sqrt(1.0 + ct * ct);
+//	} else
+//		result = 0.0;
+//	return (result);
+//}
+//codi::RealForward PYTHAG(codi::RealForward a, codi::RealForward b) {
+//	codi::RealForward at = fabs(a), bt = fabs(b), ct, result;
+//
+//	if (at > bt) {
+//		ct = bt / at;
+//		result = at * sqrt(1.0 + ct * ct);
+//	} else if (bt > 0.0) {
+//		ct = at / bt;
+//		result = bt * sqrt(1.0 + ct * ct);
+//	} else
+//		result = 0.0;
+//	return (result);
+//}
 
 
 
@@ -1548,988 +1728,988 @@ int calcRegTerms(double *L, double *regTerm, double wSvd, double w12, int dim) {
 
 }
 
-/* forward mode */
-
-int calcRegTerms(double *L, double *regTerm, double *regTermd, double wSvd, double w12, int dim, int derIndx) {
-	int flag, i, its, j, jj, k, l = 0, nm;
-	codi::RealForward c, f, h, s, x, y, z;
-	codi::RealForward anorm = 0.0, g = 0.0, scale = 0.0;
-
-
-	int m = dim;
-	int n = dim;
-
-	codi::RealForward *Lcodi = new codi::RealForward[dim*dim];
-	for (int i = 0; i < dim*dim; i++) {
-
-		Lcodi[i] = L[i];
-
-	}
-
-	Lcodi[derIndx].setGradient(1.0);
-
-
-	codi::RealForward **a;
-	a = new codi::RealForward*[dim];
-
-	for (i = 0; i < dim; i++) {
-
-		a[i] = new codi::RealForward[dim];
-	}
-
-	codi::RealForward **M;
-	M= new codi::RealForward*[dim];
-
-	for (i = 0; i < dim; i++) {
-
-		M[i] = new codi::RealForward[dim];
-	}
-
-
-	codi::RealForward **LT;
-	LT = new codi::RealForward*[dim];
-	for (int i = 0; i < dim; i++) {
-		LT[i] = new codi::RealForward[dim];
-
-	}
-
-	for (int i = 0; i < dim; i++)
-		for (int j = 0; j < dim; j++) {
-
-			LT[i][j]=0.0;
-		}
-
-
-
-
-	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j <= i; j++){
-
-			LT[j][i] = Lcodi[i*dim+j];
-		}
-
-
-	}
-#if 0
-	printf("LT = \n");
-
-	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j < dim; j++) {
-
-			printf("%10.7f ", LT[i][j]);
-
-		}
-		printf("\n");
-	}
-
-#endif
-
-	for(int i = 0; i < dim; ++i)
-		for(int j = 0; j < dim; ++j)
-		{
-			a[i][j]=0;
-			M[i][j]=0;
-		}
-
-	/* Multiplying matrix L and LT and storing in M */
-	for(int i = 0; i < dim; ++i)
-		for(int j = 0; j < dim; ++j)
-			for(int k = 0; k < dim; ++k)
-			{
-				M[i][j] += Lcodi[i*dim+k] * LT[k][j];
-
-			}
-
-	for(int i = 0; i < dim; ++i)
-		for(int j = 0; j < dim; ++j)
-		{
-			a[i][j]=M[i][j];
-
-		}
-
-
-
-#if 0
-	printf("a = \n");
-
-	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j < dim; j++) {
-
-			printf("%10.7f ", a[i][j]);
-
-		}
-		printf("\n");
-	}
-
-#endif
-
-
-
-
-	/* SVD part */
-
-	codi::RealForward **v;
-	v = new codi::RealForward*[n];
-
-	for (i = 0; i < n; i++) {
-
-		v[i] = new codi::RealForward[n];
-	}
-	codi::RealForward *w = new codi::RealForward[n];
-
-	codi::RealForward *rv1 = new codi::RealForward[n];
-
-	/* Householder reduction to bidiagonal form */
-	for (i = 0; i < n; i++) {
-		/* left-hand reduction */
-		l = i + 1;
-		rv1[i] = scale * g;
-		g = s = scale = 0.0;
-		if (i < m) {
-			for (k = i; k < m; k++)
-				scale += fabs(a[k][i]);
-			if (scale!= 0) {
-				for (k = i; k < m; k++) {
-					a[k][i] = (a[k][i] / scale);
-					s += (a[k][i] * a[k][i]);
-				}
-				f = a[i][i];
-				g = -SIGN(sqrt(s), f);
-				h = f * g - s;
-				a[i][i] = (f - g);
-				if (i != n - 1) {
-					for (j = l; j < n; j++) {
-						for (s = 0.0, k = i; k < m; k++)
-							s += (a[k][i] * a[k][j]);
-						f = s / h;
-						for (k = i; k < m; k++)
-							a[k][j] += (f * a[k][i]);
-					}
-				}
-				for (k = i; k < m; k++)
-					a[k][i] = (a[k][i] * scale);
-			}
-		}
-		w[i] = (scale * g);
-
-		/* right-hand reduction */
-		g = s = scale = 0.0;
-		if (i < m && i != n - 1) {
-			for (k = l; k < n; k++)
-				scale += fabs(a[i][k]);
-			if (scale!=0) {
-				for (k = l; k < n; k++) {
-					a[i][k] = (a[i][k] / scale);
-					s += (a[i][k] * a[i][k]);
-				}
-				f = a[i][l];
-				g = -SIGN(sqrt(s), f);
-				h = f * g - s;
-				a[i][l] = (f - g);
-				for (k = l; k < n; k++)
-					rv1[k] = a[i][k] / h;
-				if (i != m - 1) {
-					for (j = l; j < m; j++) {
-						for (s = 0.0, k = l; k < n; k++)
-							s += (a[j][k] * a[i][k]);
-						for (k = l; k < n; k++)
-							a[j][k] += (s * rv1[k]);
-					}
-				}
-				for (k = l; k < n; k++)
-					a[i][k] = (a[i][k] * scale);
-			}
-		}
-		anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
-	}
-
-	/* accumulate the right-hand transformation */
-	for (i = n - 1; i >= 0; i--) {
-		if (i < n - 1) {
-			if (g!=0) {
-				for (j = l; j < n; j++)
-					v[j][i] = ((a[i][j] / a[i][l]) / g);
-				/* float division to avoid underflow */
-				for (j = l; j < n; j++) {
-					for (s = 0.0, k = l; k < n; k++)
-						s += (a[i][k] * v[k][j]);
-					for (k = l; k < n; k++)
-						v[k][j] += (s * v[k][i]);
-				}
-			}
-			for (j = l; j < n; j++)
-				v[i][j] = v[j][i] = 0.0;
-		}
-		v[i][i] = 1.0;
-		g = rv1[i];
-		l = i;
-	}
-
-	/* accumulate the left-hand transformation */
-	for (i = n - 1; i >= 0; i--) {
-		l = i + 1;
-		g = w[i];
-		if (i < n - 1)
-			for (j = l; j < n; j++)
-				a[i][j] = 0.0;
-		if (g!=0) {
-			g = 1.0 / g;
-			if (i != n - 1) {
-				for (j = l; j < n; j++) {
-					for (s = 0.0, k = l; k < m; k++)
-						s += (a[k][i] * a[k][j]);
-					f = (s / a[i][i]) * g;
-					for (k = i; k < m; k++)
-						a[k][j] += (f * a[k][i]);
-				}
-			}
-			for (j = i; j < m; j++)
-				a[j][i] = (a[j][i] * g);
-		} else {
-			for (j = i; j < m; j++)
-				a[j][i] = 0.0;
-		}
-		++a[i][i];
-	}
-
-	/* diagonalize the bidiagonal form */
-	for (k = n - 1; k >= 0; k--) { /* loop over singular values */
-		for (its = 0; its < 30000; its++) { /* loop over allowed iterations */
-			flag = 1;
-			for (l = k; l >= 0; l--) { /* test for splitting */
-				nm = l - 1;
-				if (fabs(rv1[l]) + anorm == anorm) {
-					flag = 0;
-					break;
-				}
-				if (fabs(w[nm]) + anorm == anorm)
-					break;
-			}
-			if (flag) {
-				c = 0.0;
-				s = 1.0;
-				for (i = l; i <= k; i++) {
-					f = s * rv1[i];
-					if (fabs(f) + anorm != anorm) {
-						g = w[i];
-						h = PYTHAG(f, g);
-						w[i] = h;
-						h = 1.0 / h;
-						c = g * h;
-						s = (-f * h);
-						for (j = 0; j < m; j++) {
-							y = a[j][nm];
-							z = a[j][i];
-							a[j][nm] = (y * c + z * s);
-							a[j][i] = (z * c - y * s);
-						}
-					}
-				}
-			}
-			z = w[k];
-			if (l == k) { /* convergence */
-				if (z < 0.0) { /* make singular value nonnegative */
-					w[k] = (-z);
-					for (j = 0; j < n; j++)
-						v[j][k] = (-v[j][k]);
-				}
-				break;
-			}
-			if (its >= 30000) {
-				delete[] rv1;
-				fprintf(stderr, "No convergence after 30,000! iterations \n");
-				return 1;
-			}
-
-			/* shift from bottom 2 x 2 minor */
-			x = w[l];
-			nm = k - 1;
-			y = w[nm];
-			g = rv1[nm];
-			h = rv1[k];
-			f = ((y - z) * (y + z) + (g - h) * (g + h)) / (2.0 * h * y);
-			g = PYTHAG(f, 1.0);
-			f = ((x - z) * (x + z) + h * ((y / (f + SIGN(g, f))) - h)) / x;
-
-			/* next QR transformation */
-			c = s = 1.0;
-			for (j = l; j <= nm; j++) {
-				i = j + 1;
-				g = rv1[i];
-				y = w[i];
-				h = s * g;
-				g = c * g;
-				z = PYTHAG(f, h);
-				rv1[j] = z;
-				c = f / z;
-				s = h / z;
-				f = x * c + g * s;
-				g = g * c - x * s;
-				h = y * s;
-				y = y * c;
-				for (jj = 0; jj < n; jj++) {
-					x = v[jj][j];
-					z = v[jj][i];
-					v[jj][j] = (x * c + z * s);
-					v[jj][i] = (z * c - x * s);
-				}
-				z = PYTHAG(f, h);
-				w[j] = z;
-				if (z!=0) {
-					z = 1.0 / z;
-					c = f * z;
-					s = h * z;
-				}
-				f = (c * g) + (s * y);
-				x = (c * y) - (s * g);
-				for (jj = 0; jj < m; jj++) {
-					y = a[jj][j];
-					z = a[jj][i];
-					a[jj][j] = (y * c + z * s);
-					a[jj][i] = (z * c - y * s);
-				}
-			}
-			rv1[l] = 0.0;
-			rv1[k] = f;
-			w[k] = x;
-		}
-	}
-	delete[] rv1;
-
-#if 0
-	printf("singular values of a=\n");
-
-	for (i = 0; i < n; i++) {
-
-		printf("%10.7f\n",w[i]);
-	}
-#endif
-
-	/* sort the singular values */
-
-	codi::RealForward temp;
-	for (i = 0; i < n; ++i) {
-		for (j = i + 1; j < n; ++j) {
-
-			if (w[i] < w[j])
-
-			{
-				temp = w[i];
-				w[i] = w[j];
-				w[j] = temp;
-			}
-		}
-	}
-
-#if 0
-	printf("singular values of a=\n");
-
-
-	for (i = 0; i < n; i++) {
-
-		printf("%10.7f\n",w[i].getValue());
-	}
-#endif
-
-	/* normalization */
-	codi::RealForward wsum = 0.0;
-	for (i = 0; i < n; i++) {
-
-		wsum += w[i];
-
-	}
-
-	for (i = 0; i < n; i++) {
-
-		w[i] = w[i]/wsum;
-
-	}
-
-#if 0
-	printf("singular values of a (normalized) with wsum =%10.7f\n",wsum.getValue());
-
-
-	for (i = 0; i < n; i++) {
-
-		printf("%15.10f\n",w[i].getValue());
-	}
-#endif
-
-
-	float svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
-
-	svd_multiplier = 1.0/svd_multiplier;
-#if 0
-	printf("svd_multiplier = %10.7f\n",svd_multiplier);
-#endif
-	codi::RealForward reg_term_svd = 0.0;
-
-	for (i = 0; i < n; i++) {
-#if 0
-		printf("%d * %10.7f = %10.7f\n",i+1,w[i].getValue(),(i+1)*w[i].getValue());
-#endif
-		reg_term_svd = reg_term_svd + (i + 1) * w[i];
-	}
-#if 0
-	printf("reg_term_svd = %10.7f\n",reg_term_svd.getValue());
-#endif
-
-
-	codi::RealForward reg_term_L1 = 0.0;
-
-	for (i = 0; i < n; i++)
-		for (j = 0; j < n; j++) {
-
-			reg_term_L1 = reg_term_L1 + M[i][j]* M[i][j];
-		}
-#if 0
-	printf("reg_term_L1 = %10.7f\n",reg_term_L1.getValue());
-#endif
-
-
-
-	for (i = 0; i < n; i++) {
-		delete[] v[i];
-		delete[] a[i];
-		delete[] M[i];
-		delete[] LT[i];
-	}
-
-
-	delete[] LT;
-	delete[] M;
-	delete[] a;
-	delete[] v;
-	delete[] w;
-
-
-	codi::RealForward result = wSvd * svd_multiplier *reg_term_svd + w12 * reg_term_L1;
-	*regTerm = result.getValue();
-
-	*regTermd = result.getGradient();
-
-	return 0;
-
-
-}
-
-
-
-int calcRegTerms(double *L, double *Lb, double *result, double wSvd, double w12, int dim) {
-	int flag, i, its, j, jj, k, l = 0, nm;
-
-
-	codi::RealReverse *Lcodi = new codi::RealReverse[dim*dim];
-	for (int i = 0; i < dim*dim; i++) {
-
-		Lcodi[i] = L[i];
-
-	}
-
-	/* activate tape and register input */
-
-	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-	tape.setActive();
-
-	codi::RealReverse regTerm=0.0;
-
-
-
-	for (int i = 0; i < dim*dim; i++) {
-
-		tape.registerInput(Lcodi[i]);
-
-	}
-
-
-	codi::RealReverse c, f, h, s, x, y, z;
-	codi::RealReverse anorm = 0.0, g = 0.0, scale = 0.0;
-
-
-	int m = dim;
-	int n = dim;
-
-
-	codi::RealReverse **a;
-	a = new codi::RealReverse*[dim];
-
-	for (i = 0; i < dim; i++) {
-
-		a[i] = new codi::RealReverse[dim];
-	}
-
-	codi::RealReverse **M;
-	M = new codi::RealReverse*[dim];
-
-	for (i = 0; i < dim; i++) {
-
-		M[i] = new codi::RealReverse[dim];
-	}
-
-
-
-
-	codi::RealReverse **LT;
-	LT = new codi::RealReverse*[dim];
-	for (int i = 0; i < dim; i++) {
-		LT[i] = new codi::RealReverse[dim];
-
-	}
-
-	for (int i = 0; i < dim; i++)
-		for (int j = 0; j < dim; j++) {
-
-			LT[i][j]=0.0;
-		}
-
-
-
-
-	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j <= i; j++){
-
-			LT[j][i] = Lcodi[i*dim+j];
-		}
-
-
-	}
-#if 0
-	printf("LT = \n");
-
-	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j < dim; j++) {
-
-			printf("%10.7f ", LT[i][j].getValue());
-
-		}
-		printf("\n");
-	}
-
-#endif
-
-	for(int i = 0; i < dim; ++i)
-		for(int j = 0; j < dim; ++j)
-		{
-			a[i][j]=0;
-			M[i][j]=0;
-		}
-
-	/* Multiplying matrix L and LT and storing in M */
-	for(int i = 0; i < dim; ++i)
-		for(int j = 0; j < dim; ++j)
-			for(int k = 0; k < dim; ++k)
-			{
-				M[i][j] += Lcodi[i*dim+k] * LT[k][j];
-
-			}
-
-	for(int i = 0; i < dim; ++i)
-		for(int j = 0; j < dim; ++j)
-		{
-			a[i][j]=M[i][j];
-
-		}
-
-#if 0
-	printf("M = \n");
-
-	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j < dim; j++) {
-
-			printf("%10.7f ", M[i][j].getValue());
-
-		}
-		printf("\n");
-	}
-
-#endif
-
-#if 0
-	printf("a = \n");
-
-	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j < dim; j++) {
-
-			printf("%10.7f ", a[i][j].getValue());
-
-		}
-		printf("\n");
-	}
-
-#endif
-
-
-	/* SVD part */
-
-	codi::RealReverse **v;
-	v = new codi::RealReverse*[n];
-
-	for (i = 0; i < n; i++) {
-
-		v[i] = new codi::RealReverse[n];
-	}
-	codi::RealReverse *w = new codi::RealReverse[n];
-
-	codi::RealReverse *rv1 = new codi::RealReverse[n];
-
-	/* Householder reduction to bidiagonal form */
-	for (i = 0; i < n; i++) {
-		/* left-hand reduction */
-		l = i + 1;
-		rv1[i] = scale * g;
-		g = s = scale = 0.0;
-		if (i < m) {
-			for (k = i; k < m; k++)
-				scale += fabs(a[k][i]);
-			if (scale != 0) {
-				for (k = i; k < m; k++) {
-					a[k][i] = (a[k][i] / scale);
-					s += (a[k][i] * a[k][i]);
-				}
-				f = a[i][i];
-				g = -SIGN(sqrt(s), f);
-				h = f * g - s;
-				a[i][i] = (f - g);
-				if (i != n - 1) {
-					for (j = l; j < n; j++) {
-						for (s = 0.0, k = i; k < m; k++)
-							s += (a[k][i] * a[k][j]);
-						f = s / h;
-						for (k = i; k < m; k++)
-							a[k][j] += (f * a[k][i]);
-					}
-				}
-				for (k = i; k < m; k++)
-					a[k][i] = (a[k][i] * scale);
-			}
-		}
-		w[i] = (scale * g);
-
-		/* right-hand reduction */
-		g = s = scale = 0.0;
-		if (i < m && i != n - 1) {
-			for (k = l; k < n; k++)
-				scale += fabs(a[i][k]);
-			if (scale !=0) {
-				for (k = l; k < n; k++) {
-					a[i][k] = (a[i][k] / scale);
-					s += (a[i][k] * a[i][k]);
-				}
-				f = a[i][l];
-				g = -SIGN(sqrt(s), f);
-				h = f * g - s;
-				a[i][l] = (f - g);
-				for (k = l; k < n; k++)
-					rv1[k] = a[i][k] / h;
-				if (i != m - 1) {
-					for (j = l; j < m; j++) {
-						for (s = 0.0, k = l; k < n; k++)
-							s += (a[j][k] * a[i][k]);
-						for (k = l; k < n; k++)
-							a[j][k] += (s * rv1[k]);
-					}
-				}
-				for (k = l; k < n; k++)
-					a[i][k] = (a[i][k] * scale);
-			}
-		}
-		anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
-	}
-
-	/* accumulate the right-hand transformation */
-	for (i = n - 1; i >= 0; i--) {
-		if (i < n - 1) {
-			if (g !=0) {
-				for (j = l; j < n; j++)
-					v[j][i] = ((a[i][j] / a[i][l]) / g);
-				/* float division to avoid underflow */
-				for (j = l; j < n; j++) {
-					for (s = 0.0, k = l; k < n; k++)
-						s += (a[i][k] * v[k][j]);
-					for (k = l; k < n; k++)
-						v[k][j] += (s * v[k][i]);
-				}
-			}
-			for (j = l; j < n; j++)
-				v[i][j] = v[j][i] = 0.0;
-		}
-		v[i][i] = 1.0;
-		g = rv1[i];
-		l = i;
-	}
-
-	/* accumulate the left-hand transformation */
-	for (i = n - 1; i >= 0; i--) {
-		l = i + 1;
-		g = w[i];
-		if (i < n - 1)
-			for (j = l; j < n; j++)
-				a[i][j] = 0.0;
-		if (g != 0) {
-			g = 1.0 / g;
-			if (i != n - 1) {
-				for (j = l; j < n; j++) {
-					for (s = 0.0, k = l; k < m; k++)
-						s += (a[k][i] * a[k][j]);
-					f = (s / a[i][i]) * g;
-					for (k = i; k < m; k++)
-						a[k][j] += (f * a[k][i]);
-				}
-			}
-			for (j = i; j < m; j++)
-				a[j][i] = (a[j][i] * g);
-		} else {
-			for (j = i; j < m; j++)
-				a[j][i] = 0.0;
-		}
-		++a[i][i];
-	}
-
-	/* diagonalize the bidiagonal form */
-	for (k = n - 1; k >= 0; k--) { /* loop over singular values */
-		for (its = 0; its < 30000; its++) { /* loop over allowed iterations */
-			flag = 1;
-			for (l = k; l >= 0; l--) { /* test for splitting */
-				nm = l - 1;
-				if (fabs(rv1[l]) + anorm == anorm) {
-					flag = 0;
-					break;
-				}
-				if (fabs(w[nm]) + anorm == anorm)
-					break;
-			}
-			if (flag) {
-				c = 0.0;
-				s = 1.0;
-				for (i = l; i <= k; i++) {
-					f = s * rv1[i];
-					if (fabs(f) + anorm != anorm) {
-						g = w[i];
-						h = PYTHAG(f, g);
-						w[i] = h;
-						h = 1.0 / h;
-						c = g * h;
-						s = (-f * h);
-						for (j = 0; j < m; j++) {
-							y = a[j][nm];
-							z = a[j][i];
-							a[j][nm] = (y * c + z * s);
-							a[j][i] = (z * c - y * s);
-						}
-					}
-				}
-			}
-			z = w[k];
-			if (l == k) { /* convergence */
-				if (z < 0.0) { /* make singular value nonnegative */
-					w[k] = (-z);
-					for (j = 0; j < n; j++)
-						v[j][k] = (-v[j][k]);
-				}
-				break;
-			}
-			if (its >= 30000) {
-				delete[] rv1;
-				fprintf(stderr, "No convergence after 30,000! iterations \n");
-				return 1;
-			}
-
-			/* shift from bottom 2 x 2 minor */
-			x = w[l];
-			nm = k - 1;
-			y = w[nm];
-			g = rv1[nm];
-			h = rv1[k];
-			f = ((y - z) * (y + z) + (g - h) * (g + h)) / (2.0 * h * y);
-			g = PYTHAG(f, 1.0);
-			f = ((x - z) * (x + z) + h * ((y / (f + SIGN(g, f))) - h)) / x;
-
-			/* next QR transformation */
-			c = s = 1.0;
-			for (j = l; j <= nm; j++) {
-				i = j + 1;
-				g = rv1[i];
-				y = w[i];
-				h = s * g;
-				g = c * g;
-				z = PYTHAG(f, h);
-				rv1[j] = z;
-				c = f / z;
-				s = h / z;
-				f = x * c + g * s;
-				g = g * c - x * s;
-				h = y * s;
-				y = y * c;
-				for (jj = 0; jj < n; jj++) {
-					x = v[jj][j];
-					z = v[jj][i];
-					v[jj][j] = (x * c + z * s);
-					v[jj][i] = (z * c - x * s);
-				}
-				z = PYTHAG(f, h);
-				w[j] = z;
-				if (z != 0) {
-					z = 1.0 / z;
-					c = f * z;
-					s = h * z;
-				}
-				f = (c * g) + (s * y);
-				x = (c * y) - (s * g);
-				for (jj = 0; jj < m; jj++) {
-					y = a[jj][j];
-					z = a[jj][i];
-					a[jj][j] = (y * c + z * s);
-					a[jj][i] = (z * c - y * s);
-				}
-			}
-			rv1[l] = 0.0;
-			rv1[k] = f;
-			w[k] = x;
-		}
-	}
-	delete[] rv1;
-
-#if 0
-	printf("singular values of a=\n");
-
-	for (i = 0; i < n; i++) {
-
-		printf("%10.7f\n",w[i]);
-	}
-#endif
-
-	codi::RealReverse temp;
-	for (i = 0; i < n; ++i) {
-		for (j = i + 1; j < n; ++j) {
-
-			if (w[i] < w[j])
-
-			{
-				temp = w[i];
-				w[i] = w[j];
-				w[j] = temp;
-			}
-		}
-	}
-
-#if 0
-	printf("singular values of a=\n");
-
-
-	for (i = 0; i < n; i++) {
-
-		printf("%10.7f\n",w[i].getValue());
-	}
-#endif
-
-	codi::RealReverse wsum = 0.0;
-	for (i = 0; i < n; i++) {
-
-		wsum += w[i];
-
-	}
-
-	for (i = 0; i < n; i++) {
-
-		w[i] = w[i]/wsum;
-
-	}
-
-#if 0
-	printf("singular values of a (normalized) with wsum =%10.7f\n",wsum.getValue());
-
-
-	for (i = 0; i < n; i++) {
-
-		printf("%15.10f\n",w[i].getValue());
-	}
-#endif
-
-
-	codi::RealReverse svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
-
-	svd_multiplier = 1.0/svd_multiplier;
-#if 0
-	printf("svd_multiplier = %10.7f\n",svd_multiplier);
-#endif
-	codi::RealReverse reg_term_svd = 0.0;
-
-	for (i = 0; i < n; i++) {
-#if 0
-		printf("%d * %10.7f = %10.7f\n",i+1,w[i].getValue(),(i+1)*w[i].getValue());
-#endif
-		reg_term_svd = reg_term_svd + (i + 1) * w[i];
-	}
-#if 0
-	printf("reg_term_svd = %10.7f\n",reg_term_svd.getValue());
-#endif
-
-
-	codi::RealReverse reg_term_L1 = 0.0;
-
-	for (i = 0; i < n; i++)
-		for (j = 0; j < n; j++) {
-
-			reg_term_L1 = reg_term_L1 + M[i][j]* M[i][j];
-		}
-#if 0
-	printf("reg_term_L1 = %10.7f\n",reg_term_L1.getValue());
-#endif
-
-
-
-
-
-
-
-	regTerm = wSvd * svd_multiplier *reg_term_svd + w12 * reg_term_L1;
-
-#if 0
-	printf("w12 * reg_term_L1 = %10.7f\n",w12 * reg_term_L1.getValue());
-#endif
-
-
-	tape.registerOutput(regTerm);
-
-	tape.setPassive();
-	regTerm.setGradient(1.0);
-	tape.evaluate();
-
-	for (int i = 0; i < dim*dim; i++) {
-
-
-		Lb[i] = Lcodi[i].getGradient();
-
-	}
-
-
-	tape.reset();
-
-	*result = regTerm.getValue();
-
-	for (i = 0; i < n; i++) {
-
-		delete[] v[i];
-		delete[] a[i];
-		delete[] M[i];
-		delete[] LT[i];
-	}
-
-
-	delete[] LT;
-	delete[] M;
-	delete[] a;
-	delete[] v;
-	delete[] w;
-	delete[] Lcodi;
-
-
-	return 0;
-
-
-
-
-}
+///* forward mode */
+//
+//int calcRegTerms(double *L, double *regTerm, double *regTermd, double wSvd, double w12, int dim, int derIndx) {
+//	int flag, i, its, j, jj, k, l = 0, nm;
+//	codi::RealForward c, f, h, s, x, y, z;
+//	codi::RealForward anorm = 0.0, g = 0.0, scale = 0.0;
+//
+//
+//	int m = dim;
+//	int n = dim;
+//
+//	codi::RealForward *Lcodi = new codi::RealForward[dim*dim];
+//	for (int i = 0; i < dim*dim; i++) {
+//
+//		Lcodi[i] = L[i];
+//
+//	}
+//
+//	Lcodi[derIndx].setGradient(1.0);
+//
+//
+//	codi::RealForward **a;
+//	a = new codi::RealForward*[dim];
+//
+//	for (i = 0; i < dim; i++) {
+//
+//		a[i] = new codi::RealForward[dim];
+//	}
+//
+//	codi::RealForward **M;
+//	M= new codi::RealForward*[dim];
+//
+//	for (i = 0; i < dim; i++) {
+//
+//		M[i] = new codi::RealForward[dim];
+//	}
+//
+//
+//	codi::RealForward **LT;
+//	LT = new codi::RealForward*[dim];
+//	for (int i = 0; i < dim; i++) {
+//		LT[i] = new codi::RealForward[dim];
+//
+//	}
+//
+//	for (int i = 0; i < dim; i++)
+//		for (int j = 0; j < dim; j++) {
+//
+//			LT[i][j]=0.0;
+//		}
+//
+//
+//
+//
+//	for (int i = 0; i < dim; i++) {
+//		for (int j = 0; j <= i; j++){
+//
+//			LT[j][i] = Lcodi[i*dim+j];
+//		}
+//
+//
+//	}
+//#if 0
+//	printf("LT = \n");
+//
+//	for (int i = 0; i < dim; i++) {
+//		for (int j = 0; j < dim; j++) {
+//
+//			printf("%10.7f ", LT[i][j]);
+//
+//		}
+//		printf("\n");
+//	}
+//
+//#endif
+//
+//	for(int i = 0; i < dim; ++i)
+//		for(int j = 0; j < dim; ++j)
+//		{
+//			a[i][j]=0;
+//			M[i][j]=0;
+//		}
+//
+//	/* Multiplying matrix L and LT and storing in M */
+//	for(int i = 0; i < dim; ++i)
+//		for(int j = 0; j < dim; ++j)
+//			for(int k = 0; k < dim; ++k)
+//			{
+//				M[i][j] += Lcodi[i*dim+k] * LT[k][j];
+//
+//			}
+//
+//	for(int i = 0; i < dim; ++i)
+//		for(int j = 0; j < dim; ++j)
+//		{
+//			a[i][j]=M[i][j];
+//
+//		}
+//
+//
+//
+//#if 0
+//	printf("a = \n");
+//
+//	for (int i = 0; i < dim; i++) {
+//		for (int j = 0; j < dim; j++) {
+//
+//			printf("%10.7f ", a[i][j]);
+//
+//		}
+//		printf("\n");
+//	}
+//
+//#endif
+//
+//
+//
+//
+//	/* SVD part */
+//
+//	codi::RealForward **v;
+//	v = new codi::RealForward*[n];
+//
+//	for (i = 0; i < n; i++) {
+//
+//		v[i] = new codi::RealForward[n];
+//	}
+//	codi::RealForward *w = new codi::RealForward[n];
+//
+//	codi::RealForward *rv1 = new codi::RealForward[n];
+//
+//	/* Householder reduction to bidiagonal form */
+//	for (i = 0; i < n; i++) {
+//		/* left-hand reduction */
+//		l = i + 1;
+//		rv1[i] = scale * g;
+//		g = s = scale = 0.0;
+//		if (i < m) {
+//			for (k = i; k < m; k++)
+//				scale += fabs(a[k][i]);
+//			if (scale!= 0) {
+//				for (k = i; k < m; k++) {
+//					a[k][i] = (a[k][i] / scale);
+//					s += (a[k][i] * a[k][i]);
+//				}
+//				f = a[i][i];
+//				g = -SIGN(sqrt(s), f);
+//				h = f * g - s;
+//				a[i][i] = (f - g);
+//				if (i != n - 1) {
+//					for (j = l; j < n; j++) {
+//						for (s = 0.0, k = i; k < m; k++)
+//							s += (a[k][i] * a[k][j]);
+//						f = s / h;
+//						for (k = i; k < m; k++)
+//							a[k][j] += (f * a[k][i]);
+//					}
+//				}
+//				for (k = i; k < m; k++)
+//					a[k][i] = (a[k][i] * scale);
+//			}
+//		}
+//		w[i] = (scale * g);
+//
+//		/* right-hand reduction */
+//		g = s = scale = 0.0;
+//		if (i < m && i != n - 1) {
+//			for (k = l; k < n; k++)
+//				scale += fabs(a[i][k]);
+//			if (scale!=0) {
+//				for (k = l; k < n; k++) {
+//					a[i][k] = (a[i][k] / scale);
+//					s += (a[i][k] * a[i][k]);
+//				}
+//				f = a[i][l];
+//				g = -SIGN(sqrt(s), f);
+//				h = f * g - s;
+//				a[i][l] = (f - g);
+//				for (k = l; k < n; k++)
+//					rv1[k] = a[i][k] / h;
+//				if (i != m - 1) {
+//					for (j = l; j < m; j++) {
+//						for (s = 0.0, k = l; k < n; k++)
+//							s += (a[j][k] * a[i][k]);
+//						for (k = l; k < n; k++)
+//							a[j][k] += (s * rv1[k]);
+//					}
+//				}
+//				for (k = l; k < n; k++)
+//					a[i][k] = (a[i][k] * scale);
+//			}
+//		}
+//		anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
+//	}
+//
+//	/* accumulate the right-hand transformation */
+//	for (i = n - 1; i >= 0; i--) {
+//		if (i < n - 1) {
+//			if (g!=0) {
+//				for (j = l; j < n; j++)
+//					v[j][i] = ((a[i][j] / a[i][l]) / g);
+//				/* float division to avoid underflow */
+//				for (j = l; j < n; j++) {
+//					for (s = 0.0, k = l; k < n; k++)
+//						s += (a[i][k] * v[k][j]);
+//					for (k = l; k < n; k++)
+//						v[k][j] += (s * v[k][i]);
+//				}
+//			}
+//			for (j = l; j < n; j++)
+//				v[i][j] = v[j][i] = 0.0;
+//		}
+//		v[i][i] = 1.0;
+//		g = rv1[i];
+//		l = i;
+//	}
+//
+//	/* accumulate the left-hand transformation */
+//	for (i = n - 1; i >= 0; i--) {
+//		l = i + 1;
+//		g = w[i];
+//		if (i < n - 1)
+//			for (j = l; j < n; j++)
+//				a[i][j] = 0.0;
+//		if (g!=0) {
+//			g = 1.0 / g;
+//			if (i != n - 1) {
+//				for (j = l; j < n; j++) {
+//					for (s = 0.0, k = l; k < m; k++)
+//						s += (a[k][i] * a[k][j]);
+//					f = (s / a[i][i]) * g;
+//					for (k = i; k < m; k++)
+//						a[k][j] += (f * a[k][i]);
+//				}
+//			}
+//			for (j = i; j < m; j++)
+//				a[j][i] = (a[j][i] * g);
+//		} else {
+//			for (j = i; j < m; j++)
+//				a[j][i] = 0.0;
+//		}
+//		++a[i][i];
+//	}
+//
+//	/* diagonalize the bidiagonal form */
+//	for (k = n - 1; k >= 0; k--) { /* loop over singular values */
+//		for (its = 0; its < 30000; its++) { /* loop over allowed iterations */
+//			flag = 1;
+//			for (l = k; l >= 0; l--) { /* test for splitting */
+//				nm = l - 1;
+//				if (fabs(rv1[l]) + anorm == anorm) {
+//					flag = 0;
+//					break;
+//				}
+//				if (fabs(w[nm]) + anorm == anorm)
+//					break;
+//			}
+//			if (flag) {
+//				c = 0.0;
+//				s = 1.0;
+//				for (i = l; i <= k; i++) {
+//					f = s * rv1[i];
+//					if (fabs(f) + anorm != anorm) {
+//						g = w[i];
+//						h = PYTHAG(f, g);
+//						w[i] = h;
+//						h = 1.0 / h;
+//						c = g * h;
+//						s = (-f * h);
+//						for (j = 0; j < m; j++) {
+//							y = a[j][nm];
+//							z = a[j][i];
+//							a[j][nm] = (y * c + z * s);
+//							a[j][i] = (z * c - y * s);
+//						}
+//					}
+//				}
+//			}
+//			z = w[k];
+//			if (l == k) { /* convergence */
+//				if (z < 0.0) { /* make singular value nonnegative */
+//					w[k] = (-z);
+//					for (j = 0; j < n; j++)
+//						v[j][k] = (-v[j][k]);
+//				}
+//				break;
+//			}
+//			if (its >= 30000) {
+//				delete[] rv1;
+//				fprintf(stderr, "No convergence after 30,000! iterations \n");
+//				return 1;
+//			}
+//
+//			/* shift from bottom 2 x 2 minor */
+//			x = w[l];
+//			nm = k - 1;
+//			y = w[nm];
+//			g = rv1[nm];
+//			h = rv1[k];
+//			f = ((y - z) * (y + z) + (g - h) * (g + h)) / (2.0 * h * y);
+//			g = PYTHAG(f, 1.0);
+//			f = ((x - z) * (x + z) + h * ((y / (f + SIGN(g, f))) - h)) / x;
+//
+//			/* next QR transformation */
+//			c = s = 1.0;
+//			for (j = l; j <= nm; j++) {
+//				i = j + 1;
+//				g = rv1[i];
+//				y = w[i];
+//				h = s * g;
+//				g = c * g;
+//				z = PYTHAG(f, h);
+//				rv1[j] = z;
+//				c = f / z;
+//				s = h / z;
+//				f = x * c + g * s;
+//				g = g * c - x * s;
+//				h = y * s;
+//				y = y * c;
+//				for (jj = 0; jj < n; jj++) {
+//					x = v[jj][j];
+//					z = v[jj][i];
+//					v[jj][j] = (x * c + z * s);
+//					v[jj][i] = (z * c - x * s);
+//				}
+//				z = PYTHAG(f, h);
+//				w[j] = z;
+//				if (z!=0) {
+//					z = 1.0 / z;
+//					c = f * z;
+//					s = h * z;
+//				}
+//				f = (c * g) + (s * y);
+//				x = (c * y) - (s * g);
+//				for (jj = 0; jj < m; jj++) {
+//					y = a[jj][j];
+//					z = a[jj][i];
+//					a[jj][j] = (y * c + z * s);
+//					a[jj][i] = (z * c - y * s);
+//				}
+//			}
+//			rv1[l] = 0.0;
+//			rv1[k] = f;
+//			w[k] = x;
+//		}
+//	}
+//	delete[] rv1;
+//
+//#if 0
+//	printf("singular values of a=\n");
+//
+//	for (i = 0; i < n; i++) {
+//
+//		printf("%10.7f\n",w[i]);
+//	}
+//#endif
+//
+//	/* sort the singular values */
+//
+//	codi::RealForward temp;
+//	for (i = 0; i < n; ++i) {
+//		for (j = i + 1; j < n; ++j) {
+//
+//			if (w[i] < w[j])
+//
+//			{
+//				temp = w[i];
+//				w[i] = w[j];
+//				w[j] = temp;
+//			}
+//		}
+//	}
+//
+//#if 0
+//	printf("singular values of a=\n");
+//
+//
+//	for (i = 0; i < n; i++) {
+//
+//		printf("%10.7f\n",w[i].getValue());
+//	}
+//#endif
+//
+//	/* normalization */
+//	codi::RealForward wsum = 0.0;
+//	for (i = 0; i < n; i++) {
+//
+//		wsum += w[i];
+//
+//	}
+//
+//	for (i = 0; i < n; i++) {
+//
+//		w[i] = w[i]/wsum;
+//
+//	}
+//
+//#if 0
+//	printf("singular values of a (normalized) with wsum =%10.7f\n",wsum.getValue());
+//
+//
+//	for (i = 0; i < n; i++) {
+//
+//		printf("%15.10f\n",w[i].getValue());
+//	}
+//#endif
+//
+//
+//	float svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
+//
+//	svd_multiplier = 1.0/svd_multiplier;
+//#if 0
+//	printf("svd_multiplier = %10.7f\n",svd_multiplier);
+//#endif
+//	codi::RealForward reg_term_svd = 0.0;
+//
+//	for (i = 0; i < n; i++) {
+//#if 0
+//		printf("%d * %10.7f = %10.7f\n",i+1,w[i].getValue(),(i+1)*w[i].getValue());
+//#endif
+//		reg_term_svd = reg_term_svd + (i + 1) * w[i];
+//	}
+//#if 0
+//	printf("reg_term_svd = %10.7f\n",reg_term_svd.getValue());
+//#endif
+//
+//
+//	codi::RealForward reg_term_L1 = 0.0;
+//
+//	for (i = 0; i < n; i++)
+//		for (j = 0; j < n; j++) {
+//
+//			reg_term_L1 = reg_term_L1 + M[i][j]* M[i][j];
+//		}
+//#if 0
+//	printf("reg_term_L1 = %10.7f\n",reg_term_L1.getValue());
+//#endif
+//
+//
+//
+//	for (i = 0; i < n; i++) {
+//		delete[] v[i];
+//		delete[] a[i];
+//		delete[] M[i];
+//		delete[] LT[i];
+//	}
+//
+//
+//	delete[] LT;
+//	delete[] M;
+//	delete[] a;
+//	delete[] v;
+//	delete[] w;
+//
+//
+//	codi::RealForward result = wSvd * svd_multiplier *reg_term_svd + w12 * reg_term_L1;
+//	*regTerm = result.getValue();
+//
+//	*regTermd = result.getGradient();
+//
+//	return 0;
+//
+//
+//}
+
+
+
+//int calcRegTerms(double *L, double *Lb, double *result, double wSvd, double w12, int dim) {
+//	int flag, i, its, j, jj, k, l = 0, nm;
+//
+//
+//	codi::RealReverse *Lcodi = new codi::RealReverse[dim*dim];
+//	for (int i = 0; i < dim*dim; i++) {
+//
+//		Lcodi[i] = L[i];
+//
+//	}
+//
+//	/* activate tape and register input */
+//
+//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+//	tape.setActive();
+//
+//	codi::RealReverse regTerm=0.0;
+//
+//
+//
+//	for (int i = 0; i < dim*dim; i++) {
+//
+//		tape.registerInput(Lcodi[i]);
+//
+//	}
+//
+//
+//	codi::RealReverse c, f, h, s, x, y, z;
+//	codi::RealReverse anorm = 0.0, g = 0.0, scale = 0.0;
+//
+//
+//	int m = dim;
+//	int n = dim;
+//
+//
+//	codi::RealReverse **a;
+//	a = new codi::RealReverse*[dim];
+//
+//	for (i = 0; i < dim; i++) {
+//
+//		a[i] = new codi::RealReverse[dim];
+//	}
+//
+//	codi::RealReverse **M;
+//	M = new codi::RealReverse*[dim];
+//
+//	for (i = 0; i < dim; i++) {
+//
+//		M[i] = new codi::RealReverse[dim];
+//	}
+//
+//
+//
+//
+//	codi::RealReverse **LT;
+//	LT = new codi::RealReverse*[dim];
+//	for (int i = 0; i < dim; i++) {
+//		LT[i] = new codi::RealReverse[dim];
+//
+//	}
+//
+//	for (int i = 0; i < dim; i++)
+//		for (int j = 0; j < dim; j++) {
+//
+//			LT[i][j]=0.0;
+//		}
+//
+//
+//
+//
+//	for (int i = 0; i < dim; i++) {
+//		for (int j = 0; j <= i; j++){
+//
+//			LT[j][i] = Lcodi[i*dim+j];
+//		}
+//
+//
+//	}
+//#if 0
+//	printf("LT = \n");
+//
+//	for (int i = 0; i < dim; i++) {
+//		for (int j = 0; j < dim; j++) {
+//
+//			printf("%10.7f ", LT[i][j].getValue());
+//
+//		}
+//		printf("\n");
+//	}
+//
+//#endif
+//
+//	for(int i = 0; i < dim; ++i)
+//		for(int j = 0; j < dim; ++j)
+//		{
+//			a[i][j]=0;
+//			M[i][j]=0;
+//		}
+//
+//	/* Multiplying matrix L and LT and storing in M */
+//	for(int i = 0; i < dim; ++i)
+//		for(int j = 0; j < dim; ++j)
+//			for(int k = 0; k < dim; ++k)
+//			{
+//				M[i][j] += Lcodi[i*dim+k] * LT[k][j];
+//
+//			}
+//
+//	for(int i = 0; i < dim; ++i)
+//		for(int j = 0; j < dim; ++j)
+//		{
+//			a[i][j]=M[i][j];
+//
+//		}
+//
+//#if 0
+//	printf("M = \n");
+//
+//	for (int i = 0; i < dim; i++) {
+//		for (int j = 0; j < dim; j++) {
+//
+//			printf("%10.7f ", M[i][j].getValue());
+//
+//		}
+//		printf("\n");
+//	}
+//
+//#endif
+//
+//#if 0
+//	printf("a = \n");
+//
+//	for (int i = 0; i < dim; i++) {
+//		for (int j = 0; j < dim; j++) {
+//
+//			printf("%10.7f ", a[i][j].getValue());
+//
+//		}
+//		printf("\n");
+//	}
+//
+//#endif
+//
+//
+//	/* SVD part */
+//
+//	codi::RealReverse **v;
+//	v = new codi::RealReverse*[n];
+//
+//	for (i = 0; i < n; i++) {
+//
+//		v[i] = new codi::RealReverse[n];
+//	}
+//	codi::RealReverse *w = new codi::RealReverse[n];
+//
+//	codi::RealReverse *rv1 = new codi::RealReverse[n];
+//
+//	/* Householder reduction to bidiagonal form */
+//	for (i = 0; i < n; i++) {
+//		/* left-hand reduction */
+//		l = i + 1;
+//		rv1[i] = scale * g;
+//		g = s = scale = 0.0;
+//		if (i < m) {
+//			for (k = i; k < m; k++)
+//				scale += fabs(a[k][i]);
+//			if (scale != 0) {
+//				for (k = i; k < m; k++) {
+//					a[k][i] = (a[k][i] / scale);
+//					s += (a[k][i] * a[k][i]);
+//				}
+//				f = a[i][i];
+//				g = -SIGN(sqrt(s), f);
+//				h = f * g - s;
+//				a[i][i] = (f - g);
+//				if (i != n - 1) {
+//					for (j = l; j < n; j++) {
+//						for (s = 0.0, k = i; k < m; k++)
+//							s += (a[k][i] * a[k][j]);
+//						f = s / h;
+//						for (k = i; k < m; k++)
+//							a[k][j] += (f * a[k][i]);
+//					}
+//				}
+//				for (k = i; k < m; k++)
+//					a[k][i] = (a[k][i] * scale);
+//			}
+//		}
+//		w[i] = (scale * g);
+//
+//		/* right-hand reduction */
+//		g = s = scale = 0.0;
+//		if (i < m && i != n - 1) {
+//			for (k = l; k < n; k++)
+//				scale += fabs(a[i][k]);
+//			if (scale !=0) {
+//				for (k = l; k < n; k++) {
+//					a[i][k] = (a[i][k] / scale);
+//					s += (a[i][k] * a[i][k]);
+//				}
+//				f = a[i][l];
+//				g = -SIGN(sqrt(s), f);
+//				h = f * g - s;
+//				a[i][l] = (f - g);
+//				for (k = l; k < n; k++)
+//					rv1[k] = a[i][k] / h;
+//				if (i != m - 1) {
+//					for (j = l; j < m; j++) {
+//						for (s = 0.0, k = l; k < n; k++)
+//							s += (a[j][k] * a[i][k]);
+//						for (k = l; k < n; k++)
+//							a[j][k] += (s * rv1[k]);
+//					}
+//				}
+//				for (k = l; k < n; k++)
+//					a[i][k] = (a[i][k] * scale);
+//			}
+//		}
+//		anorm = MAX(anorm, (fabs(w[i]) + fabs(rv1[i])));
+//	}
+//
+//	/* accumulate the right-hand transformation */
+//	for (i = n - 1; i >= 0; i--) {
+//		if (i < n - 1) {
+//			if (g !=0) {
+//				for (j = l; j < n; j++)
+//					v[j][i] = ((a[i][j] / a[i][l]) / g);
+//				/* float division to avoid underflow */
+//				for (j = l; j < n; j++) {
+//					for (s = 0.0, k = l; k < n; k++)
+//						s += (a[i][k] * v[k][j]);
+//					for (k = l; k < n; k++)
+//						v[k][j] += (s * v[k][i]);
+//				}
+//			}
+//			for (j = l; j < n; j++)
+//				v[i][j] = v[j][i] = 0.0;
+//		}
+//		v[i][i] = 1.0;
+//		g = rv1[i];
+//		l = i;
+//	}
+//
+//	/* accumulate the left-hand transformation */
+//	for (i = n - 1; i >= 0; i--) {
+//		l = i + 1;
+//		g = w[i];
+//		if (i < n - 1)
+//			for (j = l; j < n; j++)
+//				a[i][j] = 0.0;
+//		if (g != 0) {
+//			g = 1.0 / g;
+//			if (i != n - 1) {
+//				for (j = l; j < n; j++) {
+//					for (s = 0.0, k = l; k < m; k++)
+//						s += (a[k][i] * a[k][j]);
+//					f = (s / a[i][i]) * g;
+//					for (k = i; k < m; k++)
+//						a[k][j] += (f * a[k][i]);
+//				}
+//			}
+//			for (j = i; j < m; j++)
+//				a[j][i] = (a[j][i] * g);
+//		} else {
+//			for (j = i; j < m; j++)
+//				a[j][i] = 0.0;
+//		}
+//		++a[i][i];
+//	}
+//
+//	/* diagonalize the bidiagonal form */
+//	for (k = n - 1; k >= 0; k--) { /* loop over singular values */
+//		for (its = 0; its < 30000; its++) { /* loop over allowed iterations */
+//			flag = 1;
+//			for (l = k; l >= 0; l--) { /* test for splitting */
+//				nm = l - 1;
+//				if (fabs(rv1[l]) + anorm == anorm) {
+//					flag = 0;
+//					break;
+//				}
+//				if (fabs(w[nm]) + anorm == anorm)
+//					break;
+//			}
+//			if (flag) {
+//				c = 0.0;
+//				s = 1.0;
+//				for (i = l; i <= k; i++) {
+//					f = s * rv1[i];
+//					if (fabs(f) + anorm != anorm) {
+//						g = w[i];
+//						h = PYTHAG(f, g);
+//						w[i] = h;
+//						h = 1.0 / h;
+//						c = g * h;
+//						s = (-f * h);
+//						for (j = 0; j < m; j++) {
+//							y = a[j][nm];
+//							z = a[j][i];
+//							a[j][nm] = (y * c + z * s);
+//							a[j][i] = (z * c - y * s);
+//						}
+//					}
+//				}
+//			}
+//			z = w[k];
+//			if (l == k) { /* convergence */
+//				if (z < 0.0) { /* make singular value nonnegative */
+//					w[k] = (-z);
+//					for (j = 0; j < n; j++)
+//						v[j][k] = (-v[j][k]);
+//				}
+//				break;
+//			}
+//			if (its >= 30000) {
+//				delete[] rv1;
+//				fprintf(stderr, "No convergence after 30,000! iterations \n");
+//				return 1;
+//			}
+//
+//			/* shift from bottom 2 x 2 minor */
+//			x = w[l];
+//			nm = k - 1;
+//			y = w[nm];
+//			g = rv1[nm];
+//			h = rv1[k];
+//			f = ((y - z) * (y + z) + (g - h) * (g + h)) / (2.0 * h * y);
+//			g = PYTHAG(f, 1.0);
+//			f = ((x - z) * (x + z) + h * ((y / (f + SIGN(g, f))) - h)) / x;
+//
+//			/* next QR transformation */
+//			c = s = 1.0;
+//			for (j = l; j <= nm; j++) {
+//				i = j + 1;
+//				g = rv1[i];
+//				y = w[i];
+//				h = s * g;
+//				g = c * g;
+//				z = PYTHAG(f, h);
+//				rv1[j] = z;
+//				c = f / z;
+//				s = h / z;
+//				f = x * c + g * s;
+//				g = g * c - x * s;
+//				h = y * s;
+//				y = y * c;
+//				for (jj = 0; jj < n; jj++) {
+//					x = v[jj][j];
+//					z = v[jj][i];
+//					v[jj][j] = (x * c + z * s);
+//					v[jj][i] = (z * c - x * s);
+//				}
+//				z = PYTHAG(f, h);
+//				w[j] = z;
+//				if (z != 0) {
+//					z = 1.0 / z;
+//					c = f * z;
+//					s = h * z;
+//				}
+//				f = (c * g) + (s * y);
+//				x = (c * y) - (s * g);
+//				for (jj = 0; jj < m; jj++) {
+//					y = a[jj][j];
+//					z = a[jj][i];
+//					a[jj][j] = (y * c + z * s);
+//					a[jj][i] = (z * c - y * s);
+//				}
+//			}
+//			rv1[l] = 0.0;
+//			rv1[k] = f;
+//			w[k] = x;
+//		}
+//	}
+//	delete[] rv1;
+//
+//#if 0
+//	printf("singular values of a=\n");
+//
+//	for (i = 0; i < n; i++) {
+//
+//		printf("%10.7f\n",w[i]);
+//	}
+//#endif
+//
+//	codi::RealReverse temp;
+//	for (i = 0; i < n; ++i) {
+//		for (j = i + 1; j < n; ++j) {
+//
+//			if (w[i] < w[j])
+//
+//			{
+//				temp = w[i];
+//				w[i] = w[j];
+//				w[j] = temp;
+//			}
+//		}
+//	}
+//
+//#if 0
+//	printf("singular values of a=\n");
+//
+//
+//	for (i = 0; i < n; i++) {
+//
+//		printf("%10.7f\n",w[i].getValue());
+//	}
+//#endif
+//
+//	codi::RealReverse wsum = 0.0;
+//	for (i = 0; i < n; i++) {
+//
+//		wsum += w[i];
+//
+//	}
+//
+//	for (i = 0; i < n; i++) {
+//
+//		w[i] = w[i]/wsum;
+//
+//	}
+//
+//#if 0
+//	printf("singular values of a (normalized) with wsum =%10.7f\n",wsum.getValue());
+//
+//
+//	for (i = 0; i < n; i++) {
+//
+//		printf("%15.10f\n",w[i].getValue());
+//	}
+//#endif
+//
+//
+//	codi::RealReverse svd_multiplier = (1.0*n*(1.0*n+1))/2.0;
+//
+//	svd_multiplier = 1.0/svd_multiplier;
+//#if 0
+//	printf("svd_multiplier = %10.7f\n",svd_multiplier);
+//#endif
+//	codi::RealReverse reg_term_svd = 0.0;
+//
+//	for (i = 0; i < n; i++) {
+//#if 0
+//		printf("%d * %10.7f = %10.7f\n",i+1,w[i].getValue(),(i+1)*w[i].getValue());
+//#endif
+//		reg_term_svd = reg_term_svd + (i + 1) * w[i];
+//	}
+//#if 0
+//	printf("reg_term_svd = %10.7f\n",reg_term_svd.getValue());
+//#endif
+//
+//
+//	codi::RealReverse reg_term_L1 = 0.0;
+//
+//	for (i = 0; i < n; i++)
+//		for (j = 0; j < n; j++) {
+//
+//			reg_term_L1 = reg_term_L1 + M[i][j]* M[i][j];
+//		}
+//#if 0
+//	printf("reg_term_L1 = %10.7f\n",reg_term_L1.getValue());
+//#endif
+//
+//
+//
+//
+//
+//
+//
+//	regTerm = wSvd * svd_multiplier *reg_term_svd + w12 * reg_term_L1;
+//
+//#if 0
+//	printf("w12 * reg_term_L1 = %10.7f\n",w12 * reg_term_L1.getValue());
+//#endif
+//
+//
+//	tape.registerOutput(regTerm);
+//
+//	tape.setPassive();
+//	regTerm.setGradient(1.0);
+//	tape.evaluate();
+//
+//	for (int i = 0; i < dim*dim; i++) {
+//
+//
+//		Lb[i] = Lcodi[i].getGradient();
+//
+//	}
+//
+//
+//	tape.reset();
+//
+//	*result = regTerm.getValue();
+//
+//	for (i = 0; i < n; i++) {
+//
+//		delete[] v[i];
+//		delete[] a[i];
+//		delete[] M[i];
+//		delete[] LT[i];
+//	}
+//
+//
+//	delete[] LT;
+//	delete[] M;
+//	delete[] a;
+//	delete[] v;
+//	delete[] w;
+//	delete[] Lcodi;
+//
+//
+//	return 0;
+//
+//
+//
+//
+//}
 
 
 /** calculate regularization terms for the given matrix L
@@ -2632,146 +2812,146 @@ int calcRegTermL12(double *L, double *regTerm, double w12, int dim) {
 }
 
 
-int calcRegTermL12(double *L, double *Lb, double *result , double w12, int dim) {
-
-
-
-	codi::RealReverse *Lcodi = new codi::RealReverse[dim*dim];
-	for (int i = 0; i < dim*dim; i++) {
-
-		Lcodi[i] = L[i];
-
-	}
-
-	/* activate tape and register input */
-
-	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-	tape.setActive();
-
-	codi::RealReverse regTerm=0.0;
-
-
-
-	for (int i = 0; i < dim*dim; i++) {
-
-		tape.registerInput(Lcodi[i]);
-
-	}
-
-
-
-
-
-	codi::RealReverse **M;
-	M = new codi::RealReverse*[dim];
-
-	for (int i = 0; i < dim; i++) {
-
-		M[i] = new codi::RealReverse[dim];
-	}
-
-
-
-
-	codi::RealReverse **LT;
-	LT = new codi::RealReverse*[dim];
-	for (int i = 0; i < dim; i++) {
-		LT[i] = new codi::RealReverse[dim];
-
-	}
-
-	for (int i = 0; i < dim; i++)
-		for (int j = 0; j < dim; j++) {
-
-			LT[i][j]=0.0;
-		}
-
-
-
-
-	for (int i = 0; i < dim; i++) {
-		for (int j = 0; j <= i; j++){
-
-			LT[j][i] = Lcodi[i*dim+j];
-		}
-
-
-	}
-
-	for(int i = 0; i < dim; ++i)
-		for(int j = 0; j < dim; ++j)
-		{
-
-			M[i][j]=0;
-		}
-
-	/* Multiplying matrix L and LT and storing in M */
-	for(int i = 0; i < dim; ++i)
-		for(int j = 0; j < dim; ++j)
-			for(int k = 0; k < dim; ++k)
-			{
-				M[i][j] += Lcodi[i*dim+k] * LT[k][j];
-
-			}
-
-
-
-
-
-
-
-	codi::RealReverse reg_term_L1 = 0.0;
-
-	for (int i = 0; i < dim; i++)
-		for (int j = 0; j < dim; j++) {
-
-			reg_term_L1 = reg_term_L1 + M[i][j]* M[i][j];
-		}
-
-
-	regTerm = w12 * reg_term_L1;
-
-#if 0
-	printf("w12 * reg_term_L1 = %10.7f\n",w12 * reg_term_L1.getValue());
-#endif
-
-
-	tape.registerOutput(regTerm);
-
-	tape.setPassive();
-	regTerm.setGradient(1.0);
-	tape.evaluate();
-
-	for (int i = 0; i < dim*dim; i++) {
-
-
-		Lb[i] = Lcodi[i].getGradient();
-
-	}
-
-
-	tape.reset();
-
-	*result = regTerm.getValue();
-
-	for (int i = 0; i < dim; i++) {
-
-		delete[] M[i];
-		delete[] LT[i];
-	}
-
-
-	delete[] LT;
-	delete[] M;
-	delete[] Lcodi;
-
-
-	return 0;
-
-
-
-
-}
+//int calcRegTermL12(double *L, double *Lb, double *result , double w12, int dim) {
+//
+//
+//
+//	codi::RealReverse *Lcodi = new codi::RealReverse[dim*dim];
+//	for (int i = 0; i < dim*dim; i++) {
+//
+//		Lcodi[i] = L[i];
+//
+//	}
+//
+//	/* activate tape and register input */
+//
+//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+//	tape.setActive();
+//
+//	codi::RealReverse regTerm=0.0;
+//
+//
+//
+//	for (int i = 0; i < dim*dim; i++) {
+//
+//		tape.registerInput(Lcodi[i]);
+//
+//	}
+//
+//
+//
+//
+//
+//	codi::RealReverse **M;
+//	M = new codi::RealReverse*[dim];
+//
+//	for (int i = 0; i < dim; i++) {
+//
+//		M[i] = new codi::RealReverse[dim];
+//	}
+//
+//
+//
+//
+//	codi::RealReverse **LT;
+//	LT = new codi::RealReverse*[dim];
+//	for (int i = 0; i < dim; i++) {
+//		LT[i] = new codi::RealReverse[dim];
+//
+//	}
+//
+//	for (int i = 0; i < dim; i++)
+//		for (int j = 0; j < dim; j++) {
+//
+//			LT[i][j]=0.0;
+//		}
+//
+//
+//
+//
+//	for (int i = 0; i < dim; i++) {
+//		for (int j = 0; j <= i; j++){
+//
+//			LT[j][i] = Lcodi[i*dim+j];
+//		}
+//
+//
+//	}
+//
+//	for(int i = 0; i < dim; ++i)
+//		for(int j = 0; j < dim; ++j)
+//		{
+//
+//			M[i][j]=0;
+//		}
+//
+//	/* Multiplying matrix L and LT and storing in M */
+//	for(int i = 0; i < dim; ++i)
+//		for(int j = 0; j < dim; ++j)
+//			for(int k = 0; k < dim; ++k)
+//			{
+//				M[i][j] += Lcodi[i*dim+k] * LT[k][j];
+//
+//			}
+//
+//
+//
+//
+//
+//
+//
+//	codi::RealReverse reg_term_L1 = 0.0;
+//
+//	for (int i = 0; i < dim; i++)
+//		for (int j = 0; j < dim; j++) {
+//
+//			reg_term_L1 = reg_term_L1 + M[i][j]* M[i][j];
+//		}
+//
+//
+//	regTerm = w12 * reg_term_L1;
+//
+//#if 0
+//	printf("w12 * reg_term_L1 = %10.7f\n",w12 * reg_term_L1.getValue());
+//#endif
+//
+//
+//	tape.registerOutput(regTerm);
+//
+//	tape.setPassive();
+//	regTerm.setGradient(1.0);
+//	tape.evaluate();
+//
+//	for (int i = 0; i < dim*dim; i++) {
+//
+//
+//		Lb[i] = Lcodi[i].getGradient();
+//
+//	}
+//
+//
+//	tape.reset();
+//
+//	*result = regTerm.getValue();
+//
+//	for (int i = 0; i < dim; i++) {
+//
+//		delete[] M[i];
+//		delete[] LT[i];
+//	}
+//
+//
+//	delete[] LT;
+//	delete[] M;
+//	delete[] Lcodi;
+//
+//
+//	return 0;
+//
+//
+//
+//
+//}
 
 
 
@@ -2934,69 +3114,69 @@ void calculateKernelValues_b(double *X, double *kernelValTable, double *kernelVa
 }
 
 
-void calculateKernelValues(double *X, codi::RealReverse *kernelValTable, codi::RealReverse *M, codi::RealReverse sigma, int N, int d){
-
-	const double sqr_two_pi = sqrt(2.0 * 3.14159265359);
-
-	codi::RealReverse diff[d];
-	codi::RealReverse tempVec[d];
-
-	for(int indx1=0; indx1<N; indx1++){
-		for(int indx2=indx1+1; indx2<N; indx2++){
-
-
-
-			int off1 = indx1*(d+1);
-			int off2 = indx2*(d+1);
-
-
-
-			for (int k = 0; k < d; k++) {
-
-				diff[k] = X[off1+k] - X[off2+k];
-
-
-			}
-
-
-
-
-
-			codi::RealReverse sum = 0.0;
-
-			for (int i = 0; i < d; i++) {
-				for (int j = 0; j < d; j++) {
-
-					sum = sum + M[i*d+j] * diff[j];
-				}
-
-				tempVec[i] = sum;
-				sum = 0.0;
-
-			}
-
-
-			sum = 0.0;
-
-			for (int i = 0; i < d; i++) {
-
-				sum = sum + tempVec[i] * diff[i];
-			}
-
-
-
-
-			codi::RealReverse kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-sum / (2 * sigma * sigma)) + 10E-12;
-
-			kernelValTable[indx1*N+indx2]= kernelVal;
-
-
-		}
-	}
-
-
-
-}
+//void calculateKernelValues(double *X, codi::RealReverse *kernelValTable, codi::RealReverse *M, codi::RealReverse sigma, int N, int d){
+//
+//	const double sqr_two_pi = sqrt(2.0 * 3.14159265359);
+//
+//	codi::RealReverse diff[d];
+//	codi::RealReverse tempVec[d];
+//
+//	for(int indx1=0; indx1<N; indx1++){
+//		for(int indx2=indx1+1; indx2<N; indx2++){
+//
+//
+//
+//			int off1 = indx1*(d+1);
+//			int off2 = indx2*(d+1);
+//
+//
+//
+//			for (int k = 0; k < d; k++) {
+//
+//				diff[k] = X[off1+k] - X[off2+k];
+//
+//
+//			}
+//
+//
+//
+//
+//
+//			codi::RealReverse sum = 0.0;
+//
+//			for (int i = 0; i < d; i++) {
+//				for (int j = 0; j < d; j++) {
+//
+//					sum = sum + M[i*d+j] * diff[j];
+//				}
+//
+//				tempVec[i] = sum;
+//				sum = 0.0;
+//
+//			}
+//
+//
+//			sum = 0.0;
+//
+//			for (int i = 0; i < d; i++) {
+//
+//				sum = sum + tempVec[i] * diff[i];
+//			}
+//
+//
+//
+//
+//			codi::RealReverse kernelVal = (1.0 / (sigma * sqr_two_pi))* exp(-sum / (2 * sigma * sigma)) + 10E-12;
+//
+//			kernelValTable[indx1*N+indx2]= kernelVal;
+//
+//
+//		}
+//	}
+//
+//
+//
+//}
 
 void calculateLossKernelL1(double *result, double *data, double *kernelValTable, int N, int d){
 
@@ -3198,75 +3378,75 @@ void calculateLossKernelL1_b(double *result, double *resultb, double *data, doub
 
 
 
-void calculateLossKernelL1(codi::RealReverse* result, double *data,codi::RealReverse *kernelValTable, int N, int d){
-
-
-	codi::RealReverse lossFunc = 0.0;
-
-	for(int tid=0; tid<N; tid++){
-
-
-
-		codi::RealReverse kernelSum = 0.0;
-
-		for(int i=0; i<N; i++){
-
-			if(tid != i){
-
-				int indxKernelValTable;
-				if(i<tid) {
-
-
-					indxKernelValTable = i*N+tid;
-
-				}
-				else{
-
-					indxKernelValTable = tid*N+i;
-
-				}
-
-				kernelSum += kernelValTable[indxKernelValTable];
-
-			}
-
-
-
-		}
-
-		codi::RealReverse fapprox=0.0;
-		for(int i=0; i<N; i++){
-
-			if(tid != i){
-				int indxKernelValTable;
-
-				if(i<tid) {
-
-					indxKernelValTable = i*N+tid;
-
-				}
-				else{
-
-					indxKernelValTable = tid*N+i;
-
-				}
-
-				fapprox += (kernelValTable[indxKernelValTable]/kernelSum)* data[i*(d+1)+d];
-
-			}
-
-
-
-
-		}
-
-		lossFunc += fabs(fapprox - data[tid*(d+1)+d]);
-
-	}
-
-	*result = lossFunc;
-
-}
+//void calculateLossKernelL1(codi::RealReverse* result, double *data,codi::RealReverse *kernelValTable, int N, int d){
+//
+//
+//	codi::RealReverse lossFunc = 0.0;
+//
+//	for(int tid=0; tid<N; tid++){
+//
+//
+//
+//		codi::RealReverse kernelSum = 0.0;
+//
+//		for(int i=0; i<N; i++){
+//
+//			if(tid != i){
+//
+//				int indxKernelValTable;
+//				if(i<tid) {
+//
+//
+//					indxKernelValTable = i*N+tid;
+//
+//				}
+//				else{
+//
+//					indxKernelValTable = tid*N+i;
+//
+//				}
+//
+//				kernelSum += kernelValTable[indxKernelValTable];
+//
+//			}
+//
+//
+//
+//		}
+//
+//		codi::RealReverse fapprox=0.0;
+//		for(int i=0; i<N; i++){
+//
+//			if(tid != i){
+//				int indxKernelValTable;
+//
+//				if(i<tid) {
+//
+//					indxKernelValTable = i*N+tid;
+//
+//				}
+//				else{
+//
+//					indxKernelValTable = tid*N+i;
+//
+//				}
+//
+//				fapprox += (kernelValTable[indxKernelValTable]/kernelSum)* data[i*(d+1)+d];
+//
+//			}
+//
+//
+//
+//
+//		}
+//
+//		lossFunc += fabs(fapprox - data[tid*(d+1)+d]);
+//
+//	}
+//
+//	*result = lossFunc;
+//
+//}
 
 
 
@@ -3488,82 +3668,82 @@ void calculateLossKernelL2_b(double *result, double *resultb, double *X, double 
 }
 
 
-void calculateLossKernelL2(codi::RealReverse* result, double *X,codi::RealReverse *kernelValTable, int N, int d){
-
-
-	codi::RealReverse lossFunc = 0.0;
-
-	for(int tid=0; tid<N; tid++){
-
-
-		codi::RealReverse kernelSum = 0.0;
-
-		for(int i=0; i<N; i++){
-
-			if(tid != i){
-
-				int indxKernelValTable;
-				if(i<tid) {
-
-
-					indxKernelValTable = i*N+tid;
-
-				}
-				else{
-
-					indxKernelValTable = tid*N+i;
-
-				}
-
-				kernelSum += kernelValTable[indxKernelValTable];
-
-			}
-
-
-
-		}
-
-		codi::RealReverse fapprox=0.0;
-		for(int i=0; i<N; i++){
-
-			if(tid != i){
-				int indxKernelValTable;
-
-				if(i<tid) {
-
-					indxKernelValTable = i*N+tid;
-
-				}
-				else{
-
-					indxKernelValTable = tid*N+i;
-
-				}
-
-				fapprox += (kernelValTable[indxKernelValTable]/kernelSum)* X[i*(d+1)+d];
-#if 0
-				printf("weight = %10.7f f = %10.7f\n", (kernelValTable[indxKernelValTable]/kernelSum),X[i*(d+1)+d]);
-#endif
-
-			}
-
-
-		}
-
-
-		lossFunc += (fapprox - X[tid*(d+1)+d]) * (fapprox - X[tid*(d+1)+d]);
-#if 0
-		printf("ftilde = %10.7f fexact = %10.7f\n", fapprox,X[tid*(d+1)+d]);
-#endif
-
-
-
-
-	}
-
-	*result = lossFunc;
-
-}
+//void calculateLossKernelL2(codi::RealReverse* result, double *X,codi::RealReverse *kernelValTable, int N, int d){
+//
+//
+//	codi::RealReverse lossFunc = 0.0;
+//
+//	for(int tid=0; tid<N; tid++){
+//
+//
+//		codi::RealReverse kernelSum = 0.0;
+//
+//		for(int i=0; i<N; i++){
+//
+//			if(tid != i){
+//
+//				int indxKernelValTable;
+//				if(i<tid) {
+//
+//
+//					indxKernelValTable = i*N+tid;
+//
+//				}
+//				else{
+//
+//					indxKernelValTable = tid*N+i;
+//
+//				}
+//
+//				kernelSum += kernelValTable[indxKernelValTable];
+//
+//			}
+//
+//
+//
+//		}
+//
+//		codi::RealReverse fapprox=0.0;
+//		for(int i=0; i<N; i++){
+//
+//			if(tid != i){
+//				int indxKernelValTable;
+//
+//				if(i<tid) {
+//
+//					indxKernelValTable = i*N+tid;
+//
+//				}
+//				else{
+//
+//					indxKernelValTable = tid*N+i;
+//
+//				}
+//
+//				fapprox += (kernelValTable[indxKernelValTable]/kernelSum)* X[i*(d+1)+d];
+//#if 0
+//				printf("weight = %10.7f f = %10.7f\n", (kernelValTable[indxKernelValTable]/kernelSum),X[i*(d+1)+d]);
+//#endif
+//
+//			}
+//
+//
+//		}
+//
+//
+//		lossFunc += (fapprox - X[tid*(d+1)+d]) * (fapprox - X[tid*(d+1)+d]);
+//#if 0
+//		printf("ftilde = %10.7f fexact = %10.7f\n", fapprox,X[tid*(d+1)+d]);
+//#endif
+//
+//
+//
+//
+//	}
+//
+//	*result = lossFunc;
+//
+//}
 
 
 
@@ -3682,141 +3862,141 @@ void calcLossFunCPU(double *result, double *input, double *data,int N, int d,int
  *
  * */
 
-void calcLossFunCPUCodi(double *result, double *input, double *inputb, double *data,int N, int d,int lossFunType){
-
-
-	codi::RealReverse *inputcodi = new codi::RealReverse[d*d+1];
-
-	codi::RealReverse LT[d][d];
-	codi::RealReverse L[d][d];
-	codi::RealReverse M[d*d];
-
-	codi::RealReverse *kernelValTable = new codi::RealReverse[N*N];
-
-
-	/* activate tape and register input */
-
-	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-	tape.setActive();
-
-
-	for (int i = 0; i < d*d+1; i++) {
-		inputcodi[i] = input[i];
-		tape.registerInput(inputcodi[i]);
-
-	}
-
-
-
-	codi::RealReverse resultCodi;
-
-
-	for (int i = 0; i < d; i++)
-		for (int j = 0; j < d; j++) {
-			L[i][j]=inputcodi[i*d+j];
-
-		}
-
-
-	codi::RealReverse sigma = inputcodi[d*d];
-
-
-
-	for (int i = 0; i < d; i++)
-		for (int j = 0; j < d; j++) {
-
-			LT[i][j]=0.0;
-		}
-
-
-
-
-	for (int i = 0; i < d; i++) {
-		for (int j = 0; j <= i; j++){
-
-			LT[j][i] = L[i][j];
-		}
-
-
-	}
-
-
-	for(int i = 0; i < d; ++i)
-		for(int j = 0; j < d; ++j)
-		{
-			M[i*d+j]=0;
-		}
-
-	/* Multiplying matrix L and LT and storing in M */
-	for(int i = 0; i < d; ++i)
-		for(int j = 0; j < d; ++j)
-			for(int k = 0; k < d; ++k)
-			{
-				M[i*d+j] += L[i][k] * LT[k][j];
-
-			}
-
-	calculateKernelValues(data, kernelValTable, M, sigma, N, d);
-
-	if(lossFunType == L1_LOSS_FUNCTION){
-
-		calculateLossKernelL1(&resultCodi,data,kernelValTable, N, d);
-
-	}
-
-	if(lossFunType == L2_LOSS_FUNCTION){
-
-		calculateLossKernelL2(&resultCodi, data,kernelValTable, N,d);
-
-	}
-
-
-
-	tape.registerOutput(resultCodi);
-
-	tape.setPassive();
-	resultCodi.setGradient(1.0);
-	tape.evaluate();
-
-	for (int i = 0; i < d*d+1; i++) {
-
-
-		inputb[i] = inputcodi[i].getGradient();
-
-	}
-
-
-
-
-	*result = resultCodi.getValue();
-
-#if 1
-	printf("loss = %10.7f\n", *result);
-#endif
-
-#if 1
-
-
-	printf("Lb =\n");
-	for (int i = 0; i < d; i++){
-		for (int j = 0; j < d; j++) {
-			printf("%10.7f ",inputb[i*d+j]);
-
-		}
-
-		printf("\n");
-	}
-
-	printf("sigmab = %10.7f\n",inputb[d*d]);
-
-#endif
-
-	tape.reset();
-
-
-	delete [] kernelValTable;
-
-}
+//void calcLossFunCPUCodi(double *result, double *input, double *inputb, double *data,int N, int d,int lossFunType){
+//
+//
+//	codi::RealReverse *inputcodi = new codi::RealReverse[d*d+1];
+//
+//	codi::RealReverse LT[d][d];
+//	codi::RealReverse L[d][d];
+//	codi::RealReverse M[d*d];
+//
+//	codi::RealReverse *kernelValTable = new codi::RealReverse[N*N];
+//
+//
+//	/* activate tape and register input */
+//
+//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
+//	tape.setActive();
+//
+//
+//	for (int i = 0; i < d*d+1; i++) {
+//		inputcodi[i] = input[i];
+//		tape.registerInput(inputcodi[i]);
+//
+//	}
+//
+//
+//
+//	codi::RealReverse resultCodi;
+//
+//
+//	for (int i = 0; i < d; i++)
+//		for (int j = 0; j < d; j++) {
+//			L[i][j]=inputcodi[i*d+j];
+//
+//		}
+//
+//
+//	codi::RealReverse sigma = inputcodi[d*d];
+//
+//
+//
+//	for (int i = 0; i < d; i++)
+//		for (int j = 0; j < d; j++) {
+//
+//			LT[i][j]=0.0;
+//		}
+//
+//
+//
+//
+//	for (int i = 0; i < d; i++) {
+//		for (int j = 0; j <= i; j++){
+//
+//			LT[j][i] = L[i][j];
+//		}
+//
+//
+//	}
+//
+//
+//	for(int i = 0; i < d; ++i)
+//		for(int j = 0; j < d; ++j)
+//		{
+//			M[i*d+j]=0;
+//		}
+//
+//	/* Multiplying matrix L and LT and storing in M */
+//	for(int i = 0; i < d; ++i)
+//		for(int j = 0; j < d; ++j)
+//			for(int k = 0; k < d; ++k)
+//			{
+//				M[i*d+j] += L[i][k] * LT[k][j];
+//
+//			}
+//
+//	calculateKernelValues(data, kernelValTable, M, sigma, N, d);
+//
+//	if(lossFunType == L1_LOSS_FUNCTION){
+//
+//		calculateLossKernelL1(&resultCodi,data,kernelValTable, N, d);
+//
+//	}
+//
+//	if(lossFunType == L2_LOSS_FUNCTION){
+//
+//		calculateLossKernelL2(&resultCodi, data,kernelValTable, N,d);
+//
+//	}
+//
+//
+//
+//	tape.registerOutput(resultCodi);
+//
+//	tape.setPassive();
+//	resultCodi.setGradient(1.0);
+//	tape.evaluate();
+//
+//	for (int i = 0; i < d*d+1; i++) {
+//
+//
+//		inputb[i] = inputcodi[i].getGradient();
+//
+//	}
+//
+//
+//
+//
+//	*result = resultCodi.getValue();
+//
+//#if 1
+//	printf("loss = %10.7f\n", *result);
+//#endif
+//
+//#if 1
+//
+//
+//	printf("Lb =\n");
+//	for (int i = 0; i < d; i++){
+//		for (int j = 0; j < d; j++) {
+//			printf("%10.7f ",inputb[i*d+j]);
+//
+//		}
+//
+//		printf("\n");
+//	}
+//
+//	printf("sigmab = %10.7f\n",inputb[d*d]);
+//
+//#endif
+//
+//	tape.reset();
+//
+//
+//	delete [] kernelValTable;
+//
+//}
 
 
 void calcLossFunCPU_b(double *result, double *input, double *inputb, double *data,int N, int d,int lossFunType){
@@ -4606,501 +4786,501 @@ double kernelRegressorNotNormalized(mat &X,
 //
 //}
 
-int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, double &w12,
-		unsigned int max_cv_iter, unsigned int lossFunType, unsigned int batchsize, unsigned int nepochs) {
-
-
-	double learning_rateM = 0.00001;
-	double learning_rateSigma = learning_rateM * 0.01;
-
-	bool trainWithSvdFlag = false;
-
-	if(wSvd > 0.0) {
-
-		trainWithSvdFlag = true;
-	}
-
-
-	//	const double alpha = 0.9;
-
-	unsigned int d = L.n_cols;
-
-	/* Ldim is the number of entries in the L matrix */
-	unsigned int Ldim = d*d;
-
-	/* lower diagonal matrix Lbest to keep the best L*/
-	mat bestL(d,d);
-	bestL.fill(0.0);
-
-	double bestsigma = 0.0;
-
-
-	/* divide the data set into training and validation sets */
-
-	unsigned int N = data.n_rows;
-
-
-	/* size of the validation set, default to one fifth */
-	unsigned int NvalidationSet = N/5;
-	unsigned int Ntraining = N - NvalidationSet;
-#if 1
-	printf("Training the Mahalanobis distance...\n");
-	printf("Mini batch size = %d\n",batchsize);
-	printf("Number of epochs = %d\n",nepochs);
-	printf("number of cross-validation iterations = %d\n",max_cv_iter);
-	printf("number of training samples (core) = %d\n",Ntraining);
-	printf("number of validation samples      = %d\n",NvalidationSet);
-
-#endif
-
-
-
-	/* do not allow that batch size will be greater than number of training samples */
-	if (batchsize > Ntraining){
-
-		batchsize = Ntraining;
-	}
-
-	/* divide the data into two sets */
-
-	mat dataTraining      = data.submat( 0, 0, Ntraining-1, d );
-	mat dataValidation    = data.submat( Ntraining, 0, N-1, d );
-
-
-	mat XValidation = dataValidation.submat(0,0,NvalidationSet-1,d-1);
-	vec yValidation = dataValidation.col(d);
-
-	mat XTraining = dataTraining.submat(0,0,Ntraining-1,d-1);
-	vec yTraining = dataTraining.col(d);
-
-	mat dataMiniBatch(batchsize, d+1);
-
-
-#if 0
-
-	printf("Training data set = \n");
-	dataTraining.print();
-
-	printf("Validation data set = \n");
-	dataValidation.print();
-#endif
-
-
-#if 0
-	printf("XTraining = \n");
-	XTraining.print();
-	printf("yTraining = \n");
-	yTraining.print();
-#endif
-
-#if 0
-	printf("XValidation = \n");
-	XValidation.print();
-	printf("yValidation = \n");
-	yValidation.print();
-#endif
-
-	vec wSvdtrial(max_cv_iter);
-	vec w12trial(max_cv_iter);
-
-
-	if(max_cv_iter !=1){
-
-		for(unsigned int i=0; i<max_cv_iter; i++){
-
-			wSvdtrial(i) = pow(10.0,generateRandomDouble(-2,0.0));
-			w12trial(i) = pow(10.0,generateRandomDouble(-5,0.0));
-		}
-#if 0
-		printf("wSvdtrial = \n");
-		trans(wSvdtrial).print();
-		printf("w12trial = \n");
-		trans(w12trial).print();
-#endif
-
-	}
-
-	/* auxilliary vectors */
-
-	double *inputVec = new double[Ldim+1]();
-	//	double *inputVecVel = new double[Ldim+1]();
-	double *inputVecLocalBest = new double[Ldim+1]();
-	double *inputVecb = new double[Ldim+1]();
-	double *inputVecRegb = new double[Ldim]();
-	double *gradientVec = new double[Ldim+1]();
-
-
-	double *dataVecTraining = new double[batchsize*(d+1)]();
-
-
-
-
-	double optGenError = 10E14;
-
-	/* cross validation loop to tune the weights for the regularization parameters */
-	for(unsigned int iter_cv=0; iter_cv< max_cv_iter; iter_cv++){
-
-
-		if(max_cv_iter !=1){
-
-			if(trainWithSvdFlag){
-				wSvd = wSvdtrial(iter_cv);
-			}
-			else{
-
-				wSvd = 0.0;
-			}
-			w12 =  w12trial(iter_cv);
-		}
-#if 1
-		printf("Outer iteration = %d\n",iter_cv);
-		printf("wSvd = %10.7f, w12 = %10.7f\n",wSvd,w12);
-#endif
-
-		/* initialize the L matrix and sigma => everything is saved in the vector "inputVec" */
-
-		for (unsigned int i = 0; i < d; i++)
-			for (unsigned int j = 0; j < d; j++) {
-
-				inputVec[i*d+j] = 0.0;
-			}
-
-		for (unsigned int i = 0; i < d; i++) {
-
-			for (unsigned int j = 0; j <= i; j++) {
-
-				if(i ==j) { /* main diagonal */
-
-					inputVec[i*d+j] = 1.0+ generateRandomDouble(-0.1,0.1);
-				}
-				else {
-
-					inputVec[i*d+j] = generateRandomDouble(0.0,0.1);
-				}
-			}
-		}
-
-		/* assign sigma to a small value between 0 and 0.1 */
-		inputVec[Ldim] = 0.05+ generateRandomDouble(-0.001,0.001);
-#if 1
-		printf("Initial values of L:\n");
-
-		for (unsigned int i = 0; i < d; i++){
-			for (unsigned int j = 0; j < d; j++) {
-
-				printf("%10.7f ",inputVec[i*d+j]);
-			}
-			printf("\n");
-		}
-
-		printf("Initial sigma = %10.7f\n",inputVec[Ldim]);
-
-#endif
-		double lossVal, regTerm;
-		double objFunVal;
-		lossVal = 0.0;
-
-		double objectiveFunLocalBest = 10E14;
-
-
-
-		/* optimization loop */
-
-		for(unsigned int opt_iter=0 ; opt_iter < nepochs; opt_iter++){
-
-
-			dataTraining = shuffle(dataTraining);
-
-			/*get the mini batch */
-			dataMiniBatch = dataTraining.submat(0,0,batchsize-1,d);
-
-#if 0
-			printf("dataMiniBatch = \n");
-			dataMiniBatch.print();
-#endif
-
-
-
-
-#if 0
-			printf("copying training data...\n");
-#endif
-			for (unsigned int i = 0; i < batchsize; i++) {
-
-				for (unsigned int j = 0; j < d+1; j++) {
-
-					dataVecTraining[i*(d+1)+j ] = dataMiniBatch (i, j);
-				}
-			}
-#if 0
-			printf("data copied = \n");
-
-			for (int i = 0; i < batchsize; i++) {
-
-				for (int j = 0; j < d+1; j++) {
-
-					printf("%10.7f ",dataVecTraining[i*(d+1)+j ]);
-				}
-				printf("\n");
-			}
-
-#endif
-
-
-
-
-
-			/* init sensitivities to zero */
-			for(unsigned int i=0;i<Ldim+1;i++) {
-
-				inputVecb[i] = 0.0;
-			}
-
-			calcLossFunCPU_b(&lossVal,inputVec,inputVecb, dataVecTraining,batchsize,d, lossFunType);
-#if 0
-			printf("Loss (CPU Version)= %10.7f\n", lossVal);
-#endif
-			for(unsigned int i=0;i<Ldim+1;i++) {
-
-				gradientVec[i]=inputVecb[i];
-			}
-#if 0
-			printf("calculating the regularization term...\n");
-#endif
-			for(unsigned int i=0;i<Ldim;i++) {
-
-				inputVecRegb[i] = 0.0;
-			}
-
-			/* call the adjoint mode of the function to compute the regularization term */
-
-			if(trainWithSvdFlag){
-
-				calcRegTerms(inputVec, inputVecRegb, &regTerm, wSvd, w12, d);
-			}
-			else{
-
-				calcRegTermL12(inputVec, inputVecRegb,&regTerm, w12, d);
-
-			}
-
-
-#if 0
-			printf("gradient of the regularization term = \n");
-
-			for (int i = 0; i < numVar; i++) {
-				for (int j = 0; j < numVar; j++) {
-
-					printf("%10.7f ", inputVecRegb[i*numVar+j]);
-
-				}
-				printf("\n");
-			}
-#endif
-
-
-			/* add the regularization sensitivities to the gradient vector */
-
-			for(unsigned int i=0;i<Ldim;i++) {
-
-				gradientVec[i]+=inputVecRegb[i];
-			}
-
-
-			objFunVal = lossVal + regTerm;
-
-			/* check if gradient has some NaNs*/
-			for(unsigned int i=0;i<Ldim;i++) {
-
-				if( gradientVec[i] != gradientVec[i]){
-
-					printf("Error: gradientVec[%d] is NaN!\n",i);
-					exit(1);
-
-				}
-			}
-
-
-
-			/* update L */
-
-			for (unsigned int i = 0; i < d; i++){
-				for (unsigned int j = 0; j <= i; j++) {
-
-					//					inputVec[i*d+j]= inputVec[i*d+j] + inputVecVel[i*d+j];
-					inputVec[i*d+j]= inputVec[i*d+j] -learning_rateM * gradientVec[i*d+j];
-
-				}
-
-			}
-
-			/* do not allow that entries of L will be negative! */
-
-			for (unsigned int i = 0; i < d; i++){
-				for (unsigned int j = 0; j <= i; j++) {
-
-					if ( inputVec[i*d+j] < 0) {
-
-						inputVec[i*d+j] = 10E-6;
-
-					}
-
-
-				}
-
-			}
-
-			/* update sigma */
-			//			inputVec[Ldim]= inputVec[Ldim] + inputVecVel[Ldim];
-			inputVec[Ldim]= inputVec[Ldim] - learning_rateSigma *gradientVec[Ldim];
-
-			if(inputVec[Ldim] <= 0) {
-
-				inputVec[Ldim] = 10E-06;
-			}
-
-
-
-
-			if(objFunVal < objectiveFunLocalBest){
-
-				objectiveFunLocalBest = objFunVal;
-
-				for(unsigned int i=0;i<Ldim+1;i++) {
-
-					inputVecLocalBest[i]=inputVec[i];
-
-				}
-
-			}
-
-
-			if(opt_iter % 100 == 0){
-
-#if 1
-				printf("iter = %d, objective function = %10.7f, Leave One Out Error = %10.7f, Regularization term = %10.7f\n",opt_iter,objFunVal,lossVal, regTerm);
-#endif
-#if 0
-				printf("L = \n");
-
-				for (int i = 0; i < d; i++) {
-					for (int j = 0; j < d; j++) {
-
-						printf("%10.7f ", inputVec[i*d+j]);
-
-					}
-					printf("\n");
-				}
-
-				printf("sigma = %10.7f\n",inputVec[Ldim]);
-#endif
-
-
-
-			}
-
-
-
-
-
-		} /* end of local optimization loop */
-
-
-
-
-		for (unsigned int i = 0; i < d; i++)
-			for (unsigned int j = 0; j < d; j++) {
-
-				L(i,j)= inputVecLocalBest[i*d+j];
-			}
-
-#if 1
-		printf("local optimization result:\n");
-		printf("L = \n");
-		L.print();
-		printf("sigma = %10.7f\n", inputVecLocalBest[Ldim]);
-
-#endif
-		sigma = inputVecLocalBest[Ldim];
-
-
-		mat M = L*trans(L);
-#if 1
-		printf("M = \n");
-		M.print();
-#endif
-
-
-		dataTraining      = data.submat( 0, 0, Ntraining-1, d );
-
-
-		double genError = 0.0;
-
-		for(unsigned int i=0;i <NvalidationSet; i++){
-
-			rowvec xp = XValidation.row(i);
-			double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma);
-			double yexact = yValidation(i);
-
-#if 0
-			printf("x:\n");
-			xp.print();
-			printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
-#endif
-
-
-
-			if( lossFunType == L1_LOSS_FUNCTION) {
-
-				genError += fabs(yexact-ytilde);
-			}
-			if( lossFunType == L2_LOSS_FUNCTION) {
-
-				genError += (yexact-ytilde)*(yexact-ytilde);
-			}
-
-		}
-
-		genError = genError/NvalidationSet;
-
-#if 0
-		printf("Generalization error = %10.7f\n",genError);
-#endif
-		if(genError < optGenError) {
-
-#if 0
-			printf("Better L has been found, updating L...\n");
-#endif
-			bestL = L;
-			bestsigma = sigma;
-			optGenError = genError;
-
-
-		}
-
-
-
-
-
-
-	} /* end of cv loop */
-
-	L = bestL;
-	sigma = bestsigma;
-
-
-
-	delete[] inputVec;
-	delete[] inputVecLocalBest;
-	delete[] inputVecb;
-	delete[] inputVecRegb;
-	delete[] dataVecTraining;
-	delete[] gradientVec;
-
-	return 0;
-
-
-}
+//int trainMahalanobisDistance(mat &L, mat &data, double &sigma, double &wSvd, double &w12,
+//		unsigned int max_cv_iter, unsigned int lossFunType, unsigned int batchsize, unsigned int nepochs) {
+//
+//
+//	double learning_rateM = 0.00001;
+//	double learning_rateSigma = learning_rateM * 0.01;
+//
+//	bool trainWithSvdFlag = false;
+//
+//	if(wSvd > 0.0) {
+//
+//		trainWithSvdFlag = true;
+//	}
+//
+//
+//	//	const double alpha = 0.9;
+//
+//	unsigned int d = L.n_cols;
+//
+//	/* Ldim is the number of entries in the L matrix */
+//	unsigned int Ldim = d*d;
+//
+//	/* lower diagonal matrix Lbest to keep the best L*/
+//	mat bestL(d,d);
+//	bestL.fill(0.0);
+//
+//	double bestsigma = 0.0;
+//
+//
+//	/* divide the data set into training and validation sets */
+//
+//	unsigned int N = data.n_rows;
+//
+//
+//	/* size of the validation set, default to one fifth */
+//	unsigned int NvalidationSet = N/5;
+//	unsigned int Ntraining = N - NvalidationSet;
+//#if 1
+//	printf("Training the Mahalanobis distance...\n");
+//	printf("Mini batch size = %d\n",batchsize);
+//	printf("Number of epochs = %d\n",nepochs);
+//	printf("number of cross-validation iterations = %d\n",max_cv_iter);
+//	printf("number of training samples (core) = %d\n",Ntraining);
+//	printf("number of validation samples      = %d\n",NvalidationSet);
+//
+//#endif
+//
+//
+//
+//	/* do not allow that batch size will be greater than number of training samples */
+//	if (batchsize > Ntraining){
+//
+//		batchsize = Ntraining;
+//	}
+//
+//	/* divide the data into two sets */
+//
+//	mat dataTraining      = data.submat( 0, 0, Ntraining-1, d );
+//	mat dataValidation    = data.submat( Ntraining, 0, N-1, d );
+//
+//
+//	mat XValidation = dataValidation.submat(0,0,NvalidationSet-1,d-1);
+//	vec yValidation = dataValidation.col(d);
+//
+//	mat XTraining = dataTraining.submat(0,0,Ntraining-1,d-1);
+//	vec yTraining = dataTraining.col(d);
+//
+//	mat dataMiniBatch(batchsize, d+1);
+//
+//
+//#if 0
+//
+//	printf("Training data set = \n");
+//	dataTraining.print();
+//
+//	printf("Validation data set = \n");
+//	dataValidation.print();
+//#endif
+//
+//
+//#if 0
+//	printf("XTraining = \n");
+//	XTraining.print();
+//	printf("yTraining = \n");
+//	yTraining.print();
+//#endif
+//
+//#if 0
+//	printf("XValidation = \n");
+//	XValidation.print();
+//	printf("yValidation = \n");
+//	yValidation.print();
+//#endif
+//
+//	vec wSvdtrial(max_cv_iter);
+//	vec w12trial(max_cv_iter);
+//
+//
+//	if(max_cv_iter !=1){
+//
+//		for(unsigned int i=0; i<max_cv_iter; i++){
+//
+//			wSvdtrial(i) = pow(10.0,generateRandomDouble(-2,0.0));
+//			w12trial(i) = pow(10.0,generateRandomDouble(-5,0.0));
+//		}
+//#if 0
+//		printf("wSvdtrial = \n");
+//		trans(wSvdtrial).print();
+//		printf("w12trial = \n");
+//		trans(w12trial).print();
+//#endif
+//
+//	}
+//
+//	/* auxilliary vectors */
+//
+//	double *inputVec = new double[Ldim+1]();
+//	//	double *inputVecVel = new double[Ldim+1]();
+//	double *inputVecLocalBest = new double[Ldim+1]();
+//	double *inputVecb = new double[Ldim+1]();
+//	double *inputVecRegb = new double[Ldim]();
+//	double *gradientVec = new double[Ldim+1]();
+//
+//
+//	double *dataVecTraining = new double[batchsize*(d+1)]();
+//
+//
+//
+//
+//	double optGenError = 10E14;
+//
+//	/* cross validation loop to tune the weights for the regularization parameters */
+//	for(unsigned int iter_cv=0; iter_cv< max_cv_iter; iter_cv++){
+//
+//
+//		if(max_cv_iter !=1){
+//
+//			if(trainWithSvdFlag){
+//				wSvd = wSvdtrial(iter_cv);
+//			}
+//			else{
+//
+//				wSvd = 0.0;
+//			}
+//			w12 =  w12trial(iter_cv);
+//		}
+//#if 1
+//		printf("Outer iteration = %d\n",iter_cv);
+//		printf("wSvd = %10.7f, w12 = %10.7f\n",wSvd,w12);
+//#endif
+//
+//		/* initialize the L matrix and sigma => everything is saved in the vector "inputVec" */
+//
+//		for (unsigned int i = 0; i < d; i++)
+//			for (unsigned int j = 0; j < d; j++) {
+//
+//				inputVec[i*d+j] = 0.0;
+//			}
+//
+//		for (unsigned int i = 0; i < d; i++) {
+//
+//			for (unsigned int j = 0; j <= i; j++) {
+//
+//				if(i ==j) { /* main diagonal */
+//
+//					inputVec[i*d+j] = 1.0+ generateRandomDouble(-0.1,0.1);
+//				}
+//				else {
+//
+//					inputVec[i*d+j] = generateRandomDouble(0.0,0.1);
+//				}
+//			}
+//		}
+//
+//		/* assign sigma to a small value between 0 and 0.1 */
+//		inputVec[Ldim] = 0.05+ generateRandomDouble(-0.001,0.001);
+//#if 1
+//		printf("Initial values of L:\n");
+//
+//		for (unsigned int i = 0; i < d; i++){
+//			for (unsigned int j = 0; j < d; j++) {
+//
+//				printf("%10.7f ",inputVec[i*d+j]);
+//			}
+//			printf("\n");
+//		}
+//
+//		printf("Initial sigma = %10.7f\n",inputVec[Ldim]);
+//
+//#endif
+//		double lossVal, regTerm;
+//		double objFunVal;
+//		lossVal = 0.0;
+//
+//		double objectiveFunLocalBest = 10E14;
+//
+//
+//
+//		/* optimization loop */
+//
+//		for(unsigned int opt_iter=0 ; opt_iter < nepochs; opt_iter++){
+//
+//
+//			dataTraining = shuffle(dataTraining);
+//
+//			/*get the mini batch */
+//			dataMiniBatch = dataTraining.submat(0,0,batchsize-1,d);
+//
+//#if 0
+//			printf("dataMiniBatch = \n");
+//			dataMiniBatch.print();
+//#endif
+//
+//
+//
+//
+//#if 0
+//			printf("copying training data...\n");
+//#endif
+//			for (unsigned int i = 0; i < batchsize; i++) {
+//
+//				for (unsigned int j = 0; j < d+1; j++) {
+//
+//					dataVecTraining[i*(d+1)+j ] = dataMiniBatch (i, j);
+//				}
+//			}
+//#if 0
+//			printf("data copied = \n");
+//
+//			for (int i = 0; i < batchsize; i++) {
+//
+//				for (int j = 0; j < d+1; j++) {
+//
+//					printf("%10.7f ",dataVecTraining[i*(d+1)+j ]);
+//				}
+//				printf("\n");
+//			}
+//
+//#endif
+//
+//
+//
+//
+//
+//			/* init sensitivities to zero */
+//			for(unsigned int i=0;i<Ldim+1;i++) {
+//
+//				inputVecb[i] = 0.0;
+//			}
+//
+//			calcLossFunCPU_b(&lossVal,inputVec,inputVecb, dataVecTraining,batchsize,d, lossFunType);
+//#if 0
+//			printf("Loss (CPU Version)= %10.7f\n", lossVal);
+//#endif
+//			for(unsigned int i=0;i<Ldim+1;i++) {
+//
+//				gradientVec[i]=inputVecb[i];
+//			}
+//#if 0
+//			printf("calculating the regularization term...\n");
+//#endif
+//			for(unsigned int i=0;i<Ldim;i++) {
+//
+//				inputVecRegb[i] = 0.0;
+//			}
+//
+//			/* call the adjoint mode of the function to compute the regularization term */
+//
+//			if(trainWithSvdFlag){
+//
+//				calcRegTerms(inputVec, inputVecRegb, &regTerm, wSvd, w12, d);
+//			}
+//			else{
+//
+//				calcRegTermL12(inputVec, inputVecRegb,&regTerm, w12, d);
+//
+//			}
+//
+//
+//#if 0
+//			printf("gradient of the regularization term = \n");
+//
+//			for (int i = 0; i < numVar; i++) {
+//				for (int j = 0; j < numVar; j++) {
+//
+//					printf("%10.7f ", inputVecRegb[i*numVar+j]);
+//
+//				}
+//				printf("\n");
+//			}
+//#endif
+//
+//
+//			/* add the regularization sensitivities to the gradient vector */
+//
+//			for(unsigned int i=0;i<Ldim;i++) {
+//
+//				gradientVec[i]+=inputVecRegb[i];
+//			}
+//
+//
+//			objFunVal = lossVal + regTerm;
+//
+//			/* check if gradient has some NaNs*/
+//			for(unsigned int i=0;i<Ldim;i++) {
+//
+//				if( gradientVec[i] != gradientVec[i]){
+//
+//					printf("Error: gradientVec[%d] is NaN!\n",i);
+//					exit(1);
+//
+//				}
+//			}
+//
+//
+//
+//			/* update L */
+//
+//			for (unsigned int i = 0; i < d; i++){
+//				for (unsigned int j = 0; j <= i; j++) {
+//
+//					//					inputVec[i*d+j]= inputVec[i*d+j] + inputVecVel[i*d+j];
+//					inputVec[i*d+j]= inputVec[i*d+j] -learning_rateM * gradientVec[i*d+j];
+//
+//				}
+//
+//			}
+//
+//			/* do not allow that entries of L will be negative! */
+//
+//			for (unsigned int i = 0; i < d; i++){
+//				for (unsigned int j = 0; j <= i; j++) {
+//
+//					if ( inputVec[i*d+j] < 0) {
+//
+//						inputVec[i*d+j] = 10E-6;
+//
+//					}
+//
+//
+//				}
+//
+//			}
+//
+//			/* update sigma */
+//			//			inputVec[Ldim]= inputVec[Ldim] + inputVecVel[Ldim];
+//			inputVec[Ldim]= inputVec[Ldim] - learning_rateSigma *gradientVec[Ldim];
+//
+//			if(inputVec[Ldim] <= 0) {
+//
+//				inputVec[Ldim] = 10E-06;
+//			}
+//
+//
+//
+//
+//			if(objFunVal < objectiveFunLocalBest){
+//
+//				objectiveFunLocalBest = objFunVal;
+//
+//				for(unsigned int i=0;i<Ldim+1;i++) {
+//
+//					inputVecLocalBest[i]=inputVec[i];
+//
+//				}
+//
+//			}
+//
+//
+//			if(opt_iter % 100 == 0){
+//
+//#if 1
+//				printf("iter = %d, objective function = %10.7f, Leave One Out Error = %10.7f, Regularization term = %10.7f\n",opt_iter,objFunVal,lossVal, regTerm);
+//#endif
+//#if 0
+//				printf("L = \n");
+//
+//				for (int i = 0; i < d; i++) {
+//					for (int j = 0; j < d; j++) {
+//
+//						printf("%10.7f ", inputVec[i*d+j]);
+//
+//					}
+//					printf("\n");
+//				}
+//
+//				printf("sigma = %10.7f\n",inputVec[Ldim]);
+//#endif
+//
+//
+//
+//			}
+//
+//
+//
+//
+//
+//		} /* end of local optimization loop */
+//
+//
+//
+//
+//		for (unsigned int i = 0; i < d; i++)
+//			for (unsigned int j = 0; j < d; j++) {
+//
+//				L(i,j)= inputVecLocalBest[i*d+j];
+//			}
+//
+//#if 1
+//		printf("local optimization result:\n");
+//		printf("L = \n");
+//		L.print();
+//		printf("sigma = %10.7f\n", inputVecLocalBest[Ldim]);
+//
+//#endif
+//		sigma = inputVecLocalBest[Ldim];
+//
+//
+//		mat M = L*trans(L);
+//#if 1
+//		printf("M = \n");
+//		M.print();
+//#endif
+//
+//
+//		dataTraining      = data.submat( 0, 0, Ntraining-1, d );
+//
+//
+//		double genError = 0.0;
+//
+//		for(unsigned int i=0;i <NvalidationSet; i++){
+//
+//			rowvec xp = XValidation.row(i);
+//			double ytilde = kernelRegressor(XTraining, yTraining, xp, M, sigma);
+//			double yexact = yValidation(i);
+//
+//#if 0
+//			printf("x:\n");
+//			xp.print();
+//			printf("ytilde = %10.7f, yexact = %10.7f\n",ytilde,yexact);
+//#endif
+//
+//
+//
+//			if( lossFunType == L1_LOSS_FUNCTION) {
+//
+//				genError += fabs(yexact-ytilde);
+//			}
+//			if( lossFunType == L2_LOSS_FUNCTION) {
+//
+//				genError += (yexact-ytilde)*(yexact-ytilde);
+//			}
+//
+//		}
+//
+//		genError = genError/NvalidationSet;
+//
+//#if 0
+//		printf("Generalization error = %10.7f\n",genError);
+//#endif
+//		if(genError < optGenError) {
+//
+//#if 0
+//			printf("Better L has been found, updating L...\n");
+//#endif
+//			bestL = L;
+//			bestsigma = sigma;
+//			optGenError = genError;
+//
+//
+//		}
+//
+//
+//
+//
+//
+//
+//	} /* end of cv loop */
+//
+//	L = bestL;
+//	sigma = bestsigma;
+//
+//
+//
+//	delete[] inputVec;
+//	delete[] inputVecLocalBest;
+//	delete[] inputVecb;
+//	delete[] inputVecRegb;
+//	delete[] dataVecTraining;
+//	delete[] gradientVec;
+//
+//	return 0;
+//
+//
+//}
 
 
 

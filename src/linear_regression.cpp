@@ -7,10 +7,9 @@
 using namespace arma;
 
 
-LinearModel::LinearModel(std::string name, unsigned int dimension):SurrogateModel(name,dimension){
+LinearModel::LinearModel(std::string name):SurrogateModel(name){
 
 	modelID = LINEAR_REGRESSION;
-	weights = zeros(dim+1);
 	regularizationParam = 10E-6;
 
 
@@ -20,6 +19,39 @@ LinearModel::LinearModel():SurrogateModel(){
 
 
 }
+
+
+void LinearModel::initializeSurrogateModel(void){
+
+	if(label != "None"){
+
+		ReadDataAndNormalize();
+		weights = zeros<vec>(dim+1);
+
+	}
+
+}
+
+void LinearModel::saveHyperParameters(void) const  {
+
+	weights.save(hyperparameters_filename, csv_ascii);
+
+}
+
+void LinearModel::loadHyperParameters(void){
+
+	weights.load(hyperparameters_filename, csv_ascii);
+
+}
+
+void LinearModel::printHyperParameters(void) const{
+
+	printVector(weights,"linear regression weights");
+
+}
+
+
+
 
 
 void LinearModel::setRegularizationParam(double value){
@@ -33,12 +65,16 @@ double LinearModel::getRegularizationParam(void) const{
 }
 
 
+
+
 void LinearModel::train(void){
 
+	if(ifInitialized){
+
+		initializeSurrogateModel();
+	}
 
 	mat augmented_X(N, dim + 1);
-
-	vec ys = data.col(dim);
 
 	for (unsigned int i = 0; i < N; i++) {
 
@@ -73,7 +109,7 @@ void LinearModel::train(void){
 
 		//		psuedo_inverse_X_augmented.print();
 
-		weights = psuedo_inverse_X_augmented * ys;
+		weights = psuedo_inverse_X_augmented * y;
 
 	}
 
@@ -85,7 +121,7 @@ void LinearModel::train(void){
 
 		XtX = XtX + regularizationParam*eye(XtX.n_rows,XtX.n_rows);
 
-		weights = inv(XtX)*trans(augmented_X)*ys;
+		weights = inv(XtX)*trans(augmented_X)*y;
 
 	}
 
@@ -109,17 +145,16 @@ void LinearModel::train(void){
 double LinearModel::calculateInSampleError(void) const{
 
 	printf("Calculating in-sample error for the linear regression...\n");
-	vec ys = data.col(dim);
 
 	double inSampleError = 0;
 	for(unsigned int i=0;i<N;i++){
 
 		double fTilde = interpolate(X.row(i));
 
-		inSampleError += (ys(i) - fTilde)*(ys(i) - fTilde);
+		inSampleError += (y(i) - fTilde)*(y(i) - fTilde);
 #if 1
 		printf("Sample %d:\n", i);
-		printf("fExact = %15.10f, fTilde = %15.10f\n",ys(i),fTilde);
+		printf("fExact = %15.10f, fTilde = %15.10f\n",y(i),fTilde);
 #endif
 
 	}
@@ -149,6 +184,15 @@ double LinearModel::interpolate(rowvec x) const{
 
 }
 
+
+
+void LinearModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
+
+	cout << "ERROR: interpolateWithVariance does not exist for LinearModel\n";
+	abort();
+
+
+}
 vec LinearModel::interpolateAll(mat X) const{
 
 	unsigned int numberOfSamples = X.n_rows;
@@ -186,7 +230,7 @@ void LinearModel::printSurrogateModel(void) const{
 	cout<< "Number of samples: "<<N<<endl;
 	cout<<"Number of input parameters: "<<dim<<endl;
 	cout<<"Raw Data:\n";
-	data.print();
+	rawData.print();
 	cout<<"xmin =";
 	trans(xmin).print();
 	cout<<"xmax =";

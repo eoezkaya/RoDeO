@@ -110,6 +110,34 @@ mat normalizeMatrix(mat matrixIn){
 
 }
 
+mat normalizeMatrix(mat matrixIn, vec xmin, vec xmax){
+
+	unsigned int dim = matrixIn.n_cols;
+	unsigned int N=matrixIn.n_rows;
+
+	mat matrixOut(N,dim,fill::zeros);
+
+	vec deltax = xmax-xmin;
+
+	for(unsigned int i=0; i<N;i++){
+
+		for(unsigned int j=0; j<dim;j++){
+
+			assert(deltax(j) > 0);
+
+			matrixOut(i,j)  = ((matrixIn(i,j)-xmin(j)))/(deltax(j));
+
+		}
+
+	}
+
+	return matrixOut;
+
+}
+
+
+
+
 bool isEqual(const mat &A, const mat&B, double tolerance){
 
 	unsigned int m = A.n_rows;
@@ -130,22 +158,3 @@ bool isEqual(const mat &A, const mat&B, double tolerance){
 	return true;
 }
 
-
-bool checkIfSymmetricPositiveDefinite(const mat &M){
-
-	mat R = M;
-	return chol(R,M);
-
-}
-
-
-
-bool checkIfSymmetric(const mat &M){
-
-	mat MT = trans(M);
-
-	if(isEqual(M, MT, 10E-10)) return true;
-	else return false;
-
-
-}

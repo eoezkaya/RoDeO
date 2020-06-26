@@ -19,7 +19,7 @@
 using namespace arma;
 
 ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, double (*objFun)(double *), unsigned int dimension)
-: surrogateModel(objectiveFunName,dimension){
+: surrogateModel(objectiveFunName){
 
 
 	dim = dimension;
@@ -134,7 +134,7 @@ ConstraintFunction::ConstraintFunction(std::string constraintName, std::string c
 
 	if(ifNeedsSurrogate){
 
-		KrigingModel temp(constraintName, dimension);
+		KrigingModel temp(constraintName);
 		surrogateModel = temp;
 
 	}

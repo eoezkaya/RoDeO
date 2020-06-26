@@ -16,6 +16,81 @@
 
 using namespace arma;
 
+PartitionData::PartitionData(){
+
+	ifNormalized = false;
+	numberOfSamples = 0;
+	dim = 0;
+}
+
+PartitionData::PartitionData(std::string name){
+
+	label = name;
+	ifNormalized = false;
+	numberOfSamples = 0;
+	dim = 0;
+}
+
+
+void PartitionData::fillWithData(mat inputData){
+
+	assert(inputData.n_rows > 0);
+	assert(inputData.n_cols >=2);
+
+	rawData = inputData;
+
+	numberOfSamples = rawData.n_rows;
+	dim = rawData.n_cols-1;
+	X = rawData.submat(0,0,numberOfSamples-1, dim-1);
+
+	yExact = rawData.col(dim);
+	ySurrogate = zeros<vec>(numberOfSamples);
+	squaredError = zeros<vec>(numberOfSamples);
+}
+
+void PartitionData::saveAsCSVFile(std::string fileName){
+
+	mat saveBuffer = rawData;
+	saveBuffer.reshape(numberOfSamples,dim+3);
+	saveBuffer.col(dim+1) =  ySurrogate;
+	saveBuffer.col(dim+2) =  squaredError;
+
+	saveBuffer.save(fileName,csv_ascii);
+
+}
+
+
+
+
+rowvec PartitionData::getRow(unsigned int indx) const{
+
+	return X.row(indx);
+
+}
+
+double PartitionData::calculateMeanSquaredError(void) const{
+
+	return mean(squaredError);
+
+}
+
+void PartitionData::normalizeAndScaleData(vec xmin, vec xmax){
+
+	X =  normalizeMatrix(X, xmin, xmax);
+	X = X*(1.0/dim);
+	ifNormalized = true;
+
+}
+
+void PartitionData::print(void) const{
+
+	cout <<"Data: "<<label <<"\n";
+	printMatrix(rawData,"rawData");
+	printMatrix(X,"X");
+
+
+}
+
 
 SurrogateModel::SurrogateModel(){
 
@@ -24,6 +99,8 @@ SurrogateModel::SurrogateModel(){
 	label = "None";
 	N = 0;
 	ifInitialized = false;
+	ifUsesGradientData = false;
+
 
 
 }
@@ -33,7 +110,7 @@ void SurrogateModel::ReadDataAndNormalize(void){
 #if 0
 	std::cout<<"Loading data from the file "<<input_filename<<"...\n";
 #endif
-	bool status = data.load(input_filename.c_str(), csv_ascii);
+	bool status = rawData.load(input_filename.c_str(), csv_ascii);
 
 	if(status == true)
 	{
@@ -43,22 +120,29 @@ void SurrogateModel::ReadDataAndNormalize(void){
 	}
 	else
 	{
-		printf("ERROR: Problem with data the input (cvs ascii format) at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
+		printf("ERROR: Problem with data the input (cvs ascii format)\n");
+		abort();
 	}
 
-	if(data.n_cols != dim+1){
+	if(ifUsesGradientData){
 
-		printf("ERROR: Number of columns of the data matrix does match with the problem dimension!\n");
-		exit(-1);
-
+		assert((rawData.n_cols - 1)%2 == 0);
+		dim = (rawData.n_cols - 1)/2;
 	}
-
+	else{
+		dim = rawData.n_cols - 1;
+	}
 
 	/* set number of sample points */
-	N = data.n_rows;
+	N = rawData.n_rows;
 
-	X = data.submat(0, 0, N - 1, dim - 1);
+	X = rawData.submat(0, 0, N - 1, dim - 1);
+
+	if(ifUsesGradientData){
+
+		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
+
+	}
 
 
 	xmax.set_size(dim);
@@ -66,35 +150,30 @@ void SurrogateModel::ReadDataAndNormalize(void){
 
 	for (unsigned int i = 0; i < dim; i++) {
 
-		xmax(i) = data.col(i).max();
-		xmin(i) = data.col(i).min();
+		xmax(i) = rawData.col(i).max();
+		xmin(i) = rawData.col(i).min();
 
 	}
 
 	X = normalizeMatrix(X);
 	X = (1.0/dim)*X;
 
-	vec ySample = data.col(dim);
+	y = rawData.col(dim);
 
 
-	ymin = min(ySample);
-	ymax = max(ySample);
-	yave = mean(ySample);
-
-
+	ymin = min(y);
+	ymax = max(y);
+	yave = mean(y);
 
 }
 
 
-SurrogateModel::SurrogateModel(std::string name, unsigned int dimension){
+SurrogateModel::SurrogateModel(std::string name){
 
-	dim = dimension;
+	dim = 0;
 	N = 0;
 
 	label = name;
-#if 0
-	printf("Initiating surrogate model for the %s data (Base model)...\n",name.c_str());
-#endif
 	input_filename = name +".csv";
 	hyperparameters_filename = name + "_Hyperparameters.csv";
 	ifInitialized = false;
@@ -103,105 +182,50 @@ SurrogateModel::SurrogateModel(std::string name, unsigned int dimension){
 
 
 
-mat SurrogateModel::tryModelOnTestSet(mat testSet) const{
+void SurrogateModel::tryModelOnTestSet(PartitionData &testSet) const{
 
 	/* testset should be without gradients */
-	assert(testSet.n_cols == dim+1);
+	assert(testSet.dim == dim);
 
-	unsigned int howManySamples = testSet.n_rows;
+	unsigned int howManySamples = testSet.numberOfSamples;
 
-	vec fSurrogateValue(howManySamples);
-	vec squaredError(howManySamples);
-	vec fExactValue = testSet.col(dim);
-
-	mat xTest = testSet.submat(0, 0, howManySamples - 1, dim - 1);
 
 	/* normalize data matrix for the Validation */
 
-	for (unsigned int i = 0; i < howManySamples; i++) {
+	if(testSet.ifNormalized == false){
 
-		for (unsigned int j = 0; j < dim; j++) {
+		testSet.normalizeAndScaleData(xmin,xmax);
 
-			xTest(i, j) = (1.0/dim)*(xTest(i, j) - xmin(j)) / (xmax(j) - xmin(j));
-		}
 	}
-
 
 	for(unsigned int i=0; i<howManySamples; i++){
 
-		fSurrogateValue(i) = interpolate(xTest.row(i));
-		squaredError(i) = (fSurrogateValue(i)-fExactValue(i)) * (fSurrogateValue(i)-fExactValue(i));
+		rowvec x = testSet.getRow(i);
+		testSet.ySurrogate(i) = interpolate(x);
+		testSet.squaredError(i) = (testSet.ySurrogate(i)-testSet.yExact(i)) * (testSet.ySurrogate(i)-testSet.yExact(i));
 #if 0
 		printf("\nx: ");
-		xTest.row(i).print();
-		printf("fExactValue = %15.10f, fExactValue = %15.10f\n",fSurrogateValue(i),fExactValue(i));
+		x.print();
+		printf("fExactValue = %15.10f, fSurrogateValue = %15.10f\n",testSet.yExact(i),testSet.ySurrogate(i));
 #endif
 
 	}
 
-	mat testResults = testSet;
-	testResults.reshape(howManySamples,dim+3);
-	testResults.col(dim+1) =  fSurrogateValue;
-	testResults.col(dim+2) =  squaredError;
 
-
-	return testResults;
 }
 
 
+void SurrogateModel::visualizeTestResults(void) const{
 
-
-
-void SurrogateModel::visualizeTestResults(mat testResults) const{
-
-
-	std::string python_command;
-
-	python_command = "python -W ignore "+ settings.python_dir + "/plot_Test_Results.py "+ label;
+	std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_Test_Results.py "+ label;
 
 	executePythonScript(python_command);
 
-
-}
-
-void SurrogateModel::initializeSurrogateModel(void){
-
-	fprintf(stderr, "ERROR: cannot initialize the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
-	exit(-1);
-
-
-
 }
 
 
-void SurrogateModel::train(void){
-
-	fprintf(stderr, "ERROR: cannot train the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
-	exit(-1);
-
-}
-
-double SurrogateModel::interpolate(rowvec x) const{
-
-	fprintf(stderr, "ERROR: cannot interpolate using the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
-	exit(-1);
-
-}
-
-void SurrogateModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
-
-	fprintf(stderr, "ERROR: cannot interpolate using the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
-	exit(-1);
-
-}
 
 
-double SurrogateModel::calculateInSampleError(void) const{
-
-	fprintf(stderr, "ERROR: cannot call  calculateInSampleError using the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
-	exit(-1);
-
-}
 
 void SurrogateModel::printSurrogateModel(void) const{
 
@@ -211,7 +235,7 @@ void SurrogateModel::printSurrogateModel(void) const{
 	cout<< "Number of samples: "<<N<<endl;
 	cout<<"Number of input parameters: "<<dim<<endl;
 	cout<<"Raw Data:\n";
-	data.print();
+	rawData.print();
 	cout<<"xmin =";
 	trans(xmin).print();
 	cout<<"xmax =";
@@ -219,14 +243,6 @@ void SurrogateModel::printSurrogateModel(void) const{
 	cout<<"ymin = "<<ymin<<endl;
 	cout<<"ymax = "<<ymax<<endl;
 	cout<<"ymean = "<<yave<<endl;
-}
-
-void SurrogateModel::printHyperParameters(void) const{
-
-	fprintf(stderr, "ERROR: cannot call  printHyperParameters using the base class: SurrogateModel! at %s, line %d.\n",__FILE__, __LINE__);
-	abort();
-
-
 }
 
 
@@ -257,8 +273,6 @@ rowvec SurrogateModel::getRowXRaw(unsigned int index) const{
 
 		x(i) = xnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
 	}
-
-
 
 	return x;
 
