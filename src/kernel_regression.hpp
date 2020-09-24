@@ -87,6 +87,8 @@ public:
 	void initializeSigmaRandom(void);
 
 	void calculateMahalanobisMatrix(void);
+	mat getMahalanobisMatrix(void) const;
+	double getsigmaGaussianKernel(void) const;
 	void calculateMahalanobisMatrixAdjoint(void);
 	void updateMahalanobisAndSigma(double learningRate);
 	double calculateGaussianKernel(rowvec xi, rowvec xj) const;

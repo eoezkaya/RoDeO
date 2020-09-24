@@ -392,6 +392,8 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 	PartitionData testSet;
 	testSet.fillWithData(testSetMatrix);
 
+
+
 	surrogateModel->tryModelOnTestSet(testSet);
 
 

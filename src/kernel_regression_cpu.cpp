@@ -308,6 +308,18 @@ void KernelRegressionModel::calculateMahalanobisMatrix(void){
 }
 
 
+mat KernelRegressionModel::getMahalanobisMatrix(void) const{
+
+	return mahalanobisMatrix;
+
+
+}
+
+double KernelRegressionModel::getsigmaGaussianKernel(void) const{
+
+	return sigmaGaussianKernel;
+
+}
 
 void KernelRegressionModel::calculateMahalanobisMatrixAdjoint(void) {
 
