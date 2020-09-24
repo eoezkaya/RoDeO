@@ -15,6 +15,8 @@ public:
 	std::string label;
 	mat rawData;
 	mat X;
+	mat gradientData;
+
 	vec yExact;
 	vec ySurrogate;
 	vec squaredError;
@@ -22,6 +24,7 @@ public:
 	PartitionData();
 	PartitionData(std::string name);
 	void fillWithData(mat);
+	void fillWithData(mat, mat);
 	bool ifNormalized;
 	unsigned int numberOfSamples;
 	unsigned int dim;
@@ -55,16 +58,16 @@ protected:
 	vec xmax;
 
 	bool ifInitialized;
-	bool ifUsesGradientData;
+
 
 
 public:
 
 	SURROGATE_MODEL modelID;
+	bool ifUsesGradientData;
 
 	SurrogateModel();
 	SurrogateModel(std::string name);
-
 
 	void ReadDataAndNormalize(void);
 
@@ -75,9 +78,10 @@ public:
 	virtual void loadHyperParameters(void) = 0;
 	virtual void train(void) = 0;
 	virtual double interpolate(rowvec x) const = 0;
+	virtual double interpolateWithGradients(rowvec x) const = 0;
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
 
-	virtual double calculateInSampleError(void) const = 0;
+	double calculateInSampleError(void) const;
 
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;

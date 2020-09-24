@@ -15,24 +15,34 @@ using namespace arma;
 class TestFunction {
 
 private:
-	vec lb;
-	vec ub;
+
+	unsigned int numberOfInputParams;
+	std::string function_name;
+
+	vec lb; /*lower bounds */
+	vec ub; /*upper bounds */
 
 	SurrogateModel *surrogateModel;
 
-public:
 	bool ifFunctionIsNoisy;
-	bool ifAdjointFunctionExist;
-    unsigned int numberOfInputParams;
-    std::string function_name;
+
+	bool ifVisualize;
+	double noiseLevel;
+
+public:
+
+	short int numberOfSamplesUsedForVisualization;
+
     double (*func_ptr)(double *);
     double (*adj_ptr)(double *, double *);
-    double noiseLevel;
-
-
 
     TestFunction(std::string name,int dimension);
     void plot(int resolution = 100) const;
+
+
+    void addNoise(double);
+    void setVisualizationOn(void);
+    void setVisualizationOff(void);
 
     void visualizeSurrogate1D(SurrogateModel *TestFunSurrogate, unsigned int resolution=1000) const;
     void visualizeSurrogate2D(SurrogateModel *TestFunSurrogate, unsigned int resolution=100) const;
@@ -42,7 +52,7 @@ public:
     mat  generateRandomSamplesWithGradients(unsigned int nsamples);
 
     mat  generateUniformSamples(unsigned int howManySamples) const;
-    void testSurrogateModel(SURROGATE_MODEL modelId, unsigned int nsamples, bool ifVisualize = false);
+    double testSurrogateModel(SURROGATE_MODEL modelId, unsigned int nsamples);
     void testEfficientGlobalOptimization(int nsamplesTrainingData, int maxnsamples, bool ifVisualize = false, bool ifWarmStart = false, bool ifMinimize = true);
 
     void evaluateGlobalExtrema(void) const;
@@ -60,17 +70,6 @@ public:
 
 /* regression test functions */
 
-double TestFunction1D(double *x);
-double TestFunction1DAdj(double *xin, double *xb);
-
-
-double test_function1KernelReg(double *x);
-double test_function1KernelRegAdj(double *xin, double *xb);
-
-double test_function2KernelReg(double *x);
-double test_function2KernelRegAdj(double *x,double *xb);
-
-
 double LinearTF1(double *x);
 double LinearTF1Adj(double *x, double *xb);
 
@@ -78,8 +77,6 @@ double LinearTF1Adj(double *x, double *xb);
 double Eggholder(double *x);
 double Eggholder_adj(double *x, double *xb);
 
-double Griewank2D(double *x);
-double Griewank2D_adj(double *xin, double *xb);
 
 
 double Rastrigin6D(double *x);

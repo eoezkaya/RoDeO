@@ -1,7 +1,17 @@
 #include "metric.hpp"
 #include "auxilliary_functions.hpp"
 
+double calculateL1norm(const rowvec &x){
 
+	double sum = 0.0;
+	for(unsigned int i=0; i<x.size(); i++){
+
+		sum += fabs(x(i));
+
+	}
+
+	return sum;
+}
 
 double calculateMetric(rowvec &xi,rowvec &xj, mat M){
 

@@ -29,17 +29,14 @@ int population_overall_max_tread_id = -1;
 
 
 
-KrigingModel::KrigingModel():SurrogateModel(){
-#if 0
-	printf("Calling KrigingModel()\n");
-#endif
-}
+KrigingModel::KrigingModel():SurrogateModel(){}
 
 
 KrigingModel::KrigingModel(std::string name):SurrogateModel(name),linearModel(name){
 
 	linear_regression = false;
 	modelID = KRIGING;
+	hyperparameters_filename = label + "_kriging_hyperparameters.csv";
 
 
 }
@@ -47,6 +44,7 @@ KrigingModel::KrigingModel(std::string name):SurrogateModel(name),linearModel(na
 void KrigingModel::initializeSurrogateModel(void){
 
 	if(label != "None"){
+
 		printf("Initializing settings for the Kriging model...\n");
 
 		modelID = KRIGING;
@@ -70,13 +68,9 @@ void KrigingModel::initializeSurrogateModel(void){
 
 					printf("ERROR: Two samples in the training data are too close to each other!\n");
 					exit(-1);
-
 				}
-
 			}
-
 		}
-
 
 		sigmaSquared = 0.0;
 		beta0 = 0.0;
@@ -85,17 +79,18 @@ void KrigingModel::initializeSurrogateModel(void){
 		upperDiagonalMatrix= zeros<mat>(N,N);
 		R_inv_ys_min_beta = zeros<vec>(N);
 		R_inv_I= zeros<vec>(N);
-		vectorOfOnes= zeros<vec>(N);
+		vectorOfOnes= ones<vec>(N);
 
-		std::cout<<"Kriging model initialization is done...\n"<<std::endl;
+		ifInitialized = true;
 
+		std::cout << "Kriging model initialization is done...\n";
 
 	}
 }
 
 void KrigingModel::printHyperParameters(void) const{
 
-	printVector(kriging_weights);
+	printVector(kriging_weights,"kriging_weights");
 
 }
 void KrigingModel::saveHyperParameters(void) const{
@@ -190,26 +185,18 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 
 
 void KrigingModel::printSurrogateModel(void) const{
-	printf("\n");
-	cout << "Kriging Surrogate model:"<< endl;
+	cout << "\nKriging Surrogate model:\n";
 	cout<< "Number of samples: "<<N<<endl;
-	cout<<"Number of input parameters: "<<dim<<endl;
-	cout<<"Raw Data:\n";
-	rawData.print();
-	cout<<"X:\n";
-	X.print();
-	cout<<"xmin =";
-	trans(xmin).print();
-	cout<<"xmax =";
-	trans(xmax).print();
-	cout<<"ymin = "<<ymin<<endl;
-	cout<<"ymax = "<<ymax<<endl;
-	cout<<"ymean = "<<yave<<endl;
+	cout<< "Number of input parameters: "<<dim<<"\n";
+	printMatrix(rawData,"rawData");
+	printMatrix(X,"X");
+
 
 	printf("hyperparameters_filename: %s\n",hyperparameters_filename.c_str());
 	printf("input_filename: %s\n",input_filename.c_str());
 	printf("max_number_of_kriging_iterations = %d\n",max_number_of_kriging_iterations);
 	printf("epsilonKriging = %15.10e\n",epsilonKriging);
+	printVector(kriging_weights,"kriging_weights");
 	printf("\n");
 
 
@@ -227,7 +214,6 @@ void KrigingModel::updateModelParams(void){
 	}
 
 	computeCorrelationMatrix();
-
 
 	/* Cholesky decomposition R = LDL^T */
 
@@ -253,6 +239,8 @@ void KrigingModel::updateModelParams(void){
 	beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
 
 	vec ys_min_betaI = ys - beta0*vectorOfOnes;
+
+
 
 	/* solve R x = ys-beta0*I */
 	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_ys_min_beta , ys_min_betaI);
@@ -384,33 +372,9 @@ double KrigingModel::interpolate(rowvec xp) const{
 	}
 
 
-#if 0
-	printf("fLinearRegression = %10.7f\n",fLinearRegression);
-#endif
-
 	vec r = computeCorrelationVector(xp);
 
-#if 0
-	printf("size of vector r = %d\n",int(r.size()));
-	printf("r: \n");
-	trans(r).print();
-	printf("size of vector R_inv_ys_min_beta = %d\n",int(R_inv_ys_min_beta.size()));
-	printf("R_inv_ys_min_beta: \n");
-	trans(R_inv_ys_min_beta).print();
-	printf("ys: \n");
-	trans(data.col(dim)).print();
-
-
-#endif
-
 	fKriging = beta0+ dot(r,R_inv_ys_min_beta);
-#if 0
-	printf("f_kriging = %15.10f\n", f_kriging);
-#endif
-
-#if 0
-	printf("ftilde = %15.10f\n", fLinearRegression+fKriging);
-#endif
 
 	return fLinearRegression+fKriging;;
 
@@ -472,7 +436,13 @@ double KrigingModel::calculateExpectedImprovement(rowvec xp){
 }
 
 
+double KrigingModel::interpolateWithGradients(rowvec xp) const{
 
+	cout << "ERROR: interpolateWithGradients does not exist for KrigingModel!\n";
+	abort();
+
+
+}
 
 
 void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const{
@@ -529,6 +499,12 @@ void KrigingModel::computeCorrelationMatrix(void)  {
 
 
 void KrigingModel::train(void){
+
+	if(ifInitialized == false){
+
+		printf("ERROR: Kriging model must be initialized before training!\n");
+		abort();
+	}
 
 	printf("\nTraining Kriging response surface for the data : %s\n",input_filename.c_str());
 
@@ -633,8 +609,8 @@ void KrigingModel::train(void){
 #if 1
 #pragma omp master
 			{
-				printf("hyperparameters read from the file (theta; gamma)^T:\n");
-				trans(weights_read_from_file).print();
+				printf("hyperparameters read from the file (theta; gamma):\n");
+				printVector(weights_read_from_file);
 			}
 #endif
 
@@ -675,8 +651,8 @@ void KrigingModel::train(void){
 #pragma omp master
 		{
 			printf("Initial design:\n");
-			initial_design.theta.print();
-			initial_design.gamma.print();
+			printVector(initial_design.theta,"theta");
+			printVector(initial_design.gamma,"gamma");
 		}
 #endif
 
@@ -850,56 +826,15 @@ void KrigingModel::train(void){
 
 	printf("Kring training is done\n");
 	printf("Kriging weights:\n");
-	trans(kriging_weights).print();
+	printVector(kriging_weights);
 
 
 	updateModelParams();
 
-
-
 }
 
 
-double KrigingModel::calculateInSampleError(void) const{
 
-
-	double meanSquaredError = 0.0;
-
-
-	for(unsigned int i=0;i<N;i++){
-
-		rowvec xp = getRowX(i);
-
-		rowvec x  = getRowXRaw(i);
-
-#if 1
-		printf("\nData point = %d\n", i+1);
-		printf("calling f_tilde at x:\n");
-		x.print();
-		printf("xnorm:\n");
-		xp.print();
-#endif
-		double functionValueSurrogate = interpolate(xp);
-
-		double functionValueExact = y(i);
-
-		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
-
-		meanSquaredError+= squaredError;
-#if 1
-		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
-		printf("in sample error = %15.10f\n", meanSquaredError);
-#endif
-	}
-
-	meanSquaredError = meanSquaredError/N;
-
-	printf("In sample error (MSE) for the Kriging model = %15.10f\n",meanSquaredError);
-
-	return meanSquaredError;
-
-
-}
 
 
 EAdesign::EAdesign(int dimension){

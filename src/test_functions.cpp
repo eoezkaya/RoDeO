@@ -34,18 +34,39 @@ TestFunction::TestFunction(std::string name,int dimension){
 		exit(-1);
 
 	}
+
+	numberOfSamplesUsedForVisualization = 10000;
 	numberOfInputParams = dimension;
 	function_name = name;
 	func_ptr = empty;
 	adj_ptr  = emptyAdj;
 	noiseLevel = 0.0;
 	ifFunctionIsNoisy = false;
-	ifAdjointFunctionExist = false;
+
 	lb.zeros(dimension);
 	ub.zeros(dimension);
 
 
 }
+
+
+void TestFunction::addNoise(double noise){
+
+	noiseLevel = noise;
+	ifFunctionIsNoisy = true;
+
+}
+void TestFunction::setVisualizationOn(void){
+
+	ifVisualize = true;
+}
+void TestFunction::setVisualizationOff(void){
+
+	ifVisualize = false;
+
+}
+
+
 
 void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
 
@@ -251,7 +272,8 @@ void TestFunction::plot(int resolution) const{
 }
 
 
-void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howManySamples, bool ifVisualize){
+double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howManySamples){
+
 
 	printf("Testing surrogate model with the %s function...\n",function_name.c_str());
 	printf("ModelId: %d\n",modelID);
@@ -262,7 +284,8 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 
 	mat sampleMatrix;
 
-	if(ifAdjointFunctionExist) {
+	if(modelID == GRADIENT_ENHANCED_KERNEL_REGRESSION || modelID == AGGREGATION) {
+
 		sampleMatrix = generateRandomSamplesWithGradients(howManySamples);
 	}
 	else{
@@ -275,7 +298,6 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 
 	KrigingModel TestFunModelKriging(label);
 	KernelRegressionModel TestFunModelKernelRegression(label);
-	GradientKernelRegressionModel TestFunModelGradientKernelRegression(label);
 	LinearModel TestFunModelLinearRegression(label);
 
 
@@ -283,24 +305,24 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 	switch (modelID) {
 	case KRIGING:
 	{
-		//		surrogateModel =  &TestFunModelKriging;
+		surrogateModel =  &TestFunModelKriging;
 		break;
 	}
 	case LINEAR_REGRESSION:
 	{
-		//		surrogateModel = &TestFunModelLinearRegression;
+		surrogateModel = &TestFunModelLinearRegression;
 		break;
 	}
 	case KERNEL_REGRESSION:
 	{
-		cout << "Initializing the kernel regression model\n";
 		surrogateModel =  &TestFunModelKernelRegression;
 		break;
 	}
 	case GRADIENT_ENHANCED_KERNEL_REGRESSION:
 	{
-		cout << "Initializing the gradient enhanced kernel regression model\n";
-		surrogateModel =  &TestFunModelGradientKernelRegression;
+		TestFunModelKernelRegression.setGradientsOn();
+		TestFunModelKernelRegression.modelID = GRADIENT_ENHANCED_KERNEL_REGRESSION;
+		surrogateModel =  &TestFunModelKernelRegression;
 		break;
 	}
 	default:
@@ -310,19 +332,25 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 	}
 	}
 
+	surrogateModel->initializeSurrogateModel();
 
-	surrogateModel->train();
+
+//	surrogateModel->train();
+
+	surrogateModel->loadHyperParameters();
 
 	double inSampleError = surrogateModel->calculateInSampleError();
 #if 1
 	printf("inSampleError = %15.10f\n",inSampleError);
 #endif
 
-	mat testSetMatrix = generateRandomSamples(20000);
+	mat testSetMatrix = generateRandomSamples(numberOfSamplesUsedForVisualization);
 
 	PartitionData testSet;
 	testSet.fillWithData(testSetMatrix);
+
 	surrogateModel->tryModelOnTestSet(testSet);
+
 
 	label = function_name + "_SurrogateTestResults";
 
@@ -343,6 +371,7 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howM
 	}
 
 
+	return testError;
 }
 
 
@@ -354,7 +383,13 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 
 	for(unsigned int j=0; j<numberOfInputParams;j++) {
 
-		assert(lb(j) < ub(j));
+		if (lb(j) >= ub(j)){
+
+			printf("\nERROR: lb(%d) >= ub(%d) (%10.7f >= %10.7f)!\n",j,j,lb(j),ub(j));
+			printf("Did you set box constraints properly?\n");
+			abort();
+
+		}
 	}
 
 
@@ -404,7 +439,6 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 
 mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples){
 
-	assert(ifAdjointFunctionExist);
 
 	printf("Generating %d random samples for the function: %s\n",howManySamples,function_name.c_str());
 
@@ -509,14 +543,13 @@ void TestFunction::testEfficientGlobalOptimization(int nsamplesTrainingData, int
 
 
 double empty(double *x){
-	fprintf(stderr, "Error: calling empty function! at %s, line %d.\n",__FILE__, __LINE__);
+	printf("\nERROR: calling empty primal function! Did you set the primal function properly?\n");
 	abort();
-	return 0;
 
 }
 
 double emptyAdj(double *x, double *xb){
-	fprintf(stderr, "Error: calling emptyAdj function! at %s, line %d.\n",__FILE__, __LINE__);
+	printf("\nERROR: calling empty dual function! Did you set the dual function properly?\n");
 	abort();
 
 	return 0;
@@ -524,208 +557,8 @@ double emptyAdj(double *x, double *xb){
 }
 
 
-double test_function1KernelReg(double *x){
-
-	return 0.001*sin(x[0])+ 1.0*cos(x[1]);
-
-}
-
-//double test_function1KernelRegAdj(double *xin, double *xb){
-//
-//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-//	tape.setActive();
-//	codi::RealReverse *x = new codi::RealReverse[2];
-//	x[0]= xin[0];
-//	x[1]= xin[1];
-//	tape.registerInput(x[0]);
-//	tape.registerInput(x[1]);
-//
-//	codi::RealReverse result = 0.001*sin(x[0])+ 1.0*cos(x[1]);
-//
-//	tape.registerOutput(result);
-//
-//	tape.setPassive();
-//	result.setGradient(1.0);
-//	tape.evaluate();
-//
-//	xb[0]=x[0].getGradient();
-//	xb[1]=x[1].getGradient();
-//
-//	tape.reset();
-//	delete[] x;
-//	return result.getValue();
-//
-//}
 
 
-double test_function2KernelReg(double *x){
-
-	return sin(x[1]+x[2])+ pow( (x[1]-x[2]),2.0)-1.5*x[1]+2.5*x[2]+1.0;
-
-}
-
-//double test_function2KernelRegAdj(double *xin,double *xb){
-//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-//	tape.setActive();
-//	codi::RealReverse *x = new codi::RealReverse[5];
-//
-//	for(int i=0; i<5;i++){
-//
-//		x[i]= xin[i];
-//		tape.registerInput(x[i]);
-//	}
-//	codi::RealReverse result = sin(x[1]+x[2])+ pow( (x[1]-x[2]),2.0)-1.5*x[1]+2.5*x[2]+1.0;
-//	tape.registerOutput(result);
-//
-//	tape.setPassive();
-//	result.setGradient(1.0);
-//	tape.evaluate();
-//
-//	for(int i=0; i<5;i++){
-//		xb[i]=x[i].getGradient();
-//
-//	}
-//	delete[] x;
-//	tape.reset();
-//	return result.getValue();
-//
-//}
-
-
-
-double TestFunction1D(double *x){
-
-	return sin(2*x[0])+ 0.5* sin(10*x[0]) + x[0]*x[0] ;
-
-}
-
-//double TestFunction1DAdj(double *xin, double *xb){
-//
-//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-//	tape.setActive();
-//	codi::RealReverse *x = new codi::RealReverse[1];
-//
-//	tape.registerInput(x[0]);
-//
-//	codi::RealReverse result = sin(2*x[0])+ 0.5* sin(10*x[0]) + x[0]*x[0] ;
-//	tape.registerOutput(result);
-//
-//	tape.setPassive();
-//	result.setGradient(1.0);
-//	tape.evaluate();
-//
-//
-//	xb[0]=x[0].getGradient();
-//
-//
-//	delete[] x;
-//	tape.reset();
-//	return result.getValue();
-//
-//}
-
-
-
-
-double Griewank2D(double *x){
-
-	return (x[0]*x[0])/4000.0 + (x[1]*x[1])/4000.0 - cos(x[0]) * cos(x[1]/sqrt(2.0));
-
-
-
-}
-
-//double Griewank2D_adj(double *xin, double *xb){
-//
-//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-//	tape.setActive();
-//	codi::RealReverse *x = new codi::RealReverse[2];
-//
-//	for(int i=0; i<2;i++){
-//
-//		x[i]= xin[i];
-//		tape.registerInput(x[i]);
-//	}
-//
-//	codi::RealReverse result = (x[0]*x[0])/4000.0 + (x[1]*x[1])/4000.0 - cos(x[0]) * cos(x[1]/sqrt(2.0));
-//	tape.registerOutput(result);
-//
-//	tape.setPassive();
-//	result.setGradient(1.0);
-//	tape.evaluate();
-//
-//	for(int i=0; i<2;i++){
-//		xb[i]=x[i].getGradient();
-//
-//	}
-//	delete[] x;
-//	tape.reset();
-//	return result.getValue();
-//
-//
-//
-//
-//
-//}
-
-double Rastrigin6D(double *x){
-
-	int d = 6;
-	double sum = 0;
-	for (int i = 0; i<d; i++){
-
-		sum = sum + (x[i]*x[i] - 10.0*cos(2*3.14159265359*x[i]));
-	}
-
-	sum = 10.0*d + sum;
-	return sum;
-
-
-}
-
-//double Rastrigin6D_adj(double *xin, double *xb){
-//
-//	int d = 6;
-//
-//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-//	tape.setActive();
-//	codi::RealReverse *x = new codi::RealReverse[d];
-//
-//	for(int i=0; i<d;i++){
-//
-//		x[i]= xin[i];
-//		tape.registerInput(x[i]);
-//	}
-//
-//
-//	codi::RealReverse sum = 0;
-//	for (int i = 0; i<d; i++){
-//
-//		sum = sum + (x[i]*x[i] - 10.0*cos(2*3.14159265359*x[i]));
-//	}
-//
-//	sum = 10.0*d + sum;
-//
-//
-//	tape.registerOutput(sum);
-//
-//	tape.setPassive();
-//	sum.setGradient(1.0);
-//	tape.evaluate();
-//
-//	for(int i=0; i<d;i++){
-//		xb[i]=x[i].getGradient();
-//
-//	}
-//	delete[] x;
-//	tape.reset();
-//	return sum.getValue();
-//
-//
-//
-//
-//
-//}
 
 
 double Waves2Dpertrubed(double *x){
@@ -797,46 +630,16 @@ double Herbie2D(double *x){
 
 double Herbie2DAdj(double *x, double *xb) {
 
-    xb[0] =  - (2*pow(x[0]-1, 2-1)*exp(-pow(x[0]-1, 2))+2*pow(x[0]+1, 2-1
-        )*0.8*exp(-(0.8*pow(x[0]+1, 2)))+8*cos(8*(x[0]+0.1))*0.05);
-    xb[1] =  - (2*pow(x[1]-1, 2-1)*exp(-pow(x[1]-1, 2))+2*pow(x[1]+1, 2-1
-        )*0.8*exp(-(0.8*pow(x[1]+1, 2)))+8*cos(8*(x[1]+0.1))*0.05);
-    return exp(-pow((x[0]-1),2))+exp(-0.8*pow((x[0]+1),2))-0.05*sin(8*(x[0]+0.1))
-    	+ exp(-pow((x[1]-1),2))+exp(-0.8*pow((x[1]+1),2))-0.05*sin(8*(x[1]+0.1));
+	xb[0] =  - (2*pow(x[0]-1, 2-1)*exp(-pow(x[0]-1, 2))+2*pow(x[0]+1, 2-1
+	)*0.8*exp(-(0.8*pow(x[0]+1, 2)))+8*cos(8*(x[0]+0.1))*0.05);
+	xb[1] =  - (2*pow(x[1]-1, 2-1)*exp(-pow(x[1]-1, 2))+2*pow(x[1]+1, 2-1
+	)*0.8*exp(-(0.8*pow(x[1]+1, 2)))+8*cos(8*(x[1]+0.1))*0.05);
+	return exp(-pow((x[0]-1),2))+exp(-0.8*pow((x[0]+1),2))-0.05*sin(8*(x[0]+0.1))
+	+ exp(-pow((x[1]-1),2))+exp(-0.8*pow((x[1]+1),2))-0.05*sin(8*(x[1]+0.1));
 
 
 }
 
-//double Herbie2D_adj(double *xin, double *xb) {
-//
-//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-//	tape.setActive();
-//	codi::RealReverse *x = new codi::RealReverse[2];
-//
-//	for(int i=0; i<2;i++){
-//
-//		x[i]= xin[i];
-//		tape.registerInput(x[i]);
-//	}
-//
-//
-//	codi::RealReverse result = exp(-pow((x[0]-1),2))+exp(-0.8*pow((x[0]+1),2))-0.05*sin(8*(x[0]+0.1))
-//	+ exp(-pow((x[1]-1),2))+exp(-0.8*pow((x[1]+1),2))-0.05*sin(8*(x[1]+0.1));
-//	tape.registerOutput(result);
-//
-//	tape.setPassive();
-//	result.setGradient(1.0);
-//	tape.evaluate();
-//
-//	for(int i=0; i<2;i++){
-//		xb[i]=x[i].getGradient();
-//
-//	}
-//	delete[] x;
-//	tape.reset();
-//	return result.getValue();
-//
-//}
 
 
 
@@ -1346,309 +1149,101 @@ double Wingweight(double *x){
 }
 
 double WingweightAdj(double *x, double *xb) {
-    double Sw = x[0];
-    double Swb = 0.0;
-    double Wfw = x[1];
-    double Wfwb = 0.0;
-    double A = x[2];
-    double Ab = 0.0;
-    double Lambda = x[3];
-    double Lambdab = 0.0;
-    double q = x[4];
-    double qb = 0.0;
-    double lambda = x[5];
-    double lambdab = 0.0;
-    double tc = x[6];
-    double tcb = 0.0;
-    double Nz = x[7];
-    double Nzb = 0.0;
-    double Wdg = x[8];
-    double Wdgb = 0.0;
-    double Wp = x[9];
-    double Wpb = 0.0;
-    double deg = Lambda*datum::pi/180.0;
-    double degb = 0.0;
-    double W = 0.036*pow(Sw, 0.758)*pow(Wfw, 0.0035)*pow(A/(cos(deg)*cos(deg))
-    , 0.6)*pow(q, 0.006)*pow(lambda, 0.04)*pow(100.0*tc/cos(deg), -0.3)*pow(Nz
-    *Wdg, 0.49) + Sw*Wp;
-    double Wb = 0.0;
-    double temp;
-    double temp0;
-    double temp1;
-    double temp2;
-    double temp3;
-    double temp4;
-    double temp5;
-    double tempb;
-    double temp6;
-    double temp7;
-    double temp8;
-    double tempb0;
-    double temp9;
-    double temp10;
-    double temp11;
-    double temp12;
-    double tempb1;
-    double tempb2;
-    double tempb3;
-    double tempb4;
+	double Sw = x[0];
+	double Swb = 0.0;
+	double Wfw = x[1];
+	double Wfwb = 0.0;
+	double A = x[2];
+	double Ab = 0.0;
+	double Lambda = x[3];
+	double Lambdab = 0.0;
+	double q = x[4];
+	double qb = 0.0;
+	double lambda = x[5];
+	double lambdab = 0.0;
+	double tc = x[6];
+	double tcb = 0.0;
+	double Nz = x[7];
+	double Nzb = 0.0;
+	double Wdg = x[8];
+	double Wdgb = 0.0;
+	double Wp = x[9];
+	double Wpb = 0.0;
+	double deg = Lambda*datum::pi/180.0;
+	double degb = 0.0;
+	double W = 0.036*pow(Sw, 0.758)*pow(Wfw, 0.0035)*pow(A/(cos(deg)*cos(deg))
+			, 0.6)*pow(q, 0.006)*pow(lambda, 0.04)*pow(100.0*tc/cos(deg), -0.3)*pow(Nz
+					*Wdg, 0.49) + Sw*Wp;
+	double Wb = 0.0;
+	double temp;
+	double temp0;
+	double temp1;
+	double temp2;
+	double temp3;
+	double temp4;
+	double temp5;
+	double tempb;
+	double temp6;
+	double temp7;
+	double temp8;
+	double tempb0;
+	double temp9;
+	double temp10;
+	double temp11;
+	double temp12;
+	double tempb1;
+	double tempb2;
+	double tempb3;
+	double tempb4;
 
-    Wb = 1.0;
-    temp = pow(lambda, 0.04);
-    temp0 = pow(q, 0.006);
-    temp1 = temp0*temp;
-    temp2 = cos(deg);
-    temp3 = temp2*temp2;
-    temp4 = A/temp3;
-    temp5 = pow(temp4, 0.6);
-    temp6 = cos(deg);
-    temp7 = tc/temp6;
-    temp8 = pow(100.0*temp7, -0.3);
-    temp9 = pow(Nz*Wdg, 0.49);
-    temp10 = pow(Wfw, 0.0035);
-    temp11 = pow(Sw, 0.758);
-    temp12 = temp11*temp10;
-    tempb = temp5*temp1*0.036*Wb;
-    tempb3 = temp12*temp9*temp8*0.036*Wb;
-    Wpb = Sw*Wb;
-    tempb4 = 0.6*pow(temp4, 0.6-1)*temp1*tempb3/temp3;
-    qb = 0.006*pow(q, 0.006-1)*temp*temp5*tempb3;
-    lambdab = 0.04*pow(lambda, 0.04-1)*temp0*temp5*tempb3;
-    Ab = tempb4;
-    tempb0 = temp8*tempb;
-    Swb = Wp*Wb + 0.758*pow(Sw, 0.758-1)*temp10*temp9*tempb0;
-    tempb2 = -(100.0*0.3*pow(100.0*temp7, -0.3-1)*temp12*temp9*tempb/temp6);
-    degb = sin(deg)*2*temp2*temp4*tempb4 + sin(deg)*temp7*tempb2;
-    tcb = tempb2;
-    Wfwb = 0.0035*pow(Wfw, 0.0035-1)*temp11*temp9*tempb0;
-    tempb1 = 0.49*pow(Nz*Wdg, 0.49-1)*temp12*tempb0;
-    Nzb = Wdg*tempb1;
-    Wdgb = Nz*tempb1;
-    Lambdab = datum::pi*degb/180.0;
-    xb[9] = Wpb;
-    xb[8] = Wdgb;
-    xb[7] = Nzb;
-    xb[6] = tcb;
-    xb[5] = lambdab;
-    xb[4] = qb;
-    xb[3] = Lambdab;
-    xb[2] = Ab;
-    xb[1] = Wfwb;
-    xb[0] = Swb;
-    return(W);
+	Wb = 1.0;
+	temp = pow(lambda, 0.04);
+	temp0 = pow(q, 0.006);
+	temp1 = temp0*temp;
+	temp2 = cos(deg);
+	temp3 = temp2*temp2;
+	temp4 = A/temp3;
+	temp5 = pow(temp4, 0.6);
+	temp6 = cos(deg);
+	temp7 = tc/temp6;
+	temp8 = pow(100.0*temp7, -0.3);
+	temp9 = pow(Nz*Wdg, 0.49);
+	temp10 = pow(Wfw, 0.0035);
+	temp11 = pow(Sw, 0.758);
+	temp12 = temp11*temp10;
+	tempb = temp5*temp1*0.036*Wb;
+	tempb3 = temp12*temp9*temp8*0.036*Wb;
+	Wpb = Sw*Wb;
+	tempb4 = 0.6*pow(temp4, 0.6-1)*temp1*tempb3/temp3;
+	qb = 0.006*pow(q, 0.006-1)*temp*temp5*tempb3;
+	lambdab = 0.04*pow(lambda, 0.04-1)*temp0*temp5*tempb3;
+	Ab = tempb4;
+	tempb0 = temp8*tempb;
+	Swb = Wp*Wb + 0.758*pow(Sw, 0.758-1)*temp10*temp9*tempb0;
+	tempb2 = -(100.0*0.3*pow(100.0*temp7, -0.3-1)*temp12*temp9*tempb/temp6);
+	degb = sin(deg)*2*temp2*temp4*tempb4 + sin(deg)*temp7*tempb2;
+	tcb = tempb2;
+	Wfwb = 0.0035*pow(Wfw, 0.0035-1)*temp11*temp9*tempb0;
+	tempb1 = 0.49*pow(Nz*Wdg, 0.49-1)*temp12*tempb0;
+	Nzb = Wdg*tempb1;
+	Wdgb = Nz*tempb1;
+	Lambdab = datum::pi*degb/180.0;
+	xb[9] = Wpb;
+	xb[8] = Wdgb;
+	xb[7] = Nzb;
+	xb[6] = tcb;
+	xb[5] = lambdab;
+	xb[4] = qb;
+	xb[3] = Lambdab;
+	xb[2] = Ab;
+	xb[1] = Wfwb;
+	xb[0] = Swb;
+	return(W);
 }
 
 
 
 
-
-/*
- *
- * Generate test data for a given 2D function with random distribution
- *
- */
-
-
-/* generate the contour plot with the given function within specified bounds and resolution */
-//void generate_contour_plot_2D_function(double (*test_function)(double *), double *bounds, std::string function_name, int resolution=100){
-//	/* first generate output data file */
-//
-//	std::string filename= function_name;
-//	filename += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".dat";
-//
-//
-//	std::string file_name_for_plot = function_name;
-//	file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-//
-//
-//
-//	printf("opening file %s for output...\n",filename.c_str());
-//	FILE *test_function_data=fopen(filename.c_str(),"w");
-//
-//
-//
-//	double dx,dy; /* step sizes in x and y directions */
-//	double x[2];
-//	double func_val;
-//	dx = (bounds[1]-bounds[0])/(resolution-1);
-//	dy = (bounds[3]-bounds[2])/(resolution-1);
-//
-//	x[0] = bounds[0];
-//	for(int i=0;i<resolution;i++){
-//		x[1] = bounds[2];
-//		for(int j=0;j<resolution;j++){
-//			func_val = test_function(x);
-//			fprintf(test_function_data,"%10.7f %10.7f %10.7f\n",x[0],x[1],func_val);
-//
-//
-//			x[1]+=dy;
-//		}
-//		x[0]+= dx;
-//
-//	}
-//
-//	fclose(test_function_data);
-//
-//	std::string python_command = "python -W ignore plot_2d_surface.py "+ filename+ " "+ file_name_for_plot ;
-//
-//
-//
-//	FILE* in = popen(python_command.c_str(), "r");
-//
-//
-//	fprintf(in, "\n");
-//
-//
-//
-//}
-
-
-/* generate the contour plot with the given function
- * and its gradient sensitivities within specified bounds and resolution
- *
- *   */
-//void generate_contour_plot_2D_function_with_gradient(double (*test_function)(double *, double *),
-//		double *bounds,
-//		std::string function_name,
-//		std::string python_dir,
-//		int resolution=100){
-//	/* first generate output data file */
-//
-//	std::string filename= function_name;
-//	filename += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".dat";
-//
-//	std::string filename_g1= function_name;
-//	filename_g1 += "_g1_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".dat";
-//
-//
-//	std::string filename_g2= function_name;
-//	filename_g2 += "_g2_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".dat";
-//
-//
-//
-//	std::string file_name_for_plot = function_name;
-//	file_name_for_plot += "_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-//
-//
-//	std::string file_name_for_plot_g1 = function_name;
-//	file_name_for_plot_g1 += "_g1_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-//
-//	std::string file_name_for_plot_g2 = function_name;
-//	file_name_for_plot_g2 += "_g2_"+std::to_string(resolution)+ "_"+std::to_string(resolution)+".png";
-//
-//
-//
-//
-//	printf("opening file %s for output...\n",filename.c_str());
-//
-//
-//
-//	FILE *test_function_data=fopen(filename.c_str(),"w");
-//	FILE *test_function_data_g1=fopen(filename_g1.c_str(),"w");
-//	FILE *test_function_data_g2=fopen(filename_g2.c_str(),"w");
-//
-//
-//
-//	double dx,dy; /* step sizes in x and y directions */
-//	double x[2];
-//	double xb[2];
-//	double func_val;
-//	dx = (bounds[1]-bounds[0])/(resolution-1);
-//	dy = (bounds[3]-bounds[2])/(resolution-1);
-//
-//	x[0] = bounds[0];
-//	for(int i=0;i<resolution;i++){
-//		x[1] = bounds[2];
-//		for(int j=0;j<resolution;j++){
-//			xb[0]=0.0; xb[1]=0.0;
-//			func_val = test_function(x,xb);
-//			fprintf(test_function_data,"%10.7f %10.7f %10.7f\n",x[0],x[1],func_val);
-//			fprintf(test_function_data_g1,"%10.7f %10.7f %10.7f\n",x[0],x[1],xb[0]);
-//			fprintf(test_function_data_g2,"%10.7f %10.7f %10.7f\n",x[0],x[1],xb[1]);
-//
-//			x[1]+=dy;
-//		}
-//		x[0]+= dx;
-//
-//	}
-//
-//	fclose(test_function_data);
-//	fclose(test_function_data_g1);
-//	fclose(test_function_data_g2);
-//
-//	std::string title = "function";
-//	std::string python_command = "python -W ignore "+python_dir+"/plot_2d_surface.py "+ filename+ " "+ file_name_for_plot + " "+title;
-//
-//
-//	FILE* in = popen(python_command.c_str(), "r");
-//	fprintf(in, "\n");
-//
-//	title = "df/dx1";
-//	std::string python_command_g1 = "python -W ignore "+python_dir+"/plot_2d_surface.py "+ filename_g1+ " "+ file_name_for_plot_g1+ " "+title ;
-//	FILE* in_g1 = popen(python_command_g1.c_str(), "r");
-//	fprintf(in_g1, "\n");
-//
-//	title = "df/dx2";
-//	std::string python_command_g2 = "python -W ignore "+python_dir+"/plot_2d_surface.py "+ filename_g2+ " "+ file_name_for_plot_g2 + " "+title;
-//	FILE* in_g2 = popen(python_command_g2.c_str(), "r");
-//	fprintf(in_g2, "\n");
-//
-//
-//
-//
-//}
-//
-//
-//
-//void generate_plot_1D_function(double (*test_function)(double *), double *bounds, std::string function_name, int resolution=1000){
-//	/* first generate output data file */
-//
-//	std::string filename= function_name;
-//	filename += "_"+std::to_string(resolution)+".dat";
-//
-//
-//	std::string file_name_for_plot = function_name;
-//	file_name_for_plot += "_"+std::to_string(resolution)+".png";
-//
-//
-//
-//	printf("opening file %s for output...\n",filename.c_str());
-//	FILE *test_function_data=fopen(filename.c_str(),"w");
-//
-//
-//
-//	double dx; /* step size in x*/
-//	double x;
-//	double func_val;
-//	dx = (bounds[1]-bounds[0])/(resolution-1);
-//
-//
-//	x= bounds[0];
-//	for(int i=0;i<resolution;i++){
-//
-//		func_val = test_function(&x);
-//		fprintf(test_function_data,"%10.7f %10.7f\n",x,func_val);
-//		x+= dx;
-//
-//	}
-//
-//
-//
-//
-//	fclose(test_function_data);
-//
-//	std::string python_command = "python -W ignore plot_1d_function.py "+ filename+ " "+ file_name_for_plot ;
-//
-//
-//
-//	FILE* in = popen(python_command.c_str(), "r");
-//
-//
-//	fprintf(in, "\n");
-//
-//
-//
-//}
 
 
 

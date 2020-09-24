@@ -21,12 +21,15 @@ KernelRegressionModel::KernelRegressionModel():SurrogateModel(){}
 KernelRegressionModel::KernelRegressionModel(std::string name):SurrogateModel(name),trainingData("TrainingData"),testDataForInnerOptimizationLoop("CrossValidationData"){
 
 	modelID = KERNEL_REGRESSION;
+	hyperparameters_filename = label + "_kernel_regression_hyperparameters.csv";
 
 }
 
 void KernelRegressionModel::initializeSurrogateModel(void){
 
 	if(label != "None"){
+
+		cout << "Initializing kernel regression model...\n";
 
 		ReadDataAndNormalize();
 
@@ -38,8 +41,8 @@ void KernelRegressionModel::initializeSurrogateModel(void){
 		sigmaGaussianKernel = 0.0;
 		sigmaGaussianKernelAdjoint = 0.0;
 
-		maximumCrossValidationIterations = 5;
-		maximumInnerOptIterations = 10000;
+		maximumCrossValidationIterations = 2;
+		maximumInnerOptIterations = 1000;
 
 		lossFunctionType = L2_LOSS_FUNCTION;
 
@@ -89,9 +92,7 @@ void KernelRegressionModel::initializeSurrogateModel(void){
 
 	ifInitialized = true;
 
-	printSurrogateModel();
-
-
+	cout << "Kernel regression model initialization is done...\n";
 }
 
 void KernelRegressionModel::saveHyperParameters(void) const{
@@ -125,7 +126,7 @@ void KernelRegressionModel::loadHyperParameters(void){
 
 void KernelRegressionModel::printSurrogateModel(void) const{
 
-	cout << "Kernel regression model\n";
+	cout << "\nKernel regression model:\n";
 	cout << "N = " << N <<"\n";;
 	cout << "dim = " << dim <<"\n";
 	printMatrix(rawData,"rawData");
@@ -133,6 +134,7 @@ void KernelRegressionModel::printSurrogateModel(void) const{
 	trainingData.print();
 	testDataForInnerOptimizationLoop.print();
 
+	printHyperParameters();
 
 }
 
@@ -346,7 +348,9 @@ void KernelRegressionModel::train(void){
 
 	if(!ifInitialized){
 
-		this->initializeSurrogateModel();
+		printf("ERROR: Kernel regression model must be initialized before training!\n");
+		abort();
+
 	}
 
 
@@ -941,7 +945,10 @@ double KernelRegressionModel::calculateL12RegularizationTermAdjoint(double weigh
 
 
 double KernelRegressionModel::interpolate(rowvec x) const{
-
+#if 0
+	printVector(x,"x");
+	printMatrix(X,"X");
+#endif
 	assert(x.size() == dim);
 
 	unsigned int samplesUsedInInterpolation = X.n_rows;
@@ -963,27 +970,81 @@ double KernelRegressionModel::interpolate(rowvec x) const{
 	for(unsigned int i=0; i<samplesUsedInInterpolation; i++){
 
 		weights(i) = kernelValues(i)/kernelSum;
+#if 0
+		rowvec xi = X.row(i);
+		printVector(xi);
+		printf("weights(%d) = %10.7f\n",i,weights(i));
+#endif
 		weightedSum += weights(i)* y(i);
+	}
+
+
+	return weightedSum;
+
+
+}
+
+void KernelRegressionModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
+
+	cout <<"ERROR: interpolateWithVariance does not exist for the KernelRegressionModel\n";
+	abort();
+
+}
+
+
+void KernelRegressionModel::setGradientsOn(void){
+
+	this->ifUsesGradientData = true;
+
+}
+
+void KernelRegressionModel::setGradientsOff(void){
+
+	this->ifUsesGradientData = false;
+
+}
+
+double KernelRegressionModel::interpolateWithGradients(rowvec x) const{
+
+	assert(ifUsesGradientData);
+	assert(x.size() == dim);
+
+	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
+
+	unsigned int samplesUsedInInterpolation = X.n_rows;
+
+	vec kernelValues(samplesUsedInInterpolation,fill::zeros);
+
+	for(unsigned int i=0; i<samplesUsedInInterpolation; i++){
+
+		rowvec xi = X.row(i);
+		kernelValues(i) = calculateGaussianKernel(x,xi);
+
+	}
+
+	double kernelSum = sum(kernelValues);
+
+	vec weights(samplesUsedInInterpolation,fill::zeros);
+
+
+	double weightedSum = 0.0;
+	for(unsigned int i=0; i<samplesUsedInInterpolation; i++){
+
+		rowvec xi = getRowXRaw(i);
+
+		rowvec xdiff = xp-xi;
+		rowvec grad = gradientData.row(i);
+		double gradTerm = dot(xdiff,grad);
+
+		weights(i) = kernelValues(i)/kernelSum;
+		weightedSum += weights(i)* (y(i)+gradTerm);
 	}
 
 	return weightedSum;
 
 }
 
-void KernelRegressionModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
 
-	cout <<"ERROR: interpolateWithVariance does not exist for the kernel regression model\n";
-	abort();
-
-}
-
-double KernelRegressionModel::calculateInSampleError(void) const{
-
-	double result = 0.0;
-
-	return result;
-
-}
 
 float MAX(float a, float b){
 

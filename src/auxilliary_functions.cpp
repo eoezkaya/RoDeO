@@ -121,40 +121,39 @@ void abortIfFalse(bool flag){
 
 
 
-double calculatePolynomial(const rowvec &x, const vec &coeffs){
+double calculatePolynomial(double x, const rowvec &coeffs){
 
-	assert(x.size() == coeffs.size());
+//	printVector(coeffs,"coeffs");
 	double sum = 0.0;
 
-	for(unsigned int i=0; i<x.size(); i++){
+	for(unsigned int i=0; i<coeffs.size(); i++){
+#if 0
+		printf("coeffs(%d)*pow(%10.7f,%d) = %10.7f\n",i,x,i,coeffs(i)*pow(x,i));
+#endif
 
-		sum += coeffs(i)*pow(x(i),i);
+		sum += coeffs(i)*pow(x,i);
 	}
 
 
 	return sum;
 }
 
+double calculateTensorProduct(const rowvec &x, const mat &coeffs){
+
+	assert(x.size() == coeffs.n_rows);
+
+	double prod = 1.0;
+	for(unsigned int i=0; i<coeffs.n_rows; i++){
+
+		double sum = calculatePolynomial(x(i), coeffs.row(i));
+
+		prod = prod*sum;
+	}
+
+	return prod;
+}
 
 
-
-
-
-//void perturbVectorUniform(frowvec &xp,float sigmaPert){
-//
-//
-//	int size = xp.size();
-//
-//	for(int i=0; i<size; i++){
-//
-//		float eps = sigmaPert* randomFloat(-1.0, 1.0);
-//
-//		xp(i) += eps;
-//
-//
-//	}
-//
-//}
 
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
 
@@ -623,93 +622,93 @@ bool file_exist(const char *fileName)
  * @param[out] indices
  */
 
-void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, unsigned int norm){
-
-#if 0
-	printf("findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, int norm)...\n");
-#endif
-
-	int number_of_points= data.n_rows;
-	int dim= data.n_cols;
-
-
-
-	for(int i=0; i<K; i++){
-
-		min_dist[i]= LARGE;
-		indices[i]= -1;
-	}
-
-
-	for(int i=0; i<number_of_points; i++){ /* for each data point */
-
-		rowvec x = data.row(i);
-		rowvec xdiff = x-p;
-
-		double distance = 0.0;
-
-		if(norm == xdiff.size()){
-
-			distance = Lpnorm(xdiff, dim, xdiff.size());
-		}
-		if(norm == 2){
-
-			distance = L2norm(xdiff, dim);
-
-		}
-		if(norm == 1){
-
-			distance = L1norm(xdiff, dim);
-
-		}
-#if 0
-		printf("distance = %10.7f\n", distance);
-#endif
-		double worst_distance = -LARGE;
-		int worst_distance_index = -1;
-
-
-		find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
-
-		/* a better point is found */
-		if(distance < worst_distance){
-
-			min_dist[worst_distance_index]= distance;
-			indices[worst_distance_index] = i;
-
-		}
-
-	}
-
-	/* sort the indices */
-
-	for(int i=0; i<K; i++){
-
-		for(int j=i+1; j<K; j++){
-
-			if(min_dist[i] > min_dist[j]){
-
-				double temp;
-				int tempindx;
-				temp = min_dist[j];
-				tempindx = indices[j];
-
-				min_dist[j] =  min_dist[i];
-				indices[j] = indices[i];
-
-				min_dist[i] =  temp;
-				indices[i] = tempindx;
-
-			}
-
-
-		}
-
-	}
-
-
-
-}
+//void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, unsigned int norm){
+//
+//#if 0
+//	printf("findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, int norm)...\n");
+//#endif
+//
+//	int number_of_points= data.n_rows;
+//	int dim= data.n_cols;
+//
+//
+//
+//	for(int i=0; i<K; i++){
+//
+//		min_dist[i]= LARGE;
+//		indices[i]= -1;
+//	}
+//
+//
+//	for(int i=0; i<number_of_points; i++){ /* for each data point */
+//
+//		rowvec x = data.row(i);
+//		rowvec xdiff = x-p;
+//
+//		double distance = 0.0;
+//
+//		if(norm == xdiff.size()){
+//
+//			distance = Lpnorm(xdiff, dim, xdiff.size());
+//		}
+//		if(norm == 2){
+//
+//			distance = L2norm(xdiff, dim);
+//
+//		}
+//		if(norm == 1){
+//
+//			distance = L1norm(xdiff, dim);
+//
+//		}
+//#if 0
+//		printf("distance = %10.7f\n", distance);
+//#endif
+//		double worst_distance = -LARGE;
+//		int worst_distance_index = -1;
+//
+//
+//		find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
+//
+//		/* a better point is found */
+//		if(distance < worst_distance){
+//
+//			min_dist[worst_distance_index]= distance;
+//			indices[worst_distance_index] = i;
+//
+//		}
+//
+//	}
+//
+//	/* sort the indices */
+//
+//	for(int i=0; i<K; i++){
+//
+//		for(int j=i+1; j<K; j++){
+//
+//			if(min_dist[i] > min_dist[j]){
+//
+//				double temp;
+//				int tempindx;
+//				temp = min_dist[j];
+//				tempindx = indices[j];
+//
+//				min_dist[j] =  min_dist[i];
+//				indices[j] = indices[i];
+//
+//				min_dist[i] =  temp;
+//				indices[i] = tempindx;
+//
+//			}
+//
+//
+//		}
+//
+//	}
+//
+//
+//
+//}
 
 
 
@@ -727,72 +726,72 @@ void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices,
  * @param[in] M : metric matrix
  */
 
-void findKNeighbours(mat &data,
-		rowvec &p,
-		int K,
-		vec &min_dist,
-		uvec &indices,
-		mat M){
-
-#if 0
-	printf("calling findKNeighbours...\n");
-	printf("point = \n");
-	p.print();
-#endif
-
-	int number_of_points= data.n_rows;
-
-	min_dist.fill(LARGE);
-	indices.fill(-1);
-
-
-
-	for(int i=0; i<number_of_points; i++){ /* for each data point */
-
-		rowvec x = data.row(i);
-		rowvec xdiff = x-p;
-
-#if 0
-		printf("xdiff = \n");
-		xdiff.print();
-#endif
-
-
-		double distance =  calculateMetric(x,p, M);
-
-#if 0
-		printf("distance = %10.7f\n", distance);
-#endif
-
-		double worst_distance = -LARGE;
-		int worst_distance_index = -1;
-
-
-		find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
-
-
-		/* a better point is found */
-		if(distance < worst_distance){
-
-			min_dist[worst_distance_index]= distance;
-			indices[worst_distance_index] = i;
-
-		}
-
-	}
-
-#if 0
-	printf("%d nearest neighbors...\n",K);
-	for(int i=0;i<K;i++){
-
-		printf("index = %d\n",indices[i]);
-		data.row(indices[i]).print();
-	}
-#endif
-
-
-
-}
+//void findKNeighbours(mat &data,
+//		rowvec &p,
+//		int K,
+//		vec &min_dist,
+//		uvec &indices,
+//		mat M){
+//
+//#if 0
+//	printf("calling findKNeighbours...\n");
+//	printf("point = \n");
+//	p.print();
+//#endif
+//
+//	int number_of_points= data.n_rows;
+//
+//	min_dist.fill(LARGE);
+//	indices.fill(-1);
+//
+//
+//
+//	for(int i=0; i<number_of_points; i++){ /* for each data point */
+//
+//		rowvec x = data.row(i);
+//		rowvec xdiff = x-p;
+//
+//#if 0
+//		printf("xdiff = \n");
+//		xdiff.print();
+//#endif
+//
+//
+//		double distance =  calculateMetric(x,p, M);
+//
+//#if 0
+//		printf("distance = %10.7f\n", distance);
+//#endif
+//
+//		double worst_distance = -LARGE;
+//		int worst_distance_index = -1;
+//
+//
+//		find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
+//
+//
+//		/* a better point is found */
+//		if(distance < worst_distance){
+//
+//			min_dist[worst_distance_index]= distance;
+//			indices[worst_distance_index] = i;
+//
+//		}
+//
+//	}
+//
+//#if 0
+//	printf("%d nearest neighbors...\n",K);
+//	for(int i=0;i<K;i++){
+//
+//		printf("index = %d\n",indices[i]);
+//		data.row(indices[i]).print();
+//	}
+//#endif
+//
+//
+//
+//}
 
 
 
@@ -808,57 +807,57 @@ void findKNeighbours(mat &data,
  * @param[in] number_of_independent_variables
  */
 
-void findKNeighbours(mat &data,
-		rowvec &p,
-		int K,
-		int *input_indx ,
-		double* min_dist,
-		int *indices,
-		int number_of_independent_variables){
-
-	int number_of_points= data.n_rows;
-
-	for(int i=0; i<K; i++){
-
-		min_dist[i]= LARGE;
-		indices[i]= -1;
-	}
-
-
-
-	for(int i=0; i<number_of_points; i++){ /* for each data point */
-
-		rowvec x = data.row(i);
-		rowvec xdiff = x-p;
-
-#if 0
-		printf("xdiff = \n");
-		xdiff.print();
-#endif
-
-		double distance = Lpnorm(xdiff, number_of_independent_variables, xdiff.size(), input_indx);
-#if 0
-		printf("distance = %10.7f\n", distance);
-#endif
-
-		double worst_distance = -LARGE;
-		int worst_distance_index = -1;
-
-
-		find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
-
-
-		/* a better point is found */
-		if(distance < worst_distance){
-
-			min_dist[worst_distance_index]= distance;
-			indices[worst_distance_index] = i;
-
-		}
-
-	}
-
-}
+//void findKNeighbours(mat &data,
+//		rowvec &p,
+//		int K,
+//		int *input_indx ,
+//		double* min_dist,
+//		int *indices,
+//		int number_of_independent_variables){
+//
+//	int number_of_points= data.n_rows;
+//
+//	for(int i=0; i<K; i++){
+//
+//		min_dist[i]= LARGE;
+//		indices[i]= -1;
+//	}
+//
+//
+//
+//	for(int i=0; i<number_of_points; i++){ /* for each data point */
+//
+//		rowvec x = data.row(i);
+//		rowvec xdiff = x-p;
+//
+//#if 0
+//		printf("xdiff = \n");
+//		xdiff.print();
+//#endif
+//
+//		double distance = Lpnorm(xdiff, number_of_independent_variables, xdiff.size(), input_indx);
+//#if 0
+//		printf("distance = %10.7f\n", distance);
+//#endif
+//
+//		double worst_distance = -LARGE;
+//		int worst_distance_index = -1;
+//
+//
+//		find_max_with_index(min_dist, K, &worst_distance, &worst_distance_index);
+//
+//
+//		/* a better point is found */
+//		if(distance < worst_distance){
+//
+//			min_dist[worst_distance_index]= distance;
+//			indices[worst_distance_index] = i;
+//
+//		}
+//
+//	}
+//
+//}
 
 
 /*

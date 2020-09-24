@@ -16,5 +16,5 @@ void testcalculateKernelRegressionWeightsAdjoint(void);
 void testcalculateLossFunctionAdjointL2(void);
 void testcalculateLossFunctionAdjointL1(void);
 void testKernelRegressionTrain(void);
-
+void testGradientEnhancedKernelRegression(void);
 #endif

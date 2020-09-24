@@ -3,83 +3,107 @@
 
 #include "Rodeo_macros.hpp"
 #include "kernel_regression.hpp"
+#include "kriging_training.hpp"
 
-class GradientKernelRegressionModel: public KernelRegressionModel{
+
+class AggregationModel : public SurrogateModel {
 
 private:
+	KernelRegressionModel kernelRegressionModel;
+	KrigingModel krigingModel;
 
-	mat gradientData;
-
-
-public:
-
-	GradientKernelRegressionModel();
-	GradientKernelRegressionModel(std::string name);
-
-
-};
-
-class AggregationModel {
-
-public:
-
-	unsigned int dim;
-	unsigned int N;
-	bool linear_regression;
-
-	vec regression_weights;
-	vec kriging_weights;
-	vec R_inv_ys_min_beta;
-	vec R_inv_I;
-	vec I;
-
-	mat R;
-	mat U;
-	mat L;
-	mat X;
-	mat XnotNormalized;
-	mat data;
-	mat grad;
-	vec xmin;
-	vec xmax;
-	double beta0;
-	double sigma_sqr;
-	double genErrorKriging;
-	double genErrorKernelRegression;
-	double genErrorAggModel;
-	std::string label;
-	std::string kriging_hyperparameters_filename;
-	std::string input_filename;
-	double epsilon_kriging;
-	unsigned int max_number_of_kriging_iterations;
-	unsigned int minibatchsize;
-
-	mat M;
-	unsigned int number_of_cv_iterations_rho;
-	unsigned int number_of_cv_iterations;
 	double rho;
-	double sigma;
+	double dr;
 
-	std::string validationset_input_filename;
-	bool visualizeKrigingValidation;
-	bool visualizeKernelRegressionValidation;
-	bool visualizeAggModelValidation;
+	PartitionData testDataForRhoOptimizationLoop;
+	PartitionData trainingData;
 
-	double ymin,ymax,yave;
+public:
+
+	unsigned int numberOfIterForRhoOptimization;
 
 
+	AggregationModel();
+	AggregationModel(std::string name);
 
-	AggregationModel(std::string name,int dimension);
-	void update(void);
-	double ftilde(rowvec xp);
-	double ftildeKriging(rowvec xp);
-	void ftilde_and_ssqr(rowvec xp,double *f_tilde,double *ssqr);
-	void updateKrigingModel(void);
+	void initializeSurrogateModel(void);
+	void printSurrogateModel(void) const;
+	void printHyperParameters(void) const;
+	void saveHyperParameters(void) const;
+	void loadHyperParameters(void);
 	void train(void);
-	void save_state(void);
-	void load_state(void);
+	double interpolate(rowvec x) const ;
+	double interpolateWithGradients(rowvec x) const ;
+	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
+
+	unsigned int findNearestNeighbor(rowvec xp) const;
+
 
 };
+
+
+
+//class AggregationModel {
+//
+//public:
+//
+//	unsigned int dim;
+//	unsigned int N;
+//	bool linear_regression;
+//
+//	vec regression_weights;
+//	vec kriging_weights;
+//	vec R_inv_ys_min_beta;
+//	vec R_inv_I;
+//	vec I;
+//
+//	mat R;
+//	mat U;
+//	mat L;
+//	mat X;
+//	mat XnotNormalized;
+//	mat data;
+//	mat grad;
+//	vec xmin;
+//	vec xmax;
+//	double beta0;
+//	double sigma_sqr;
+//	double genErrorKriging;
+//	double genErrorKernelRegression;
+//	double genErrorAggModel;
+//	std::string label;
+//	std::string kriging_hyperparameters_filename;
+//	std::string input_filename;
+//	double epsilon_kriging;
+//	unsigned int max_number_of_kriging_iterations;
+//	unsigned int minibatchsize;
+//
+//	mat M;
+//	unsigned int number_of_cv_iterations_rho;
+//	unsigned int number_of_cv_iterations;
+//	double rho;
+//	double sigma;
+//
+//	std::string validationset_input_filename;
+//	bool visualizeKrigingValidation;
+//	bool visualizeKernelRegressionValidation;
+//	bool visualizeAggModelValidation;
+//
+//	double ymin,ymax,yave;
+//
+//
+//
+//	AggregationModel(std::string name,int dimension);
+//	void update(void);
+//	double ftilde(rowvec xp);
+//	double ftildeKriging(rowvec xp);
+//	void ftilde_and_ssqr(rowvec xp,double *f_tilde,double *ssqr);
+//	void updateKrigingModel(void);
+//	void train(void);
+//	void save_state(void);
+//	void load_state(void);
+//
+//};
 
 
 
@@ -95,27 +119,27 @@ public:
 //		int dim,
 //		int train_hyper_param);
 
-int train_aggregation_model(AggregationModel &model_settings);
-
-double ftildeAggModel(AggregationModel &model_settings,
-		rowvec &xp,
-		rowvec xpNotNormalized,
-		mat &X,
-		mat &XTrainingNotNormalized,
-		vec &yTrainingNotNormalized,
-		mat &gradTrainingNotNormalized,
-		vec &x_min,
-		vec &x_max);
-
-double calcGenErrorAggModel(AggregationModel &model_settings,
-		mat Xvalidation,
-		mat XvalidationNotNormalized,
-		vec yvalidation,
-		mat X,
-		mat XTrainingNotNormalized,
-		vec yTrainingNotNormalized,
-		mat gradTrainingNotNormalized,
-		vec x_min,
-		vec x_max);
+//int train_aggregation_model(AggregationModel &model_settings);
+//
+//double ftildeAggModel(AggregationModel &model_settings,
+//		rowvec &xp,
+//		rowvec xpNotNormalized,
+//		mat &X,
+//		mat &XTrainingNotNormalized,
+//		vec &yTrainingNotNormalized,
+//		mat &gradTrainingNotNormalized,
+//		vec &x_min,
+//		vec &x_max);
+//
+//double calcGenErrorAggModel(AggregationModel &model_settings,
+//		mat Xvalidation,
+//		mat XvalidationNotNormalized,
+//		vec yvalidation,
+//		mat X,
+//		mat XTrainingNotNormalized,
+//		vec yTrainingNotNormalized,
+//		mat gradTrainingNotNormalized,
+//		vec x_min,
+//		vec x_max);
 
 #endif

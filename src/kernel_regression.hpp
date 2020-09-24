@@ -44,9 +44,13 @@ public:
 	void loadHyperParameters(void);
 	void train(void);
 	double interpolate(rowvec x) const ;
+	double interpolateWithGradients(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 	double calculateInSampleError(void) const;
 
+
+	void setGradientsOn(void);
+	void setGradientsOff(void);
 
 	void initializeMahalanobisMatrixRandom(void);
 	void initializeSigmaRandom(void);

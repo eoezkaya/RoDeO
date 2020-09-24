@@ -48,6 +48,17 @@ void PartitionData::fillWithData(mat inputData){
 	squaredError = zeros<vec>(numberOfSamples);
 }
 
+void PartitionData::fillWithData(mat inputData, mat gradients){
+
+	assert(inputData.n_rows == gradients.n_rows);
+	assert(inputData.n_cols-1 == gradients.n_cols);
+	fillWithData(inputData);
+	gradientData = gradients;
+
+
+}
+
+
 void PartitionData::saveAsCSVFile(std::string fileName){
 
 	mat saveBuffer = rawData;
@@ -101,9 +112,20 @@ SurrogateModel::SurrogateModel(){
 	ifInitialized = false;
 	ifUsesGradientData = false;
 
+}
 
+SurrogateModel::SurrogateModel(std::string name){
+
+	dim = 0;
+	N = 0;
+
+	label = name;
+	input_filename = name +".csv";
+	ifInitialized = false;
+	ifUsesGradientData = false;
 
 }
+
 
 void SurrogateModel::ReadDataAndNormalize(void){
 
@@ -130,6 +152,7 @@ void SurrogateModel::ReadDataAndNormalize(void){
 		dim = (rawData.n_cols - 1)/2;
 	}
 	else{
+
 		dim = rawData.n_cols - 1;
 	}
 
@@ -168,17 +191,6 @@ void SurrogateModel::ReadDataAndNormalize(void){
 }
 
 
-SurrogateModel::SurrogateModel(std::string name){
-
-	dim = 0;
-	N = 0;
-
-	label = name;
-	input_filename = name +".csv";
-	hyperparameters_filename = name + "_Hyperparameters.csv";
-	ifInitialized = false;
-
-}
 
 
 
@@ -201,7 +213,16 @@ void SurrogateModel::tryModelOnTestSet(PartitionData &testSet) const{
 	for(unsigned int i=0; i<howManySamples; i++){
 
 		rowvec x = testSet.getRow(i);
-		testSet.ySurrogate(i) = interpolate(x);
+
+		if(ifUsesGradientData){
+
+			testSet.ySurrogate(i) = interpolateWithGradients(x);
+		}
+		else{
+
+			testSet.ySurrogate(i) = interpolate(x);
+		}
+
 		testSet.squaredError(i) = (testSet.ySurrogate(i)-testSet.yExact(i)) * (testSet.ySurrogate(i)-testSet.yExact(i));
 #if 0
 		printf("\nx: ");
@@ -210,6 +231,46 @@ void SurrogateModel::tryModelOnTestSet(PartitionData &testSet) const{
 #endif
 
 	}
+
+
+}
+
+
+
+double SurrogateModel::calculateInSampleError(void) const{
+
+
+	double meanSquaredError = 0.0;
+
+	for(unsigned int i=0;i<N;i++){
+
+		rowvec xp = getRowX(i);
+
+		rowvec x  = getRowXRaw(i);
+
+#if 1
+		printf("\nData point = %d\n", i+1);
+		printf("calling f_tilde at x:\n");
+		x.print();
+		printf("xnorm:\n");
+		xp.print();
+#endif
+		double functionValueSurrogate = interpolate(xp);
+
+		double functionValueExact = y(i);
+
+		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
+
+		meanSquaredError+= squaredError;
+#if 1
+		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
+#endif
+	}
+
+	meanSquaredError = meanSquaredError/N;
+
+
+	return meanSquaredError;
 
 
 }

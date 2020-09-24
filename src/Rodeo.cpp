@@ -12,6 +12,7 @@
 
 #include "kernel_regression.hpp"
 #include "kernel_regression_test.hpp"
+#include "aggregation_test.hpp"
 #include "surrogate_model.hpp"
 
 #ifdef GPU_VERSION
@@ -20,7 +21,8 @@
 
 #include "trust_region_gek.hpp"
 #include "kriging_training.hpp"
-
+#include "polynomials.hpp"
+#include "polynomials_test.hpp"
 Rodeo_settings settings;
 
 int main(void){
@@ -58,84 +60,15 @@ int main(void){
 	}
 
 
-//	testAllKernelRegression();
-//
-//	exit(1);
+	testAllKernelRegression();
 
+	TestFunction testFunHimmelblau("Himmelblau",2);
+	testFunHimmelblau.adj_ptr = HimmelblauAdj;
+	testFunHimmelblau.func_ptr = Himmelblau;
+	testFunHimmelblau.setVisualizationOn();
+	testFunHimmelblau.setBoxConstraints(0.0,5.0);
+	testFunHimmelblau.testSurrogateModel(GRADIENT_ENHANCED_KERNEL_REGRESSION,100);
 
-
-
-//	KrigingModel EggholderModel("Eggholder",2);
-//	EggholderModel.test(Eggholder);
-
-//
-//
-//
-
-
-//	TestFunction TestFunc1D("TestFunction1D",1);
-//	TestFunc1D.func_ptr = TestFunction1D;
-////	////	EggholderFunc.adj_ptr = Eggholder_adj;
-////	////	EggholderFunc.ifAdjointFunctionExist = true;;
-//	TestFunc1D.setBoxConstraints(0.0,10.0);
-//	TestFunc1D.testSurrogateModel(KRIGING,20,true);
-//	exit(1);
-//	TestFunc1D.print();
-////	TestFunc1D.plot();
-////	TestFunc1D.testEGO(100,100);
-//
-////	TestFunc1D.plot();
-//	TestFunc1D.testKrigingModel(20,true);
-//
-//	exit(1);
-
-
-	TestFunction LinearTestFunc("LinearTF1",2);
-	LinearTestFunc.func_ptr = LinearTF1;
-	LinearTestFunc.adj_ptr = LinearTF1Adj;
-	LinearTestFunc.ifAdjointFunctionExist = true;;
-	LinearTestFunc.setBoxConstraints(-5.0,5.0);
-	LinearTestFunc.print();
-//	HimmelblauFunc.plot();
-	LinearTestFunc.testSurrogateModel(GRADIENT_ENHANCED_KERNEL_REGRESSION,100,true);
-
-//	HimmelblauFunc.testEfficientGlobalOptimization(20,20, true);
-	exit(1);
-
-
-	TestFunction EggholderFunc("Eggholder",2);
-	EggholderFunc.func_ptr = Eggholder;
-////	EggholderFunc.adj_ptr = Eggholder_adj;
-////	EggholderFunc.ifAdjointFunctionExist = true;;
-	EggholderFunc.setBoxConstraints(-512.0,512.0);
-	EggholderFunc.print();
-	EggholderFunc.plot();
-
-//	EggholderFunc.testEfficientGlobalOptimization(50,100, true);
-
-//	EggholderFunc.plot();
-//	EggholderFunc.testKrigingModel(50);
-
-//	EggholderFunc.generateRandomSamples(500,"Eggholder500.csv");
-
-
-
-
-	return 0;
-
-
-
-
-
-	OptimizerWithGradients OptimizationStudy("Eggholder400",2);
-
-	OptimizationStudy.adj_fun = Eggholder_adj;
-	OptimizationStudy.max_number_of_samples = 100;
-	OptimizationStudy.lower_bound_dv.fill(0);
-	OptimizationStudy.upper_bound_dv.fill(200.0);
-	OptimizationStudy.doesValidationFileExist = true;
-
-	OptimizationStudy.EfficientGlobalOptimization();
 
 
 

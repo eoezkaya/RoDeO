@@ -282,180 +282,180 @@ void OptimizerWithGradients::print(void){
 
 }
 
-void OptimizerWithGradients::EfficientGlobalOptimization(void){
-
-	print();
-
-	AggregationModel ObjFunModel(name,size_of_dv);
-
-	if(doesValidationFileExist){
-
-		std::string validation_filename = name + "_validation.csv";
-		ObjFunModel.validationset_input_filename = validation_filename;
-		ObjFunModel.visualizeAggModelValidation = true;
-		ObjFunModel.visualizeKrigingValidation = true;
-		ObjFunModel.visualizeKernelRegressionValidation = false;
-	}
-
-	ObjFunModel.number_of_cv_iterations = 0;
-
-	ObjFunModel.train();
-
-	/* main loop for optimization */
-	unsigned int simulationCount = 0;
-	unsigned int iterOpt=0;
-
-	double bestObjFunVal = LARGE;
-	rowvec best_dvGlobal(size_of_dv);
-	unsigned int bestIndx = -1;
-
-	while(1){
-		iterOpt++;
-#if 1
-		printf("Optimization Iteration = %d\n",iterOpt);
-		printf("Sample minimum = %10.7f\n",ObjFunModel.ymin );
-#endif
-
-		double maxEI = 0.0;
-		rowvec best_dv(size_of_dv);
-
-#pragma omp parallel for
-		for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
-			rowvec dv(size_of_dv);
-			rowvec dvNorm(size_of_dv);
-
-			/* Generate a random design vector */
-			for(unsigned int k=0; k<size_of_dv; k++){
-
-				dv(k)= generateRandomDouble(lower_bound_dv(k), upper_bound_dv(k));
-				dvNorm(k) = (1.0/ObjFunModel.dim)*(dv(k) - ObjFunModel.xmin(k)) / (ObjFunModel.xmax(k) - ObjFunModel.xmin(k));
-			}
-
-#if 0
-			printf("dv = \n");
-			dv.print();
-#endif
-			double ftilde = 0.0;
-			double ssqr   = 0.0;
-			ObjFunModel.ftilde_and_ssqr(dvNorm,&ftilde,&ssqr);
-
-
-#if 0
-			printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
-#endif
-
-			double	standart_error = sqrt(ssqr)	;
-
-			double EI = 0.0;
-
-			if(standart_error!=0.0){
-
-				double	EIfac = (ObjFunModel.ymin - ftilde)/standart_error;
-
-				/* calculate the Expected Improvement value */
-				EI = (ObjFunModel.ymin - ftilde)*cdf(EIfac,0.0,1.0)+ standart_error * pdf(EIfac,0.0,1.0);
-			}
-			else{
-
-				EI = 0.0;
-
-			}
-#if 0
-			printf("EI value = %15.10f\n",EI);
-#endif
-			if(EI > maxEI){
-
-				best_dv = dv;
-				maxEI = EI;
-#if 1
-				printf("A design with better EI value has been find, EI = %15.10f\n", EI);
-				best_dv.print();
-#endif
-			}
-
-
-		} /* end of EI loop */
-
-		/* now make a simulation for the most promising design */
-
-		rowvec grad(size_of_dv);
-		double fVal = adj_fun(best_dv.memptr(), grad.memptr());
-		double objFunVal = fVal;
-
-		if(objFunVal < bestObjFunVal){
-
-			bestIndx = iterOpt;
-			bestObjFunVal = objFunVal;
-			best_dvGlobal = best_dv;
-#if 1
-			printf("\nBetter design has been found:\n");
-			printf("dv =");
-			best_dv.print();
-			printf("Objective function value = %15.10f\n",objFunVal);
-#endif
-
-		}
-
-
-		simulationCount ++;
-#if 1
-		printf("Simulation at dv = \n");
-		best_dv.print();
-		printf("True value of the function = %15.10f\n",fVal);
-		printf("grad = \n");
-		grad.print();
-
-
-#endif
-
-		/* new row that will be added to the data */
-
-		rowvec newsample(2*size_of_dv +1);
-
-		for(unsigned int k=0; k<size_of_dv; k++){
-
-			newsample(k) = best_dv(k);
-
-		}
-		newsample(size_of_dv) = fVal;
-
-		for(unsigned int k=size_of_dv+1; k<2*size_of_dv+1; k++){
-
-			newsample(k) = grad(k-size_of_dv-1);
-
-		}
-#if 1
-		printf("new sample: \n");
-		newsample.print();
-#endif
-
-
-
-		ObjFunModel.data.resize(ObjFunModel.N+1,2*ObjFunModel.dim+1);
-
-		ObjFunModel.data.row(ObjFunModel.N) = newsample;
-		ObjFunModel.data.save(ObjFunModel.input_filename,csv_ascii);
-		ObjFunModel.update();
-
-
-		if(simulationCount >= max_number_of_samples){
-
-			printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
-			printf("Global optimal solution:\n");
-			printf("dv =");
-			best_dv.print();
-			printf("Objective function value = %15.10f\n",bestObjFunVal);
-			printf("Index = %d\n",bestIndx);
-			break;
-		}
-
-
-
-	}
-
-
-
-}
+//void OptimizerWithGradients::EfficientGlobalOptimization(void){
+//
+//	print();
+//
+//	AggregationModel ObjFunModel(name,size_of_dv);
+//
+//	if(doesValidationFileExist){
+//
+//		std::string validation_filename = name + "_validation.csv";
+//		ObjFunModel.validationset_input_filename = validation_filename;
+//		ObjFunModel.visualizeAggModelValidation = true;
+//		ObjFunModel.visualizeKrigingValidation = true;
+//		ObjFunModel.visualizeKernelRegressionValidation = false;
+//	}
+//
+//	ObjFunModel.number_of_cv_iterations = 0;
+//
+//	ObjFunModel.train();
+//
+//	/* main loop for optimization */
+//	unsigned int simulationCount = 0;
+//	unsigned int iterOpt=0;
+//
+//	double bestObjFunVal = LARGE;
+//	rowvec best_dvGlobal(size_of_dv);
+//	unsigned int bestIndx = -1;
+//
+//	while(1){
+//		iterOpt++;
+//#if 1
+//		printf("Optimization Iteration = %d\n",iterOpt);
+//		printf("Sample minimum = %10.7f\n",ObjFunModel.ymin );
+//#endif
+//
+//		double maxEI = 0.0;
+//		rowvec best_dv(size_of_dv);
+//
+//#pragma omp parallel for
+//		for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
+//			rowvec dv(size_of_dv);
+//			rowvec dvNorm(size_of_dv);
+//
+//			/* Generate a random design vector */
+//			for(unsigned int k=0; k<size_of_dv; k++){
+//
+//				dv(k)= generateRandomDouble(lower_bound_dv(k), upper_bound_dv(k));
+//				dvNorm(k) = (1.0/ObjFunModel.dim)*(dv(k) - ObjFunModel.xmin(k)) / (ObjFunModel.xmax(k) - ObjFunModel.xmin(k));
+//			}
+//
+//#if 0
+//			printf("dv = \n");
+//			dv.print();
+//#endif
+//			double ftilde = 0.0;
+//			double ssqr   = 0.0;
+//			ObjFunModel.ftilde_and_ssqr(dvNorm,&ftilde,&ssqr);
+//
+//
+//#if 0
+//			printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
+//#endif
+//
+//			double	standart_error = sqrt(ssqr)	;
+//
+//			double EI = 0.0;
+//
+//			if(standart_error!=0.0){
+//
+//				double	EIfac = (ObjFunModel.ymin - ftilde)/standart_error;
+//
+//				/* calculate the Expected Improvement value */
+//				EI = (ObjFunModel.ymin - ftilde)*cdf(EIfac,0.0,1.0)+ standart_error * pdf(EIfac,0.0,1.0);
+//			}
+//			else{
+//
+//				EI = 0.0;
+//
+//			}
+//#if 0
+//			printf("EI value = %15.10f\n",EI);
+//#endif
+//			if(EI > maxEI){
+//
+//				best_dv = dv;
+//				maxEI = EI;
+//#if 1
+//				printf("A design with better EI value has been find, EI = %15.10f\n", EI);
+//				best_dv.print();
+//#endif
+//			}
+//
+//
+//		} /* end of EI loop */
+//
+//		/* now make a simulation for the most promising design */
+//
+//		rowvec grad(size_of_dv);
+//		double fVal = adj_fun(best_dv.memptr(), grad.memptr());
+//		double objFunVal = fVal;
+//
+//		if(objFunVal < bestObjFunVal){
+//
+//			bestIndx = iterOpt;
+//			bestObjFunVal = objFunVal;
+//			best_dvGlobal = best_dv;
+//#if 1
+//			printf("\nBetter design has been found:\n");
+//			printf("dv =");
+//			best_dv.print();
+//			printf("Objective function value = %15.10f\n",objFunVal);
+//#endif
+//
+//		}
+//
+//
+//		simulationCount ++;
+//#if 1
+//		printf("Simulation at dv = \n");
+//		best_dv.print();
+//		printf("True value of the function = %15.10f\n",fVal);
+//		printf("grad = \n");
+//		grad.print();
+//
+//
+//#endif
+//
+//		/* new row that will be added to the data */
+//
+//		rowvec newsample(2*size_of_dv +1);
+//
+//		for(unsigned int k=0; k<size_of_dv; k++){
+//
+//			newsample(k) = best_dv(k);
+//
+//		}
+//		newsample(size_of_dv) = fVal;
+//
+//		for(unsigned int k=size_of_dv+1; k<2*size_of_dv+1; k++){
+//
+//			newsample(k) = grad(k-size_of_dv-1);
+//
+//		}
+//#if 1
+//		printf("new sample: \n");
+//		newsample.print();
+//#endif
+//
+//
+//
+//		ObjFunModel.data.resize(ObjFunModel.N+1,2*ObjFunModel.dim+1);
+//
+//		ObjFunModel.data.row(ObjFunModel.N) = newsample;
+//		ObjFunModel.data.save(ObjFunModel.input_filename,csv_ascii);
+//		ObjFunModel.update();
+//
+//
+//		if(simulationCount >= max_number_of_samples){
+//
+//			printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
+//			printf("Global optimal solution:\n");
+//			printf("dv =");
+//			best_dv.print();
+//			printf("Objective function value = %15.10f\n",bestObjFunVal);
+//			printf("Index = %d\n",bestIndx);
+//			break;
+//		}
+//
+//
+//
+//	}
+//
+//
+//
+//}
 
 
 

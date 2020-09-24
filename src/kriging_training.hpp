@@ -51,10 +51,10 @@ public:
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
 	void train(void);
+	double interpolateWithGradients(rowvec x) const ;
 	double interpolate(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
-	double calculateInSampleError(void) const;
 
 	double calculateExpectedImprovement(rowvec xp);
 	double getyMin(void) const;

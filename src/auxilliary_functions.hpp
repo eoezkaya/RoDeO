@@ -20,43 +20,43 @@ void perturbVectorUniform(frowvec &xp,float sigmaPert);
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
 
 
-template<class T>
-void find_max_with_index(T vec, int size, double *max_val, int *indx){
-
-	*max_val = -LARGE;
-
-	for(int i=0; i<size; i++){
-
-		if(vec[i] > *max_val){
-
-			*max_val = vec[i];
-			*indx = i;
-		}
-
-	}
-
-
-}
-
-
-
-template<class T>
-void find_min_with_index(T vec, int size, double *min_val, int *indx){
-
-	*min_val = LARGE;
-
-	for(int i=0; i<size; i++){
-
-		if(vec[i] < *min_val){
-
-			*min_val = vec[i];
-			*indx = i;
-		}
-
-	}
-
-
-}
+//template<class T>
+//void find_max_with_index(T vec, int size, double *max_val, int *indx){
+//
+//	*max_val = -LARGE;
+//
+//	for(int i=0; i<size; i++){
+//
+//		if(vec[i] > *max_val){
+//
+//			*max_val = vec[i];
+//			*indx = i;
+//		}
+//
+//	}
+//
+//
+//}
+//
+//
+//
+//template<class T>
+//void find_min_with_index(T vec, int size, double *min_val, int *indx){
+//
+//	*min_val = LARGE;
+//
+//	for(int i=0; i<size; i++){
+//
+//		if(vec[i] < *min_val){
+//
+//			*min_val = vec[i];
+//			*indx = i;
+//		}
+//
+//	}
+//
+//
+//}
 
 bool checkValue(double value, double expected, double tolerance);
 bool checkValue(double value, double expected);
@@ -67,7 +67,8 @@ void abortIfFalse(bool flag, std::string file, int line);
 void abortIfFalse(bool flag);
 
 
-double calculatePolynomial(const rowvec &x, const vec &coeffs);
+double calculatePolynomial(double x, const rowvec &coeffs);
+double calculateTensorProduct(const rowvec &x, const mat &coeffs);
 
 double pdf(double x, double mu, double sigma);
 

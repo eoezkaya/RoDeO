@@ -11,6 +11,7 @@ LinearModel::LinearModel(std::string name):SurrogateModel(name){
 
 	modelID = LINEAR_REGRESSION;
 	regularizationParam = 10E-6;
+	hyperparameters_filename = label + "_linear_regression_hyperparameters.csv";
 
 
 }
@@ -29,6 +30,8 @@ void LinearModel::initializeSurrogateModel(void){
 		weights = zeros<vec>(dim+1);
 
 	}
+
+	ifInitialized = true;
 
 }
 
@@ -69,9 +72,10 @@ double LinearModel::getRegularizationParam(void) const{
 
 void LinearModel::train(void){
 
-	if(ifInitialized){
+	if(ifInitialized == false){
 
-		initializeSurrogateModel();
+		printf("ERROR: Linear regression model must be initialized before training!\n");
+		abort();
 	}
 
 	mat augmented_X(N, dim + 1);
@@ -142,30 +146,7 @@ void LinearModel::train(void){
 
 }
 
-double LinearModel::calculateInSampleError(void) const{
 
-	printf("Calculating in-sample error for the linear regression...\n");
-
-	double inSampleError = 0;
-	for(unsigned int i=0;i<N;i++){
-
-		double fTilde = interpolate(X.row(i));
-
-		inSampleError += (y(i) - fTilde)*(y(i) - fTilde);
-#if 1
-		printf("Sample %d:\n", i);
-		printf("fExact = %15.10f, fTilde = %15.10f\n",y(i),fTilde);
-#endif
-
-	}
-
-	inSampleError = inSampleError/N;
-
-	return inSampleError;
-
-
-
-}
 
 
 double LinearModel::interpolate(rowvec x) const{
@@ -193,6 +174,14 @@ void LinearModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr
 
 
 }
+double LinearModel::interpolateWithGradients(rowvec xp) const{
+
+	cout << "ERROR: interpolateWithGradients does not exist for LinearModel\n";
+	abort();
+
+
+}
+
 vec LinearModel::interpolateAll(mat X) const{
 
 	unsigned int numberOfSamples = X.n_rows;
