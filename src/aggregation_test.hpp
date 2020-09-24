@@ -29,23 +29,15 @@
  *
  */
 
-#ifndef KERNELREGTEST
-#define KERNELREGTEST
+#ifndef AGGMODELGTEST
+#define AGGMODELGTEST
 
-void generateRandomTestDataForKernelRegression(int dim, int N);
+void testAllAggregationModel(void);
 
-void testAllKernelRegression(void);
-void testcalculateMahalanobisMatrix(void);
-void testcalculateLossFunctions(void);
-void testcalculateLossFunctionsAdjoint(void);
-void testcalculateGaussianKernel(void);
-void testcalculateMetric(void);
-void testcalculateMetricAdjoint(void);
-void testcalculateKernelRegressionWeights(void);
-void testcalculateGaussianKernelAdjoint(void);
-void testcalculateKernelRegressionWeightsAdjoint(void);
-void testcalculateLossFunctionAdjointL2(void);
-void testcalculateLossFunctionAdjointL1(void);
-void testKernelRegressionTrain(void);
-void testGradientEnhancedKernelRegression(void);
+void generateRandomTestAndValidationDataForAggregationModel(int dim, int N);
+void testAggregationModeltrain(void);
+void testAggregationInterpolate(void);
+void testAggregationModelHimmelblau(void);
+
+
 #endif

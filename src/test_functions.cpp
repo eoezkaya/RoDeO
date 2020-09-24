@@ -1,3 +1,33 @@
+/*
+ * RoDeO, a Robust Design Optimization Package
+ *
+ * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Homepage: http://www.scicomp.uni-kl.de
+ * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
+ *
+ * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ *
+ * This file is part of RoDeO
+ *
+ * RoDeO is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * RoDeO is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ * You should have received a copy of the GNU
+ * General Public License along with CoDiPack.
+ * If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ *
+ *
+ *
+ */
 
 #include <stdio.h>
 #include <math.h>
@@ -272,7 +302,7 @@ void TestFunction::plot(int resolution) const{
 }
 
 
-double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howManySamples){
+double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howManySamples, bool warmStart){
 
 
 	printf("Testing surrogate model with the %s function...\n",function_name.c_str());
@@ -299,6 +329,7 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 	KrigingModel TestFunModelKriging(label);
 	KernelRegressionModel TestFunModelKernelRegression(label);
 	LinearModel TestFunModelLinearRegression(label);
+	AggregationModel TestFunModelAggregation(label);
 
 
 
@@ -325,6 +356,12 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 		surrogateModel =  &TestFunModelKernelRegression;
 		break;
 	}
+	case AGGREGATION:
+	{
+
+		surrogateModel =  &TestFunModelAggregation;
+		break;
+	}
 	default:
 	{
 		cout << "ERROR: Non valid modelID\n";
@@ -334,10 +371,16 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 
 	surrogateModel->initializeSurrogateModel();
 
+	if(!warmStart){
 
-//	surrogateModel->train();
+		surrogateModel->train();
+	}
+	else{
 
-	surrogateModel->loadHyperParameters();
+		surrogateModel->loadHyperParameters();
+	}
+
+
 
 	double inSampleError = surrogateModel->calculateInSampleError();
 #if 1

@@ -28,24 +28,29 @@
  *
  *
  */
+#ifndef GRADIENT_KERNEL_REG_HPP
+#define GRADIENT_KERNEL_REG_HPP
 
-#ifndef KERNELREGTEST
-#define KERNELREGTEST
+#include "Rodeo_macros.hpp"
+#include "kernel_regression.hpp"
 
-void generateRandomTestDataForKernelRegression(int dim, int N);
+class GradientKernelRegressionModel: public KernelRegressionModel{
 
-void testAllKernelRegression(void);
-void testcalculateMahalanobisMatrix(void);
-void testcalculateLossFunctions(void);
-void testcalculateLossFunctionsAdjoint(void);
-void testcalculateGaussianKernel(void);
-void testcalculateMetric(void);
-void testcalculateMetricAdjoint(void);
-void testcalculateKernelRegressionWeights(void);
-void testcalculateGaussianKernelAdjoint(void);
-void testcalculateKernelRegressionWeightsAdjoint(void);
-void testcalculateLossFunctionAdjointL2(void);
-void testcalculateLossFunctionAdjointL1(void);
-void testKernelRegressionTrain(void);
-void testGradientEnhancedKernelRegression(void);
+private:
+
+
+public:
+
+	GradientKernelRegressionModel();
+	GradientKernelRegressionModel(std::string name);
+
+	double interpolateWithGradients(rowvec x) const;
+	void printHyperParameters(void) const;
+	void printHyperParameters2(void) const;
+
+
+};
+
+
+
 #endif

@@ -29,23 +29,57 @@
  *
  */
 
-#ifndef KERNELREGTEST
-#define KERNELREGTEST
+#ifndef POLYNOMIALS_HPP
+#define POLYNOMIALS_HPP
+#include <vector>
+#include <armadillo>
+using namespace arma;
 
-void generateRandomTestDataForKernelRegression(int dim, int N);
 
-void testAllKernelRegression(void);
-void testcalculateMahalanobisMatrix(void);
-void testcalculateLossFunctions(void);
-void testcalculateLossFunctionsAdjoint(void);
-void testcalculateGaussianKernel(void);
-void testcalculateMetric(void);
-void testcalculateMetricAdjoint(void);
-void testcalculateKernelRegressionWeights(void);
-void testcalculateGaussianKernelAdjoint(void);
-void testcalculateKernelRegressionWeightsAdjoint(void);
-void testcalculateLossFunctionAdjointL2(void);
-void testcalculateLossFunctionAdjointL1(void);
-void testKernelRegressionTrain(void);
-void testGradientEnhancedKernelRegression(void);
+class Polynomial{
+
+private:
+
+	unsigned int degree;
+	vec coefficients;
+
+public:
+
+	Polynomial();
+	Polynomial(unsigned int);
+
+	double evaluate(double x) const;
+	double differentiate(double x) const;
+	void print(void) const;
+	void initializeRandomCoefficients(void);
+
+	friend void testPolynomialEvaluate(void);
+	friend void testPolynomialDifferentiate(void);
+	friend void testPolynomialProductEvaluate(void);
+	friend void testPolynomialProductDifferentiate(void);
+
+};
+
+class PolynomialProduct{
+
+private:
+
+	std::vector<Polynomial> polynomials;
+
+public:
+
+	PolynomialProduct();
+	PolynomialProduct(unsigned int, unsigned int);
+
+	double evaluate(const rowvec &x) const;
+	double differentiate(const rowvec &x, unsigned int indx) const;
+	void print(void) const;
+	void initializeRandomCoefficients(void);
+
+	friend void testPolynomialProductEvaluate(void);
+	friend void testPolynomialProductDifferentiate(void);
+
+};
+
+
 #endif
