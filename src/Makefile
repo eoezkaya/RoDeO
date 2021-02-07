@@ -8,10 +8,10 @@ CPP     = g++
 #CFLAGS  = -std=c++11 -fopenmp -I $(AD_PATH) 
 CPPFLAGS  = -Wall -g -fopenmp  
 #LDFLAGS_GPU = -lm -larmadillo -rdc=true -lcudadevrt -lgomp
-LDFLAGS = -lm -larmadillo -lgomp
+LDFLAGS = -lm -larmadillo -lgomp -lquadmath
 
-OBJ = auxilliary_functions.o aggregation_test.o kernel_regression_cpu.o kernel_regression_test.o kriging_training.o linear_regression.o  \
-matrix_vector_operations.o metric.o optimization.o polynomials.o polynomials_test.o random_functions.o Rodeo.o surrogate_model.o test_functions.o trust_region_gek.o  
+OBJ = auxiliary_functions.o aggregation_test.o drivers.o gek.o gek_test.o kernel_regression_cpu.o kernel_regression_test.o kriging_training.o lhs.o linear_regression.o  \
+matrix_vector_operations.o metric.o optimization.o polynomials.o polynomials_test.o random_functions.o Rodeo.o surrogate_model.o test_functions.o trust_region_gek.o 
  
 #OBJ_GPU = Rodeo.o test_functions.o trust_region_gek.o kriging_training.o optimization.o \
 auxilliary_functions.o linear_regression.o kernel_regression_cuda.o 

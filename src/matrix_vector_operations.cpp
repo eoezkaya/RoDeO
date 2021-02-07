@@ -29,13 +29,146 @@
  *
  */
 
-#include <cassert>
+
+
 
 #include "matrix_vector_operations.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
+
+
+HighPrecisionMatrix factorizeCholeskyHP(const HighPrecisionMatrix& input) {
+
+    int n = input.n_rows();
+    HighPrecisionMatrix result(n, n);
+    for (int i = 0; i < n; ++i) {
+        for (int k = 0; k < i; ++k) {
+        	__float128 value = input(i, k);
+            for (int j = 0; j < k; ++j)
+                value -= result(i, j) * result(k, j);
+            result(i, k) = value/result(k, k);
+        }
+        __float128 value = input(i, i);
+        for (int j = 0; j < i; ++j)
+            value -= result(i, j) * result(i, j);
+
+        if(value < 0.0){
+        	cout<<"ERROR: Cholesky decomposition failed!\n";
+        	abort();
+
+        }
+        result(i, i) = sqrtq(value);
+    }
+    return result;
+}
+
+
+HighPrecisionMatrix transposeHP(const HighPrecisionMatrix& input) {
+
+	int n = input.n_rows();
+	HighPrecisionMatrix result(n, n);
+
+	for (int i = 0; i < n; ++i) {
+
+		for (int j = i; j < n; ++j){
+
+			result(i,j) = input(j,i);
+
+
+		}
+
+
+	}
+
+
+	return result;
+}
+
+/** solve a linear system Ax=b, with a given Cholesky decomposition of A
+ *
+ * @param[in] U
+ * @param[out] x
+ * @param[in] b
+ *
+ */
+//void solveLinearSystemCholesky(const HighPrecisionMatrix& L, vec &x, vec b){
+//
+//	int n = L.n_rows();
+//	HighPrecisionMatrix U(n,n);
+//
+//	mat L = trans(U);
+//
+//	unsigned int dim = x.size();
+//
+//	if(dim != U.n_rows || dim != b.size()){
+//
+//		fprintf(stderr, "Error: dimensions does not match! at %s, line %d.\n",__FILE__, __LINE__);
+//		abort();
+//
+//	}
+//	/* initialize x */
+//
+//	x.fill(0.0);
+//
+//	vec y(dim,fill::zeros);
+//
+//	/* forward subst. L y = b */
+//
+//	for (unsigned int i = 0; i < dim; i++) {
+//
+//		double residual = 0.0;
+//
+//		for (unsigned int j = 0; j < i; j++) {
+//
+//			residual = residual + L(i, j) * y(j);
+//
+//		}
+//
+//		y(i) = (b(i) - residual) / L(i, i);
+//	}
+//
+//
+//	/* back subst. U x = y */
+//
+//	for (int i = dim - 1; i >= 0; i--) {
+//
+//		double residual = 0.0;
+//
+//		for (int j = dim - 1; j > i; j--){
+//
+//			residual += U(i, j) * x(j);
+//		}
+//
+//
+//		x(i) = (y(i) - residual) / U(i, i);
+//	}
+//
+//}
+
+
+
+
+void testHighPrecisionCholesky(void){
+
+	int N = 10;
+	HighPrecisionMatrix  A(N, N);
+
+    mat L(N,N,fill::randu);
+
+    mat M = L*trans(L);
+
+    printMatrix(M,"M");
+
+    A = M;
+
+    HighPrecisionMatrix Lchol = factorizeCholeskyHP(A);
+    Lchol.print();
+
+    HighPrecisionMatrix Uchol = transposeHP(Lchol);
+    Uchol.print();
+}
 
 
 void printMatrix(mat M, std::string name){
@@ -50,20 +183,24 @@ void printMatrix(mat M, std::string name){
 
 void printVector(vec v, std::string name){
 
+	std::cout.precision(11);
+	std::cout.setf(ios::fixed);
 
 	std::cout<< '\n';
 	if(name != "None") std::cout<<"vector "<<name<<" has "<<v.size()<<" elements:\n";
-	trans(v).print();
+	trans(v).raw_print();
 	std::cout<< '\n';
 
 }
 
 void printVector(rowvec v, std::string name){
 
+	std::cout.precision(11);
+	std::cout.setf(ios::fixed);
 
 	std::cout<< '\n';
 	if(name != "None") std::cout<<"vector "<<name<<" has "<<v.size()<<" elements:\n";
-	v.print();
+	v.raw_print();
 	std::cout<< '\n';
 
 }
@@ -188,4 +325,7 @@ bool isEqual(const mat &A, const mat&B, double tolerance){
 
 	return true;
 }
+
+
+
 

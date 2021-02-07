@@ -37,12 +37,10 @@
 
 #include "kriging_training.hpp"
 #include "linear_regression.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 #include "random_functions.hpp"
 #include "Rodeo_macros.hpp"
-
 #include "Rodeo_globals.hpp"
-#include "Rodeo_macros.hpp"
 
 
 #define ARMA_DONT_PRINT_ERRORS
@@ -82,23 +80,26 @@ void KrigingModel::initializeSurrogateModel(void){
 
 		ReadDataAndNormalize();
 
-		kriging_weights =zeros<vec>(2*dim);
+		numberOfHyperParameters = 2*dim;
+
+		kriging_weights =zeros<vec>(numberOfHyperParameters);
 		epsilonKriging = 10E-12;
 		max_number_of_kriging_iterations = 20000;
 
 
 		for(unsigned int i=0; i<N; i++){
 
-			rowvec sample1 = X.row(i);
+			rowvec sample1 = rawData.row(i);
 
 			for(unsigned int j=i+1; j<N; j++){
 
-				rowvec sample2 = X.row(j);
+				rowvec sample2 = rawData.row(j);
 
 				if(ifTooCLose(sample1, sample2)) {
 
 					printf("ERROR: Two samples in the training data are too close to each other!\n");
-					exit(-1);
+
+					abort();
 				}
 			}
 		}
@@ -111,6 +112,12 @@ void KrigingModel::initializeSurrogateModel(void){
 		R_inv_ys_min_beta = zeros<vec>(N);
 		R_inv_I= zeros<vec>(N);
 		vectorOfOnes= ones<vec>(N);
+
+		if(ifUsesGradientData) {
+
+			linearModel.ifUsesGradientData = true;
+		}
+		linearModel.initializeSurrogateModel();
 
 		ifInitialized = true;
 
@@ -142,10 +149,31 @@ double KrigingModel::getyMin(void) const{
 
 }
 
+vec KrigingModel::getKrigingWeights(void) const{
+
+	return kriging_weights;
 
 
+}
+
+void KrigingModel::setKrigingWeights(vec w){
+
+	kriging_weights = w;
 
 
+}
+
+vec KrigingModel::getRegressionWeights(void) const{
+
+	return linearModel.getWeights();
+
+}
+
+void KrigingModel::setRegressionWeights(vec weights){
+
+	linearModel.setWeights(weights);
+
+}
 
 void KrigingModel::setNumberOfTrainingIterations(unsigned int iter){
 
@@ -203,12 +231,12 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 		rawData.row(N) = newsample;
 		rawData.save(input_filename,csv_ascii);
 
-		updateWithNewData();
+		updateModelWithNewData();
 		return 0;
 	}
 	else{
 
-		std::cout<<"Warning: the new sample is too close to a sample in the training data, it is discarded!\n";
+		std::cout<<"WARNING: The new sample is too close to a sample in the training data, it is discarded!\n";
 		return -1;
 	}
 
@@ -233,8 +261,70 @@ void KrigingModel::printSurrogateModel(void) const{
 
 
 }
-void KrigingModel::updateModelParams(void){
 
+void KrigingModel::resetDataObjects(void){
+
+	correlationMatrix.reset();
+	upperDiagonalMatrix.reset();
+	R_inv_I.reset();
+	R_inv_ys_min_beta.reset();
+	X.reset();
+	rawData.reset();
+	vectorOfOnes.reset();
+
+
+	beta0 = 0.0;
+	sigmaSquared = 0.0;
+
+
+
+}
+
+void KrigingModel::resizeDataObjects(void){
+
+	correlationMatrix.set_size(N,N);
+	correlationMatrix.fill(0.0);
+	upperDiagonalMatrix.set_size(N,N);
+	upperDiagonalMatrix.fill(0.0);
+	R_inv_ys_min_beta.set_size(N);
+	R_inv_ys_min_beta.fill(0.0);
+	R_inv_I.set_size(N);
+	R_inv_I.fill(0.0);
+	vectorOfOnes.set_size(N);
+	vectorOfOnes.fill(1.0);
+
+
+}
+
+
+void KrigingModel::updateModelWithNewData(mat newData){
+
+
+	resetDataObjects();
+
+
+	updateData(newData);
+
+	resizeDataObjects();
+
+	ymin = min(rawData.col(dim));
+	ymax = max(rawData.col(dim));
+	yave = mean(rawData.col(dim));
+
+#if 1
+	printf("ymin = %15.10f, ymax = %15.10f, yave = %15.10f\n",ymin,ymax,yave);
+#endif
+	updateAuxilliaryFields();
+
+	linearModel.updateData(newData);
+
+
+}
+
+void KrigingModel::updateAuxilliaryFields(void){
+#if 0
+	cout<<"Updating auxiliary variables of the Kriging model\n";
+#endif
 	vec ys = y;
 
 	if(linear_regression){
@@ -282,65 +372,12 @@ void KrigingModel::updateModelParams(void){
 
 }
 
-void KrigingModel::updateWithNewData(void){
+void KrigingModel::updateModelWithNewData(void){
 
-	correlationMatrix.reset();
-	upperDiagonalMatrix.reset();
-	R_inv_I.reset();
-	R_inv_ys_min_beta.reset();
-	X.reset();
-	rawData.reset();
-	vectorOfOnes.reset();
+	resetDataObjects();
 
 
-	beta0 = 0.0;
-	sigmaSquared = 0.0;
-
-
-
-	/* data matrix input */
-
-	bool status = rawData.load(input_filename.c_str(), csv_ascii);
-	if(status == true)
-	{
-		printf("Data input is done\n");
-	}
-	else
-	{
-		printf("Problem with data the input (cvs ascii format) at %s, line %d.\n", __FILE__, __LINE__);
-		exit(-1);
-	}
-
-	assert(dim == rawData.n_cols - 1);
-
-	N = rawData.n_rows;
-#if 1
-	printf("%s model has now %d training samples\n",label.c_str(),N);
-#endif
-	X = rawData.submat(0, 0, N - 1, dim - 1);
-
-	for (unsigned int i = 0; i < dim; i++) {
-
-		xmax(i) = rawData.col(i).max();
-		xmin(i) = rawData.col(i).min();
-
-	}
-
-	/* normalize input matrix */
-
-	for (unsigned int i = 0; i < N; i++) {
-
-		for (unsigned int j = 0; j < dim; j++) {
-
-			X(i, j) = (1.0/dim)*(X(i, j) - xmin(j)) / (xmax(j) - xmin(j));
-		}
-	}
-
-#if 0
-	printf("Normalized data = \n");
-	X.print();
-#endif
-
+	ReadDataAndNormalize();
 
 	correlationMatrix.set_size(N,N);
 	correlationMatrix.fill(0.0);
@@ -360,7 +397,7 @@ void KrigingModel::updateWithNewData(void){
 #if 1
 	printf("ymin = %15.10f, ymax = %15.10f, yave = %15.10f\n",ymin,ymax,yave);
 #endif
-	updateModelParams();
+	updateAuxilliaryFields();
 
 }
 
@@ -402,7 +439,6 @@ double KrigingModel::interpolate(rowvec xp) const{
 		fLinearRegression = linearModel.interpolate(xp);
 	}
 
-
 	vec r = computeCorrelationVector(xp);
 
 	fKriging = beta0+ dot(r,R_inv_ys_min_beta);
@@ -420,7 +456,6 @@ double KrigingModel::interpolate(rowvec xp) const{
 
 
 double KrigingModel::calculateExpectedImprovement(rowvec xp){
-
 
 
 	double ftilde = 0.0;
@@ -860,7 +895,7 @@ void KrigingModel::train(void){
 	printVector(kriging_weights);
 
 
-	updateModelParams();
+	updateAuxilliaryFields();
 
 }
 

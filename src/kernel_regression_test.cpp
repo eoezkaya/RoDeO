@@ -31,7 +31,7 @@
 
 #include "kernel_regression.hpp"
 #include "kernel_regression_test.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 #include "test_functions.hpp"
 #include "polynomials.hpp"
 #include <armadillo>

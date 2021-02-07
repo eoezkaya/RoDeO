@@ -36,18 +36,19 @@
 #include <stack>
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 #include "test_functions.hpp"
 #include "kriging_training.hpp"
 #include "trust_region_gek.hpp"
 #include "kernel_regression.hpp"
 #include "optimization.hpp"
 #include "random_functions.hpp"
+#include "gek.hpp"
 #ifdef GPU_VERSION
 #include "kernel_regression_cuda.h"
 #endif
 
-//#include <codi.hpp>
+
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -65,13 +66,14 @@ TestFunction::TestFunction(std::string name,int dimension){
 
 	}
 
-	numberOfSamplesUsedForVisualization = 10000;
+	numberOfSamplesUsedForVisualization = 100;
 	numberOfInputParams = dimension;
 	function_name = name;
 	func_ptr = empty;
 	adj_ptr  = emptyAdj;
 	noiseLevel = 0.0;
 	ifFunctionIsNoisy = false;
+	ifBoxConstraintsSet = false;
 
 	lb.zeros(dimension);
 	ub.zeros(dimension);
@@ -108,6 +110,7 @@ void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
 	}
 	lb.fill(lowerBound);
 	ub.fill(upperBound);
+	ifBoxConstraintsSet = true;
 
 
 }
@@ -133,10 +136,18 @@ void TestFunction::setBoxConstraints(vec lowerBound, vec upperBound){
 
 	}
 
+	ifBoxConstraintsSet= true;
 
 }
 
 void TestFunction::evaluateGlobalExtrema(void) const{
+
+	if(!ifBoxConstraintsSet){
+
+		cout<<"\nERROR: Box constraints are not set!\n";
+		abort();
+
+	}
 
 	rowvec maxx(numberOfInputParams);
 	rowvec minx(numberOfInputParams);
@@ -195,6 +206,13 @@ void TestFunction::print(void){
 
 
 void TestFunction::plot(int resolution) const{
+
+	if(!ifBoxConstraintsSet){
+
+		cout<<"\nERROR: Box constraints are not set!\n";
+		abort();
+
+	}
 
 	if(numberOfInputParams !=2 && numberOfInputParams !=1){
 
@@ -305,8 +323,15 @@ void TestFunction::plot(int resolution) const{
 double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howManySamples, bool warmStart){
 
 
-	printf("Testing surrogate model with the %s function...\n",function_name.c_str());
-	printf("ModelId: %d\n",modelID);
+	printf("\nTesting surrogate model with the %s function...\n",function_name.c_str());
+
+	if(!ifBoxConstraintsSet){
+
+		cout<<"\nERROR: Box constraints are not set!\n";
+		abort();
+
+	}
+
 
 	std::string label = function_name;
 
@@ -314,7 +339,7 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 
 	mat sampleMatrix;
 
-	if(modelID == GRADIENT_ENHANCED_KERNEL_REGRESSION || modelID == AGGREGATION) {
+	if(modelID == GRADIENT_ENHANCED_KERNEL_REGRESSION || modelID == AGGREGATION || modelID == GRADIENT_ENHANCED_KRIGING) {
 
 		sampleMatrix = generateRandomSamplesWithGradients(howManySamples);
 	}
@@ -323,14 +348,18 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 		sampleMatrix = generateRandomSamples(howManySamples);
 	}
 
-	cout << "Saving data file: " <<filenameSurrogateTest<<"\n";
+#if 1
+	printMatrix(sampleMatrix,"sampleMatrix");
+#endif
+
+	cout << "\nSaving data file: " <<filenameSurrogateTest<<"\n";
 	sampleMatrix.save(filenameSurrogateTest.c_str(), csv_ascii);
 
 	KrigingModel TestFunModelKriging(label);
 	KernelRegressionModel TestFunModelKernelRegression(label);
 	LinearModel TestFunModelLinearRegression(label);
 	AggregationModel TestFunModelAggregation(label);
-
+	GEKModel TestFunModelGEK(label);
 
 
 	switch (modelID) {
@@ -356,6 +385,12 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 		surrogateModel =  &TestFunModelKernelRegression;
 		break;
 	}
+	case GRADIENT_ENHANCED_KRIGING:
+	{
+		TestFunModelKernelRegression.setGradientsOn();
+		surrogateModel =  &TestFunModelGEK;
+		break;
+	}
 	case AGGREGATION:
 	{
 
@@ -371,21 +406,26 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 
 	surrogateModel->initializeSurrogateModel();
 
-	if(!warmStart){
+	if(warmStart == true){
 
-		surrogateModel->train();
+		surrogateModel->loadHyperParameters();
+		surrogateModel->updateAuxilliaryFields();
+
 	}
 	else{
 
-		surrogateModel->loadHyperParameters();
+		surrogateModel->train();
 	}
 
+	surrogateModel->printSurrogateModel();
 
 
 	double inSampleError = surrogateModel->calculateInSampleError();
 #if 1
 	printf("inSampleError = %15.10f\n",inSampleError);
 #endif
+
+
 
 	mat testSetMatrix = generateRandomSamples(numberOfSamplesUsedForVisualization);
 
@@ -426,6 +466,13 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 
 	printf("Generating %d random samples for the function: %s\n",howManySamples,function_name.c_str());
 
+	if(!ifBoxConstraintsSet){
+
+		cout<<"\nERROR: Box constraints are not set!\n";
+		abort();
+
+	}
+
 	for(unsigned int j=0; j<numberOfInputParams;j++) {
 
 		if (lb(j) >= ub(j)){
@@ -456,7 +503,24 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 			}
 		}
 
-		double functionValue = func_ptr(x);
+		double functionValue = 0.0;
+		if(func_ptr != empty){
+
+			functionValue = func_ptr(x);
+		}
+		else if(adj_ptr != emptyAdj){
+
+			double *xb  = new double[numberOfInputParams];
+
+			functionValue = adj_ptr(x,xb);
+
+			delete[] xb;
+		}
+
+		else{
+
+			abort();
+		}
 
 		for(unsigned int j=0;j<numberOfInputParams;j++){
 
@@ -485,9 +549,25 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples){
 
 
-	printf("Generating %d random samples for the function: %s\n",howManySamples,function_name.c_str());
+	printf("Generating %d random samples with gradients for the function: %s\n",howManySamples,function_name.c_str());
 
-	for(unsigned int j=0; j<numberOfInputParams;j++) assert(lb(j) < ub(j));
+	if(!ifBoxConstraintsSet){
+
+		cout<<"\nERROR: Box constraints are not set!\n";
+		abort();
+
+	}
+
+	for(unsigned int j=0; j<numberOfInputParams;j++) {
+
+		if (lb(j) >= ub(j)){
+
+			printf("\nERROR: lb(%d) >= ub(%d) (%10.7f >= %10.7f)!\n",j,j,lb(j),ub(j));
+			printf("Did you set box constraints properly?\n");
+			abort();
+
+		}
+	}
 
 	mat sampleMatrix = zeros(howManySamples,2*numberOfInputParams+1 );
 
@@ -533,29 +613,109 @@ mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples
 }
 
 
+void TestFunction::validateAdjoints(void){
+
+	cout<<"\nValidating adjoints...\n";
+
+	if(func_ptr == empty || adj_ptr == emptyAdj){
+		cout<<"\nERROR: cannot validate adjoints with empty primal and/or adjoint function pointer: set func_ptr and adj_ptr first\n";
+		abort();
+	}
+
+	if(!ifBoxConstraintsSet){
+
+		cout<<"\nERROR: Box constraints are not set!\n";
+		abort();
+
+	}
+
+	unsigned int NValidationPoints = 100;
+	double *x  = new double[numberOfInputParams];
+	double *xb  = new double[numberOfInputParams];
+
+	bool passTest = false;
+
+	for(unsigned int i=0; i<NValidationPoints; i++ ){
+
+		generateRandomVector(lb, ub, numberOfInputParams, x);
+
+
+		double functionValueFromAdjoint = adj_ptr(x,xb);
+		double functionValue = func_ptr(x);
+
+		passTest= checkValue(functionValueFromAdjoint,functionValue);
+		if(passTest == false){
+
+			cout<<"ERROR: The primal values does not match between function and the adjoint: check your implementations\n";
+			abort();
+		}
+
+		for(unsigned int j=0; j<numberOfInputParams; j++ ){
+
+			double xsave = x[j];
+
+			double epsilon = x[j]*0.0001;
+			x[j] = xsave - epsilon;
+
+			double fmin = func_ptr(x);
+			x[j] = xsave + epsilon;
+			double fplus = func_ptr(x);
+			double fdValue = (fplus-fmin)/(2.0*epsilon);
+
+			passTest= checkValue(fdValue,xb[j]);
+
+			if(passTest == false){
+
+				cout<<"ERROR: The adjoint value does not seem to be correct!\n";
+				abort();
+			}
+
+			x[j] = xsave;
+
+		}
+
+
+
+
+	}
+
+	delete[] x;
+	delete[] xb;
+
+
+
+}
+
 
 void TestFunction::testEfficientGlobalOptimization(int nsamplesTrainingData, int maxnsamples, bool ifVisualize, bool ifWarmStart, bool ifMinimize){
 
-	printf("Testing Efficient Global Optimization with the %s function...\n", function_name.c_str());
+	printf("Testing Efficient Global Optimization with the function: %s ...\n", function_name.c_str());
+	std::cout<<"Number of samples used for DoE = "<<nsamplesTrainingData<<"\n";
+	std::cout<<"Maximum number of samples used for the optimization = "<<maxnsamples<<"\n";
 
 	std::string filenameEGOTest = function_name+".csv";
 
 	mat samplesMatrix;
 
-	if(!ifWarmStart) {
+	if(!ifWarmStart) { /*the default value of ifWarmStart is false */
 
 		samplesMatrix = generateRandomSamples(nsamplesTrainingData);
 
 	}
 
+	samplesMatrix.save(filenameEGOTest, csv_ascii);
+
+
+
 	std::string problemType;
 
-	if(ifMinimize){
+	if(ifMinimize){ /*the default value of ifMinimize is true */
 
 		problemType = "minimize";
 
 	}
 	else{
+
 		problemType = "maximize";
 
 	}
@@ -567,6 +727,8 @@ void TestFunction::testEfficientGlobalOptimization(int nsamplesTrainingData, int
 		OptimizationStudy.ifVisualize = true;
 	}
 
+	OptimizationStudy.howOftenTrainModels = 1000000;
+
 
 	std::cout<<"Initializing the objective function..."<<std::endl;
 
@@ -577,6 +739,10 @@ void TestFunction::testEfficientGlobalOptimization(int nsamplesTrainingData, int
 	OptimizationStudy.maxNumberOfSamples = maxnsamples;
 
 	OptimizationStudy.setBoxConstraints(lb,ub);
+
+	std::cout<<"Initialization done ..."<<std::endl;
+
+
 
 	OptimizationStudy.EfficientGlobalOptimization();
 
@@ -606,7 +772,7 @@ double emptyAdj(double *x, double *xb){
 
 
 
-double Waves2Dpertrubed(double *x){
+double Waves2DWithHighFrequencyPart(double *x){
 
 	double coef = 0.001;
 	double term1 = coef*sin(100*x[0]);
@@ -624,7 +790,7 @@ double Waves2Dpertrubed(double *x){
 
 }
 
-double Waves2Dperturbed_adj(double *x,double *xb){
+double Waves2DWithHighFrequencyPartAdj(double *x,double *xb){
 	double coef = 0.001;
 	double term1 = coef*sin(100*x[0]);
 	double term2 = coef*cos(100*x[1]);
@@ -660,9 +826,6 @@ double Waves2DAdj(double *x,double *xb){
 
 	return sin(x[0])+ cos(x[1]);
 
-
-
-
 }
 
 
@@ -682,17 +845,6 @@ double Herbie2DAdj(double *x, double *xb) {
 	return exp(-pow((x[0]-1),2))+exp(-0.8*pow((x[0]+1),2))-0.05*sin(8*(x[0]+0.1))
 	+ exp(-pow((x[1]-1),2))+exp(-0.8*pow((x[1]+1),2))-0.05*sin(8*(x[1]+0.1));
 
-
-}
-
-
-
-
-double test_function1D_adj(double *x, double *xb){
-
-
-	xb[0] = (2*x[0]+10*(cos(10*x[0])*0.5)+2*cos(2*x[0]));
-	return sin(2*x[0])+ 0.5* sin(10*x[0]) + x[0]*x[0] ;
 
 }
 
@@ -729,54 +881,67 @@ double Eggholder(double *x){
 
 }
 
+double EggholderAdj(double *x, double *xb) {
+	double fabs0;
+	double fabs0b;
+	double fabs1;
+	double fabs1b;
+	double temp;
+	double temp0;
+	int branch;
 
-//double Eggholder_adj(double *xin, double *xb){
-//
-//	codi::RealReverse::TapeType& tape = codi::RealReverse::getGlobalTape();
-//	tape.setActive();
-//	codi::RealReverse *x = new codi::RealReverse[2];
-//	x[0]= xin[0];
-//	x[1]= xin[1];
-//	tape.registerInput(x[0]);
-//	tape.registerInput(x[1]);
-//
-//	codi::RealReverse result = -(x[1]+47.0)*sin(sqrt(fabs(x[1]+0.5*x[0]+47.0)))-x[0]*sin(sqrt(fabs(x[0]-(x[1]+47.0) )));
-//
-//	tape.registerOutput(result);
-//
-//	tape.setPassive();
-//	result.setGradient(1.0);
-//	tape.evaluate();
-//
-//	xb[0]=x[0].getGradient();
-//	xb[1]=x[1].getGradient();
-//
-//#if 0
-//	double fdres[2];
-//	double epsilon = 0.0001;
-//	double xsave;
-//	double f0 = Eggholder(xin);
-//	xsave = xin[0];
-//	xin[0]+=epsilon;
-//	double fp = Eggholder(xin);
-//	xin[0] = xsave;
-//	fdres[0] = (fp-f0)/epsilon;
-//	xsave = xin[1];
-//	xin[1]+=epsilon;
-//	fp = Eggholder(xin);
-//	xin[1] = xsave;
-//	fdres[1] = (fp-f0)/epsilon;
-//	printf("fd results = \n");
-//	printf("%10.7f %10.7f\n",fdres[0],fdres[1]);
-//
-//	printf("ad results = \n");
-//	printf("%10.7f %10.7f\n",xb[0],xb[1]);
-//#endif
-//	delete[] x;
-//	tape.reset();
-//	return result.getValue();
-//
-//}
+	xb[0] = 0.0;
+	xb[1] = 0.0;
+
+	std::stack<int> intStack;
+
+
+	if (x[1] + 0.5*x[0] + 47.0 >= 0.0) {
+		fabs0 = x[1] + 0.5*x[0] + 47.0;
+		intStack.push(1);
+	} else {
+		fabs0 = -(x[1]+0.5*x[0]+47.0);
+		intStack.push(0);
+	}
+	if (x[0] - (x[1] + 47.0) >= 0.0) {
+		fabs1 = x[0] - (x[1] + 47.0);
+		intStack.push(0);
+	} else {
+		fabs1 = -(x[0]-(x[1]+47.0));
+		intStack.push(1);
+	}
+	temp = sqrt(fabs0);
+	temp0 = sqrt(fabs1);
+	xb[1] = xb[1] - sin(temp);
+	fabs0b = (fabs0 == 0.0 ? 0.0 : -(cos(temp)*(x[1]+47.0)/(2.0*
+			temp)));
+	xb[0] = xb[0] - sin(temp0);
+	fabs1b = (fabs1 == 0.0 ? 0.0 : -(cos(temp0)*x[0]/(2.0*temp0)));
+
+	branch = intStack.top();
+	intStack.pop();
+
+	if (branch == 0) {
+		xb[0] = xb[0] + fabs1b;
+		xb[1] = xb[1] - fabs1b;
+	} else {
+		xb[1] = xb[1] + fabs1b;
+		xb[0] = xb[0] - fabs1b;
+	}
+	branch = intStack.top();
+	intStack.pop();
+
+	if (branch == 0) {
+		xb[0] = xb[0] - 0.5*fabs0b;
+		xb[1] = xb[1] - fabs0b;
+	} else {
+		xb[1] = xb[1] + fabs0b;
+		xb[0] = xb[0] + 0.5*fabs0b;
+	}
+
+	return -(x[1]+47.0)*sin(sqrt(fabs(x[1]+0.5*x[0]+47.0)))-x[0]*sin(sqrt(fabs(x[0]-(x[1]+47.0) )));
+}
+
 
 
 
@@ -793,7 +958,7 @@ double McCormick(double *x){
 
 }
 
-double McCormick_adj(double *x, double *xb) {
+double McCormickAdj(double *x, double *xb) {
 	double tempb;
 	double tempb0;
 
@@ -816,7 +981,7 @@ double McCormick_adj(double *x, double *xb) {
  *
  * */
 
-double Goldstein_Price(double *x){
+double GoldsteinPrice(double *x){
 	double x_sqr  =  x[0]*x[0]; // x^2
 	double y_sqr  =  x[1]*x[1]; // y^2
 	double xy     =  x[0]*x[1]; // xy
@@ -830,7 +995,7 @@ double Goldstein_Price(double *x){
 }
 
 
-double Goldstein_Price_adj(double *x, double *xb) {
+double GoldsteinPriceAdj(double *x, double *xb) {
 	double x_sqr = x[0]*x[0];
 	double x_sqrb;
 	// x^2
@@ -900,7 +1065,7 @@ double Rosenbrock(double *x){
 
 }
 
-double Rosenbrock_adj(double *x, double *xb) {
+double RosenbrockAdj(double *x, double *xb) {
 	double tempb;
 	double Rosenbrockb = 1.0;
 
@@ -924,7 +1089,7 @@ double Rosenbrock3D(double *x){
 
 }
 
-double Rosenbrock3D_adj(double *x, double *xb) {
+double Rosenbrock3DAdj(double *x, double *xb) {
 
 	double Rosenbrock3Db = 1.0;
 	xb[0] = 0.0; xb[1] = 0.0; xb[2] = 0.0;
@@ -957,7 +1122,7 @@ double Rosenbrock4D(double *x){
 
 }
 
-double Rosenbrock4D_adj(double *x, double *xb) {
+double Rosenbrock4DAdj(double *x, double *xb) {
 	double Rosenbrock4Db = 1.0;
 	xb[0] = 0.0; xb[1] = 0.0; xb[2] = 0.0; xb[3] = 0.0;
 	double term1 = (1.0-x[0])*(1.0-x[0]) + 100.0*(x[1]-x[0]*x[0])*(x[1]-x[0]*x
@@ -1002,7 +1167,7 @@ double Rosenbrock8D(double *x){
 }
 
 
-double Rosenbrock8D_adj(double *x, double *xb) {
+double Rosenbrock8DAdj(double *x, double *xb) {
 	double temp = 0.0;
 	double tempb0 = 0.0;
 
@@ -1055,7 +1220,7 @@ double Shubert(double *x){
 }
 
 
-double Shubert_adj(double *x, double *xb) {
+double Shubertadj(double *x, double *xb) {
 	double term1 = 0.0;
 	double term1b = 0.0;
 	double term2 = 0.0;
@@ -1286,7 +1451,16 @@ double WingweightAdj(double *x, double *xb) {
 	return(W);
 }
 
+void testEGOWithHimmelblau(void){
 
+	TestFunction HimmelblauFunction("Himmelblau",2);
+	HimmelblauFunction.func_ptr = Himmelblau;
+	HimmelblauFunction.setBoxConstraints(-5.0,5.0);
+	HimmelblauFunction.plot(100);
+	HimmelblauFunction.testEfficientGlobalOptimization(50,100,true);
+
+
+}
 
 
 

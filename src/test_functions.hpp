@@ -55,6 +55,7 @@ private:
 	SurrogateModel *surrogateModel;
 
 	bool ifFunctionIsNoisy;
+	bool ifBoxConstraintsSet;
 
 	bool ifVisualize;
 	double noiseLevel;
@@ -68,6 +69,8 @@ public:
 
     TestFunction(std::string name,int dimension);
     void plot(int resolution = 100) const;
+
+    void validateAdjoints(void);
 
 
     void addNoise(double);
@@ -105,48 +108,48 @@ double LinearTF1Adj(double *x, double *xb);
 
 
 double Eggholder(double *x);
-double Eggholder_adj(double *x, double *xb);
+double EggholderAdj(double *x, double *xb);
 
 
 
 double Rastrigin6D(double *x);
-double Rastrigin6D_adj(double *xin, double *xb);
+double Rastrigin6DAdj(double *xin, double *xb);
 
 
 
 double Waves2D(double *x);
-double Waves2D_adj(double *x,double *xb);
+double Waves2DAdj(double *x,double *xb);
 
-double Waves2Dperturbed(double *x);
-double Waves2Dperturbed_adj(double *x,double *xb);
+double Waves2DWithHighFrequencyPart(double *x);
+double Waves2DWithHighFrequencyPartAdj(double *x,double *xb);
 
 double Herbie2D(double *x);
 double Herbie2DAdj(double *x, double *xb);
 
 
 double McCormick(double *x);
-double McCormick_adj(double *x, double *xb);
+double McCormickAdj(double *x, double *xb);
 
-double Goldstein_Price(double *x);
-double Goldstein_Price_adj(double *x, double *xb);
+double GoldsteinPrice(double *x);
+double GoldsteinPriceAdj(double *x, double *xb);
 
 double Rosenbrock(double *x);
-double Rosenbrock_adj(double *x, double *xb);
+double RosenbrockAdj(double *x, double *xb);
 
 
 double Rosenbrock3D(double *x);
-double Rosenbrock3D_adj(double *x, double *xb);
+double Rosenbrock3DAdj(double *x, double *xb);
 
 double Rosenbrock4D(double *x);
-double Rosenbrock4D_adj(double *x, double *xb);
+double Rosenbrock4DAdj(double *x, double *xb);
 
 
 
 double Rosenbrock8D(double *x);
-double Rosenbrock8D_adj(double *x, double *xb) ;
+double Rosenbrock8DAdj(double *x, double *xb) ;
 
 double Shubert(double *x);
-double Shubert_adj(double *x, double *xb);
+double ShubertAdj(double *x, double *xb);
 
 double Himmelblau(double *x);
 double HimmelblauAdj(double *x, double *xb);
@@ -165,6 +168,9 @@ double empty(double *x);
 double emptyAdj(double *x, double *xb);
 
 
+/* test functions for the efficient global optimization */
+
+void testEGOWithHimmelblau(void);
 
 
 

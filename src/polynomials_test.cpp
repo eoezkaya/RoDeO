@@ -31,7 +31,7 @@
 
 #include "polynomials_test.hpp"
 #include "polynomials.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 
 void testPolynomialEvaluate(void){
 

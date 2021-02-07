@@ -41,7 +41,7 @@
 #include "linear_regression.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 #include "read_settings.hpp"
 
 #include "kernel_regression.hpp"
@@ -57,7 +57,14 @@
 #include "kriging_training.hpp"
 #include "polynomials.hpp"
 #include "polynomials_test.hpp"
+#include "gek_test.hpp"
+#include "lhs.hpp"
+#include "drivers.hpp"
 Rodeo_settings settings;
+
+
+
+
 
 int main(void){
 
@@ -89,15 +96,18 @@ int main(void){
 
 	if (ret != 0){
 
-		fprintf(stderr, "Error: cannot change directory! at %s, line %d.\n",__FILE__, __LINE__);
+		cout<<"Error: Cannot change directory!\n";
 		abort();
 	}
 
-
-	testAggregationModelHimmelblau();
-
+	RoDeODriver driverToRun;
+	driverToRun.readConfigFile();
+	driverToRun.runDriver();
 
 
 
 
 }
+
+
+

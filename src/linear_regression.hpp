@@ -61,6 +61,8 @@ public:
 
 	void setRegularizationParam(double value);
 	double getRegularizationParam(void) const;
+	vec getWeights(void) const;
+	void setWeights(vec);
 
 };
 

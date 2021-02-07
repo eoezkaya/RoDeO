@@ -89,12 +89,21 @@ public:
 
 	double calculateExpectedImprovement(rowvec xp);
 	double getyMin(void) const;
+	vec getKrigingWeights(void) const;
+	void setKrigingWeights(vec);
+	vec getRegressionWeights(void) const;
+	void setRegressionWeights(vec weights);
 	void setEpsilon(double inp);
 	void setLinearRegressionOn(void);
 	void setLinearRegressionOff(void);
 	void setNumberOfTrainingIterations(unsigned int);
 
+	void resetDataObjects(void);
+	void resizeDataObjects(void);
 	int addNewSampleToData(rowvec newsample);
+	void updateModelWithNewData(mat newData);
+	void updateModelWithNewData(void);
+	void updateAuxilliaryFields(void);
 
 
 };

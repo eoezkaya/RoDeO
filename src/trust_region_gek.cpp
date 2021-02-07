@@ -39,7 +39,7 @@ using namespace arma;
 #include "Rodeo_macros.hpp"
 #include "kriging_training.hpp"
 #include "test_functions.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 
 #ifdef GPU_VERSION
 #include "kernel_regression_cuda.h"
@@ -91,17 +91,16 @@ void AggregationModel::initializeSurrogateModel(void){
 			shuffledrawData = shuffle(rawData);
 		}
 
-		mat dataTraining         = shuffledrawData.submat( 0, 0, Ntraining-1, dim );
-		mat gradientDataTraining = shuffledrawData.submat(0, dim+1, Ntraining - 1, 2*dim);
+		mat dataTraining  = shuffledrawData.submat( 0, 0, Ntraining-1, 2*dim );
 
-
-		trainingData.fillWithData(dataTraining,gradientDataTraining);
+		trainingData.ifHasGradientData = true;
+		trainingData.fillWithData(dataTraining);
 		trainingData.normalizeAndScaleData(xmin,xmax);
 
 		if(NvalidationSet > 0){
 
-			mat dataValidation    = shuffledrawData.submat( Ntraining, 0, N-1, dim );
-
+			mat dataValidation    = shuffledrawData.submat( Ntraining, 0, N-1, 2*dim );
+			testDataForRhoOptimizationLoop.ifHasGradientData = true;
 			testDataForRhoOptimizationLoop.fillWithData(dataValidation);
 			testDataForRhoOptimizationLoop.normalizeAndScaleData(xmin,xmax);
 
@@ -118,7 +117,6 @@ void AggregationModel::initializeSurrogateModel(void){
 
 		rowvec xp = generateRandomRowVector(0.0, 1.0/dim, dim);
 
-
 		int indxNearestNeighbor= findNearestNeighbor(xp);
 		double distance = calculateL1norm(xp - X.row(indxNearestNeighbor));
 
@@ -132,7 +130,6 @@ void AggregationModel::initializeSurrogateModel(void){
 #endif
 
 		probe_distances_sample(i)= distance;
-
 
 	}
 
@@ -202,37 +199,119 @@ void AggregationModel::printHyperParameters(void) const{
 }
 void AggregationModel::saveHyperParameters(void) const{
 
-	vec saveBuffer(dim*dim+1+2*dim+1, fill::zeros);
+	cout<<"Saving hyperparameters to the file:"<<hyperparameters_filename<<"\n";
+	vec saveBuffer(dim*dim+1+2*dim+1+dim+1, fill::zeros);
 
 	unsigned int count = 0;
+
 	saveBuffer(count) = rho;
+	cout<<"rho = "<<saveBuffer(count)<<"\n";
 	count++;
 
 	mat M = kernelRegressionModel.getMahalanobisMatrix();
 
 
+	printMatrix(M,"M");
+	for(unsigned int i=0; i<dim; i++)
+		for(unsigned int j=0; j<dim; j++) {
 
-		for(unsigned int i=0; i<dim; i++)
-			for(unsigned int j=0; j<dim; j++) {
 
-
-				saveBuffer(count) = M(i,j);
-				count++;
-			}
-
+			saveBuffer(count) = M(i,j);
+			count++;
+		}
 
 
 	saveBuffer(count) = kernelRegressionModel.getsigmaGaussianKernel();
+	cout<<"sigma = "<<saveBuffer(count)<<"\n";
+	count++;
+	vec krigingWeights = krigingModel.getKrigingWeights();
+	printVector(krigingWeights,"krigingWeights");
+	vec regressionWeights = krigingModel.getRegressionWeights();
+	printVector(regressionWeights,"regressionWeights");
+	for(unsigned int i=0; i<2*dim; i++){
+		saveBuffer(count) = krigingWeights(i);
+		count++;
+	}
+	for(unsigned int i=0; i<dim+1; i++){
+		saveBuffer(count) = regressionWeights(i);
+		count++;
+	}
 
-		saveBuffer.save(hyperparameters_filename, csv_ascii);
+
+	saveBuffer.save(hyperparameters_filename, csv_ascii);
+
+
 
 }
 
 void AggregationModel::loadHyperParameters(void){
 
+	cout<<"Loading hyperparameters from the file:"<<hyperparameters_filename<<"\n";
+
+	vec loadBuffer(dim*dim+1+2*dim+1+dim+1, fill::zeros);
+
+
+	loadBuffer.load(hyperparameters_filename, csv_ascii);
+
+	unsigned int count = 0;
+
+	rho = loadBuffer(count);
+	count++;
+
+	cout<<"rho = "<<rho<<"\n";
+
+	mat M(dim,dim);
+
+
+	for(unsigned int i=0; i<dim; i++)
+		for(unsigned int j=0; j<dim; j++) {
+
+
+			M(i,j) = loadBuffer(count);
+			count++;
+		}
+	printMatrix(M,"M");
+
+	double sigma = loadBuffer(count);
+	count++;
+
+	cout<<"sigma = "<<sigma<<"\n";
+
+	kernelRegressionModel.setsigmaGaussianKernel(sigma);
+
+
+	vec krigingWeights(2*dim);
+	vec regressionWeights(dim+1);
+
+	for(unsigned int i=0; i<2*dim; i++){
+		krigingWeights(i) = loadBuffer(count);
+		count++;
+	}
+	for(unsigned int i=0; i<dim+1; i++){
+		regressionWeights(i) = loadBuffer(count);
+		count++;
+	}
+
+
+	printVector(krigingWeights,"krigingWeights");
+	printVector(regressionWeights,"regressionWeights");
+
+	krigingModel.setKrigingWeights(krigingWeights);
+	krigingModel.setRegressionWeights(regressionWeights);
+
+
+
 
 
 }
+
+void AggregationModel::updateAuxilliaryFields(void){
+
+	krigingModel.updateAuxilliaryFields();
+
+
+}
+
 void AggregationModel::train(void){
 
 	if(!ifInitialized){
@@ -245,12 +324,16 @@ void AggregationModel::train(void){
 	cout<<"Training Kernel regression model...\n";
 	kernelRegressionModel.train();
 
+    mat rawDataSave = rawData;
 
-	mat gradientDataSave = gradientData;
-	mat Xsave = X;
+    trainingData.print();
+    updateData(trainingData.rawData);
+    krigingModel.updateModelWithNewData(trainingData.rawData);
+    kernelRegressionModel.updateData(trainingData.rawData);
 
-	gradientDataSave = trainingData.gradientData;
-	X = trainingData.X;
+
+	krigingModel.printSurrogateModel();
+
 
 	rho = 0.0;
 	double minimumValidationError = LARGE;
@@ -286,11 +369,12 @@ void AggregationModel::train(void){
 	}
 
 	rho = best_rho;
-	X = Xsave;
-	gradientData = gradientDataSave;
 
+	updateData(rawDataSave);
+	krigingModel.updateModelWithNewData(rawDataSave);
+	kernelRegressionModel.updateData(rawDataSave);
 
-
+	saveHyperParameters();
 
 
 }
@@ -308,18 +392,23 @@ double AggregationModel::interpolate(rowvec x) const{
 #if 0
 	cout <<"The closest point to x:\n";
 	x.print();
-	cout <<"is xp:\n";
+	cout <<"is xg with index = "<<indx<<":\n";
 	xNearestPoint.print();
 #endif
 
 	rowvec xDiff = x - xNearestPoint;
+#if 0
+	printVector(xDiff,"xDiff");
+#endif
 	double min_dist = calculateL1norm(xDiff);
+#if 0
+	cout<<"min_dist = "<<min_dist<<"\n";
+#endif
 
 
 	double fSurrogateKriging = krigingModel.interpolate(x);
 #if 0
 	cout<<"fSurrogateKriging = "<<fSurrogateKriging<<"\n";
-
 #endif
 
 
@@ -347,6 +436,7 @@ double AggregationModel::interpolate(rowvec x) const{
 	cout<<"result  = "<<w1*fSurrogateKriging+ w2* fSurrogateKernelRegression<<"\n";
 
 #endif
+
 	return w1*fSurrogateKriging+ w2* fSurrogateKernelRegression;
 
 

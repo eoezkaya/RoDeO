@@ -81,5 +81,7 @@ public:
 
 };
 
+void generateRandomTestAndValidationDataForGradientModels(int dim, int N);
+
 
 #endif

@@ -32,7 +32,7 @@
 
 #ifndef READ_SETTINGS
 #define READ_SETTINGS
-#include <algorithm>
+#include<algorithm>
 #include<iostream>
 class Rodeo_settings {
 public:
@@ -40,15 +40,17 @@ public:
 
 	std::string cwd;
 	std::string python_dir;
-	double lambda;
+	std::string config_file;
+
 	std::string *keywords;
-	const int number_of_keywords = 2;
+	const int number_of_keywords = 3;
 
 	Rodeo_settings(){
 
 		keywords = new std::string[number_of_keywords];
 		keywords[0]="cwd:";
 		keywords[1]="python_dir:";
+		keywords[2]="config_file:";
 
 	}
 
@@ -59,6 +61,7 @@ public:
 		printf("\nSettings:\n");
 		printf("cwd: %s\n", cwd.c_str());
 		printf("python_dir: %s\n", python_dir.c_str());
+		printf("config_file: %s\n", config_file.c_str());
 
 	}
 
@@ -112,6 +115,10 @@ public:
 						}
 						case 1: {
 							python_dir = sub_str;
+							break;
+						}
+						case 2: {
+							config_file = sub_str;
 							break;
 						}
 

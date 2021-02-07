@@ -29,7 +29,7 @@
  *
  */
 #include "linear_regression.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 #include "Rodeo_macros.hpp"
 
 #include <armadillo>
@@ -57,7 +57,8 @@ void LinearModel::initializeSurrogateModel(void){
 	if(label != "None"){
 
 		ReadDataAndNormalize();
-		weights = zeros<vec>(dim+1);
+		numberOfHyperParameters = dim+1;
+		weights = zeros<vec>(numberOfHyperParameters);
 
 	}
 
@@ -97,6 +98,15 @@ double LinearModel::getRegularizationParam(void) const{
 	return regularizationParam;
 }
 
+vec LinearModel::getWeights(void) const{
+
+	return weights;
+}
+
+void LinearModel::setWeights(vec w){
+
+	weights = w;
+}
 
 
 

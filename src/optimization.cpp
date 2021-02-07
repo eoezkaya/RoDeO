@@ -36,13 +36,14 @@
 #include <iostream>
 #include <unistd.h>
 #include <cassert>
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 #include "kriging_training.hpp"
 #include "trust_region_gek.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
 #include "test_functions.hpp"
 #include "optimization.hpp"
+#include "lhs.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -62,21 +63,92 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, double (*objF
 
 }
 
+ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int dimension)
+: surrogateModel(objectiveFunName){
+
+
+	dim = dimension;
+	name = objectiveFunName;
+	objectiveFunPtr = empty;
+	executableName = "None";
+	executablePath = "None";
+	fileNameObjectiveFunctionRead = "None";
+	fileNameDesignVector = "None";
+	assert(dim < 1000);
+
+
+}
+
 
 ObjectiveFunction::ObjectiveFunction(){
 
 	dim = 0;
 	name = "None";
 	objectiveFunPtr = empty;
+	executableName = "None";
+	executablePath = "None";
+	fileNameObjectiveFunctionRead = "None";
+	fileNameDesignVector = "None";
+
+
+}
+
+void ObjectiveFunction::readConfigFile(void){
+
+	cout<<"Reading configuration file:"<<settings.config_file<<"\n";
+
+	if(!file_exist(settings.config_file.c_str())){
+
+		cout<<"ERROR: Configuration file "<<settings.config_file<<" does not exist!\n";
+		abort();
+	}
+
+
+}
+
+
+
+void ObjectiveFunction::setFileNameReadObjectFunction(std::string fileName){
+
+	fileNameObjectiveFunctionRead = fileName;
+
+}
+
+
+void ObjectiveFunction::setFileNameDesignVector(std::string fileName){
+
+	fileNameDesignVector = fileName;
+
+}
+
+void ObjectiveFunction::setExecutablePath(std::string path){
+
+	executablePath = path;
+
+}
+
+void ObjectiveFunction::setExecutableName(std::string exeName){
+
+	executableName = exeName;
 
 }
 
 void ObjectiveFunction::trainSurrogate(void){
 
+	surrogateModel.initializeSurrogateModel();
 	surrogateModel.train();
 
 }
 
+
+
+void ObjectiveFunction::saveDoEData(mat data) const{
+
+	std::string fileName = surrogateModel.getInputFileName();
+	data.save(fileName,csv_ascii);
+
+
+}
 
 double ObjectiveFunction::calculateExpectedImprovement(rowvec x){
 
@@ -85,31 +157,88 @@ double ObjectiveFunction::calculateExpectedImprovement(rowvec x){
 }
 
 
-double ObjectiveFunction::evaluate(rowvec x){
+double ObjectiveFunction::evaluate(rowvec x,bool ifAddToData = true){
 
-	double functionValue =  objectiveFunPtr(x.memptr());
 
-	assert(std::isnan(functionValue) == false);
+	double functionValue = 0.0;
 
-	rowvec newsample(dim +1);
+	if( objectiveFunPtr != empty){
 
-	for(unsigned int k=0; k<dim; k++){
-
-		newsample(k) = x(k);
+		functionValue =  objectiveFunPtr(x.memptr());
 
 	}
-	newsample(dim) = functionValue;
+
+	else if (fileNameObjectiveFunctionRead != "None" && executableName != "None" && fileNameDesignVector != "None"){
+
+
+		bool ifSaveIsSuccessful= x.save(fileNameDesignVector,raw_ascii);
+
+		if(!ifSaveIsSuccessful){
+
+			std::cout << "ERROR: There was a problem while saving the design vector!\n";
+			abort();
+
+		}
+
+		std::string runCommand;
+		if(this->executablePath!= "None") {
+
+			runCommand = executablePath +"/" + executableName;
+		}
+		else{
+			runCommand = "./" + executableName;
+		}
+
+		system(runCommand.c_str());
+
+		std::ifstream ifile(fileNameObjectiveFunctionRead, std::ios::in);
+
+		    if (!ifile.is_open()) {
+
+		        std::cout << "ERROR: There was a problem opening the input file!\n";
+		        abort();
+		    }
+
+		    ifile >> functionValue;
+
+	}
+	else{
+
+		cout<<"ERROR: Cannot evaluate the objective function. Check settings!\n";
+		abort();
+	}
+
+	if(std::isnan(functionValue)){
+
+		cout<<"ERROR: NaN as the objective function value!\n";
+		abort();
+
+	}
+
+
+	if(ifAddToData){
+
+		rowvec newsample(dim +1);
+
+		for(unsigned int k=0; k<dim; k++){
+
+			newsample(k) = x(k);
+
+		}
+		newsample(dim) = functionValue;
 
 
 #if 1
-	printf("new sample: \n");
-	newsample.print();
+		printf("new sample: \n");
+		newsample.print();
 #endif
 
-	if(surrogateModel.addNewSampleToData(newsample) !=0){
+		if(surrogateModel.addNewSampleToData(newsample) !=0){
 
-		printf("Warning: The new sample cannot be added into the training data since it is too close to a sample!\n");
-		return LARGE;
+			printf("Warning: The new sample cannot be added into the training data since it is too close to a sample!\n");
+
+		}
+
 
 	}
 
@@ -173,6 +302,16 @@ ConstraintFunction::ConstraintFunction(std::string constraintName, std::string c
 
 }
 
+
+void ConstraintFunction::saveDoEData(mat data) const{
+
+	std::string fileName = surrogateModel.getInputFileName();
+	data.save(fileName,csv_ascii);
+
+
+}
+
+
 void ConstraintFunction::trainSurrogate(void){
 
 	assert(ifNeedsSurrogate);
@@ -215,28 +354,34 @@ bool ConstraintFunction::checkFeasibility(double value){
 }
 
 
-double ConstraintFunction::evaluate(rowvec x){
+double ConstraintFunction::evaluate(rowvec x, bool ifAddToData = true){
 
 	double functionValue =  pConstFun(x.memptr());
 
 	assert(std::isnan(functionValue) == false);
 
-	rowvec newsample(dim +1);
 
-	for(unsigned int k=0; k<dim; k++){
+	if(ifAddToData){
 
-		newsample(k) = x(k);
+		rowvec newsample(dim +1);
 
-	}
-	newsample(dim) = functionValue;
+		for(unsigned int k=0; k<dim; k++){
+
+			newsample(k) = x(k);
+
+		}
+		newsample(dim) = functionValue;
 
 
 #if 1
-	printf("new sample: \n");
-	newsample.print();
+		printf("new sample: \n");
+		newsample.print();
 #endif
 
-	surrogateModel.addNewSampleToData(newsample);
+
+		surrogateModel.addNewSampleToData(newsample);
+
+	}
 
 	return functionValue;
 }
@@ -490,29 +635,30 @@ void OptimizerWithGradients::print(void){
 
 
 
-Optimizer::Optimizer(std::string nameTestcase, int input_size,std::string problemType){
+Optimizer::Optimizer(std::string nameTestcase, int numberOfOptimizationParams, std::string problemType = "minimize"){
 
-	/* we do not allow problems with too large dimension */
+	/* RoDeO does not allow problems with too many optimization parameters */
 
-	if(input_size > 1000){
+	if(numberOfOptimizationParams > 100){
 
 		std::cout<<"Problem dimension of the optimization is too large!"<<std::endl;
-		exit(-1);
+		abort();
 
 	}
 
 	name = nameTestcase;
-	dimension = input_size;
+	dimension = numberOfOptimizationParams;
 	numberOfConstraints = 0;
 	maxNumberOfSamples  = 0;
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
+	ifBoxConstraintsSet = false;
 	iterMaxEILoop = dimension*10000;
 	iterGradientEILoop = 100;
 	epsilon_EI = 10E-4;
 	optimizationType = problemType;
 	ifVisualize = false;
-	howOftenTrainModels = 10;
+	howOftenTrainModels = 10; /* train surrogates in every 10 iteration */
 
 
 	assert(optimizationType == "minimize" || optimizationType == "maximize");
@@ -544,6 +690,7 @@ void Optimizer::setBoxConstraints(std::string filename){
 
 	lowerBounds = boxConstraints.col(0);
 	upperBounds = boxConstraints.col(1);
+	ifBoxConstraintsSet = true;
 
 
 }
@@ -554,7 +701,7 @@ void Optimizer::setBoxConstraints(double lowerBound, double upperBound){
 	assert(lowerBound < upperBound);
 	lowerBounds.fill(lowerBound);
 	upperBounds.fill(upperBound);
-
+	ifBoxConstraintsSet = true;
 
 }
 
@@ -566,7 +713,7 @@ void Optimizer::setBoxConstraints(vec lb, vec ub){
 
 	lowerBounds = lb;
 	upperBounds = ub;
-
+	ifBoxConstraintsSet = true;
 
 }
 
@@ -586,12 +733,12 @@ void Optimizer::addObjectFunction(ObjectiveFunction &objFunc){
 }
 
 
-void Optimizer::evaluateConstraints(rowvec x, rowvec &constraintValues){
+void Optimizer::evaluateConstraints(rowvec x, rowvec &constraintValues, bool ifAddToData = true){
 
 	unsigned int contraintIt = 0;
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
-		constraintValues(contraintIt) = it->evaluate(x);
+		constraintValues(contraintIt) = it->evaluate(x,ifAddToData);
 		contraintIt++;
 	}
 
@@ -657,11 +804,12 @@ void Optimizer::visualizeOptimizationHistory(void) const{
 	if(dimension == 2){
 
 		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_2d_opthist.py "+ name;
-
+#if 1
+		cout<<python_command<<"\n";
+#endif
 		FILE* in = popen(python_command.c_str(), "r");
 
 		fprintf(in, "\n");
-
 
 	}
 
@@ -695,16 +843,17 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 	if (maxNumberOfSamples == 0){
 
-		fprintf(stderr, "Error: maximum number of samples is not set!\n");
-		exit(-1);
+		fprintf(stderr, "ERROR: Maximum number of samples is not set for the optimization!\n");
+		cout<<"maxNumberOfSamples = "<<maxNumberOfSamples<<"\n";
+		abort();
 	}
 
 
 
 	if(checkBoxConstraints() == false){
 
-		fprintf(stderr, "Error: Box constraints are not set properly!\n");
-		exit(-1);
+		fprintf(stderr, "ERROR: Box constraints are not set properly!\n");
+		abort();
 
 	}
 
@@ -714,6 +863,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 #endif
 
 	trainSurrogates();
+
 
 
 	/* main loop for optimization */
@@ -726,14 +876,14 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 	while(1){
 		iterOpt++;
-#if 1
+#if 0
 		printf("Optimization Iteration = %d\n",iterOpt);
 #endif
 
 
 		if(simulationCount%howOftenTrainModels == 0) {
 
-					trainSurrogates();
+			trainSurrogates();
 		}
 
 
@@ -770,7 +920,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 				best_dv = dv;
 				maxEI = EI;
-#if 1
+#if 0
 				printf("A design with a better EI value has been find, EI = %15.10f\n", EI);
 				best_dv.print();
 #endif
@@ -909,7 +1059,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 		best_dv = dvGradientSearch;
 
-#if 1
+#if 0
 		printf("The most promising design:\n");
 		best_dv.print();
 #endif
@@ -921,8 +1071,8 @@ void Optimizer::EfficientGlobalOptimization(void){
 		best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds,upperBounds);
 
 
-#if 1
-		printf("The most promising design (not Normalized):\n");
+#if 0
+		printf("The most promising design (not normalized):\n");
 		best_dv.print();
 #endif
 
@@ -970,7 +1120,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 		optimizationHistory.save("optimizationHistory.csv",csv_ascii);
 
 
-#if 1
+#if 0
 		printf("optimizationHistory:\n");
 		optimizationHistory.print();
 
@@ -985,7 +1135,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 			bestIndx = iterOpt;
 			bestObjFunVal = objFunVal;
 			best_dvGlobal = best_dv;
-#if 1
+#if 0
 			printf("\nBetter design has been found:\n");
 			printf("dv =");
 			best_dv.print();
@@ -997,11 +1147,12 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 		simulationCount ++;
 #if 1
-		printf("Simulation at dv = \n");
+		//		printf("Simulation at dv = \n");
 		best_dv.print();
-		printf("True value of the function = %15.10f\n",fVal);
+		//		printf("True value of the function = %15.10f\n",fVal);
 
 #endif
+
 
 
 		/* terminate optimization */
@@ -1010,16 +1161,15 @@ void Optimizer::EfficientGlobalOptimization(void){
 			printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
 			printf("Global optimal solution:\n");
 			printf("design vector =");
-			best_dv.print();
+			best_dvGlobal.print();
 			printf("Objective function value = %15.10f\n",bestObjFunVal);
 			printf("Index = %d\n",bestIndx);
-
 
 			if(ifVisualize){
 
 				visualizeOptimizationHistory();
-
 			}
+
 
 
 			break;
@@ -1032,6 +1182,203 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 
 }
+
+
+void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
+
+	if(!ifBoxConstraintsSet){
+
+		cout<<"ERROR: Cannot run DoE before the box-constraints are set!\n";
+		abort();
+	}
+
+	mat samples;
+
+	if(methodID == LHS){
+
+		LHSSamples DoE(dimension, lowerBounds, upperBounds, howManySamples);
+		if(dimension == 2) DoE.visualize();
+		std::string filename= this->name + "_samples.csv";
+		DoE.saveSamplesToFile(filename);
+		samples = DoE.getSamples();
+	}
+
+#if 1
+	printMatrix(samples,"samples");
+#endif
+
+	mat bufferDataObjFunction(howManySamples,dimension+1);
+	cube bufferDataConstraints(howManySamples,dimension+1,numberOfConstraints);
+
+
+	rowvec constraintValues(numberOfConstraints);
+	for(unsigned int i=0; i<howManySamples; i++){
+
+		rowvec designVector = samples.row(i);
+
+
+		for(unsigned int j=0;j<dimension;j++) {
+			bufferDataObjFunction(i,j) = samples(i,j);
+
+		}
+		bufferDataObjFunction(i,dimension) = objFun.evaluate(designVector, false);
+
+		evaluateConstraints(designVector, constraintValues,false);
+
+		for(unsigned int j=0;j<dimension;j++) {
+			for(unsigned int k=0;k<numberOfConstraints;k++) {
+
+				bufferDataConstraints(i,j,k) = samples(i,j);
+
+			}
+
+		}
+
+		for(unsigned int k=0;k<numberOfConstraints;k++) {
+
+			bufferDataConstraints(i,dimension,k) = constraintValues(k);
+
+		}
+
+
+	}
+
+	objFun.saveDoEData(bufferDataObjFunction);
+
+
+	unsigned int contraintIt = 0;
+	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+
+
+		if(it->ifNeedsSurrogate){
+
+
+			mat saveBuffer = bufferDataConstraints.slice(contraintIt);
+			it->saveDoEData(saveBuffer);
+		}
+
+		contraintIt++;
+	}
+
+
+
+
+}
+void testOptimizationWingweight(void){
+/*
+	Sw: Wing Area (ft^2) (150,200)
+	 *  Wfw: Weight of fuel in the wing (lb) (220,300)
+	 *  A: Aspect ratio (6,10)
+	 *  Lambda: quarter chord sweep (deg) (-10,10)
+	 *  q: dynamic pressure at cruise (lb/ft^2)  (16,45)
+	 *  lambda: taper ratio (0.5,1)
+	 *  tc: aerofoil thickness to chord ratio (0.08,0.18)
+	 *  Nz: ultimate load factor (2.5,6)
+	 *  Wdg: flight design gross weight (lb)  (1700,2500)
+	 *  Wp: paint weight (lb/ft^2) (0.025, 0.08)
+
+
+*/
+	vec lb(10);
+	vec ub(10);
+	lb(0) = 150; ub(0) = 200;
+	lb(1) = 220; ub(1) = 300;
+	lb(2) = 6;   ub(2) = 10;
+	lb(3) = -10; ub(3) = 10;
+	lb(4) = 16; ub(4) = 45;
+	lb(5) = 0.5; ub(5) = 1;
+	lb(6) = 0.08; ub(6) = 0.18;
+	lb(7) = 2.5; ub(7) = 6;
+	lb(8) = 1700; ub(8) = 2500;
+	lb(9) = 0.025; ub(9) = 0.08;
+
+
+
+	std::string problemName = "Wingweight";
+	unsigned int dimension = 10;
+	Optimizer OptimizationStudy(problemName, dimension);
+
+	ObjectiveFunction objFunc(problemName, Wingweight, dimension);
+	OptimizationStudy.addObjectFunction(objFunc);
+
+	OptimizationStudy.maxNumberOfSamples = 100;
+
+	OptimizationStudy.setBoxConstraints(lb,ub);
+	OptimizationStudy.performDoE(100,LHS);
+
+
+	OptimizationStudy.EfficientGlobalOptimization();
+
+
+}
+
+void testOptimizationEggholder(void){
+
+
+	std::string problemName = "Eggholder";
+	unsigned int dimension = 2;
+	Optimizer OptimizationStudy(problemName, dimension);
+
+	ObjectiveFunction objFunc(problemName, Eggholder, dimension);
+	OptimizationStudy.addObjectFunction(objFunc);
+
+	OptimizationStudy.maxNumberOfSamples = 50;
+
+	OptimizationStudy.setBoxConstraints(0.0,200.0);
+	OptimizationStudy.performDoE(50,LHS);
+
+	OptimizationStudy.ifVisualize = true;
+	OptimizationStudy.EfficientGlobalOptimization();
+
+
+}
+
+void testOptimizationHimmelblau(void){
+
+
+	std::string problemName = "Himmelblau";
+	unsigned int dimension = 2;
+	Optimizer OptimizationStudy(problemName, dimension);
+
+	ObjectiveFunction objFunc(problemName, Himmelblau, dimension);
+	OptimizationStudy.addObjectFunction(objFunc);
+
+	OptimizationStudy.maxNumberOfSamples = 100;
+
+	OptimizationStudy.setBoxConstraints(-5.0,5.0);
+	OptimizationStudy.performDoE(50,LHS);
+
+	OptimizationStudy.ifVisualize = true;
+	OptimizationStudy.EfficientGlobalOptimization();
+
+
+}
+
+void testOptimizationHimmelblauExternalExe(void){
+
+
+	std::string problemName = "Himmelblau";
+	unsigned int dimension = 2;
+	Optimizer OptimizationStudy(problemName, dimension);
+
+	ObjectiveFunction objFunc(problemName, dimension);
+	objFunc.setFileNameReadObjectFunction("objFunVal.dat");
+	objFunc.setExecutablePath("/home/emre/RoDeO/Tests/HimmelblauOptimization");
+	objFunc.setExecutableName("himmelblau");
+	objFunc.setFileNameDesignVector("dv.csv");
+	OptimizationStudy.addObjectFunction(objFunc);
+
+	OptimizationStudy.maxNumberOfSamples = 100;
+
+	OptimizationStudy.setBoxConstraints(-5.0,5.0);
+	OptimizationStudy.performDoE(50,LHS);
+
+	OptimizationStudy.ifVisualize = true;
+	OptimizationStudy.EfficientGlobalOptimization();
+
+
+}
+
 
 
 

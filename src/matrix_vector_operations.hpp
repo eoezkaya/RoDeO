@@ -31,8 +31,82 @@
 #ifndef MATRIX_OPERATIONS_HPP
 #define MATRIX_OPERATIONS_HPP
 #include <armadillo>
-
+#include <cassert>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+#include <vector>
+#include <quadmath.h>
 using namespace arma;
+
+class HighPrecisionMatrix {
+public:
+	HighPrecisionMatrix(int rows, int columns){
+
+		Nrows = rows;
+		Ncolumns = columns;
+		elements = new __float128[rows*columns]();
+
+
+
+	}
+
+
+
+	int n_rows() const { return Nrows; }
+	int n_cols() const { return Ncolumns; }
+
+	const __float128& operator()(int row, int column) const {
+
+		return elements[row * Ncolumns + column];
+	}
+	__float128& operator()(int row, int column) {
+
+		return elements[row * Ncolumns + column];
+	}
+
+	void operator=(mat &A) {
+
+		for(int i=0; i<Nrows; i++){
+			for(int j=0; j<Ncolumns; j++){
+
+				elements[i * Ncolumns + j] = A(i,j);
+			}
+		}
+
+
+	}
+
+	void print(void){
+
+		std::cout.precision(10);
+		for(int i=0; i<Nrows; i++){
+			for(int j=0; j<Ncolumns; j++){
+
+				cout<<double(elements[i * Ncolumns + j])<<" ";
+
+			}
+
+			cout<<"\n";
+		}
+
+	}
+
+	~HighPrecisionMatrix(){
+
+		delete[] elements;
+	}
+
+
+private:
+	int Nrows;
+	int Ncolumns;
+	__float128 *elements;
+};
+
+HighPrecisionMatrix factorizeCholeskyHP(const HighPrecisionMatrix& input);
+HighPrecisionMatrix transposeHP(const HighPrecisionMatrix& input);
+void testHighPrecisionCholesky(void);
 
 bool isEqual(const mat &A, const mat&B, double tolerance);
 

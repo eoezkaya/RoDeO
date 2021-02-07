@@ -32,7 +32,7 @@
 #include <cassert>
 
 #include "random_functions.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -44,6 +44,17 @@ int generateRandomInt(int a, int b){
 	return(rand() % (b-a)+a);
 
 }
+
+
+int generateRandomInt(uvec indices){
+	unsigned int size = indices.size();
+	assert(size>0);
+	int randomIndex = generateRandomInt(0, size);
+
+	return(indices(randomIndex));
+
+}
+
 
 
 double generateRandomDouble(double a, double b) {
@@ -116,6 +127,16 @@ vec generateRandomVector(double lb, double ub, unsigned int dim){
 
 }
 
+
+void generateRandomVector(vec lb, vec ub, unsigned int dim, double *x){
+
+
+	for(unsigned int i=0; i<dim; i++) {
+		assert(lb(i) < ub(i));
+		x[i] = generateRandomDouble(lb(i), ub(i));
+	}
+
+}
 
 
 

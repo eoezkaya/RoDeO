@@ -55,8 +55,8 @@ public:
 	PartitionData();
 	PartitionData(std::string name);
 	void fillWithData(mat);
-	void fillWithData(mat, mat);
 	bool ifNormalized;
+	bool ifHasGradientData;
 	unsigned int numberOfSamples;
 	unsigned int dim;
 	void normalizeAndScaleData(vec xmin, vec xmax);
@@ -89,6 +89,7 @@ protected:
 	vec xmax;
 
 	bool ifInitialized;
+	int numberOfHyperParameters;
 
 
 
@@ -107,6 +108,7 @@ public:
 	virtual void printHyperParameters(void) const = 0;
 	virtual void saveHyperParameters(void) const = 0;
 	virtual void loadHyperParameters(void) = 0;
+	virtual void updateAuxilliaryFields(void);
 	virtual void train(void) = 0;
 	virtual double interpolate(rowvec x) const = 0;
 	virtual double interpolateWithGradients(rowvec x) const = 0;
@@ -116,21 +118,15 @@ public:
 
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
+	std::string getInputFileName(void) const;
 
-
+	void updateData(mat dataMatrix);
 	void tryModelOnTestSet(PartitionData &testSet) const;
 	void visualizeTestResults(void) const;
 
 
 
 };
-
-
-
-
-
-
-
 
 
 #endif

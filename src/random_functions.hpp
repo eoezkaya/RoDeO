@@ -36,6 +36,7 @@
 using namespace arma;
 
 int generateRandomInt(int a, int b);
+int generateRandomInt(uvec indices);
 
 double generateRandomDouble(double a, double b);
 void generateRandomDoubleArray(double *xp,double a, double b, unsigned int dim);
@@ -46,6 +47,8 @@ rowvec generateRandomRowVector(double lb, double ub, unsigned int dim);
 
 vec generateRandomVector(vec lb, vec ub);
 vec generateRandomVector(double lb, double ub, unsigned int dim);
+
+void generateRandomVector(vec lb, vec ub, unsigned int dim, double *x);
 
 double generateRandomDoubleFromNormalDist(double xs, double xe, double sigma_factor);
 

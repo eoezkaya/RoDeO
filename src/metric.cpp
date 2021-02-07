@@ -30,7 +30,7 @@
  */
 
 #include "metric.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 
 double calculateL1norm(const rowvec &x){
 

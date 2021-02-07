@@ -35,7 +35,11 @@
 #include <armadillo>
 #include "kriging_training.hpp"
 
-using namespace arma;
+
+
+
+
+
 
 
 class ObjectiveFunction{
@@ -44,16 +48,34 @@ class ObjectiveFunction{
 private:
 	std::string name;
 	double (*objectiveFunPtr)(double *);
+	std::string executableName;
+	std::string executablePath;
+	std::string fileNameObjectiveFunctionRead;
+	std::string fileNameDesignVector;
+	std::string settingsFileName;
 	KrigingModel surrogateModel;
 	unsigned int dim;
+	bool ifDoErequired;
+	bool ifWarmStart;
 
 public:
+
+
 	ObjectiveFunction(std::string, double (*objFun)(double *), unsigned int);
+	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
+
+	void readConfigFile(void);
+
 	void trainSurrogate(void);
 
+	void saveDoEData(mat) const;
+	void setFileNameReadObjectFunction(std::string);
+	void setExecutablePath(std::string);
+	void setExecutableName(std::string);
+	void setFileNameDesignVector(std::string);
 	double calculateExpectedImprovement(rowvec x);
-	double evaluate(rowvec x);
+	double evaluate(rowvec x, bool);
 	double ftilde(rowvec x) const;
 	void print(void) const;
 
@@ -71,17 +93,21 @@ private:
 	double (*pConstFun)(double *);
 	double targetValue;
 	std::string inequalityType;
-	bool ifNeedsSurrogate;
+
 	KrigingModel surrogateModel;
 public:
+
+	bool ifNeedsSurrogate;
+
 	ConstraintFunction(std::string, std::string, double, double (*constFun)(double *), unsigned int dimension, bool ifNeedsSurrogate = false);
 	ConstraintFunction();
+	void saveDoEData(mat) const;
 	void trainSurrogate(void);
 
 	bool checkFeasibility(double value);
 
 	double calculateEI(rowvec x) const;
-	double evaluate(rowvec x);
+	double evaluate(rowvec x, bool);
 	double ftilde(rowvec x) const;
 	void print(void) const;
 };
@@ -142,11 +168,14 @@ public:
 	double epsilon_EI;
 	unsigned int iterMaxEILoop;
 
+	bool ifBoxConstraintsSet;
+
 	Optimizer(std::string ,int, std::string);
 	void print(void) const;
 	void visualizeOptimizationHistory(void) const;
 	void EfficientGlobalOptimization(void);
 	void trainSurrogates(void);
+	void performDoE(unsigned int howManySamples, DoE_METHOD methodID);
 
 	void setBoxConstraints(std::string filename="BoxConstraints.csv");
 	void setBoxConstraints(double lb, double ub);
@@ -154,7 +183,7 @@ public:
 
 	void addConstraint(ConstraintFunction &constFunc);
 
-	void evaluateConstraints(rowvec x, rowvec &constraintValues);
+	void evaluateConstraints(rowvec x, rowvec &constraintValues,bool);
 
 	bool checkBoxConstraints(void) const;
 	bool checkConstraintFeasibility(rowvec constraintValues);
@@ -164,6 +193,9 @@ public:
 
 };
 
-
+void testOptimizationHimmelblau(void);
+void testOptimizationHimmelblauExternalExe(void);
+void testOptimizationWingweight(void);
+void testOptimizationEggholder(void);
 
 #endif

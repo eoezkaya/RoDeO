@@ -61,6 +61,7 @@ public:
 	void printHyperParameters(void) const;
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
+	void updateAuxilliaryFields(void);
 	void train(void);
 	double interpolate(rowvec x) const ;
 	double interpolateWithGradients(rowvec x) const ;

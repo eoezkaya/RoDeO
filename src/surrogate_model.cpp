@@ -35,7 +35,7 @@
 #include <cassert>
 
 #include "surrogate_model.hpp"
-#include "auxilliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
 
@@ -49,6 +49,7 @@ using namespace arma;
 PartitionData::PartitionData(){
 
 	ifNormalized = false;
+	ifHasGradientData = false;
 	numberOfSamples = 0;
 	dim = 0;
 }
@@ -57,6 +58,7 @@ PartitionData::PartitionData(std::string name){
 
 	label = name;
 	ifNormalized = false;
+	ifHasGradientData = false;
 	numberOfSamples = 0;
 	dim = 0;
 }
@@ -65,36 +67,46 @@ PartitionData::PartitionData(std::string name){
 void PartitionData::fillWithData(mat inputData){
 
 	assert(inputData.n_rows > 0);
-	assert(inputData.n_cols >=2);
 
 	rawData = inputData;
 
 	numberOfSamples = rawData.n_rows;
-	dim = rawData.n_cols-1;
+
+	if(ifHasGradientData){
+
+		dim = (rawData.n_cols-1)/2;
+
+	}
+	else{
+
+		dim = rawData.n_cols-1;
+
+	}
+
+
+
 	X = rawData.submat(0,0,numberOfSamples-1, dim-1);
+
+	if(ifHasGradientData){
+
+		gradientData = rawData.submat(0,dim+1,numberOfSamples-1, 2*dim);
+
+	}
 
 	yExact = rawData.col(dim);
 	ySurrogate = zeros<vec>(numberOfSamples);
 	squaredError = zeros<vec>(numberOfSamples);
 }
 
-void PartitionData::fillWithData(mat inputData, mat gradients){
-
-	assert(inputData.n_rows == gradients.n_rows);
-	assert(inputData.n_cols-1 == gradients.n_cols);
-	fillWithData(inputData);
-	gradientData = gradients;
-
-
-}
 
 
 void PartitionData::saveAsCSVFile(std::string fileName){
 
 	mat saveBuffer = rawData;
-	saveBuffer.reshape(numberOfSamples,dim+3);
-	saveBuffer.col(dim+1) =  ySurrogate;
-	saveBuffer.col(dim+2) =  squaredError;
+	int nCols = rawData.n_cols;
+	saveBuffer.reshape(numberOfSamples,nCols+2);
+	saveBuffer.col(nCols) =  ySurrogate;
+	saveBuffer.col(nCols+1) =  squaredError;
 
 	saveBuffer.save(fileName,csv_ascii);
 
@@ -139,6 +151,7 @@ SurrogateModel::SurrogateModel(){
 	dim = 0;
 	label = "None";
 	N = 0;
+	numberOfHyperParameters = 0;
 	ifInitialized = false;
 	ifUsesGradientData = false;
 
@@ -148,7 +161,7 @@ SurrogateModel::SurrogateModel(std::string name){
 
 	dim = 0;
 	N = 0;
-
+	numberOfHyperParameters = 0;
 	label = name;
 	input_filename = name +".csv";
 	ifInitialized = false;
@@ -191,6 +204,76 @@ void SurrogateModel::ReadDataAndNormalize(void){
 
 	X = rawData.submat(0, 0, N - 1, dim - 1);
 
+
+	if(ifUsesGradientData){
+
+		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
+
+	}
+
+
+	xmax.set_size(dim);
+	xmin.set_size(dim);
+
+	for (unsigned int i = 0; i < dim; i++) {
+
+		xmax(i) = rawData.col(i).max();
+		xmin(i) = rawData.col(i).min();
+
+	}
+
+	X = normalizeMatrix(X);
+	X = (1.0/dim)*X;
+
+
+	y = rawData.col(dim);
+
+
+	ymin = min(y);
+	ymax = max(y);
+	yave = mean(y);
+
+}
+
+void SurrogateModel::updateData(mat dataMatrix){
+
+	rawData.reset();
+	X.reset();
+	gradientData.reset();
+	y.reset();
+
+	unsigned int dimDataMatrix;
+
+	if(ifUsesGradientData){
+
+		dimDataMatrix = (dataMatrix.n_cols - 1)/2;
+
+	}
+	else{
+
+		dimDataMatrix = dataMatrix.n_cols - 1;
+
+	}
+
+
+
+	if(dimDataMatrix !=dim){
+
+		cout<<"ERROR: Dimension of the new data does not match with the problem dimension!\n";
+		cout<<"dimDataMatrix = "<<dimDataMatrix<<"\n";
+		cout<<"dim = "<<dim<<"\n";
+		abort();
+
+
+	}
+
+	rawData = dataMatrix;
+
+	/* set number of sample points */
+	N = rawData.n_rows;
+
+	X = rawData.submat(0, 0, N - 1, dim - 1);
+
 	if(ifUsesGradientData){
 
 		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
@@ -218,9 +301,8 @@ void SurrogateModel::ReadDataAndNormalize(void){
 	ymax = max(y);
 	yave = mean(y);
 
+
 }
-
-
 
 
 
@@ -265,7 +347,12 @@ void SurrogateModel::tryModelOnTestSet(PartitionData &testSet) const{
 
 }
 
+void SurrogateModel::updateAuxilliaryFields(void){
 
+
+
+
+}
 
 double SurrogateModel::calculateInSampleError(void) const{
 
@@ -274,13 +361,13 @@ double SurrogateModel::calculateInSampleError(void) const{
 
 	for(unsigned int i=0;i<N;i++){
 
-		rowvec xp = getRowX(i);
+		rowvec xp = X.row(i);
 
 		rowvec x  = getRowXRaw(i);
 
 #if 1
 		printf("\nData point = %d\n", i+1);
-		printf("calling f_tilde at x:\n");
+		printf("Interpolation at x:\n");
 		x.print();
 		printf("xnorm:\n");
 		xp.print();
@@ -295,6 +382,8 @@ double SurrogateModel::calculateInSampleError(void) const{
 #if 1
 		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
 #endif
+
+
 	}
 
 	meanSquaredError = meanSquaredError/N;
@@ -334,6 +423,13 @@ void SurrogateModel::printSurrogateModel(void) const{
 	cout<<"ymin = "<<ymin<<endl;
 	cout<<"ymax = "<<ymax<<endl;
 	cout<<"ymean = "<<yave<<endl;
+}
+
+
+std::string SurrogateModel::getInputFileName(void) const{
+
+	return input_filename;
+
 }
 
 

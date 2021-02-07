@@ -34,7 +34,6 @@
 
 void testAllAggregationModel(void);
 
-void generateRandomTestAndValidationDataForAggregationModel(int dim, int N);
 void testAggregationModeltrain(void);
 void testAggregationInterpolate(void);
 void testAggregationModelHimmelblau(void);
