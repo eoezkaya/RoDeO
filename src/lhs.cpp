@@ -192,8 +192,8 @@ void LHSSamples::generateSamples(void){
 #endif
 		for(unsigned int i=0; i<numberOfDesignVariables; i++) {
 
-			lb(i) = lowerBounds(i)+intervals(i)*dx(i)+dx(i)*0.2;
-			ub(i) = lb(i) + 0.6*dx(i);
+			lb(i) = lowerBounds(i)+intervals(i)*dx(i)+dx(i)*0.45;
+			ub(i) = lb(i) + 0.1*dx(i);
 		}
 
 		rowvec dv = generateRandomRowVector(lb,ub);
@@ -224,8 +224,74 @@ void LHSSamples::generateSamples(void){
 	} /* end of while */
 
 
+	if(testIfSamplesAreTooClose() == true){
+
+		std::cout<<"WARNING: Samples are too close each other\n";
+
+	}
 
 
+
+
+
+}
+
+
+bool LHSSamples::testIfSamplesAreTooClose(void){
+
+	bool ifTooClose = false;
+#if 1
+	std::cout<<"Testing Latin Hypercube samples...\n";
+#endif
+
+	if(samples.n_rows == 0){
+
+		std::cout<<"ERROR: There are no samples to check!\n";
+		abort();
+
+	}
+
+	vec maximumDx(numberOfDesignVariables);
+
+	for(unsigned int i=0; i<numberOfDesignVariables; i++){
+
+		maximumDx(i) = 0.5*(upperBounds(i) - lowerBounds(i))/numberOfSamples;
+
+	}
+
+
+	for(unsigned int i=0; i<numberOfSamples; i++){
+
+		rowvec sample1 = samples.row(i);
+		for(unsigned int j=0; j<numberOfSamples; j++){
+
+			rowvec sample2 = samples.row(j);
+			for(unsigned int k=0; k<this->numberOfDesignVariables; k++){
+
+				if(i!=j){
+
+					double dx = fabs(sample1(k) - sample2(k));
+					if(dx < maximumDx(k)){
+						sample1.print();
+						sample2.print();
+						std::cout<<"dx = "<<dx<<"\n";
+						std::cout<<"maximumDx(k) = "<<maximumDx(k)<<"\n";
+						ifTooClose = true;
+						return ifTooClose;
+					}
+
+				}
+
+			}
+
+		}
+
+	}
+
+
+
+
+	return ifTooClose;
 
 }
 
@@ -260,7 +326,7 @@ void LHSSamples::visualize(void){
 void LHSSamples::printSamples(void){
 
 
-printMatrix(this->samples,"LHS Samples");
+	printMatrix(this->samples,"LHS Samples");
 
 
 
@@ -412,7 +478,7 @@ void RandomSamples::visualize(void){
 void RandomSamples::printSamples(void){
 
 
-printMatrix(this->samples,"Random Samples");
+	printMatrix(this->samples,"Random Samples");
 
 
 
@@ -704,7 +770,7 @@ void FullFactorialSamples::visualize(void){
 void FullFactorialSamples::printSamples(void){
 
 
-printMatrix(this->samples,"Full Factorial Samples");
+	printMatrix(this->samples,"Full Factorial Samples");
 
 
 

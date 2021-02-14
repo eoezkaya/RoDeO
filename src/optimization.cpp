@@ -51,7 +51,7 @@
 using namespace arma;
 
 ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, double (*objFun)(double *), unsigned int dimension)
-: surrogateModel(objectiveFunName){
+: surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName){
 
 
 	dim = dimension;
@@ -64,7 +64,7 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, double (*objF
 }
 
 ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int dimension)
-: surrogateModel(objectiveFunName){
+: surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName){
 
 
 	dim = dimension;
@@ -89,19 +89,6 @@ ObjectiveFunction::ObjectiveFunction(){
 	executablePath = "None";
 	fileNameObjectiveFunctionRead = "None";
 	fileNameDesignVector = "None";
-
-
-}
-
-void ObjectiveFunction::readConfigFile(void){
-
-	cout<<"Reading configuration file:"<<settings.config_file<<"\n";
-
-	if(!file_exist(settings.config_file.c_str())){
-
-		cout<<"ERROR: Configuration file "<<settings.config_file<<" does not exist!\n";
-		abort();
-	}
 
 
 }
@@ -159,7 +146,11 @@ double ObjectiveFunction::calculateExpectedImprovement(rowvec x){
 
 double ObjectiveFunction::evaluate(rowvec x,bool ifAddToData = true){
 
-
+#if 0
+	std::cout<<fileNameObjectiveFunctionRead<<"\n";
+	std::cout<<executableName<<"\n";
+	std::cout<<fileNameDesignVector<<"\n";
+#endif
 	double functionValue = 0.0;
 
 	if( objectiveFunPtr != empty){
@@ -193,13 +184,13 @@ double ObjectiveFunction::evaluate(rowvec x,bool ifAddToData = true){
 
 		std::ifstream ifile(fileNameObjectiveFunctionRead, std::ios::in);
 
-		    if (!ifile.is_open()) {
+		if (!ifile.is_open()) {
 
-		        std::cout << "ERROR: There was a problem opening the input file!\n";
-		        abort();
-		    }
+			std::cout << "ERROR: There was a problem opening the input file!\n";
+			abort();
+		}
 
-		    ifile >> functionValue;
+		ifile >> functionValue;
 
 	}
 	else{
@@ -227,8 +218,10 @@ double ObjectiveFunction::evaluate(rowvec x,bool ifAddToData = true){
 		}
 		newsample(dim) = functionValue;
 
+		std::cout<<name<<" = "<<functionValue<<"\n";
 
-#if 1
+
+#if 0
 		printf("new sample: \n");
 		newsample.print();
 #endif
@@ -260,7 +253,11 @@ void ObjectiveFunction::print(void) const{
 	std::cout<<"Objective Function"<<std::endl;
 	std::cout<<"Name: "<<name<<std::endl;
 	std::cout<<"Dimension: "<<dim<<std::endl;
-	std::cout<<std::endl;
+	std::cout<<"executableName: "<<executableName<<"\n";
+	std::cout<<"executablePath: "<<executablePath<<"\n";
+	std::cout<<"Output filename: "<<fileNameObjectiveFunctionRead<<"\n";
+	std::cout<<"Input filename: "<<fileNameDesignVector<<"\n";
+
 
 	surrogateModel.printSurrogateModel();
 
@@ -269,11 +266,16 @@ void ObjectiveFunction::print(void) const{
 
 ConstraintFunction::ConstraintFunction(){
 
+	ID = 0;
 	dim = 0;
 	name = "None";
 	pConstFun = empty;
 	inequalityType = "None";
 	targetValue = 0.0;
+	executableName = "None";
+	executablePath = "None";
+	fileNameConstraintFunctionRead = "None";
+	fileNameDesignVector = "None";
 
 }
 
@@ -284,6 +286,11 @@ ConstraintFunction::ConstraintFunction(std::string constraintName, std::string c
 	name = constraintName;
 	pConstFun = fun_ptr;
 	inequalityType = constraintType;
+	executableName = "None";
+	executablePath = "None";
+	fileNameConstraintFunctionRead = "None";
+	fileNameDesignVector = "None";
+
 
 	assert(dim < 1000);
 	assert(constraintType == "lt" || constraintType == "gt");
@@ -303,6 +310,60 @@ ConstraintFunction::ConstraintFunction(std::string constraintName, std::string c
 }
 
 
+ConstraintFunction::ConstraintFunction(std::string constraintName, std::string constraintType, double constraintValue, unsigned int dimension):
+																					surrogateModel(constraintName),surrogateModelGradient(constraintName){
+
+	ifNeedsSurrogate = true;
+	pConstFun = empty;
+	targetValue = constraintValue;
+	dim = dimension;
+	name = constraintName;
+	inequalityType = constraintType;
+	executableName = "None";
+	executablePath = "None";
+	fileNameConstraintFunctionRead = "None";
+	fileNameDesignVector = "None";
+
+
+
+}
+
+void ConstraintFunction::setID(int givenID){
+
+	ID = givenID;
+
+}
+
+
+
+void ConstraintFunction::setFileNameReadConstraintFunction(std::string fileName){
+
+	fileNameConstraintFunctionRead = fileName;
+
+}
+
+void ConstraintFunction::setFileNameDesignVector(std::string fileName){
+
+	fileNameDesignVector = fileName;
+
+}
+
+void ConstraintFunction::setExecutablePath(std::string path){
+
+	executablePath = path;
+
+}
+
+void ConstraintFunction::setExecutableName(std::string exeName){
+
+	executableName = exeName;
+
+}
+
+
+
+
+
 void ConstraintFunction::saveDoEData(mat data) const{
 
 	std::string fileName = surrogateModel.getInputFileName();
@@ -315,6 +376,7 @@ void ConstraintFunction::saveDoEData(mat data) const{
 void ConstraintFunction::trainSurrogate(void){
 
 	assert(ifNeedsSurrogate);
+	surrogateModel.initializeSurrogateModel();
 	surrogateModel.train();
 
 }
@@ -330,9 +392,9 @@ double ConstraintFunction::ftilde(rowvec x) const{
 bool ConstraintFunction::checkFeasibility(double value){
 
 	bool result = true;
-	if (inequalityType == "lt"){
+	if (inequalityType == "lt" || inequalityType == "<"){
 
-		if(value > targetValue ){
+		if(value >= targetValue ){
 
 			result = false;
 
@@ -340,9 +402,9 @@ bool ConstraintFunction::checkFeasibility(double value){
 
 	}
 
-	if (inequalityType == "gt"){
+	if (inequalityType == "gt" || inequalityType == ">"){
 
-		if(value < targetValue ){
+		if(value <= targetValue ){
 
 			result = false;
 
@@ -356,7 +418,127 @@ bool ConstraintFunction::checkFeasibility(double value){
 
 double ConstraintFunction::evaluate(rowvec x, bool ifAddToData = true){
 
-	double functionValue =  pConstFun(x.memptr());
+
+	double functionValue = 0.0;
+
+	if( pConstFun != empty){
+
+		functionValue =  pConstFun(x.memptr());
+
+	}
+
+	else if (fileNameConstraintFunctionRead != "None" && executableName != "None" && fileNameDesignVector != "None"){
+
+		bool ifRun = true;
+		if(!IDToFunctionsShareOutputExecutable.empty()){
+			std::vector<int>::iterator result = std::min_element(IDToFunctionsShareOutputExecutable.begin(), IDToFunctionsShareOutputExecutable.end());
+			unsigned int minIDshareExe = *result;
+
+
+			if(this->ID > minIDshareExe){
+
+				ifRun = false;
+#if 0
+				std::cout<<"No need to call this constraint exe\n";
+#endif
+			}
+
+
+		}
+
+
+
+
+		if(ifRun){
+
+
+			bool ifSaveIsSuccessful= x.save(fileNameDesignVector,raw_ascii);
+
+			if(!ifSaveIsSuccessful){
+
+				std::cout << "ERROR: There was a problem while saving the design vector!\n";
+				abort();
+
+			}
+
+			std::string runCommand;
+			if(this->executablePath!= "None") {
+
+				runCommand = executablePath +"/" + executableName;
+			}
+			else{
+				runCommand = "./" + executableName;
+			}
+#if 0
+			std::cout<<runCommand<<"\n";
+#endif
+
+			system(runCommand.c_str());
+
+
+		}
+
+
+		int numberOfTotalItemsToRead = 1;
+		int IndexOfItemToRead = 1;
+
+		if(!IDToFunctionsShareOutputFile.empty()){
+
+			numberOfTotalItemsToRead = IDToFunctionsShareOutputFile.size()+1;
+
+
+			for (auto it = IDToFunctionsShareOutputFile.begin(); it != IDToFunctionsShareOutputFile.end(); it++){
+
+				if(*it < int(ID)) {
+
+					IndexOfItemToRead ++;
+				}
+
+			}
+
+
+
+		}
+#if 0
+		std::cout<<"numberOfTotalItemsToRead = "<<numberOfTotalItemsToRead<<"\n";
+		std::cout<<"IndexOfItemToRead = "<<IndexOfItemToRead<<"\n";
+#endif
+
+
+		std::ifstream ifile(fileNameConstraintFunctionRead, std::ios::in);
+
+		if (!ifile.is_open()) {
+
+			std::cout << "ERROR: There was a problem opening the input file!\n";
+			abort();
+		}
+
+		double bufferRead;
+		for(int i=0; i<numberOfTotalItemsToRead; i++){
+
+			ifile >> bufferRead;
+
+			if(i == IndexOfItemToRead-1) functionValue = bufferRead;
+
+
+		}
+
+
+	}
+	else{
+
+		cout<<"ERROR: Cannot evaluate the objective function. Check settings!\n";
+		abort();
+	}
+
+	if(std::isnan(functionValue)){
+
+		cout<<"ERROR: NaN as the objective function value!\n";
+		abort();
+
+	}
+
+
 
 	assert(std::isnan(functionValue) == false);
 
@@ -372,8 +554,9 @@ double ConstraintFunction::evaluate(rowvec x, bool ifAddToData = true){
 		}
 		newsample(dim) = functionValue;
 
+		std::cout<<name<<" = "<<functionValue<<"\n";
 
-#if 1
+#if 0
 		printf("new sample: \n");
 		newsample.print();
 #endif
@@ -391,247 +574,34 @@ double ConstraintFunction::evaluate(rowvec x, bool ifAddToData = true){
 
 void ConstraintFunction::print(void) const{
 
+	std::cout<<"#####################################################\n";
 	std::cout<<std::endl;
-	std::cout<<"Constraint Function"<<std::endl;
+	std::cout<<"Constraint Function\n";
+	std::cout<<"ID: "<<ID<<std::endl;
 	std::cout<<"Name: "<<name<<std::endl;
 	std::cout<<"Dimension: "<<dim<<std::endl;
 	std::cout<<"Type of constraint: "<<inequalityType<<" "<<targetValue<<std::endl;
 	std::cout<<"Needs surrogate:"<<ifNeedsSurrogate<<std::endl;
+	std::cout<<"Executable name: "<<executableName<<"\n";
+	std::cout<<"Executable path: "<<executablePath<<"\n";
+	std::cout<<"Input file name: "<<fileNameDesignVector<<"\n";
+	std::cout<<"Output file name: "<<fileNameConstraintFunctionRead<<"\n";
+	std::cout<<"Shares executable with:";
+	for (std::vector<int>::const_iterator i = IDToFunctionsShareOutputExecutable.begin(); i != IDToFunctionsShareOutputExecutable.end(); ++i)
+		std::cout << " "<<*i << ' ';
+
+	std::cout<<"Shares output file with:";
+	for (std::vector<int>::const_iterator i = IDToFunctionsShareOutputFile.begin(); i != IDToFunctionsShareOutputFile.end(); ++i)
+		std::cout << " "<<*i << ' ';
+
 	std::cout<<std::endl;
 
+
 	surrogateModel.printSurrogateModel();
-
+	std::cout<<"#####################################################\n";
 }
 
 
-
-
-
-OptimizerWithGradients::OptimizerWithGradients(){
-
-	name = "None";
-	size_of_dv = 0;
-	max_number_of_samples  = 0;
-	iterMaxEILoop = 0;
-	doesValidationFileExist = false;
-
-}
-
-
-
-OptimizerWithGradients::OptimizerWithGradients(int input_size){
-
-	name = "None";
-	size_of_dv = input_size;
-	max_number_of_samples  = 0;
-	lower_bound_dv.zeros(input_size);
-	upper_bound_dv.zeros(input_size);
-	iterMaxEILoop = input_size*10000;
-	doesValidationFileExist = false;
-
-}
-
-OptimizerWithGradients::OptimizerWithGradients(std::string nameTestcase,int input_size){
-
-	name = nameTestcase;
-	size_of_dv = input_size;
-	max_number_of_samples  = 0;
-	lower_bound_dv.zeros(input_size);
-	upper_bound_dv.zeros(input_size);
-	iterMaxEILoop = input_size*10000;
-	doesValidationFileExist = false;
-
-}
-
-
-
-void OptimizerWithGradients::print(void){
-
-	printf("....... %s optimization using max %d samples .........\n",name.c_str(),max_number_of_samples);
-	if(lower_bound_dv(0) == 0 && upper_bound_dv(0) == 0 ){
-
-		fprintf(stderr, "Error: Box constraints are not set! at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
-
-
-	}
-
-}
-
-//void OptimizerWithGradients::EfficientGlobalOptimization(void){
-//
-//	print();
-//
-//	AggregationModel ObjFunModel(name,size_of_dv);
-//
-//	if(doesValidationFileExist){
-//
-//		std::string validation_filename = name + "_validation.csv";
-//		ObjFunModel.validationset_input_filename = validation_filename;
-//		ObjFunModel.visualizeAggModelValidation = true;
-//		ObjFunModel.visualizeKrigingValidation = true;
-//		ObjFunModel.visualizeKernelRegressionValidation = false;
-//	}
-//
-//	ObjFunModel.number_of_cv_iterations = 0;
-//
-//	ObjFunModel.train();
-//
-//	/* main loop for optimization */
-//	unsigned int simulationCount = 0;
-//	unsigned int iterOpt=0;
-//
-//	double bestObjFunVal = LARGE;
-//	rowvec best_dvGlobal(size_of_dv);
-//	unsigned int bestIndx = -1;
-//
-//	while(1){
-//		iterOpt++;
-//#if 1
-//		printf("Optimization Iteration = %d\n",iterOpt);
-//		printf("Sample minimum = %10.7f\n",ObjFunModel.ymin );
-//#endif
-//
-//		double maxEI = 0.0;
-//		rowvec best_dv(size_of_dv);
-//
-//#pragma omp parallel for
-//		for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
-//			rowvec dv(size_of_dv);
-//			rowvec dvNorm(size_of_dv);
-//
-//			/* Generate a random design vector */
-//			for(unsigned int k=0; k<size_of_dv; k++){
-//
-//				dv(k)= generateRandomDouble(lower_bound_dv(k), upper_bound_dv(k));
-//				dvNorm(k) = (1.0/ObjFunModel.dim)*(dv(k) - ObjFunModel.xmin(k)) / (ObjFunModel.xmax(k) - ObjFunModel.xmin(k));
-//			}
-//
-//#if 0
-//			printf("dv = \n");
-//			dv.print();
-//#endif
-//			double ftilde = 0.0;
-//			double ssqr   = 0.0;
-//			ObjFunModel.ftilde_and_ssqr(dvNorm,&ftilde,&ssqr);
-//
-//
-//#if 0
-//			printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
-//#endif
-//
-//			double	standart_error = sqrt(ssqr)	;
-//
-//			double EI = 0.0;
-//
-//			if(standart_error!=0.0){
-//
-//				double	EIfac = (ObjFunModel.ymin - ftilde)/standart_error;
-//
-//				/* calculate the Expected Improvement value */
-//				EI = (ObjFunModel.ymin - ftilde)*cdf(EIfac,0.0,1.0)+ standart_error * pdf(EIfac,0.0,1.0);
-//			}
-//			else{
-//
-//				EI = 0.0;
-//
-//			}
-//#if 0
-//			printf("EI value = %15.10f\n",EI);
-//#endif
-//			if(EI > maxEI){
-//
-//				best_dv = dv;
-//				maxEI = EI;
-//#if 1
-//				printf("A design with better EI value has been find, EI = %15.10f\n", EI);
-//				best_dv.print();
-//#endif
-//			}
-//
-//
-//		} /* end of EI loop */
-//
-//		/* now make a simulation for the most promising design */
-//
-//		rowvec grad(size_of_dv);
-//		double fVal = adj_fun(best_dv.memptr(), grad.memptr());
-//		double objFunVal = fVal;
-//
-//		if(objFunVal < bestObjFunVal){
-//
-//			bestIndx = iterOpt;
-//			bestObjFunVal = objFunVal;
-//			best_dvGlobal = best_dv;
-//#if 1
-//			printf("\nBetter design has been found:\n");
-//			printf("dv =");
-//			best_dv.print();
-//			printf("Objective function value = %15.10f\n",objFunVal);
-//#endif
-//
-//		}
-//
-//
-//		simulationCount ++;
-//#if 1
-//		printf("Simulation at dv = \n");
-//		best_dv.print();
-//		printf("True value of the function = %15.10f\n",fVal);
-//		printf("grad = \n");
-//		grad.print();
-//
-//
-//#endif
-//
-//		/* new row that will be added to the data */
-//
-//		rowvec newsample(2*size_of_dv +1);
-//
-//		for(unsigned int k=0; k<size_of_dv; k++){
-//
-//			newsample(k) = best_dv(k);
-//
-//		}
-//		newsample(size_of_dv) = fVal;
-//
-//		for(unsigned int k=size_of_dv+1; k<2*size_of_dv+1; k++){
-//
-//			newsample(k) = grad(k-size_of_dv-1);
-//
-//		}
-//#if 1
-//		printf("new sample: \n");
-//		newsample.print();
-//#endif
-//
-//
-//
-//		ObjFunModel.data.resize(ObjFunModel.N+1,2*ObjFunModel.dim+1);
-//
-//		ObjFunModel.data.row(ObjFunModel.N) = newsample;
-//		ObjFunModel.data.save(ObjFunModel.input_filename,csv_ascii);
-//		ObjFunModel.update();
-//
-//
-//		if(simulationCount >= max_number_of_samples){
-//
-//			printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
-//			printf("Global optimal solution:\n");
-//			printf("dv =");
-//			best_dv.print();
-//			printf("Objective function value = %15.10f\n",bestObjFunVal);
-//			printf("Index = %d\n",bestIndx);
-//			break;
-//		}
-//
-//
-//
-//	}
-//
-//
-//
-//}
 
 
 
@@ -661,9 +631,34 @@ Optimizer::Optimizer(std::string nameTestcase, int numberOfOptimizationParams, s
 	howOftenTrainModels = 10; /* train surrogates in every 10 iteration */
 
 
-	assert(optimizationType == "minimize" || optimizationType == "maximize");
+}
+
+void Optimizer::setProblemType(std::string type){
+
+	if(type == "MAXIMIZATION" || type == "Maximize" || type == "maximization" || type == "maximize" ){
+
+		type = "maximize";
+	}
+
+	if(type == "MINIMIZATION" || type == "Minimize" || type == "minimization" || type == "minimization"){
+
+		type = "minimize";
+	}
+
+
+	optimizationType = type;
+
+
 
 }
+void Optimizer::setMaximumNumberOfIterations(unsigned int maxIterations){
+
+	maxNumberOfSamples = maxIterations;
+
+}
+
+
+
 
 void Optimizer::setBoxConstraints(std::string filename){
 
@@ -746,6 +741,19 @@ void Optimizer::evaluateConstraints(rowvec x, rowvec &constraintValues, bool ifA
 }
 
 
+void Optimizer::estimateConstraints(rowvec x, rowvec &constraintValues){
+
+	unsigned int contraintIt = 0;
+	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+
+		constraintValues(contraintIt) = it->ftilde(x);
+		contraintIt++;
+	}
+
+
+}
+
+
 bool Optimizer::checkBoxConstraints(void) const{
 
 	bool flagWithinBounds = true;
@@ -782,11 +790,7 @@ void Optimizer::print(void) const{
 
 	objFun.print();
 
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-		it->print();
-
-	}
+	printConstraints();
 
 	if (constraintFunctions.begin() == constraintFunctions.end()){
 
@@ -799,12 +803,24 @@ void Optimizer::print(void) const{
 
 }
 
+void Optimizer::printConstraints(void) const{
+
+	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+
+		it->print();
+
+	}
+
+
+
+}
+
 void Optimizer::visualizeOptimizationHistory(void) const{
 
 	if(dimension == 2){
 
 		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_2d_opthist.py "+ name;
-#if 1
+#if 0
 		cout<<python_command<<"\n";
 #endif
 		FILE* in = popen(python_command.c_str(), "r");
@@ -905,11 +921,46 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 
 #if 0
+			 int tid = omp_get_thread_num();
+			 if(tid ==0)
+			{
 			printf("dv = \n");
 			dv.print();
+
+			rowvec dvOriginalCoordinates =normalizeRowVectorBack(dv, lowerBounds,upperBounds);
+
+			printVector(dvOriginalCoordinates,"dvOriginalCoordinates");
+			}
 #endif
 
 			double EI = objFun.calculateExpectedImprovement(dv);
+
+			/* check if the constaints are satisfied */
+			if(constraintFunctions.size() > 0){
+				rowvec estimatesForConstaints(constraintFunctions.size());
+
+				estimateConstraints(dv,estimatesForConstaints);
+#if 0
+				if(tid ==0)
+			{
+				printVector(estimatesForConstaints,"estimatesForConstaints");
+
+			}
+#endif
+				bool ifConstraintsSatisfied = checkConstraintFeasibility(estimatesForConstaints);
+
+				if(!ifConstraintsSatisfied){
+
+					EI = -LARGE;
+				}
+
+			}
+
+
+
+
+
+
 
 #if 0
 			printf("EI value = %15.10f\n",EI);
@@ -1071,7 +1122,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 		best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds,upperBounds);
 
 
-#if 0
+#if 1
 		printf("The most promising design (not normalized):\n");
 		best_dv.print();
 #endif
@@ -1082,18 +1133,21 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 		double fVal = objFun.evaluate(best_dv);
 
+
+
 		rowvec constraintValues(constraintFunctions.size());
 
+		bool ifConstraintsSatisfied = true;
 		if(constraintFunctions.size() > 0){
 
 
 			evaluateConstraints(best_dv,constraintValues);
 
-			bool ifConstraintsSatisfied = checkConstraintFeasibility(constraintValues);
+			ifConstraintsSatisfied = checkConstraintFeasibility(constraintValues);
 
 			if(!ifConstraintsSatisfied){
 
-				fVal = LARGE;
+				std::cout<<"The new sample does not satisfy all the constraints\n";
 			}
 
 		}
@@ -1126,7 +1180,10 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 #endif
 
+		if(!ifConstraintsSatisfied){
 
+			fVal = LARGE;
+		}
 
 		double objFunVal = fVal;
 
@@ -1197,6 +1254,8 @@ void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 	if(methodID == LHS){
 
 		LHSSamples DoE(dimension, lowerBounds, upperBounds, howManySamples);
+
+
 		if(dimension == 2) DoE.visualize();
 		std::string filename= this->name + "_samples.csv";
 		DoE.saveSamplesToFile(filename);
@@ -1214,6 +1273,9 @@ void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 	rowvec constraintValues(numberOfConstraints);
 	for(unsigned int i=0; i<howManySamples; i++){
 
+		std::cout<<"Evaluating sample "<<i<<"\n";
+		std::cout<<"##########################################\n";
+
 		rowvec designVector = samples.row(i);
 
 
@@ -1222,6 +1284,8 @@ void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 		}
 		bufferDataObjFunction(i,dimension) = objFun.evaluate(designVector, false);
+
+		std::cout<<objFun.name<<" = "<<bufferDataObjFunction(i,dimension)<<"\n";
 
 		evaluateConstraints(designVector, constraintValues,false);
 
@@ -1238,12 +1302,15 @@ void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 			bufferDataConstraints(i,dimension,k) = constraintValues(k);
 
+			std::cout<<this->constraintFunctions.at(k).name<<" = "<<constraintValues(k)<<"\n";
+
 		}
 
 
 	}
 
 	objFun.saveDoEData(bufferDataObjFunction);
+
 
 
 	unsigned int contraintIt = 0;
@@ -1265,7 +1332,7 @@ void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 }
 void testOptimizationWingweight(void){
-/*
+	/*
 	Sw: Wing Area (ft^2) (150,200)
 	 *  Wfw: Weight of fuel in the wing (lb) (220,300)
 	 *  A: Aspect ratio (6,10)
@@ -1278,7 +1345,7 @@ void testOptimizationWingweight(void){
 	 *  Wp: paint weight (lb/ft^2) (0.025, 0.08)
 
 
-*/
+	 */
 	vec lb(10);
 	vec ub(10);
 	lb(0) = 150; ub(0) = 200;

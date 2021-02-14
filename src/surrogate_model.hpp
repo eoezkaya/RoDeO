@@ -97,6 +97,7 @@ public:
 
 	SURROGATE_MODEL modelID;
 	bool ifUsesGradientData;
+	bool ifprintToScreen;
 
 	SurrogateModel();
 	SurrogateModel(std::string name);

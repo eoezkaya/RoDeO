@@ -34,8 +34,7 @@
 
 #include <armadillo>
 #include "kriging_training.hpp"
-
-
+#include "trust_region_gek.hpp"
 
 
 
@@ -46,21 +45,23 @@ class ObjectiveFunction{
 
 
 private:
-	std::string name;
+
 	double (*objectiveFunPtr)(double *);
 	std::string executableName;
 	std::string executablePath;
 	std::string fileNameObjectiveFunctionRead;
 	std::string fileNameDesignVector;
-	std::string settingsFileName;
+
 	KrigingModel surrogateModel;
+	AggregationModel surrogateModelGradient;
 	unsigned int dim;
 	bool ifDoErequired;
 	bool ifWarmStart;
+	bool ifGradientAvailable;
 
 public:
 
-
+	std::string name;
 	ObjectiveFunction(std::string, double (*objFun)(double *), unsigned int);
 	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
@@ -88,21 +89,41 @@ class ConstraintFunction{
 
 
 private:
+	unsigned int ID;
 	unsigned int dim;
-	std::string name;
+
 	double (*pConstFun)(double *);
 	double targetValue;
 	std::string inequalityType;
 
 	KrigingModel surrogateModel;
-public:
+	AggregationModel surrogateModelGradient;
 
+	std::string executableName;
+	std::string executablePath;
+	std::string fileNameConstraintFunctionRead;
+	std::string fileNameDesignVector;
+
+	bool ifGradientAvailable;
+
+public:
+	std::string name;
 	bool ifNeedsSurrogate;
+	std::vector<int> IDToFunctionsShareOutputFile;
+	std::vector<int> IDToFunctionsShareOutputExecutable;
+
 
 	ConstraintFunction(std::string, std::string, double, double (*constFun)(double *), unsigned int dimension, bool ifNeedsSurrogate = false);
+	ConstraintFunction(std::string, std::string, double, unsigned int);
 	ConstraintFunction();
 	void saveDoEData(mat) const;
 	void trainSurrogate(void);
+
+	void setFileNameReadConstraintFunction(std::string);
+	void setExecutablePath(std::string);
+	void setExecutableName(std::string);
+	void setFileNameDesignVector(std::string);
+	void setID(int);
 
 	bool checkFeasibility(double value);
 
@@ -113,30 +134,6 @@ public:
 };
 
 
-
-
-
-
-class OptimizerWithGradients {
-public:
-	std::string name;
-	unsigned int size_of_dv;
-	unsigned int max_number_of_samples;
-	unsigned int iterMaxEILoop;
-	vec lower_bound_dv;
-	vec upper_bound_dv;
-	bool doesValidationFileExist = true;
-
-	OptimizerWithGradients();
-	OptimizerWithGradients(int);
-	OptimizerWithGradients(std::string ,int );
-	void print(void);
-	void EfficientGlobalOptimization(void);
-
-
-	double (*adj_fun)(double *, double *);
-
-};
 
 
 class Optimizer {
@@ -172,11 +169,14 @@ public:
 
 	Optimizer(std::string ,int, std::string);
 	void print(void) const;
+	void printConstraints(void) const;
 	void visualizeOptimizationHistory(void) const;
 	void EfficientGlobalOptimization(void);
 	void trainSurrogates(void);
 	void performDoE(unsigned int howManySamples, DoE_METHOD methodID);
 
+	void setProblemType(std::string);
+	void setMaximumNumberOfIterations(unsigned int );
 	void setBoxConstraints(std::string filename="BoxConstraints.csv");
 	void setBoxConstraints(double lb, double ub);
 	void setBoxConstraints(vec lb, vec ub);
@@ -184,6 +184,7 @@ public:
 	void addConstraint(ConstraintFunction &constFunc);
 
 	void evaluateConstraints(rowvec x, rowvec &constraintValues,bool);
+	void estimateConstraints(rowvec x, rowvec &constraintValues);
 
 	bool checkBoxConstraints(void) const;
 	bool checkConstraintFeasibility(rowvec constraintValues);

@@ -48,9 +48,13 @@ public:
 	Rodeo_settings(){
 
 		keywords = new std::string[number_of_keywords];
-		keywords[0]="cwd:";
-		keywords[1]="python_dir:";
-		keywords[2]="config_file:";
+		keywords[0]="WORKING_DIRECTORY=";
+		keywords[1]="PYTHON_DIRECTORY=";
+		keywords[2]="CONFIGURATION_FILE=";
+
+		cwd = "None";
+		python_dir = "None";
+		config_file = "None";
 
 	}
 
@@ -59,16 +63,17 @@ public:
 
 	void print(void){
 		printf("\nSettings:\n");
-		printf("cwd: %s\n", cwd.c_str());
-		printf("python_dir: %s\n", python_dir.c_str());
-		printf("config_file: %s\n", config_file.c_str());
+		printf("WORKING_DIRECTORY= %s\n", cwd.c_str());
+		printf("PYTHON_DIRECTORY= %s\n", python_dir.c_str());
+		printf("CONFIGURATION_FILE= %s\n", config_file.c_str());
+		printf("\n\n");
 
 	}
 
 	void read(void){
 
 #if 1
-		printf("reading settings...\n");
+		printf("Reading settings...\n");
 #endif
 		size_t len = 0;
 		ssize_t readlen;
@@ -77,7 +82,7 @@ public:
 
 		if (inp == NULL){
 
-			printf("Error: settings.dat cannot be opened\n");
+			printf("Error: The file: settings.dat cannot be opened\n");
 			exit(-1);
 		}
 
@@ -146,6 +151,22 @@ public:
 		fclose(inp);
 
 		print();
+
+		if(config_file == "None"){
+
+			std::cout<<"ERROR: No configuration file is specified in settings.dat!\n";
+			abort();
+
+		}
+
+		if(cwd == "None"){
+
+			std::cout<<"ERROR: No working directory is specified in settings.dat!\n";
+			abort();
+
+		}
+
+
 	}
 } ;
 

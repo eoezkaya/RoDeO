@@ -51,33 +51,46 @@ private:
 	std::string problemName;
 	int dimension;
 	int numberOfConstraints;
+	int maximumNumberOfSimulations;
+	int maximumNumberDoESamples;
 	vec boxConstraintsUpperBounds;
 	vec boxConstraintsLowerBounds;
 	vec constraintValues;
 
 	bool ifObjectiveFunctionNameIsSet;
 	bool ifObjectiveFunctionOutputFileIsSet;
+	bool ifConstraintFunctionOutputFileIsSet;
 	bool ifNumberOfConstraintsSet;
 	bool ifProblemDimensionSet;
 	bool ifUpperBoundsSet;
 	bool ifLowerBoundsSet;
 	bool ifProblemTypeSet;
+	bool ifmaximumNumberOfSimulationsSet;
+	bool ifmaximumNumberOfDoESamplesSet;
+	bool ifexecutablePathObjectiveFunctionSet;
+	bool ifDesignVectorFileNameSet;
 
 
-	bool IsGradientsAvailableForObjectiveFunction;
+	std::vector<bool> IsGradientsAvailable;
+	std::vector<std::string> executablesWithGradient;
 
+	bool ifWarmStart;
 	std::string objectiveFunctionName;
 	std::vector<std::string> constraintNames;
 	std::vector<std::string> constraintTypes;
 	std::vector<std::string> executableNames;
 	std::vector<std::string> executablePaths;
-	std::string executableInputFile;
+	std::string designVectorFilename;
 	std::vector<std::string> executableOutputFiles;
+
+	bool checkifProblemTypeIsValid(std::string) const;
+	void setObjectiveFunction(ObjectiveFunction & );
+	void setConstraint(ConstraintFunction & constraintFunc, int indx);
 
 
 public:
 	RoDeODriver();
-	void checkConsistencyOfConfigParams(void);
+	void checkConsistencyOfConfigParams(void) const;
 	void readConfigFile(void);
 	void runDriver(void);
 

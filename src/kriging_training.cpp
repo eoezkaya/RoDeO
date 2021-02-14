@@ -311,7 +311,7 @@ void KrigingModel::updateModelWithNewData(mat newData){
 	ymax = max(rawData.col(dim));
 	yave = mean(rawData.col(dim));
 
-#if 1
+#if 0
 	printf("ymin = %15.10f, ymax = %15.10f, yave = %15.10f\n",ymin,ymax,yave);
 #endif
 	updateAuxilliaryFields();
@@ -394,7 +394,7 @@ void KrigingModel::updateModelWithNewData(void){
 	ymax = max(rawData.col(dim));
 	yave = mean(rawData.col(dim));
 
-#if 1
+#if 0
 	printf("ymin = %15.10f, ymax = %15.10f, yave = %15.10f\n",ymin,ymax,yave);
 #endif
 	updateAuxilliaryFields();
@@ -572,13 +572,23 @@ void KrigingModel::train(void){
 		abort();
 	}
 
-	printf("\nTraining Kriging response surface for the data : %s\n",input_filename.c_str());
+	if(ifprintToScreen){
+
+		printf("\nTraining Kriging response surface for the data : %s\n",input_filename.c_str());
+
+	}
 
 	vec ysKriging = y;
 
 
 	if(linear_regression){
-		printf("Linear regression is active...\n");
+
+		if(ifprintToScreen){
+
+			std::cout<<"Linear regression is active...\n";
+
+
+		}
 
 		linearModel.train();
 
@@ -606,9 +616,15 @@ void KrigingModel::train(void){
 
 
 		if (tid == 0){
-			printf("number of threads used : %d\n", number_of_treads);
+
 			max_number_of_function_calculations = max_number_of_function_calculations/number_of_treads;
-			printf("number of function evaluations per thread : %d\n", max_number_of_function_calculations);
+
+			if(ifprintToScreen){
+
+				printf("number of threads used : %d\n", number_of_treads);
+				printf("number of function evaluations per thread : %d\n", max_number_of_function_calculations);
+
+			}
 		}
 
 	}
@@ -657,7 +673,9 @@ void KrigingModel::train(void){
 		if(file_exist(hyperparameters_filename.c_str())){
 #pragma omp master
 			{
-				printf("Hyperparameter file: %s exists...\n",hyperparameters_filename.c_str() );
+				if(ifprintToScreen){
+					printf("Hyperparameter file: %s exists...\n",hyperparameters_filename.c_str() );
+				}
 			}
 
 
@@ -675,8 +693,10 @@ void KrigingModel::train(void){
 #if 1
 #pragma omp master
 			{
-				printf("hyperparameters read from the file (theta; gamma):\n");
-				printVector(weights_read_from_file);
+				if(ifprintToScreen){
+					printf("hyperparameters read from the file (theta; gamma):\n");
+					printVector(weights_read_from_file);
+				}
 			}
 #endif
 
@@ -684,7 +704,9 @@ void KrigingModel::train(void){
 #if 1
 #pragma omp master
 				{
-					printf("Warning: hyper parameters read from the file do not match the problem dimensions!\n");
+					if(ifprintToScreen){
+						printf("Warning: Hyper parameters read from the file do not match the problem dimensions!\n");
+					}
 				}
 #endif
 
@@ -716,9 +738,12 @@ void KrigingModel::train(void){
 #if 1
 #pragma omp master
 		{
-			printf("Initial design:\n");
-			printVector(initial_design.theta,"theta");
-			printVector(initial_design.gamma,"gamma");
+			if(ifprintToScreen){
+				printf("Initial design:\n");
+				printVector(initial_design.theta,"theta");
+				printVector(initial_design.gamma,"gamma");
+
+			}
 		}
 #endif
 
@@ -890,10 +915,11 @@ void KrigingModel::train(void){
 
 	} /* end of parallel section */
 
-	printf("Kring training is done\n");
-	printf("Kriging weights:\n");
-	printVector(kriging_weights);
-
+	if(ifprintToScreen){
+		printf("Kring training is done\n");
+		printf("Kriging weights:\n");
+		printVector(kriging_weights);
+	}
 
 	updateAuxilliaryFields();
 

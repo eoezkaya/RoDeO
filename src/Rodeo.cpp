@@ -96,12 +96,14 @@ int main(void){
 
 	if (ret != 0){
 
-		cout<<"Error: Cannot change directory!\n";
+		cout<<"Error: Cannot change directory! Are you sure that the directory: "<<settings.cwd<<" exists?\n";
 		abort();
 	}
 
 	RoDeODriver driverToRun;
 	driverToRun.readConfigFile();
+
+	abort();
 	driverToRun.runDriver();
 
 

@@ -154,7 +154,7 @@ SurrogateModel::SurrogateModel(){
 	numberOfHyperParameters = 0;
 	ifInitialized = false;
 	ifUsesGradientData = false;
-
+	ifprintToScreen = false;
 }
 
 SurrogateModel::SurrogateModel(std::string name){
@@ -166,6 +166,7 @@ SurrogateModel::SurrogateModel(std::string name){
 	input_filename = name +".csv";
 	ifInitialized = false;
 	ifUsesGradientData = false;
+	ifprintToScreen = false;
 
 }
 

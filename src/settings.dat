@@ -1,5 +1,7 @@
 # current working directory
-cwd: /home/emre/RoDeO/Tests/HimmelblauOptimization
+WORKING_DIRECTORY= /home/emre/RoDeO/Tests/HimmelblauAdjoint
 # directory for the python scripts
-python_dir: /home/emre/RoDeO/python
-config_file: himmelblau.cfg
+PYTHON_DIRECTORY= /home/emre/RoDeO/python
+# name of the configuration file
+CONFIGURATION_FILE= himmelblau.cfg
+

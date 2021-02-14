@@ -32,6 +32,7 @@
 using namespace arma;
 
 
+
 class LHSSamples{
 
 private:
@@ -56,6 +57,9 @@ public:
 	void visualize(void);
 	void printSamples(void);
 	mat getSamples(void);
+
+	bool testIfSamplesAreTooClose(void);
+
 
 	/* test functions */
 
