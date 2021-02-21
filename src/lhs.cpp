@@ -35,7 +35,7 @@
 #include <cassert>
 
 
-LHSSamples::LHSSamples(int d, double lb, double ub, int N){
+LHSSamples::LHSSamples(unsigned int d, double lb, double ub, unsigned int N){
 
 	assert(d>0);
 	assert(N>d);
@@ -54,13 +54,13 @@ LHSSamples::LHSSamples(int d, double lb, double ub, int N){
 
 }
 
-LHSSamples::LHSSamples(int d, double *lb, double *ub, int N){
+LHSSamples::LHSSamples(unsigned int d, double *lb, double *ub, unsigned int N){
 
 	assert(d>0);
 	assert(N>d);
 	numberOfDesignVariables = d;
 	numberOfSamples = N;
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 
 		assert(ub[i]>lb[i]);
 	}
@@ -69,7 +69,7 @@ LHSSamples::LHSSamples(int d, double *lb, double *ub, int N){
 	upperBounds= zeros<vec>(d);
 	lowerBounds= zeros<vec>(d);
 
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 		upperBounds(i) = ub[i];
 		lowerBounds(i) = lb[i];
 	}
@@ -79,13 +79,13 @@ LHSSamples::LHSSamples(int d, double *lb, double *ub, int N){
 
 }
 
-LHSSamples::LHSSamples(int d, vec lb, vec ub, int N){
+LHSSamples::LHSSamples(unsigned int d, vec lb, vec ub, unsigned int N){
 
 	assert(d>0);
 	assert(N>d);
 	numberOfDesignVariables = d;
 	numberOfSamples = N;
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 
 		assert(ub(i)>lb(i));
 	}
@@ -351,7 +351,7 @@ void testLHS2D(void){
 }
 
 
-RandomSamples::RandomSamples(int d, double lb, double ub, int N){
+RandomSamples::RandomSamples(unsigned int d, double lb, double ub, unsigned int N){
 
 	assert(d>0);
 	assert(N>d);
@@ -368,13 +368,13 @@ RandomSamples::RandomSamples(int d, double lb, double ub, int N){
 
 }
 
-RandomSamples::RandomSamples(int d, double *lb, double *ub, int N){
+RandomSamples::RandomSamples(unsigned int d, double *lb, double *ub, unsigned int N){
 
 	assert(d>0);
 	assert(N>d);
 	numberOfDesignVariables = d;
 	numberOfSamples = N;
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 
 		assert(ub[i]>lb[i]);
 	}
@@ -383,7 +383,7 @@ RandomSamples::RandomSamples(int d, double *lb, double *ub, int N){
 	upperBounds= zeros<vec>(d);
 	lowerBounds= zeros<vec>(d);
 
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 		upperBounds(i) = ub[i];
 		lowerBounds(i) = lb[i];
 	}
@@ -393,13 +393,13 @@ RandomSamples::RandomSamples(int d, double *lb, double *ub, int N){
 
 }
 
-RandomSamples::RandomSamples(int d, vec lb, vec ub, int N){
+RandomSamples::RandomSamples(unsigned int d, vec lb, vec ub, unsigned int N){
 
 	assert(d>0);
 	assert(N>d);
 	numberOfDesignVariables = d;
 	numberOfSamples = N;
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 
 		assert(ub(i)>lb(i));
 	}
@@ -496,7 +496,7 @@ void testRandomSamples2D(void){
 
 
 
-FullFactorialSamples::FullFactorialSamples(int d, double lb, double ub, int levels){
+FullFactorialSamples::FullFactorialSamples(unsigned int d, double lb, double ub, unsigned int levels){
 
 	assert(d>0);
 	assert(ub>lb);
@@ -522,12 +522,12 @@ FullFactorialSamples::FullFactorialSamples(int d, double lb, double ub, int leve
 
 }
 
-FullFactorialSamples::FullFactorialSamples(int d, double *lb, double *ub, int levels){
+FullFactorialSamples::FullFactorialSamples(unsigned int d, double *lb, double *ub, unsigned int levels){
 
 	assert(d>0);
 	numberOfDesignVariables = d;
 
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 
 		assert(ub[i]>lb[i]);
 	}
@@ -536,7 +536,7 @@ FullFactorialSamples::FullFactorialSamples(int d, double *lb, double *ub, int le
 	upperBounds= zeros<vec>(d);
 	lowerBounds= zeros<vec>(d);
 
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 		upperBounds(i) = ub[i];
 		lowerBounds(i) = lb[i];
 	}
@@ -552,13 +552,13 @@ FullFactorialSamples::FullFactorialSamples(int d, double *lb, double *ub, int le
 
 }
 
-FullFactorialSamples::FullFactorialSamples(int d, vec lb, vec ub, int levels){
+FullFactorialSamples::FullFactorialSamples(unsigned int d, vec lb, vec ub, unsigned int levels){
 
 	assert(d>0);
 
 	numberOfDesignVariables = d;
 	numberOfSamples = pow(levels,d);
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 
 		assert(ub(i)>lb(i));
 	}
@@ -576,7 +576,7 @@ FullFactorialSamples::FullFactorialSamples(int d, vec lb, vec ub, int levels){
 
 
 }
-FullFactorialSamples::FullFactorialSamples(int d, double lb, double ub, uvec levels){
+FullFactorialSamples::FullFactorialSamples(unsigned int d, double lb, double ub, uvec levels){
 
 	assert(d>0);
 	assert(ub>lb);
@@ -608,13 +608,13 @@ FullFactorialSamples::FullFactorialSamples(int d, double lb, double ub, uvec lev
 
 }
 
-FullFactorialSamples::FullFactorialSamples(int d, double *lb, double *ub, uvec levels){
+FullFactorialSamples::FullFactorialSamples(unsigned int d, double *lb, double *ub, uvec levels){
 
 	assert(d>0);
 	assert(levels.size() == d);
 	numberOfDesignVariables = d;
 
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 
 		assert(ub[i]>lb[i]);
 	}
@@ -623,7 +623,7 @@ FullFactorialSamples::FullFactorialSamples(int d, double *lb, double *ub, uvec l
 	upperBounds= zeros<vec>(d);
 	lowerBounds= zeros<vec>(d);
 
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 		upperBounds(i) = ub[i];
 		lowerBounds(i) = lb[i];
 	}
@@ -644,13 +644,13 @@ FullFactorialSamples::FullFactorialSamples(int d, double *lb, double *ub, uvec l
 
 }
 
-FullFactorialSamples::FullFactorialSamples(int d, vec lb, vec ub, uvec levels){
+FullFactorialSamples::FullFactorialSamples(unsigned int d, vec lb, vec ub, uvec levels){
 
 	assert(d>0);
 	assert(levels.size() == d);
 	numberOfDesignVariables = d;
 
-	for(int i=0; i<d; i++){
+	for(unsigned int i=0; i<d; i++){
 
 		assert(ub(i)>lb(i));
 	}
@@ -700,7 +700,7 @@ void FullFactorialSamples::incrementIndexCount(uvec &indxCount){
 void FullFactorialSamples::generateSamples(void){
 
 
-	int numberOfSamplesGenerated = 0;
+	unsigned int numberOfSamplesGenerated = 0;
 
 	uvec indxCount(numberOfDesignVariables);
 	indxCount.fill(0);

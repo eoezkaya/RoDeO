@@ -75,6 +75,7 @@ protected:
 
 	mat rawData;
 	mat X;
+	mat Xraw;
 	mat gradientData;
 	vec y;
 
@@ -89,7 +90,7 @@ protected:
 	vec xmax;
 
 	bool ifInitialized;
-	int numberOfHyperParameters;
+	unsigned int numberOfHyperParameters;
 
 
 
@@ -111,8 +112,7 @@ public:
 	virtual void loadHyperParameters(void) = 0;
 	virtual void updateAuxilliaryFields(void);
 	virtual void train(void) = 0;
-	virtual double interpolate(rowvec x) const = 0;
-	virtual double interpolateWithGradients(rowvec x) const = 0;
+	virtual double interpolate(rowvec x, bool ifprint = false) const = 0;
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
 
 	double calculateInSampleError(void) const;

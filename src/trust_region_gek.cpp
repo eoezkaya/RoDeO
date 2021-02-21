@@ -41,10 +41,6 @@ using namespace arma;
 #include "test_functions.hpp"
 #include "auxiliary_functions.hpp"
 
-#ifdef GPU_VERSION
-#include "kernel_regression_cuda.h"
-#endif
-#include "kernel_regression.hpp"
 
 #include "Rodeo_globals.hpp"
 #include "linear_regression.hpp"
@@ -55,11 +51,12 @@ using namespace arma;
 AggregationModel::AggregationModel():SurrogateModel(){}
 
 
-AggregationModel::AggregationModel(std::string name):SurrogateModel(name),kernelRegressionModel(name),krigingModel(name) {
+AggregationModel::AggregationModel(std::string name):SurrogateModel(name),krigingModel(name) {
 
 	modelID = AGGREGATION;
 	hyperparameters_filename = label + "_aggregation_model_hyperparameters.csv";
 	ifUsesGradientData = true;
+
 
 }
 
@@ -67,23 +64,25 @@ void AggregationModel::initializeSurrogateModel(void){
 
 	if(label != "None"){
 
-		numberOfIterForRhoOptimization = 1000;
-		rho = 0.5;
+		numberOfTrainingIterations = 10000;
 
-		kernelRegressionModel.ifUsesGradientData = true;
+
 		krigingModel.ifUsesGradientData = true;
-		kernelRegressionModel.initializeSurrogateModel();
 		krigingModel.initializeSurrogateModel();
 
 		ReadDataAndNormalize();
 
+		numberOfHyperParameters = dim + 1;
+
+		L1NormWeights = zeros<vec>(dim);
+
 		int NvalidationSet = N/5;
+
+
 		int Ntraining = N - NvalidationSet;
 
 		cout << "N = "<<N<<"\n";
 		cout << "Ntraining = "<<Ntraining<<"\n";
-
-		/* divide data into training and validation data, validation data is used for optimizing regularization parameters */
 
 		mat shuffledrawData = rawData;
 		if(NvalidationSet > 0){
@@ -93,82 +92,94 @@ void AggregationModel::initializeSurrogateModel(void){
 
 		mat dataTraining  = shuffledrawData.submat( 0, 0, Ntraining-1, 2*dim );
 
-		trainingData.ifHasGradientData = true;
-		trainingData.fillWithData(dataTraining);
-		trainingData.normalizeAndScaleData(xmin,xmax);
+		trainingDataForKriging.ifHasGradientData = true;
+		trainingDataForKriging.fillWithData(dataTraining);
+		trainingDataForKriging.normalizeAndScaleData(xmin,xmax);
 
-		if(NvalidationSet > 0){
+		if(NvalidationSet > 10){
 
 			mat dataValidation    = shuffledrawData.submat( Ntraining, 0, N-1, 2*dim );
-			testDataForRhoOptimizationLoop.ifHasGradientData = true;
-			testDataForRhoOptimizationLoop.fillWithData(dataValidation);
-			testDataForRhoOptimizationLoop.normalizeAndScaleData(xmin,xmax);
+			trainingDataForHyperParameterOptimization.ifHasGradientData = true;
+			trainingDataForHyperParameterOptimization.fillWithData(dataValidation);
+			trainingDataForHyperParameterOptimization.normalizeAndScaleData(xmin,xmax);
 
+
+		}else{
+
+			std::cout<<"ERROR: There are not enough samples to train the aggregation model!\n";
+			abort();
+		}
+
+
+
+		unsigned int numberOfProbles = 1000;
+		vec probe_distances_sample(numberOfProbles);
+
+		L1NormWeights.fill(1.0);
+
+		for(unsigned int i=0; i<numberOfProbles; i++){
+
+			rowvec xp = generateRandomRowVector(0.0, 1.0/dim, dim);
+
+			int indxNearestNeighbor= findNearestNeighbor(xp);
+			double distance = calculateL1norm(xp - X.row(indxNearestNeighbor));
+
+#if 0
+			printf("point:\n");
+			xp.print();
+			printf("nearest neighbour is:\n");
+			X.row(indxNearestNeighbor).print();
+			printf("minimum distance (L1 norm)= %10.7f\n\n",distance);
+
+#endif
+
+			probe_distances_sample(i)= distance;
 
 		}
 
+		double average_distance_sample = mean(probe_distances_sample);
+#if 1
+		printf("Maximum distance (L1 norm) = %10.7f\n", max(probe_distances_sample));
+		printf("Minimum distance (L1 norm) = %10.7f\n", min(probe_distances_sample));
+		printf("Average distance (L1 norm)= %10.7f\n", average_distance_sample);
+#endif
+
+
+		/* obtain gradient statistics */
+		double sumnormgrad = 0.0;
+		for(unsigned int i=0; i<N; i++){
+
+			rowvec gradVec= gradientData.row(i);
+
+
+			double normgrad= calculateL1norm(gradVec);
+			sumnormgrad+= normgrad;
+
+		}
+
+		double avg_norm_grad= sumnormgrad/N;
+#if 1
+		printf("average norm grad = %10.7e\n", avg_norm_grad);
+#endif
+		/* define the search range for the hyperparameter r */
+
+
+
+
+
+		double rhoMax = -log(0.001)/ (max(probe_distances_sample) * avg_norm_grad);
+		rho = rhoMax;
+
+
+#if 1
+		printf("average distance in the training data= %10.7f\n",average_distance_sample);
+		printf("rhoMax = %10.7f\n",rhoMax);
+		printf("factor at maximum distance = %15.10f\n",exp(-rhoMax*max(probe_distances_sample)* avg_norm_grad));
+		printf("factor at minimum distance = %15.10f\n",exp(-rhoMax*min(probe_distances_sample)* avg_norm_grad));
+#endif
+
+
 	}
-
-
-	unsigned int numberOfProbles = 1000;
-	vec probe_distances_sample(numberOfProbles);
-
-	for(unsigned int i=0; i<numberOfProbles; i++){
-
-		rowvec xp = generateRandomRowVector(0.0, 1.0/dim, dim);
-
-		int indxNearestNeighbor= findNearestNeighbor(xp);
-		double distance = calculateL1norm(xp - X.row(indxNearestNeighbor));
-
-#if 1
-		printf("point:\n");
-		xp.print();
-		printf("nearest neighbour is:\n");
-		X.row(indxNearestNeighbor).print();
-		printf("minimum distance (L1 norm)= %10.7f\n\n",distance);
-
-#endif
-
-		probe_distances_sample(i)= distance;
-
-	}
-
-	double average_distance_sample = mean(probe_distances_sample);
-#if 1
-	printf("Average distance (L1 norm)= %10.7f\n\n", average_distance_sample);
-#endif
-
-
-	/* obtain gradient statistics */
-	double sumnormgrad = 0.0;
-	for(unsigned int i=0; i<N; i++){
-
-		rowvec gradVec= this->gradientData.row(i);
-
-
-		double normgrad= calculateL1norm(gradVec);
-		sumnormgrad+= normgrad;
-
-	}
-
-	double avg_norm_grad= sumnormgrad/N;
-#if 1
-	printf("average norm grad = %10.7e\n", avg_norm_grad);
-#endif
-	/* define the search range for the hyperparameter r */
-
-
-	double min_rho = 0.0;
-	double max_rho = -2*log(0.00001)/ (max(probe_distances_sample) * avg_norm_grad);
-	dr = (max_rho - min_rho)/(this->numberOfIterForRhoOptimization);
-
-#if 1
-	printf("average distance in the training data= %10.7f\n",average_distance_sample);
-	printf("max_r = %10.7f\n",max_rho);
-	printf("dr = %10.7f\n",dr);
-	printf("factor at maximum distance at max r = %15.10f\n",exp(-max_rho*max(probe_distances_sample)* avg_norm_grad));
-#endif
-
 
 	ifInitialized = true;
 
@@ -182,16 +193,15 @@ void AggregationModel::initializeSurrogateModel(void){
 
 void AggregationModel::printSurrogateModel(void) const{
 
-	kernelRegressionModel.printSurrogateModel();
 	krigingModel.printSurrogateModel();
-
+	printVector(L1NormWeights, "L1NormWeights");
+	std::cout<<"rho = "<<rho<<"\n";
 
 }
 
 void AggregationModel::printHyperParameters(void) const{
 
 	cout << "\nHyperparameters of the aggregation model...\n";
-	kernelRegressionModel.printHyperParameters();
 	krigingModel.printHyperParameters();
 	cout << "rho = " << rho << "\n";
 
@@ -199,46 +209,19 @@ void AggregationModel::printHyperParameters(void) const{
 }
 void AggregationModel::saveHyperParameters(void) const{
 
-	cout<<"Saving hyperparameters to the file:"<<hyperparameters_filename<<"\n";
-	vec saveBuffer(dim*dim+1+2*dim+1+dim+1, fill::zeros);
+	assert(numberOfHyperParameters == dim+1);
 
-	unsigned int count = 0;
+	vec saveBuffer(numberOfHyperParameters);
+	saveBuffer(0) = rho;
 
-	saveBuffer(count) = rho;
-	cout<<"rho = "<<saveBuffer(count)<<"\n";
-	count++;
+	for(unsigned int i=1; i<dim+1; i++){
 
-	mat M = kernelRegressionModel.getMahalanobisMatrix();
+		saveBuffer(i) = L1NormWeights(i-1);
 
-
-	printMatrix(M,"M");
-	for(unsigned int i=0; i<dim; i++)
-		for(unsigned int j=0; j<dim; j++) {
-
-
-			saveBuffer(count) = M(i,j);
-			count++;
-		}
-
-
-	saveBuffer(count) = kernelRegressionModel.getsigmaGaussianKernel();
-	cout<<"sigma = "<<saveBuffer(count)<<"\n";
-	count++;
-	vec krigingWeights = krigingModel.getKrigingWeights();
-	printVector(krigingWeights,"krigingWeights");
-	vec regressionWeights = krigingModel.getRegressionWeights();
-	printVector(regressionWeights,"regressionWeights");
-	for(unsigned int i=0; i<2*dim; i++){
-		saveBuffer(count) = krigingWeights(i);
-		count++;
-	}
-	for(unsigned int i=0; i<dim+1; i++){
-		saveBuffer(count) = regressionWeights(i);
-		count++;
 	}
 
 
-	saveBuffer.save(hyperparameters_filename, csv_ascii);
+	saveBuffer.save(hyperparameters_filename,csv_ascii);
 
 
 
@@ -246,59 +229,26 @@ void AggregationModel::saveHyperParameters(void) const{
 
 void AggregationModel::loadHyperParameters(void){
 
-	cout<<"Loading hyperparameters from the file:"<<hyperparameters_filename<<"\n";
+	assert(numberOfHyperParameters == dim+1);
 
-	vec loadBuffer(dim*dim+1+2*dim+1+dim+1, fill::zeros);
+	vec loadBuffer(numberOfHyperParameters);
+	loadBuffer.load(hyperparameters_filename,csv_ascii);
 
+	if(loadBuffer.size() == numberOfHyperParameters){
 
-	loadBuffer.load(hyperparameters_filename, csv_ascii);
+		rho = loadBuffer(0);
+		for(unsigned int i=1; i<dim+1; i++){
 
-	unsigned int count = 0;
+			L1NormWeights(i-1) = loadBuffer(i);
 
-	rho = loadBuffer(count);
-	count++;
-
-	cout<<"rho = "<<rho<<"\n";
-
-	mat M(dim,dim);
-
-
-	for(unsigned int i=0; i<dim; i++)
-		for(unsigned int j=0; j<dim; j++) {
-
-
-			M(i,j) = loadBuffer(count);
-			count++;
 		}
-	printMatrix(M,"M");
 
-	double sigma = loadBuffer(count);
-	count++;
-
-	cout<<"sigma = "<<sigma<<"\n";
-
-	kernelRegressionModel.setsigmaGaussianKernel(sigma);
-
-
-	vec krigingWeights(2*dim);
-	vec regressionWeights(dim+1);
-
-	for(unsigned int i=0; i<2*dim; i++){
-		krigingWeights(i) = loadBuffer(count);
-		count++;
 	}
-	for(unsigned int i=0; i<dim+1; i++){
-		regressionWeights(i) = loadBuffer(count);
-		count++;
+	else{
+
+		std::cout<<"WARNING: Number of entries in the hyperparameter file is inconsistent with the problem dimension!\n";
+
 	}
-
-
-	printVector(krigingWeights,"krigingWeights");
-	printVector(regressionWeights,"regressionWeights");
-
-	krigingModel.setKrigingWeights(krigingWeights);
-	krigingModel.setRegressionWeights(regressionWeights);
-
 
 
 
@@ -319,60 +269,73 @@ void AggregationModel::train(void){
 		this->initializeSurrogateModel();
 	}
 
-	cout<<"Training Kriging model...\n";
+
 	krigingModel.train();
-	cout<<"Training Kernel regression model...\n";
-	kernelRegressionModel.train();
 
-    mat rawDataSave = rawData;
 
-    trainingData.print();
-    updateData(trainingData.rawData);
-    krigingModel.updateModelWithNewData(trainingData.rawData);
-    kernelRegressionModel.updateData(trainingData.rawData);
+	mat rawDataSave = rawData;
 
+
+	trainingDataForKriging.print();
+	updateData(trainingDataForKriging.rawData);
+	krigingModel.updateModelWithNewData(trainingDataForKriging.rawData);
 
 	krigingModel.printSurrogateModel();
 
 
+
+	loadHyperParameters();
+
+	double rhoSave = rho;
 	rho = 0.0;
+
 	double minimumValidationError = LARGE;
-	double best_rho = rho;
+	vec weightsBest(dim);
 
-#if 1
-	printf("Scanning rho between 0.0 and %10.7f\n",numberOfIterForRhoOptimization*dr);
-#endif
-	for(unsigned int i=0; i<numberOfIterForRhoOptimization; i++){
+	for(unsigned int trainingIter=0; trainingIter<numberOfTrainingIterations; trainingIter++){
 
-#if 1
-		printf("rho = %10.7f\n",rho);
-#endif
 
-		tryModelOnTestSet(testDataForRhoOptimizationLoop);
 
-		double validationError = testDataForRhoOptimizationLoop.calculateMeanSquaredError();
-#if 1
+		if(trainingIter>0){
+
+			generateRandomHyperParams();
+		}
+
+		tryModelOnTestSet(trainingDataForHyperParameterOptimization);
+		double validationError = trainingDataForHyperParameterOptimization.calculateMeanSquaredError();
+#if 0
 		printf("validationError = %10.7f\n",validationError);
 #endif
 
-		if(validationError<minimumValidationError){
+		if(validationError<minimumValidationError ){
 #if 1
-			cout<<"A better rho is found\n";
+			cout<<"A better set of hyper-parameters is found)\n";
+			cout<<"Error = "<<validationError<<"\n";
+
+			printVector(L1NormWeights);
 #endif
 			minimumValidationError = validationError;
-			best_rho= rho;
+
+			weightsBest = L1NormWeights;
 
 		}
 
-		rho += dr;
 
 	}
 
-	rho = best_rho;
+#if 1
+	std::cout<<"Optimal values found:\n";
+	printVector(weightsBest,"L1NormWeights");
+#endif
+
+
+	L1NormWeights = weightsBest;
+
+	rho = rhoSave;
 
 	updateData(rawDataSave);
 	krigingModel.updateModelWithNewData(rawDataSave);
-	kernelRegressionModel.updateData(rawDataSave);
+
 
 	saveHyperParameters();
 
@@ -380,33 +343,147 @@ void AggregationModel::train(void){
 }
 
 
+void AggregationModel::generateRandomHyperParams(void){
 
 
-double AggregationModel::interpolate(rowvec x) const{
+	double sumWeights=0.0;
+	for(unsigned int i=0; i<dim; i++){
+
+		L1NormWeights(i) = generateRandomDouble(0.0, 1.0);
+		sumWeights+= L1NormWeights(i);
+
+	}
+
+	for(unsigned int i=0; i<dim; i++){
+
+		L1NormWeights(i) = L1NormWeights(i)/sumWeights;
+
+	}
+
+
+
+
+}
+
+double AggregationModel::interpolate(rowvec x,bool ifprint) const{
+
+	/* find the closest seeding point to the xp in the data set */
+
+
+	int indx = findNearestNeighbor(x);
+	rowvec xNearestPoint = X.row(indx);
+	rowvec xNearestPointRaw = Xraw.row(indx);
+	rowvec gradNearestPoint = gradientData.row(indx);
+	double yNearestPoint = y(indx);
+
+	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
+
+	if(ifprint){
+		printVector(x,"x");
+		printVector(xp,"xp");
+		cout <<"The closest point to x has an index = "<<indx<<":\n";
+		printVector(xNearestPoint,"xNearestPoint");
+		printVector(xNearestPointRaw,"xNearestPointRaw");
+		std::cout<<"y = "<<yNearestPoint<<"\n";
+
+	}
+
+
+	rowvec xDiff = x - xNearestPoint;
+	rowvec xDiffRaw = xp - xNearestPointRaw;
+
+
+	if(ifprint){
+		printVector(xDiff,"xDiff");
+		printVector(xDiffRaw,"xDiffRaw");
+	}
+
+	double min_dist = calculateWeightedL1norm(xDiff, L1NormWeights);
+	if(ifprint){
+		cout<<"min_dist = "<<min_dist<<"\n";
+	}
+
+
+
+	double fSurrogateKriging = krigingModel.interpolate(x);
+	if(ifprint){
+		cout<<"fSurrogateKriging = "<<fSurrogateKriging<<"\n";
+	}
+
+
+	rowvec gradientVector = gradientData.row(indx);
+	if(ifprint){
+		printVector(gradientVector,"gradientVector");
+	}
+
+	double normgrad = calculateL1norm(gradientVector);
+	if(ifprint){
+		cout<<"normgrad = "<<normgrad<<"\n";
+	}
+
+	double fSurrogateDual = yNearestPoint+ dot(xDiffRaw,gradientVector);
+	if(ifprint){
+		cout<<"fSurrogateDual = "<<fSurrogateDual<<"\n";
+
+	}
+
+	double w2 = exp(-rho*min_dist*normgrad);
+	double w1 = 1.0 - w2;
+	if(ifprint){
+		cout<<"w2 = "<<w2<<"\n";
+		cout<<"w1 = "<<w1<<"\n";
+		cout<<"result  = "<<w1*fSurrogateKriging+ w2* fSurrogateDual<<"\n";
+
+	}
+
+
+	return w1*fSurrogateKriging+ w2* fSurrogateDual;
+
+
+}
+
+
+
+void AggregationModel::interpolateWithVariance(rowvec x,double *f_tilde,double *ssqr) const{
+
+
 
 	/* find the closest seeding point to the xp in the data set */
 
 	int indx = findNearestNeighbor(x);
 	rowvec xNearestPoint = X.row(indx);
+	rowvec xNearestPointRaw = Xraw.row(indx);
+	rowvec gradNearestPoint = gradientData.row(indx);
+	double yNearestPoint = y(indx);
+
+	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
 
 #if 0
-	cout <<"The closest point to x:\n";
-	x.print();
-	cout <<"is xg with index = "<<indx<<":\n";
-	xNearestPoint.print();
+	printVector(x,"x");
+	printVector(xp,"xp");
+	cout <<"The closest point to x has an index = "<<indx<<":\n";
+	printVector(xNearestPoint,"xNearestPoint");
+	printVector(xNearestPointRaw,"xNearestPointRaw");
+	std::cout<<"y = "<<yNearestPoint<<"\n";
 #endif
 
 	rowvec xDiff = x - xNearestPoint;
+	rowvec xDiffRaw = xp - xNearestPointRaw;
+
+
 #if 0
 	printVector(xDiff,"xDiff");
+	printVector(xDiffRaw,"xDiffRaw");
 #endif
-	double min_dist = calculateL1norm(xDiff);
+	double min_dist = calculateWeightedL1norm(xDiff, L1NormWeights);
 #if 0
 	cout<<"min_dist = "<<min_dist<<"\n";
 #endif
 
 
-	double fSurrogateKriging = krigingModel.interpolate(x);
+	double fSurrogateKriging;
+
+	krigingModel.interpolateWithVariance(x,&fSurrogateKriging,ssqr);
 #if 0
 	cout<<"fSurrogateKriging = "<<fSurrogateKriging<<"\n";
 #endif
@@ -422,9 +499,9 @@ double AggregationModel::interpolate(rowvec x) const{
 	cout<<"normgrad = "<<normgrad<<"\n";
 #endif
 
-	double fSurrogateKernelRegression = kernelRegressionModel.interpolateWithGradients(x);
+	double fSurrogateDual = yNearestPoint+ dot(xDiffRaw,gradientVector);
 #if 0
-	cout<<"fSurrogateKernelRegression = "<<fSurrogateKernelRegression<<"\n";
+	cout<<"fSurrogateDual = "<<fSurrogateDual<<"\n";
 
 #endif
 
@@ -433,28 +510,64 @@ double AggregationModel::interpolate(rowvec x) const{
 #if 0
 	cout<<"w2 = "<<w2<<"\n";
 	cout<<"w1 = "<<w1<<"\n";
-	cout<<"result  = "<<w1*fSurrogateKriging+ w2* fSurrogateKernelRegression<<"\n";
+	cout<<"result  = "<<w1*fSurrogateKriging+ w2* fSurrogateDual<<"\n";
 
 #endif
 
-	return w1*fSurrogateKriging+ w2* fSurrogateKernelRegression;
 
+	*f_tilde =  w1*fSurrogateKriging+ w2* fSurrogateDual;
 
-}
-
-double AggregationModel::interpolateWithGradients(rowvec x) const{
-
-
-	return interpolate(x);
-
-}
-
-void AggregationModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
 
 
 
 }
 
+
+double AggregationModel::calculateExpectedImprovement(rowvec xp) const{
+
+
+	double ftilde = 0.0;
+	double ssqr   = 0.0;
+
+	interpolateWithVariance(xp,&ftilde,&ssqr);
+
+#if 0
+	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
+#endif
+
+	double	sigma = sqrt(ssqr)	;
+
+#if 0
+	printf("standart_ERROR = %15.10f\n",sigma);
+#endif
+
+	double EI = 0.0;
+
+
+	if(sigma!=0.0){
+
+
+		double	Z = (ymin - ftilde)/sigma;
+#if 0
+		printf("EIfac = %15.10f\n",EIfac);
+		printf("ymin = %15.10f\n",ymin);
+#endif
+
+
+		/* calculate the Expected Improvement value */
+		EI = (ymin - ftilde)*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
+	}
+	else{
+
+		EI = 0.0;
+
+	}
+#if 0
+	printf("EI = %15.10f\n",EI);
+#endif
+	return EI;
+
+}
 
 
 unsigned int AggregationModel::findNearestNeighbor(rowvec xp) const{
@@ -470,7 +583,7 @@ unsigned int AggregationModel::findNearestNeighbor(rowvec xp) const{
 
 		rowvec xdiff = xp -x;
 
-		double L1distance = calculateL1norm(xdiff);
+		double L1distance = calculateWeightedL1norm(xdiff, L1NormWeights);
 		if(L1distance< minL1Distance){
 
 			minL1Distance = L1distance;
@@ -488,9 +601,47 @@ unsigned int AggregationModel::findNearestNeighbor(rowvec xp) const{
 
 
 
+int AggregationModel::addNewSampleToData(rowvec newSample){
 
 
+	assert(newSample.size() == 2*dim+1);
 
+	/* avoid points that are too close to each other */
+
+	bool flagTooClose=false;
+	for(unsigned int i=0; i<N; i++){
+
+		rowvec sample = rawData.row(i);
+
+		if(ifTooCLose(sample, newSample)) {
+
+			flagTooClose = true;
+		}
+
+	}
+
+	if(!flagTooClose){
+
+		rawData.insert_rows( rawData.n_rows, newSample );
+		rawData.save(input_filename,csv_ascii);
+
+		updateModelWithNewData();
+		return 0;
+	}
+	else{
+
+		std::cout<<"WARNING: The new sample is too close to a sample in the training data, it is discarded!\n";
+		return -1;
+	}
+
+}
+
+void AggregationModel::updateModelWithNewData(void){
+
+
+	krigingModel.updateModelWithNewData();
+
+}
 
 
 

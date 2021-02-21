@@ -113,6 +113,7 @@ bool isEqual(const mat &A, const mat&B, double tolerance);
 void printMatrix(mat M, std::string name="None");
 void printVector(vec v, std::string name="None");
 void printVector(rowvec v, std::string name="None");
+void printVector(std::vector<std::string> v);
 
 vec normalizeColumnVector(vec x, double xmin, double xmax);
 

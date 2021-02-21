@@ -35,115 +35,25 @@
 #include <armadillo>
 #include "kriging_training.hpp"
 #include "trust_region_gek.hpp"
+#include "objective_function.hpp"
+#include "constraint_functions.hpp"
 
 
 
 
-
-
-class ObjectiveFunction{
-
-
-private:
-
-	double (*objectiveFunPtr)(double *);
-	std::string executableName;
-	std::string executablePath;
-	std::string fileNameObjectiveFunctionRead;
-	std::string fileNameDesignVector;
-
-	KrigingModel surrogateModel;
-	AggregationModel surrogateModelGradient;
-	unsigned int dim;
-	bool ifDoErequired;
-	bool ifWarmStart;
-	bool ifGradientAvailable;
-
-public:
-
-	std::string name;
-	ObjectiveFunction(std::string, double (*objFun)(double *), unsigned int);
-	ObjectiveFunction(std::string, unsigned int);
-	ObjectiveFunction();
-
-	void readConfigFile(void);
-
-	void trainSurrogate(void);
-
-	void saveDoEData(mat) const;
-	void setFileNameReadObjectFunction(std::string);
-	void setExecutablePath(std::string);
-	void setExecutableName(std::string);
-	void setFileNameDesignVector(std::string);
-	double calculateExpectedImprovement(rowvec x);
-	double evaluate(rowvec x, bool);
-	double ftilde(rowvec x) const;
-	void print(void) const;
-
-};
-
-
-
-
-class ConstraintFunction{
-
-
-private:
-	unsigned int ID;
-	unsigned int dim;
-
-	double (*pConstFun)(double *);
-	double targetValue;
-	std::string inequalityType;
-
-	KrigingModel surrogateModel;
-	AggregationModel surrogateModelGradient;
-
-	std::string executableName;
-	std::string executablePath;
-	std::string fileNameConstraintFunctionRead;
-	std::string fileNameDesignVector;
-
-	bool ifGradientAvailable;
-
-public:
-	std::string name;
-	bool ifNeedsSurrogate;
-	std::vector<int> IDToFunctionsShareOutputFile;
-	std::vector<int> IDToFunctionsShareOutputExecutable;
-
-
-	ConstraintFunction(std::string, std::string, double, double (*constFun)(double *), unsigned int dimension, bool ifNeedsSurrogate = false);
-	ConstraintFunction(std::string, std::string, double, unsigned int);
-	ConstraintFunction();
-	void saveDoEData(mat) const;
-	void trainSurrogate(void);
-
-	void setFileNameReadConstraintFunction(std::string);
-	void setExecutablePath(std::string);
-	void setExecutableName(std::string);
-	void setFileNameDesignVector(std::string);
-	void setID(int);
-
-	bool checkFeasibility(double value);
-
-	double calculateEI(rowvec x) const;
-	double evaluate(rowvec x, bool);
-	double ftilde(rowvec x) const;
-	void print(void) const;
-};
-
-
-
-
-class Optimizer {
+class COptimizer {
 
 private:
 
 	vec lowerBounds;
 	vec upperBounds;
+	vec dataMin;
+	vec dataMax;
+
+
 	mat optimizationHistory;
 
+//	rowvec constraintValues;
 
 	std::vector<ConstraintFunction> constraintFunctions;
 	ObjectiveFunction objFun;
@@ -155,8 +65,11 @@ public:
 	std::string name;
 	unsigned int dimension;
 	unsigned int numberOfConstraints;
+	unsigned int numberOfConstraintsWithGradient;
 	unsigned int maxNumberOfSamples;
 	unsigned int howOftenTrainModels;
+
+	unsigned int sampleDim;
 
 	unsigned int iterGradientEILoop;
 	std::string optimizationType;
@@ -167,11 +80,12 @@ public:
 
 	bool ifBoxConstraintsSet;
 
-	Optimizer(std::string ,int, std::string);
+	COptimizer(std::string ,int, std::string);
 	void print(void) const;
 	void printConstraints(void) const;
 	void visualizeOptimizationHistory(void) const;
 	void EfficientGlobalOptimization(void);
+	void updateDataMinAndMax(void);
 	void trainSurrogates(void);
 	void performDoE(unsigned int howManySamples, DoE_METHOD methodID);
 
@@ -183,13 +97,23 @@ public:
 
 	void addConstraint(ConstraintFunction &constFunc);
 
-	void evaluateConstraints(rowvec x, rowvec &constraintValues,bool);
-	void estimateConstraints(rowvec x, rowvec &constraintValues);
+	void evaluateConstraints(Design &d);
+//	void evaluateConstraints(rowvec x, rowvec &constraintValues, mat &constraintGradients, bool ifAddToData= true) ;
+//	void evaluateConstraints(rowvec x, rowvec &constraintValues, bool ifAddToData= true);
+	void estimateConstraints(rowvec x, rowvec &constraintValues) const;
 
+	void checkIfSettingsAreOK(void) const;
 	bool checkBoxConstraints(void) const;
-	bool checkConstraintFeasibility(rowvec constraintValues);
+	bool checkConstraintFeasibility(rowvec constraintValues) const;
 
 	void addObjectFunction(ObjectiveFunction &objFunc);
+
+	double computeEIPenaltyForConstraints(rowvec dv) const;
+	void computeConstraintsandPenaltyTerm(Design &);
+
+	void updateOptimizationHistory(Design d);
+	void addConstraintValuesToData(Design &d);
+
 
 
 };

@@ -39,6 +39,8 @@
 #include "Rodeo_globals.hpp"
 #include "test_functions.hpp"
 #include "optimization.hpp"
+#include "objective_function.hpp"
+#include "constraint_functions.hpp"
 #include "auxiliary_functions.hpp"
 #include "drivers.hpp"
 #include "lhs.hpp"
@@ -217,7 +219,7 @@ void RoDeODriver::readConfigFile(void){
 
 						boxConstraintsUpperBounds = zeros<vec>(valuesReadFromString.size());
 
-						for (int i = 0; i<valuesReadFromString.size() ; i++){
+						for (unsigned int i = 0; i<valuesReadFromString.size() ; i++){
 
 							boxConstraintsUpperBounds(i) = std::stoi(valuesReadFromString[i]);
 
@@ -258,7 +260,7 @@ void RoDeODriver::readConfigFile(void){
 
 						boxConstraintsLowerBounds = zeros<vec>(valuesReadFromString.size());
 
-						for (int i = 0; i<valuesReadFromString.size() ; i++){
+						for (unsigned int i = 0; i<valuesReadFromString.size() ; i++){
 
 							boxConstraintsLowerBounds(i) = std::stoi(valuesReadFromString[i]);
 
@@ -480,7 +482,7 @@ void RoDeODriver::readConfigFile(void){
 
 						}
 						std::cout<<"\n";
-						ifConstraintFunctionOutputFileIsSet = true;
+
 
 						break;
 					}
@@ -508,8 +510,7 @@ void RoDeODriver::readConfigFile(void){
 
 void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 
-	int numberOfExeNames = executableNames.size();
-	int numberOfExeOutputFile = executableOutputFiles.size();
+	unsigned int numberOfExeNames = executableNames.size();
 
 
 	if(!ifProblemTypeSet){
@@ -663,19 +664,40 @@ void RoDeODriver::setObjectiveFunction(ObjectiveFunction & objFunc){
 	objFunc.setExecutableName(executableNames.front());
 	if(ifexecutablePathObjectiveFunctionSet){
 
-		objFunc.setExecutablePath(this->executablePaths.front());
+		objFunc.setExecutablePath(executablePaths.front());
 
 	}
 
 	objFunc.setFileNameReadObjectFunction(executableOutputFiles.front());
 	objFunc.setFileNameDesignVector(designVectorFilename);
+
+	/* switch on gradients if they are available */
+
+#if 0
+	printVector(executablesWithGradient);
+#endif
+		if ( std::find(executablesWithGradient.begin(), executablesWithGradient.end(), executableNames.front()) != executablesWithGradient.end() ){
+
+#if 1
+			std::cout<<"Gradients available for the objective function\n";
+#endif
+
+			objFunc.setGradientOn();
+
+
+		}
+
+
+
+
+
 	objFunc.print();
 
 
 
 }
 
-void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, int indx){
+void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned int indx){
 
 
 	std::string exeName = executableNames.at(indx);
@@ -734,7 +756,7 @@ void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, int indx){
 
 void RoDeODriver::runDriver(void){
 
-	Optimizer optimizationStudy(problemName, dimension, problemType);
+	COptimizer optimizationStudy(problemName, dimension, problemType);
 	optimizationStudy.setBoxConstraints(boxConstraintsLowerBounds,boxConstraintsUpperBounds);
 	ObjectiveFunction objFunc(objectiveFunctionName, dimension);
 	setObjectiveFunction(objFunc);
@@ -786,6 +808,13 @@ void RoDeODriver::runDriver(void){
 		}
 
 		optimizationStudy.EfficientGlobalOptimization();
+
+
+	}
+	else if(problemType == "SURROGATE_TEST"){
+
+
+
 
 
 	}

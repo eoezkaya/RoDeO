@@ -427,7 +427,7 @@ vec KrigingModel::computeCorrelationVector(rowvec x) const{
 
 
 
-double KrigingModel::interpolate(rowvec xp) const{
+double KrigingModel::interpolate(rowvec xp,bool ifprint ) const{
 
 
 	double fLinearRegression = 0.0;

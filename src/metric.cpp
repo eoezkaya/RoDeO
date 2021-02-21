@@ -44,6 +44,19 @@ double calculateL1norm(const rowvec &x){
 	return sum;
 }
 
+double calculateWeightedL1norm(const rowvec &x, vec w){
+
+	double sum = 0.0;
+	for(unsigned int i=0; i<x.size(); i++){
+
+		sum += w(i)*fabs(x(i));
+
+	}
+
+	return sum;
+}
+
+
 double calculateMetric(rowvec &xi,rowvec &xj, mat M){
 
 	rowvec diff= xi-xj;

@@ -103,7 +103,6 @@ int main(void){
 	RoDeODriver driverToRun;
 	driverToRun.readConfigFile();
 
-	abort();
 	driverToRun.runDriver();
 
 

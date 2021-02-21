@@ -49,9 +49,9 @@ private:
 
 public:
 
-	LHSSamples(int d, double lb, double ub, int N);
-	LHSSamples(int d, vec lb, vec ub, int N);
-	LHSSamples(int d, double *lb, double* ub, int N);
+	LHSSamples(unsigned int d, double lb, double ub, unsigned int N);
+	LHSSamples(unsigned int d, vec lb, vec ub, unsigned int N);
+	LHSSamples(unsigned int d, double *lb, double* ub, unsigned int N);
 
 	void saveSamplesToFile(std::string filename);
 	void visualize(void);
@@ -85,9 +85,9 @@ private:
 
 public:
 
-	RandomSamples(int d, double lb, double ub, int N);
-	RandomSamples(int d, vec lb, vec ub, int N);
-	RandomSamples(int d, double *lb, double* ub, int N);
+	RandomSamples(unsigned int d, double lb, double ub, unsigned int N);
+	RandomSamples(unsigned int d, vec lb, vec ub, unsigned int N);
+	RandomSamples(unsigned int d, double *lb, double* ub, unsigned int N);
 
 	void saveSamplesToFile(std::string filename);
 	void visualize(void);
@@ -119,13 +119,13 @@ private:
 
 public:
 
-	FullFactorialSamples(int d, double lb, double ub, int levels);
-	FullFactorialSamples(int d, vec lb, vec ub, int levels);
-	FullFactorialSamples(int d, double *lb, double* ub, int levels);
+	FullFactorialSamples(unsigned int d, double lb, double ub, unsigned int levels);
+	FullFactorialSamples(unsigned int d, vec lb, vec ub, unsigned int levels);
+	FullFactorialSamples(unsigned int d, double *lb, double* ub, unsigned int levels);
 
-	FullFactorialSamples(int d, double lb, double ub, uvec levels);
-	FullFactorialSamples(int d, vec lb, vec ub, uvec levels);
-	FullFactorialSamples(int d, double *lb, double* ub, uvec levels);
+	FullFactorialSamples(unsigned int d, double lb, double ub, uvec levels);
+	FullFactorialSamples(unsigned int d, vec lb, vec ub, uvec levels);
+	FullFactorialSamples(unsigned int d, double *lb, double* ub, uvec levels);
 
 
 	void saveSamplesToFile(std::string filename);

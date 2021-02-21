@@ -35,7 +35,7 @@
 using namespace arma;
 
 double calculateL1norm(const rowvec &x);
-
+double calculateWeightedL1norm(const rowvec &x, vec w);
 double calculateMetric(rowvec &xi,rowvec &xj, mat M);
 double calculateMetricAdjoint(rowvec xi, rowvec xj, mat M, mat &Mb, double calculateMetricb);
 

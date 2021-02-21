@@ -212,13 +212,8 @@ void GEKModel::train(void){
 
 }
 
-double GEKModel::interpolateWithGradients(rowvec x) const {
 
-	return interpolate(x);
-
-
-}
-double GEKModel::interpolate(rowvec x) const {
+double GEKModel::interpolate(rowvec x,bool ifprint ) const {
 
 
 	vec r = computeCorrelationVectorDot(x);

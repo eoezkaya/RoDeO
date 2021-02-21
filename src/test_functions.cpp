@@ -40,7 +40,7 @@
 #include "test_functions.hpp"
 #include "kriging_training.hpp"
 #include "trust_region_gek.hpp"
-#include "kernel_regression.hpp"
+
 #include "optimization.hpp"
 #include "random_functions.hpp"
 #include "gek.hpp"
@@ -356,7 +356,6 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 	sampleMatrix.save(filenameSurrogateTest.c_str(), csv_ascii);
 
 	KrigingModel TestFunModelKriging(label);
-	KernelRegressionModel TestFunModelKernelRegression(label);
 	LinearModel TestFunModelLinearRegression(label);
 	AggregationModel TestFunModelAggregation(label);
 	GEKModel TestFunModelGEK(label);
@@ -373,21 +372,8 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 		surrogateModel = &TestFunModelLinearRegression;
 		break;
 	}
-	case KERNEL_REGRESSION:
-	{
-		surrogateModel =  &TestFunModelKernelRegression;
-		break;
-	}
-	case GRADIENT_ENHANCED_KERNEL_REGRESSION:
-	{
-		TestFunModelKernelRegression.setGradientsOn();
-		TestFunModelKernelRegression.modelID = GRADIENT_ENHANCED_KERNEL_REGRESSION;
-		surrogateModel =  &TestFunModelKernelRegression;
-		break;
-	}
 	case GRADIENT_ENHANCED_KRIGING:
 	{
-		TestFunModelKernelRegression.setGradientsOn();
 		surrogateModel =  &TestFunModelGEK;
 		break;
 	}
@@ -720,7 +706,7 @@ void TestFunction::testEfficientGlobalOptimization(int nsamplesTrainingData, int
 
 	}
 
-	Optimizer OptimizationStudy(function_name,numberOfInputParams,problemType);
+	COptimizer OptimizationStudy(function_name,numberOfInputParams,problemType);
 
 	if(ifVisualize) {
 

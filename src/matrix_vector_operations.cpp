@@ -205,6 +205,16 @@ void printVector(rowvec v, std::string name){
 
 }
 
+void printVector(std::vector<std::string> v){
+
+	for (std::vector<std::string>::const_iterator i = v.begin(); i != v.end(); ++i){
+	   std::cout << *i << ' ';
+	}
+	std::cout<<"\n";
+
+
+}
+
 vec normalizeColumnVector(vec x, double xmin, double xmax){
 
 	return ( (xmax-xmin)*x+xmin );

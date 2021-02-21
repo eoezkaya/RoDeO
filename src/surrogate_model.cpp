@@ -203,8 +203,9 @@ void SurrogateModel::ReadDataAndNormalize(void){
 	/* set number of sample points */
 	N = rawData.n_rows;
 
-	X = rawData.submat(0, 0, N - 1, dim - 1);
+	Xraw = rawData.submat(0, 0, N - 1, dim - 1);
 
+	X = Xraw;
 
 	if(ifUsesGradientData){
 
@@ -240,6 +241,7 @@ void SurrogateModel::updateData(mat dataMatrix){
 
 	rawData.reset();
 	X.reset();
+	Xraw.reset();
 	gradientData.reset();
 	y.reset();
 
@@ -273,8 +275,9 @@ void SurrogateModel::updateData(mat dataMatrix){
 	/* set number of sample points */
 	N = rawData.n_rows;
 
-	X = rawData.submat(0, 0, N - 1, dim - 1);
+	Xraw = rawData.submat(0, 0, N - 1, dim - 1);
 
+	X = Xraw;
 	if(ifUsesGradientData){
 
 		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
@@ -327,14 +330,8 @@ void SurrogateModel::tryModelOnTestSet(PartitionData &testSet) const{
 
 		rowvec x = testSet.getRow(i);
 
-		if(ifUsesGradientData){
+		testSet.ySurrogate(i) = interpolate(x);
 
-			testSet.ySurrogate(i) = interpolateWithGradients(x);
-		}
-		else{
-
-			testSet.ySurrogate(i) = interpolate(x);
-		}
 
 		testSet.squaredError(i) = (testSet.ySurrogate(i)-testSet.yExact(i)) * (testSet.ySurrogate(i)-testSet.yExact(i));
 #if 0
@@ -454,16 +451,7 @@ rowvec SurrogateModel::getRowXRaw(unsigned int index) const{
 
 	assert(index < X.n_rows);
 
-	rowvec x(dim);
-	rowvec xnorm = X.row(index);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		x(i) = xnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
-	}
-
-	return x;
-
+	return Xraw.row(index);
 }
 
 

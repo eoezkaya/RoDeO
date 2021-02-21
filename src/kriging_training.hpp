@@ -83,7 +83,7 @@ public:
 	void loadHyperParameters(void);
 	void train(void);
 	double interpolateWithGradients(rowvec x) const ;
-	double interpolate(rowvec x) const ;
+	double interpolate(rowvec x, bool ifprint = false) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
 

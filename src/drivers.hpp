@@ -49,10 +49,10 @@ private:
 	std::string configFileName;
 	std::string problemType;
 	std::string problemName;
-	int dimension;
-	int numberOfConstraints;
-	int maximumNumberOfSimulations;
-	int maximumNumberDoESamples;
+	unsigned int dimension;
+	unsigned int numberOfConstraints;
+	unsigned int maximumNumberOfSimulations;
+	unsigned int maximumNumberDoESamples;
 	vec boxConstraintsUpperBounds;
 	vec boxConstraintsLowerBounds;
 	vec constraintValues;
@@ -85,7 +85,7 @@ private:
 
 	bool checkifProblemTypeIsValid(std::string) const;
 	void setObjectiveFunction(ObjectiveFunction & );
-	void setConstraint(ConstraintFunction & constraintFunc, int indx);
+	void setConstraint(ConstraintFunction & constraintFunc, unsigned int indx);
 
 
 public:

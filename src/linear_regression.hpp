@@ -52,7 +52,7 @@ public:
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
 	void train(void);
-	double interpolate(rowvec x) const ;
+	double interpolate(rowvec x, bool ifprint = true) const ;
 	double interpolateWithGradients(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
