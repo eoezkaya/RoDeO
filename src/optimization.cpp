@@ -84,9 +84,23 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	optimizationType = problemType;
 	ifVisualize = false;
 	howOftenTrainModels = 10; /* train surrogates in every 10 iteration */
-
+	ifCleanDoeFiles = false;
 
 }
+
+bool COptimizer::checkSettings(void) const{
+
+	bool ifAllSetiingsOk = true;
+
+	if(!ifBoxConstraintsSet){
+
+		ifAllSetiingsOk = false;
+
+	}
+
+	return ifAllSetiingsOk;
+}
+
 
 void COptimizer::setProblemType(std::string type){
 
@@ -190,6 +204,9 @@ void COptimizer::addObjectFunction(ObjectiveFunction &objFunc){
 }
 
 
+
+
+
 void COptimizer::evaluateConstraints(Design &d){
 
 
@@ -200,12 +217,44 @@ void COptimizer::evaluateConstraints(Design &d){
 
 			it->evaluate(d);
 
-
 		}else{
 
 			it->evaluateAdjoint(d);
 
+		}
+		it->readEvaluateOutput(d);
 
+
+	}
+
+
+}
+
+void COptimizer::addConstraintValuesToDoEData(Design &d) const{
+
+	unsigned int countConstraintWithGradient = 0;
+	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+
+
+		if(!it->checkIfGradientAvailable()){
+
+			rowvec saveBuffer(dimension+1);
+			copyRowVector(saveBuffer,d.designParameters);
+			saveBuffer(dimension) = d.constraintTrueValues(it->getID()-1);
+			appendRowVectorToCSVData(saveBuffer,it->name+".csv");
+
+
+		}else{
+
+			rowvec saveBuffer(2*dimension+1);
+			copyRowVector(saveBuffer,d.designParameters);
+			saveBuffer(dimension) = d.constraintTrueValues(it->getID()-1);
+
+			rowvec gradient = d.constraintGradients[countConstraintWithGradient];
+			countConstraintWithGradient++;
+			copyRowVector(saveBuffer,gradient,dimension+1);
+
+			appendRowVectorToCSVData(saveBuffer,it->name+".csv");
 
 		}
 
@@ -214,8 +263,6 @@ void COptimizer::evaluateConstraints(Design &d){
 
 
 }
-
-
 
 
 //void COptimizer::evaluateConstraints(rowvec x, rowvec &constraintValues, mat &constraintGradients, bool ifAddToData){
@@ -540,7 +587,6 @@ void COptimizer::checkIfSettingsAreOK(void) const{
 
 
 
-
 void COptimizer::EfficientGlobalOptimization(void){
 
 	checkIfSettingsAreOK();
@@ -769,8 +815,7 @@ void COptimizer::EfficientGlobalOptimization(void){
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
 #endif
 
-		Design currentBestDesign;
-		currentBestDesign.designParameters = best_dv;
+		Design currentBestDesign(best_dv, numberOfConstraints);
 
 
 		/* now make a simulation for the most promising design */
@@ -784,6 +829,7 @@ void COptimizer::EfficientGlobalOptimization(void){
 			objFun.evaluateAdjoint(currentBestDesign);
 		}
 		objFun.addDesignToData(currentBestDesign);
+
 
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 		addConstraintValuesToData(currentBestDesign);
@@ -832,6 +878,30 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 
 }
+void COptimizer::cleanDoEFiles(void) const{
+
+	std::string fileNameObjectiveFunction = objFun.name+".csv";
+	if(file_exist(fileNameObjectiveFunction)){
+
+		remove(fileNameObjectiveFunction.c_str());
+	}
+
+	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+
+		std::string fileNameConstraint = it->name+".csv";
+		if(file_exist(fileNameConstraint)){
+
+			remove(fileNameConstraint.c_str());
+		}
+
+
+	}
+
+
+}
+
+
+
 
 
 void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
@@ -842,43 +912,30 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		abort();
 	}
 
-	mat samples;
+
+	if(ifCleanDoeFiles){
+
+		cleanDoEFiles();
+	}
+
+
+	mat sampleCoordinates;
+
 
 	if(methodID == LHS){
 
 		LHSSamples DoE(dimension, lowerBounds, upperBounds, howManySamples);
 
 
-		if(dimension == 2) DoE.visualize();
+		//		if(dimension == 2) DoE.visualize();
 		std::string filename= this->name + "_samples.csv";
 		DoE.saveSamplesToFile(filename);
-		samples = DoE.getSamples();
+		sampleCoordinates = DoE.getSamples();
 	}
 
 #if 1
-	printMatrix(samples,"samples");
+	printMatrix(sampleCoordinates,"sampleCoordinates");
 #endif
-
-	mat DataObjFunction;
-
-	if(objFun.checkIfGradientAvailable()) {
-
-		DataObjFunction = zeros<mat>(howManySamples,2*dimension+1);
-
-	}
-	else{
-
-		DataObjFunction = zeros<mat>(howManySamples,dimension+1);
-
-	}
-
-	int numberOfConstraintsWithoutGradients = numberOfConstraints-numberOfConstraintsWithGradient;
-	cube DataConstraints(howManySamples,dimension+1,numberOfConstraintsWithoutGradients);
-	cube DataConstraintsWithGradients(howManySamples,2*dimension+1,numberOfConstraintsWithGradient);
-
-
-
-
 
 
 	for(unsigned int sampleID=0; sampleID<howManySamples; sampleID++){
@@ -886,141 +943,47 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		std::cout<<"Evaluating sample "<<sampleID<<"\n";
 		std::cout<<"##########################################\n";
 
-		Design currentDesign;
-		currentDesign.designParameters = samples.row(sampleID);
-
-		for(unsigned int j=0;j<dimension;j++) {
-			DataObjFunction(sampleID,j) = samples(sampleID,j);
-
-		}
+		rowvec dv = sampleCoordinates.row(sampleID);
+		Design currentDesign(dv, numberOfConstraints);
 
 
-		double objectiveFunctionValue  = 0.0;
+
+
 		if(!objFun.checkIfGradientAvailable()) {
 
 			objFun.evaluate(currentDesign);
+			objFun.readEvaluateOutput(currentDesign);
+			rowvec temp(dimension+1);
+			copyRowVector(temp,dv);
+			temp(dimension) = currentDesign.trueValue;
+			appendRowVectorToCSVData(temp,objFun.name+".csv");
 
-			DataObjFunction(sampleID,dimension)  = currentDesign.trueValue;
 
 		}
 		else{
 
 			objFun.evaluateAdjoint(currentDesign);
+			objFun.readEvaluateOutput(currentDesign);
+			rowvec temp(2*dimension+1);
+			copyRowVector(temp,currentDesign.designParameters);
+			temp(dimension) = currentDesign.trueValue;
+			copyRowVector(temp,currentDesign.gradient, dimension+1);
 
-			DataObjFunction(sampleID,dimension)  = currentDesign.trueValue;
 
-			for(unsigned int j=0; j<dimension;j++){
+			appendRowVectorToCSVData(temp,objFun.name+".csv");
 
-				DataObjFunction(sampleID,dimension+1+j) = currentDesign.gradient(j);
-
-			}
 
 		}
-
-		std::cout<<objFun.name<<" = "<<objectiveFunctionValue<<"\n";
-
-		rowvec constraintValues(numberOfConstraints);
-		mat constraintGradients(numberOfConstraintsWithGradient, dimension);
-
 
 		evaluateConstraints(currentDesign);
 
-
-		int constraintID = 0;
-		int constraintIDGradient = 0;
-		int constraintIDWithoutGradient = 0;
-		for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+		addConstraintValuesToDoEData(currentDesign);
 
 
-			for(unsigned int j=0;j<dimension;j++) {
-
-
-				DataConstraints(sampleID,j,constraintID) = samples(sampleID,j);
-				DataConstraintsWithGradients(sampleID,j,constraintID) = samples(sampleID,j);
-
-			}
-
-
-			if(!it->checkIfGradientAvailable()){
-
-				DataConstraints(sampleID,dimension,constraintIDWithoutGradient) = constraintValues(constraintID);
-
-				constraintIDWithoutGradient++;
-			}
-			else{
-
-				DataConstraintsWithGradients(sampleID,dimension,constraintIDGradient) = constraintValues(constraintID);
-
-				for(unsigned int j=dimension+1;j<2*dimension+1;j++) {
-
-					DataConstraintsWithGradients(sampleID,j,constraintIDGradient) = constraintGradients(constraintIDGradient, j-dimension-1);
-
-				}
-				constraintIDGradient++;
-
-
-			}
-
-			constraintID++;
-		}
-
-
-		for(unsigned int k=0;k<numberOfConstraints;k++) {
-
-			std::cout<<constraintFunctions.at(k).name<<" = "<<constraintValues(k)<<"\n";
-
-		}
 
 	} /* end of sample loop */
 
 
-	if(DataObjFunction.has_nan()){
-
-		std::cout<<"ERROR: NaN in objective function values!\n";
-		abort();
-
-	}
-	if(DataConstraints.has_nan() || DataConstraintsWithGradients.has_nan()){
-
-		std::cout<<"ERROR: NaN in constraint values and/or gradients!\n";
-		abort();
-
-	}
-
-	objFun.saveDoEData(DataObjFunction);
-
-
-#if 1
-	printMatrix(DataObjFunction);
-#endif
-
-
-	int constraintIDGradient = 0;
-	int constraintIDWithoutGradient = 0;
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-
-		if(it->ifNeedsSurrogate){
-
-			mat saveBuffer;
-			if(!it->checkIfGradientAvailable()){
-
-				saveBuffer = DataConstraints.slice(constraintIDWithoutGradient);
-				constraintIDWithoutGradient++;
-
-			}
-			else{
-
-				saveBuffer = DataConstraintsWithGradients.slice(constraintIDGradient);
-				constraintIDGradient++;
-			}
-
-
-			it->saveDoEData(saveBuffer);
-		}
-
-
-	}
 
 
 }

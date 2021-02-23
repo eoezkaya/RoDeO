@@ -28,55 +28,51 @@
  *
  *
  */
-#ifndef TRAIN_TR_GEK_HPP
-#define TRAIN_TR_GEK_HPP
-
-#include "Rodeo_macros.hpp"
-#include "kriging_training.hpp"
 
 
-class AggregationModel : public SurrogateModel {
-
-private:
-
-	KrigingModel krigingModel;
-
-	vec L1NormWeights;
-
-	double rho;
+#include <cassert>
+#include "design.hpp"
+#include "matrix_vector_operations.hpp"
+#define ARMA_DONT_PRINT_ERRORS
+#include <armadillo>
 
 
-	PartitionData trainingDataForHyperParameterOptimization;
-	PartitionData trainingDataForKriging;
-
-	unsigned int numberOfTrainingIterations;
+using namespace arma;
 
 
-public:
+Design::Design(rowvec dv, unsigned int numberOfConstraints){
+
+	unsigned int dimension = dv.size();
+	designParameters = dv;
+	constraintTrueValues = zeros<rowvec>(numberOfConstraints);
+	gradient = zeros<rowvec>(dimension);
 
 
-	AggregationModel();
-	AggregationModel(std::string name);
+}
 
-	void initializeSurrogateModel(void);
-	void printSurrogateModel(void) const;
-	void printHyperParameters(void) const;
-	void saveHyperParameters(void) const;
-	void loadHyperParameters(void);
-	void updateAuxilliaryFields(void);
-	void train(void);
-	void generateRandomHyperParams(void);
-	double interpolate(rowvec x, bool ifprint = false) const ;
-	double interpolateWithGradients(rowvec x) const ;
-	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
-	double calculateExpectedImprovement(rowvec xp) const;
-	unsigned int findNearestNeighbor(rowvec xp) const;
-	int addNewSampleToData(rowvec newsample);
-	void updateModelWithNewData(void);
+Design::Design(rowvec dv){
+
+	unsigned int dimension = dv.size();
+	designParameters = dv;
+	gradient = zeros<rowvec>(dimension);
 
 
-};
+}
+
+void Design::print(void) const{
+
+	printVector(designParameters,"designParameters");
+	std::cout<<"Value = "<<trueValue<<"\n";
+	printVector(gradient,"gradient vector");
+	printVector(constraintTrueValues,"constraint values");
 
 
 
-#endif
+	for (auto it = constraintGradients.begin(); it != constraintGradients.end(); it++){
+
+		printVector(*it);
+
+
+	}
+
+}

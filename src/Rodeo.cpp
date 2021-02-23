@@ -44,8 +44,6 @@
 #include "auxiliary_functions.hpp"
 #include "read_settings.hpp"
 
-#include "kernel_regression.hpp"
-#include "kernel_regression_test.hpp"
 #include "aggregation_test.hpp"
 #include "surrogate_model.hpp"
 

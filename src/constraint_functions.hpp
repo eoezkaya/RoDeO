@@ -62,30 +62,38 @@ private:
 public:
 	std::string name;
 	bool ifNeedsSurrogate;
-	std::vector<int> IDToFunctionsShareOutputFile;
+
 	std::vector<int> IDToFunctionsShareOutputExecutable;
+
+	unsigned int readOutputStartIndex;
 
 
 	ConstraintFunction(std::string, std::string, double, double (*constFun)(double *), unsigned int dimension, bool ifNeedsSurrogate = false);
 	ConstraintFunction(std::string, std::string, double, unsigned int);
 	ConstraintFunction();
-	void saveDoEData(mat) const;
+	void saveDoEData(std::vector<rowvec> data) const;
 	void trainSurrogate(void);
 
+
+	void setGradientOn(void);
+	void setGradientOff(void);
 	void setFileNameReadConstraintFunction(std::string);
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
 	void setFileNameDesignVector(std::string);
-	void setID(int);
+	void setID(unsigned int);
+	unsigned int getID(void) const;
 
 	bool checkFeasibility(double value) const;
 	bool checkIfGradientAvailable(void) const;
 
 	double calculateEI(rowvec x) const;
-//	double evaluate(rowvec x, bool);
+
+	void readEvaluateOutput(Design &d);
 	void evaluate(Design &d);
-	void evaluateAdjoint(Design &d) const;
-//	rowvec evaluateAdjoint(rowvec x,bool ifAddToData = true);
+	void evaluateAdjoint(Design &d);
+	bool checkIfRunExecutableNecessary(void);
+
 	double ftilde(rowvec x) const;
 	void print(void) const;
 

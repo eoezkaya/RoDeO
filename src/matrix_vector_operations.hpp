@@ -114,11 +114,18 @@ void printMatrix(mat M, std::string name="None");
 void printVector(vec v, std::string name="None");
 void printVector(rowvec v, std::string name="None");
 void printVector(std::vector<std::string> v);
+void printVector(std::vector<int> v);
+void printVector(std::vector<bool> v);
 
 vec normalizeColumnVector(vec x, double xmin, double xmax);
 
 rowvec normalizeRowVector(rowvec x, vec xmin, vec xmax);
 rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax);
+
+void copyRowVector(rowvec &a,rowvec b);
+void copyRowVector(rowvec &a,rowvec b, unsigned int);
+
+void appendRowVectorToCSVData(rowvec v, std::string fileName);
 
 mat normalizeMatrix(mat matrixIn);
 mat normalizeMatrix(mat matrixIn, vec xmin, vec xmax);

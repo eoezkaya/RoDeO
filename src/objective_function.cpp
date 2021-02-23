@@ -156,10 +156,29 @@ void ObjectiveFunction::trainSurrogate(void){
 
 
 
-void ObjectiveFunction::saveDoEData(mat data) const{
+void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 
 	std::string fileName = surrogateModel.getInputFileName();
-	data.save(fileName,csv_ascii);
+
+	std::ofstream myFile(fileName);
+
+	myFile.precision(10);
+
+	for(unsigned int i = 0; i < data.size(); ++i)
+	{
+		rowvec v=  data.at(i);
+
+
+		for(unsigned int j= 0; j<v.size(); j++){
+
+			myFile <<v(j)<<",";
+		}
+
+		myFile << "\n";
+	}
+
+
+	myFile.close();
 
 
 }
@@ -256,7 +275,7 @@ void ObjectiveFunction::addDesignToData(Design &d){
 		}
 
 
-#if 0
+#if 1
 		printf("new sample: \n");
 		newsample.print();
 #endif
@@ -272,14 +291,67 @@ void ObjectiveFunction::addDesignToData(Design &d){
 
 }
 
+
+void ObjectiveFunction::readEvaluateOutput(Design &d){
+
+	if( objectiveFunPtr == empty){
+		std::ifstream ifile(fileNameObjectiveFunctionRead, std::ios::in);
+
+		if (!ifile.is_open()) {
+
+			std::cout << "ERROR: There was a problem opening the input file!\n";
+			abort();
+		}
+
+		double functionValue;
+		ifile >> functionValue;
+
+		if(std::isnan(functionValue)){
+
+			cout<<"ERROR: NaN as the objective function value!\n";
+			abort();
+
+		}
+
+		d.trueValue = functionValue;
+		d.objectiveFunctionValue = functionValue;
+
+		if(ifGradientAvailable){
+
+			for(unsigned int i=0; i<dim;i++){
+				ifile >> d.gradient(i);
+
+			}
+
+			if(d.gradient.has_nan()){
+
+				cout<<"ERROR: NaN in the objective function gradients!\n";
+				abort();
+
+
+			}
+
+
+
+		}
+
+
+	}
+
+}
+
+
+
 void ObjectiveFunction::evaluate(Design &d){
 
 	rowvec x = d.designParameters;
-	double functionValue = 0.0;
+
 
 	if( objectiveFunPtr != empty){
 
-		functionValue =  objectiveFunPtr(x.memptr());
+		double functionValue =  objectiveFunPtr(x.memptr());
+		d.trueValue = functionValue;
+		d.objectiveFunctionValue = functionValue;
 
 	}
 
@@ -299,17 +371,6 @@ void ObjectiveFunction::evaluate(Design &d){
 
 		system(runCommand.c_str());
 
-		std::ifstream ifile(fileNameObjectiveFunctionRead, std::ios::in);
-
-		if (!ifile.is_open()) {
-
-			std::cout << "ERROR: There was a problem opening the input file!\n";
-			abort();
-		}
-
-		ifile >> functionValue;
-
-
 	}
 	else{
 
@@ -317,15 +378,8 @@ void ObjectiveFunction::evaluate(Design &d){
 		abort();
 	}
 
-	if(std::isnan(functionValue)){
 
-		cout<<"ERROR: NaN as the objective function value!\n";
-		abort();
 
-	}
-
-	d.trueValue = functionValue;
-	d.objectiveFunctionValue = functionValue;
 
 }
 
@@ -339,25 +393,20 @@ void ObjectiveFunction::evaluateAdjoint(Design &d){
 	assert(x.size() == dim);
 	assert(ifGradientAvailable);
 
-	rowvec result(dim+1);
-	result.fill(0.0);
-	rowvec xb(dim);
-	xb.fill(0.0);
 
-	double functionValue = 0.0;
+
+
 
 	if( objectiveFunAdjPtr != emptyAdj){
 
-		functionValue =  objectiveFunAdjPtr(x.memptr(),xb.memptr());
+		rowvec xb(dim);
+		xb.fill(0.0);
 
-		result(0) = functionValue;
+		double functionValue =  objectiveFunAdjPtr(x.memptr(),xb.memptr());
 
-		for(unsigned int i=0; i<dim; i++){
-
-			result(i+1) = xb(i);
-
-		}
-
+		d.trueValue = functionValue;
+		d.objectiveFunctionValue = functionValue;
+		d.gradient = xb;
 
 	}
 
@@ -377,52 +426,12 @@ void ObjectiveFunction::evaluateAdjoint(Design &d){
 
 		system(runCommand.c_str());
 
-
-
-		std::ifstream ifile(fileNameObjectiveFunctionRead, std::ios::in);
-
-		if (!ifile.is_open()) {
-
-			std::cout << "ERROR: There was a problem opening the input file!\n";
-			abort();
-		}
-
-
-		for(unsigned int i=0; i<dim+1; i++){
-
-			ifile >> result(i);
-
-		}
-
-
-
 	}
 	else{
 
 		cout<<"ERROR: Cannot evaluate the objective function. Check settings!\n";
 		abort();
 	}
-
-	if( result.has_nan()){
-
-		cout<<"ERROR: NaN in the objective function value or gradient!\n";
-		abort();
-
-	}
-
-
-	d.trueValue = result(0);
-
-	rowvec gradientBuffer(dim);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		gradientBuffer(i) = result(i+1);
-	}
-
-	d.gradient = gradientBuffer;
-
-
 
 
 }
@@ -443,7 +452,7 @@ double ObjectiveFunction::ftilde(rowvec x, bool ifdebug) const{
 }
 
 void ObjectiveFunction::print(void) const{
-
+	std::cout << "#####################################################\n";
 	std::cout<<std::endl;
 	std::cout<<"Objective Function"<<std::endl;
 	std::cout<<"Name: "<<name<<std::endl;
@@ -466,6 +475,6 @@ void ObjectiveFunction::print(void) const{
 	surrogateModel.printSurrogateModel();
 	surrogateModelGradient.printSurrogateModel();
 #endif
-
+	std::cout << "#####################################################\n";
 
 }

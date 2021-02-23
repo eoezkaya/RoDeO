@@ -70,6 +70,7 @@ private:
 	bool ifexecutablePathObjectiveFunctionSet;
 	bool ifDesignVectorFileNameSet;
 
+	bool ifDoEFilesShouldBeCleaned;
 
 	std::vector<bool> IsGradientsAvailable;
 	std::vector<std::string> executablesWithGradient;
@@ -93,6 +94,7 @@ public:
 	void checkConsistencyOfConfigParams(void) const;
 	void readConfigFile(void);
 	void runDriver(void);
+
 
 };
 

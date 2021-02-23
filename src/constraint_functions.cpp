@@ -56,12 +56,14 @@ ConstraintFunction::ConstraintFunction() {
 	dim = 0;
 	name = "None";
 	pConstFun = empty;
+	pConstFunAdj = emptyAdj;
 	inequalityType = "None";
 	targetValue = 0.0;
 	executableName = "None";
 	executablePath = "None";
 	fileNameConstraintFunctionRead = "None";
 	fileNameDesignVector = "None";
+	ifGradientAvailable = false;
 
 }
 
@@ -83,6 +85,7 @@ ConstraintFunction::ConstraintFunction(std::string constraintName,
 
 	targetValue = constraintValue;
 	ifNeedsSurrogate = ifSurrogate;
+	ifGradientAvailable = false;
 
 	if (ifNeedsSurrogate) {
 
@@ -96,10 +99,12 @@ ConstraintFunction::ConstraintFunction(std::string constraintName,
 ConstraintFunction::ConstraintFunction(std::string constraintName,
 		std::string constraintType, double constraintValue,
 		unsigned int dimension) :
-				surrogateModel(constraintName), surrogateModelGradient(constraintName) {
+																								surrogateModel(constraintName), surrogateModelGradient(constraintName) {
 
 	ifNeedsSurrogate = true;
+	ifGradientAvailable = false;
 	pConstFun = empty;
+	pConstFunAdj = emptyAdj;
 	targetValue = constraintValue;
 	dim = dimension;
 	name = constraintName;
@@ -111,9 +116,26 @@ ConstraintFunction::ConstraintFunction(std::string constraintName,
 
 }
 
-void ConstraintFunction::setID(int givenID) {
+void ConstraintFunction::setID(unsigned int givenID) {
 
 	ID = givenID;
+
+}
+
+unsigned int ConstraintFunction::getID(void) const {
+
+	return ID;
+
+}
+
+void ConstraintFunction::setGradientOn(void){
+
+	ifGradientAvailable = true;
+
+}
+void ConstraintFunction::setGradientOff(void){
+
+	ifGradientAvailable = false;
 
 }
 
@@ -142,10 +164,30 @@ void ConstraintFunction::setExecutableName(std::string exeName) {
 
 }
 
-void ConstraintFunction::saveDoEData(mat data) const {
+void ConstraintFunction::saveDoEData(std::vector<rowvec> data) const{
 
 	std::string fileName = surrogateModel.getInputFileName();
-	data.save(fileName, csv_ascii);
+
+	std::ofstream myFile(fileName);
+
+	myFile.precision(10);
+
+	for(unsigned int i = 0; i < data.size(); ++i)
+	{
+		rowvec v=  data.at(i);
+
+
+		for(unsigned int j= 0; j<v.size(); j++){
+
+			myFile <<v(j)<<",";
+		}
+
+		myFile << "\n";
+	}
+
+
+	myFile.close();
+
 
 }
 
@@ -168,7 +210,7 @@ double ConstraintFunction::ftilde(rowvec x) const {
 	}
 	else{
 
-		result = this->surrogateModelGradient.interpolate(x);
+		result = surrogateModelGradient.interpolate(x);
 	}
 	return result;
 
@@ -208,6 +250,98 @@ bool ConstraintFunction::checkIfGradientAvailable(void) const{
 }
 
 
+
+
+void ConstraintFunction::readEvaluateOutput(Design &d) {
+
+
+	unsigned int totalNumberOfEntriesToRead = this->readOutputStartIndex;
+	if(ifGradientAvailable){
+
+		totalNumberOfEntriesToRead += dim+1;
+	}
+	else{
+		totalNumberOfEntriesToRead++;
+
+	}
+
+	std::ifstream ifile(fileNameConstraintFunctionRead, std::ios::in);
+
+	if (!ifile.is_open()) {
+
+		std::cout << "ERROR: There was a problem opening the input file!\n";
+		abort();
+	}
+
+	vec bufferRead(totalNumberOfEntriesToRead);
+
+	for (unsigned int i = 0; i < totalNumberOfEntriesToRead ; i++) {
+
+		ifile >> bufferRead(i);
+	}
+
+	printVector(bufferRead);
+
+	d.constraintTrueValues(this->ID-1) = bufferRead(readOutputStartIndex);
+
+
+
+	if(ifGradientAvailable){
+
+		rowvec constraintGradient(dim);
+
+		for(unsigned int i=0; i<dim; i++){
+
+			constraintGradient(i) = bufferRead(readOutputStartIndex+i+1);
+
+		}
+
+		if(constraintGradient.has_nan()){
+
+			std::cout<<"ERROR: NaN in constraint gradient evaluation!\n";
+			abort();
+
+
+		}
+
+
+
+
+		d.constraintGradients.push_back(constraintGradient);
+	}
+	d.print();
+
+}
+
+
+bool ConstraintFunction::checkIfRunExecutableNecessary(void) {
+
+	bool ifRun = true;
+
+	if (!IDToFunctionsShareOutputExecutable.empty()) {
+
+
+		std::vector<int>::iterator result = std::min_element(
+				IDToFunctionsShareOutputExecutable.begin(),
+				IDToFunctionsShareOutputExecutable.end());
+		unsigned int minIDshareExe = *result;
+
+		if (this->ID > minIDshareExe) {
+
+			ifRun = false;
+#if 0
+			std::cout<<"No need to call this constraint exe\n";
+#endif
+		}
+
+	}
+
+
+	return ifRun;
+
+}
+
+
 void ConstraintFunction::evaluate(Design &d) {
 
 	double functionValue = 0.0;
@@ -217,27 +351,18 @@ void ConstraintFunction::evaluate(Design &d) {
 
 		functionValue = pConstFun(x.memptr());
 
+
+
+
+		d.trueValue = functionValue;
+		d.objectiveFunctionValue = functionValue;
+
 	}
 
 	else if (fileNameConstraintFunctionRead != "None"
 			&& executableName != "None" && fileNameDesignVector != "None") {
 
-		bool ifRun = true;
-		if (!IDToFunctionsShareOutputExecutable.empty()) {
-			std::vector<int>::iterator result = std::min_element(
-					IDToFunctionsShareOutputExecutable.begin(),
-					IDToFunctionsShareOutputExecutable.end());
-			unsigned int minIDshareExe = *result;
-
-			if (this->ID > minIDshareExe) {
-
-				ifRun = false;
-#if 0
-				std::cout<<"No need to call this constraint exe\n";
-#endif
-			}
-
-		}
+		bool ifRun = checkIfRunExecutableNecessary();
 
 		if (ifRun) {
 
@@ -245,8 +370,7 @@ void ConstraintFunction::evaluate(Design &d) {
 
 			if (!ifSaveIsSuccessful) {
 
-				std::cout
-				<< "ERROR: There was a problem while saving the design vector!\n";
+				std::cout<< "ERROR: There was a problem while saving the design vector!\n";
 				abort();
 
 			}
@@ -266,224 +390,33 @@ void ConstraintFunction::evaluate(Design &d) {
 
 		}
 
-		int numberOfTotalItemsToRead = 1;
-		int IndexOfItemToRead = 1;
 
-		if (!IDToFunctionsShareOutputFile.empty()) {
 
-			numberOfTotalItemsToRead = IDToFunctionsShareOutputFile.size() + 1;
 
-			for (auto it = IDToFunctionsShareOutputFile.begin();
-					it != IDToFunctionsShareOutputFile.end(); it++) {
-
-				if (*it < int(ID)) {
-
-					IndexOfItemToRead++;
-				}
-
-			}
-
-		}
-#if 0
-		std::cout<<"numberOfTotalItemsToRead = "<<numberOfTotalItemsToRead<<"\n";
-		std::cout<<"IndexOfItemToRead = "<<IndexOfItemToRead<<"\n";
-#endif
-
-		std::ifstream ifile(fileNameConstraintFunctionRead, std::ios::in);
-
-		if (!ifile.is_open()) {
-
-			std::cout << "ERROR: There was a problem opening the input file!\n";
-			abort();
-		}
-
-		double bufferRead;
-		for (int i = 0; i < numberOfTotalItemsToRead; i++) {
-
-			ifile >> bufferRead;
-
-			if (i == IndexOfItemToRead - 1)
-				functionValue = bufferRead;
-
-		}
 
 	} else {
 
-		cout
-		<< "ERROR: Cannot evaluate the constraint function. Check settings!\n";
+		cout<< "ERROR: Cannot evaluate the constraint function. Check settings!\n";
 		abort();
 	}
-
-	if (std::isnan(functionValue)) {
-
-		cout << "ERROR: NaN as the objective function value!\n";
-		abort();
-
-	}
-
-	d.constraintTrueValues(ID-1) = functionValue;
 
 
 }
 
-
-
-//double ConstraintFunction::evaluate(rowvec x, bool ifAddToData = true) {
-//
-//	double functionValue = 0.0;
-//
-//	if (pConstFun != empty) {
-//
-//		functionValue = pConstFun(x.memptr());
-//
-//	}
-//
-//	else if (fileNameConstraintFunctionRead != "None"
-//			&& executableName != "None" && fileNameDesignVector != "None") {
-//
-//		bool ifRun = true;
-//		if (!IDToFunctionsShareOutputExecutable.empty()) {
-//			std::vector<int>::iterator result = std::min_element(
-//					IDToFunctionsShareOutputExecutable.begin(),
-//					IDToFunctionsShareOutputExecutable.end());
-//			unsigned int minIDshareExe = *result;
-//
-//			if (this->ID > minIDshareExe) {
-//
-//				ifRun = false;
-//#if 0
-//				std::cout<<"No need to call this constraint exe\n";
-//#endif
-//			}
-//
-//		}
-//
-//		if (ifRun) {
-//
-//			bool ifSaveIsSuccessful = x.save(fileNameDesignVector, raw_ascii);
-//
-//			if (!ifSaveIsSuccessful) {
-//
-//				std::cout
-//				<< "ERROR: There was a problem while saving the design vector!\n";
-//				abort();
-//
-//			}
-//
-//			std::string runCommand;
-//			if (this->executablePath != "None") {
-//
-//				runCommand = executablePath + "/" + executableName;
-//			} else {
-//				runCommand = "./" + executableName;
-//			}
-//#if 0
-//			std::cout<<runCommand<<"\n";
-//#endif
-//
-//			system(runCommand.c_str());
-//
-//		}
-//
-//		int numberOfTotalItemsToRead = 1;
-//		int IndexOfItemToRead = 1;
-//
-//		if (!IDToFunctionsShareOutputFile.empty()) {
-//
-//			numberOfTotalItemsToRead = IDToFunctionsShareOutputFile.size() + 1;
-//
-//			for (auto it = IDToFunctionsShareOutputFile.begin();
-//					it != IDToFunctionsShareOutputFile.end(); it++) {
-//
-//				if (*it < int(ID)) {
-//
-//					IndexOfItemToRead++;
-//				}
-//
-//			}
-//
-//		}
-//#if 0
-//		std::cout<<"numberOfTotalItemsToRead = "<<numberOfTotalItemsToRead<<"\n";
-//		std::cout<<"IndexOfItemToRead = "<<IndexOfItemToRead<<"\n";
-//#endif
-//
-//		std::ifstream ifile(fileNameConstraintFunctionRead, std::ios::in);
-//
-//		if (!ifile.is_open()) {
-//
-//			std::cout << "ERROR: There was a problem opening the input file!\n";
-//			abort();
-//		}
-//
-//		double bufferRead;
-//		for (int i = 0; i < numberOfTotalItemsToRead; i++) {
-//
-//			ifile >> bufferRead;
-//
-//			if (i == IndexOfItemToRead - 1)
-//				functionValue = bufferRead;
-//
-//		}
-//
-//	} else {
-//
-//		cout
-//		<< "ERROR: Cannot evaluate the constraint function. Check settings!\n";
-//		abort();
-//	}
-//
-//	if (std::isnan(functionValue)) {
-//
-//		cout << "ERROR: NaN as the objective function value!\n";
-//		abort();
-//
-//	}
-//
-//	assert(std::isnan(functionValue) == false);
-//
-//	if (ifAddToData) {
-//
-//		rowvec newsample(dim + 1);
-//
-//		for (unsigned int k = 0; k < dim; k++) {
-//
-//			newsample(k) = x(k);
-//
-//		}
-//		newsample(dim) = functionValue;
-//
-//		std::cout << name << " = " << functionValue << "\n";
-//
-//#if 0
-//		printf("new sample: \n");
-//		newsample.print();
-//#endif
-//
-//		surrogateModel.addNewSampleToData(newsample);
-//
-//	}
-//
-//	return functionValue;
-//}
-
-
-void ConstraintFunction::evaluateAdjoint(Design &d) const{
+void ConstraintFunction::evaluateAdjoint(Design &d) {
 
 	assert(ifGradientAvailable);
 
-	rowvec constraintGradient(dim);
-
 	rowvec x = d.designParameters;
-	double constraintValue = 0.0;
+
 
 	if (pConstFunAdj != emptyAdj) {
-
+		double constraintValue = 0.0;
 		rowvec xb(dim);
 		xb.fill(0.0);
 		constraintValue = pConstFunAdj(x.memptr(), xb.memptr());
 
-
+		rowvec constraintGradient(dim);
 
 		for (unsigned int i = 0; i < dim; i++) {
 
@@ -491,63 +424,7 @@ void ConstraintFunction::evaluateAdjoint(Design &d) const{
 
 		}
 
-	} else if (fileNameConstraintFunctionRead != "None"
-			&& executableName != "None" && fileNameDesignVector != "None") {
-
-		bool ifSaveIsSuccessful = x.save(fileNameDesignVector, raw_ascii);
-
-		if (!ifSaveIsSuccessful) {
-
-			std::cout
-			<< "ERROR: There was a problem while saving the design vector!\n";
-			abort();
-
-		}
-
-		std::string runCommand;
-		if (this->executablePath != "None") {
-
-			runCommand = executablePath + "/" + executableName;
-		} else {
-			runCommand = "./" + executableName;
-		}
-#if 0
-		std::cout<<runCommand<<"\n";
-#endif
-
-		system(runCommand.c_str());
-
-		std::ifstream ifile(fileNameConstraintFunctionRead, std::ios::in);
-
-		if (!ifile.is_open()) {
-
-			std::cout << "ERROR: There was a problem opening the input file!\n";
-			abort();
-		}
-
-		double bufferRead;
-		for (unsigned int i = 0; i < dim + 1; i++) {
-
-			ifile >> bufferRead;
-
-			if(i == 0){
-				constraintValue = bufferRead;
-			}
-			else{
-				constraintGradient(i-1) =  bufferRead;
-
-			}
-
-		}
-
-	} else {
-
-		cout
-		<< "ERROR: Cannot evaluate the constraint function. Check settings!\n";
-		abort();
-	}
-
-	if(constraintGradient.has_nan()){
+		if(constraintGradient.has_nan()){
 
 			std::cout<<"ERROR: NaN in constraint gradient evaluation!\n";
 			abort();
@@ -556,97 +433,58 @@ void ConstraintFunction::evaluateAdjoint(Design &d) const{
 		}
 
 
+		d.constraintTrueValues(ID-1) = constraintValue ;
+		d.constraintGradients.push_back(constraintGradient);
 
 
-	d.constraintTrueValues(ID-1) = constraintValue;
-	d.constraintGradients.push_back(constraintGradient);
 
+
+	} else if (fileNameConstraintFunctionRead != "None"
+			&& executableName != "None" && fileNameDesignVector != "None") {
+
+		bool ifRun = checkIfRunExecutableNecessary();
+
+
+		if (ifRun) {
+			bool ifSaveIsSuccessful = x.save(fileNameDesignVector, raw_ascii);
+
+			if (!ifSaveIsSuccessful) {
+
+				std::cout<< "ERROR: There was a problem while saving the design vector!\n";
+				abort();
+
+			}
+
+			std::string runCommand;
+			if (this->executablePath != "None") {
+
+				runCommand = executablePath + "/" + executableName;
+			} else {
+				runCommand = "./" + executableName;
+			}
+#if 0
+			std::cout<<runCommand<<"\n";
+#endif
+
+			system(runCommand.c_str());
+
+
+		}
+
+
+
+	} else {
+
+		cout<< "ERROR: Cannot evaluate the constraint function. Check settings!\n";
+		abort();
+	}
+
+
+
+	d.print();
 
 }
 
-
-
-//rowvec ConstraintFunction::evaluateAdjoint(rowvec x, bool ifAddToData) {
-//
-//	assert(ifGradientAvailable);
-//	rowvec result(dim + 1);
-//	result.fill(0.0);
-//	rowvec xb(dim);
-//	xb.fill(0.0);
-//
-//	double constraintValue = 0.0;
-//
-//	if (pConstFunAdj != emptyAdj) {
-//
-//		constraintValue = pConstFunAdj(x.memptr(), xb.memptr());
-//
-//		result(0) = constraintValue;
-//
-//		for (unsigned int i = 0; i < dim; i++) {
-//
-//			result(i + 1) = xb(i);
-//
-//		}
-//
-//	} else if (fileNameConstraintFunctionRead != "None"
-//			&& executableName != "None" && fileNameDesignVector != "None") {
-//
-//		bool ifSaveIsSuccessful = x.save(fileNameDesignVector, raw_ascii);
-//
-//		if (!ifSaveIsSuccessful) {
-//
-//			std::cout
-//			<< "ERROR: There was a problem while saving the design vector!\n";
-//			abort();
-//
-//		}
-//
-//		std::string runCommand;
-//		if (this->executablePath != "None") {
-//
-//			runCommand = executablePath + "/" + executableName;
-//		} else {
-//			runCommand = "./" + executableName;
-//		}
-//#if 0
-//		std::cout<<runCommand<<"\n";
-//#endif
-//
-//		system(runCommand.c_str());
-//
-//		std::ifstream ifile(fileNameConstraintFunctionRead, std::ios::in);
-//
-//		if (!ifile.is_open()) {
-//
-//			std::cout << "ERROR: There was a problem opening the input file!\n";
-//			abort();
-//		}
-//
-//		double bufferRead;
-//		for (unsigned int i = 0; i < dim + 1; i++) {
-//
-//			ifile >> bufferRead;
-//
-//			result(i) = bufferRead;
-//
-//		}
-//
-//	} else {
-//
-//		cout
-//		<< "ERROR: Cannot evaluate the constraint function. Check settings!\n";
-//		abort();
-//	}
-//
-//	if(result.has_nan()){
-//
-//		std::cout<<"ERROR: NaN in constraint function evaluation!\n";
-//
-//	}
-//
-//	return result;
-//
-//}
 
 void ConstraintFunction::addDesignToData(Design &d){
 
@@ -730,21 +568,27 @@ void ConstraintFunction::print(void) const {
 	std::cout << "Executable path: " << executablePath << "\n";
 	std::cout << "Input file name: " << fileNameDesignVector << "\n";
 	std::cout << "Output file name: " << fileNameConstraintFunctionRead << "\n";
+	if(ifGradientAvailable){
+		std::cout<<"Uses gradient vector: Yes\n";
+
+	}
+	else{
+		std::cout<<"Uses gradient vector: No\n";
+
+	}
+
 	std::cout << "Shares executable with:";
 	for (std::vector<int>::const_iterator i =
 			IDToFunctionsShareOutputExecutable.begin();
 			i != IDToFunctionsShareOutputExecutable.end(); ++i)
 		std::cout << " " << *i << ' ';
 
-	std::cout << "Shares output file with:";
-	for (std::vector<int>::const_iterator i =
-			IDToFunctionsShareOutputFile.begin();
-			i != IDToFunctionsShareOutputFile.end(); ++i)
-		std::cout << " " << *i << ' ';
+	std::cout<<"\n";
+	std::cout<<"readOutputStartIndex = "<<readOutputStartIndex<<"\n";
 
-	std::cout << std::endl;
-
+#if 0
 	surrogateModel.printSurrogateModel();
+#endif
 	std::cout << "#####################################################\n";
 }
 

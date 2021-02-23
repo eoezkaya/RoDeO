@@ -79,8 +79,10 @@ public:
 	unsigned int iterMaxEILoop;
 
 	bool ifBoxConstraintsSet;
+	bool ifCleanDoeFiles;
 
 	COptimizer(std::string ,int, std::string);
+	bool checkSettings(void) const;
 	void print(void) const;
 	void printConstraints(void) const;
 	void visualizeOptimizationHistory(void) const;
@@ -88,7 +90,7 @@ public:
 	void updateDataMinAndMax(void);
 	void trainSurrogates(void);
 	void performDoE(unsigned int howManySamples, DoE_METHOD methodID);
-
+	void cleanDoEFiles(void) const;
 	void setProblemType(std::string);
 	void setMaximumNumberOfIterations(unsigned int );
 	void setBoxConstraints(std::string filename="BoxConstraints.csv");
@@ -98,8 +100,8 @@ public:
 	void addConstraint(ConstraintFunction &constFunc);
 
 	void evaluateConstraints(Design &d);
-//	void evaluateConstraints(rowvec x, rowvec &constraintValues, mat &constraintGradients, bool ifAddToData= true) ;
-//	void evaluateConstraints(rowvec x, rowvec &constraintValues, bool ifAddToData= true);
+	void addConstraintValuesToDoEData(Design &d) const;
+
 	void estimateConstraints(rowvec x, rowvec &constraintValues) const;
 
 	void checkIfSettingsAreOK(void) const;

@@ -36,19 +36,7 @@
 #include "kriging_training.hpp"
 #include "trust_region_gek.hpp"
 #include "optimization.hpp"
-
-class Design{
-
-public:
-
-	rowvec designParameters;
-	rowvec constraintTrueValues;
-	rowvec gradient;
-	double trueValue;
-	double objectiveFunctionValue;
-	std::vector<rowvec> constraintGradients;
-
-};
+#include "design.hpp"
 
 
 class ObjectiveFunction{
@@ -83,7 +71,7 @@ public:
 
 	void setGradientOn(void);
 	void setGradientOff(void);
-	void saveDoEData(mat) const;
+	void saveDoEData(std::vector<rowvec>) const;
 	void setFileNameReadObjectFunction(std::string);
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
@@ -92,6 +80,8 @@ public:
 
 	void evaluate(Design &d);
 	void evaluateAdjoint(Design &d);
+	void readEvaluateOutput(Design &d);
+
 
 	void addDesignToData(Design &d);
 

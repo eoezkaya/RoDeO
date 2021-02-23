@@ -41,27 +41,27 @@
 
 HighPrecisionMatrix factorizeCholeskyHP(const HighPrecisionMatrix& input) {
 
-    int n = input.n_rows();
-    HighPrecisionMatrix result(n, n);
-    for (int i = 0; i < n; ++i) {
-        for (int k = 0; k < i; ++k) {
-        	__float128 value = input(i, k);
-            for (int j = 0; j < k; ++j)
-                value -= result(i, j) * result(k, j);
-            result(i, k) = value/result(k, k);
-        }
-        __float128 value = input(i, i);
-        for (int j = 0; j < i; ++j)
-            value -= result(i, j) * result(i, j);
+	int n = input.n_rows();
+	HighPrecisionMatrix result(n, n);
+	for (int i = 0; i < n; ++i) {
+		for (int k = 0; k < i; ++k) {
+			__float128 value = input(i, k);
+			for (int j = 0; j < k; ++j)
+				value -= result(i, j) * result(k, j);
+			result(i, k) = value/result(k, k);
+		}
+		__float128 value = input(i, i);
+		for (int j = 0; j < i; ++j)
+			value -= result(i, j) * result(i, j);
 
-        if(value < 0.0){
-        	cout<<"ERROR: Cholesky decomposition failed!\n";
-        	abort();
+		if(value < 0.0){
+			cout<<"ERROR: Cholesky decomposition failed!\n";
+			abort();
 
-        }
-        result(i, i) = sqrtq(value);
-    }
-    return result;
+		}
+		result(i, i) = sqrtq(value);
+	}
+	return result;
 }
 
 
@@ -147,7 +147,48 @@ HighPrecisionMatrix transposeHP(const HighPrecisionMatrix& input) {
 //
 //}
 
+void copyRowVector(rowvec &a,rowvec b){
 
+	assert(a.size() >= b.size());
+
+	for(unsigned int i=0; i<b.size(); i++){
+
+		a(i) = b(i);
+	}
+
+
+}
+
+void copyRowVector(rowvec &a,rowvec b, unsigned int indx){
+
+	assert(a.size() >= b.size() + indx);
+
+	for(unsigned int i=indx; i<b.size() + indx; i++){
+
+		a(i) = b(i-indx);
+	}
+
+
+}
+
+void appendRowVectorToCSVData(rowvec v, std::string fileName){
+
+
+	std::ofstream outfile;
+
+	outfile.open(fileName, std::ios_base::app); // append instead of overwrite
+
+	outfile.precision(10);
+	for(unsigned int i=0; i<v.size(); i++){
+
+		outfile << v(i) <<",";
+	}
+
+	outfile << "\n";
+
+	outfile.close();
+
+}
 
 
 void testHighPrecisionCholesky(void){
@@ -155,19 +196,19 @@ void testHighPrecisionCholesky(void){
 	int N = 10;
 	HighPrecisionMatrix  A(N, N);
 
-    mat L(N,N,fill::randu);
+	mat L(N,N,fill::randu);
 
-    mat M = L*trans(L);
+	mat M = L*trans(L);
 
-    printMatrix(M,"M");
+	printMatrix(M,"M");
 
-    A = M;
+	A = M;
 
-    HighPrecisionMatrix Lchol = factorizeCholeskyHP(A);
-    Lchol.print();
+	HighPrecisionMatrix Lchol = factorizeCholeskyHP(A);
+	Lchol.print();
 
-    HighPrecisionMatrix Uchol = transposeHP(Lchol);
-    Uchol.print();
+	HighPrecisionMatrix Uchol = transposeHP(Lchol);
+	Uchol.print();
 }
 
 
@@ -205,15 +246,38 @@ void printVector(rowvec v, std::string name){
 
 }
 
+
+
 void printVector(std::vector<std::string> v){
 
 	for (std::vector<std::string>::const_iterator i = v.begin(); i != v.end(); ++i){
-	   std::cout << *i << ' ';
+		std::cout << *i << ' ';
 	}
 	std::cout<<"\n";
 
 
 }
+
+void printVector(std::vector<int> v){
+
+	for (std::vector<int>::const_iterator i = v.begin(); i != v.end(); ++i){
+		std::cout << *i << ' ';
+	}
+	std::cout<<"\n";
+
+
+}
+
+void printVector(std::vector<bool> v){
+
+	for (std::vector<bool>::const_iterator i = v.begin(); i != v.end(); ++i){
+		std::cout << *i << ' ';
+	}
+	std::cout<<"\n";
+
+
+}
+
 
 vec normalizeColumnVector(vec x, double xmin, double xmax){
 

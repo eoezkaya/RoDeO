@@ -28,54 +28,31 @@
  *
  *
  */
-#ifndef TRAIN_TR_GEK_HPP
-#define TRAIN_TR_GEK_HPP
+#ifndef DESIGN_HPP
+#define DESIGN_HPP
 
-#include "Rodeo_macros.hpp"
-#include "kriging_training.hpp"
+#include <armadillo>
+#include <vector>
 
+using namespace arma;
 
-class AggregationModel : public SurrogateModel {
-
-private:
-
-	KrigingModel krigingModel;
-
-	vec L1NormWeights;
-
-	double rho;
-
-
-	PartitionData trainingDataForHyperParameterOptimization;
-	PartitionData trainingDataForKriging;
-
-	unsigned int numberOfTrainingIterations;
-
+class Design{
 
 public:
 
+	rowvec designParameters;
+	rowvec constraintTrueValues;
+	rowvec gradient;
+	double trueValue;
+	double objectiveFunctionValue;
+	std::vector<rowvec> constraintGradients;
 
-	AggregationModel();
-	AggregationModel(std::string name);
-
-	void initializeSurrogateModel(void);
-	void printSurrogateModel(void) const;
-	void printHyperParameters(void) const;
-	void saveHyperParameters(void) const;
-	void loadHyperParameters(void);
-	void updateAuxilliaryFields(void);
-	void train(void);
-	void generateRandomHyperParams(void);
-	double interpolate(rowvec x, bool ifprint = false) const ;
-	double interpolateWithGradients(rowvec x) const ;
-	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
-	double calculateExpectedImprovement(rowvec xp) const;
-	unsigned int findNearestNeighbor(rowvec xp) const;
-	int addNewSampleToData(rowvec newsample);
-	void updateModelWithNewData(void);
-
+	Design(rowvec, unsigned int);
+	Design(rowvec);
+	void print(void) const;
 
 };
+
 
 
 

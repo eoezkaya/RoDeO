@@ -52,7 +52,7 @@
 RoDeODriver::RoDeODriver(){
 
 	dimension = 0;
-	numberOfKeywords = 21;
+	numberOfKeywords = 22;
 	problemName = "None";
 	problemType = "None";
 	designVectorFilename = "None";
@@ -93,12 +93,22 @@ RoDeODriver::RoDeODriver(){
 	keywords[18]="WARM_START=";
 	keywords[19]="DESIGN_VECTOR_FILENAME=";
 	keywords[20]="GRADIENT_AVAILABLE=";
+	keywords[21]="CLEAN_DOE_FILES=";
+
 
 	configFileName = settings.config_file;
 
 }
 
 void RoDeODriver::readConfigFile(void){
+
+	bool ifParameterAlreadySet[numberOfKeywords];
+
+	for(unsigned int i=0; i<numberOfKeywords; i++){
+
+		ifParameterAlreadySet[i] = false;
+	}
+
 
 	if(!file_exist(configFileName)){
 
@@ -167,18 +177,38 @@ void RoDeODriver::readConfigFile(void){
 					}
 
 					case 1: {
+						if(ifParameterAlreadySet[key]){
+
+							std::cout<<"ERROR: DIMENSION is already defined in the config file!\n";
+							abort();
+						}
+
 						dimension = std::stoi(sub_str);
 						std::cout<<"DIMENSION= "<<dimension<<"\n";
 						ifProblemDimensionSet = true;
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 					case 2: {
+						if(ifParameterAlreadySet[key]){
+
+							std::cout<<"ERROR: NUMBER_OF_CONSTRAINTS is already defined in the config file!\n";
+							abort();
+						}
+
 						numberOfConstraints = std::stoi(sub_str);
 						std::cout<<"NUMBER_OF_CONSTRAINTS= "<<numberOfConstraints<<"\n";
 						ifNumberOfConstraintsSet = true;
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 					case 3: {
+						if(ifParameterAlreadySet[key]){
+
+							std::cout<<"ERROR: UPPER_BOUNDS are already defined in the config file!\n";
+							abort();
+						}
+
 						sub_str.erase(std::remove_if(sub_str.begin(), sub_str.end(), ::isspace), sub_str.end());
 #if 0
 						std::cout<<sub_str;
@@ -227,11 +257,17 @@ void RoDeODriver::readConfigFile(void){
 						std::cout<<"UPPER_BOUNDS=";
 						trans(boxConstraintsUpperBounds).print();
 						ifUpperBoundsSet = true;
-
+						ifParameterAlreadySet[key] = true;
 						break;
 					}/* end of case 3 */
 
 					case 4: {
+						if(ifParameterAlreadySet[key]){
+
+							std::cout<<"ERROR: LOWER_BOUNDS are already defined in the config file!\n";
+							abort();
+						}
+
 						sub_str.erase(std::remove_if(sub_str.begin(), sub_str.end(), ::isspace), sub_str.end());
 
 						if(sub_str.back() != '}'){
@@ -268,19 +304,29 @@ void RoDeODriver::readConfigFile(void){
 						std::cout<<"LOWER_BOUNDS=";
 						trans(boxConstraintsLowerBounds).print();
 						ifLowerBoundsSet = true;
-
+						ifParameterAlreadySet[key] = true;
 						break;
 					} /* end of case 4 */
 
 					case 5: {
+						if(ifParameterAlreadySet[key]){
+
+							std::cout<<"OBJECTIVE_FUNCTION_EXECUTABLE_NAME is already defined in the config file!\n";
+							abort();
+						}
 						executableNames.push_back(sub_str);
 						std::cout<<"OBJECTIVE_FUNCTION_EXECUTABLE_NAME= "<<executableNames.front()<<"\n";
 						ifObjectiveFunctionNameIsSet = true;
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
 					case 6: {
+						if(ifParameterAlreadySet[key]){
 
+							std::cout<<"CONSTRAINT_EXECUTABLE_NAMES are already defined in the config file!\n";
+							abort();
+						}
 						std::vector<std::string> valuesReadFromString;
 						getValuesFromString(sub_str,valuesReadFromString,',');
 
@@ -298,12 +344,16 @@ void RoDeODriver::readConfigFile(void){
 
 						}
 						std::cout<<"\n";
-
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
 					case 7: {
+						if(ifParameterAlreadySet[key]){
 
+							std::cout<<"ERROR: CONSTRAINT_EXECUTABLE_NAMES are already defined in the config file!\n";
+							abort();
+						}
 						std::vector<std::string> valuesReadFromString;
 						getValuesFromString(sub_str,valuesReadFromString,',');
 						int numberOfConstraintsRead = valuesReadFromString.size();
@@ -360,13 +410,15 @@ void RoDeODriver::readConfigFile(void){
 						}
 
 
-
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
 					case 8: {
+
 						problemName = sub_str;
 						std::cout<<"PROBLEM_NAME= "<<problemName<<"\n";
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
@@ -374,7 +426,7 @@ void RoDeODriver::readConfigFile(void){
 					case 9: {
 						objectiveFunctionName = sub_str;
 						std::cout<<"OBJECTIVE_FUNCTION_NAME= "<<objectiveFunctionName<<"\n";
-
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
@@ -382,11 +434,16 @@ void RoDeODriver::readConfigFile(void){
 						executablePaths.push_back(sub_str);
 						std::cout<<"OBJECTIVE_FUNCTION_EXECUTABLE_PATH= "<<executablePaths.front()<<"\n";
 						ifexecutablePathObjectiveFunctionSet = true;
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
 					case 11: {
+						if(ifParameterAlreadySet[key]){
 
+							std::cout<<"ERROR: CONSTRAINT_FUNCTION_EXECUTABLE_PATHS are already defined in the config file!\n";
+							abort();
+						}
 						std::vector<std::string> valuesReadFromString;
 						getValuesFromString(sub_str,valuesReadFromString,',');
 						std::cout<<"CONSTRAINT_FUNCTION_EXECUTABLE_PATHS= ";
@@ -398,19 +455,29 @@ void RoDeODriver::readConfigFile(void){
 						}
 						std::cout<<"\n";
 
-
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
 					case 12: {
+						if(ifParameterAlreadySet[key]){
+
+							std::cout<<"ERROR: OBJECTIVE_FUNCTION_OUTPUT_FILENAME is already defined in the config file!\n";
+							abort();
+						}
 						executableOutputFiles.push_back(sub_str);
 						std::cout<<"OBJECTIVE_FUNCTION_OUTPUT_FILENAME= "<<executableOutputFiles.front()<<"\n";
 						ifObjectiveFunctionOutputFileIsSet = true;
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
 					case 13: {
+						if(ifParameterAlreadySet[key]){
 
+							std::cout<<"ERROR: CONSTRAINT_FUNCTION_OUTPUT_FILENAMES are already defined in the config file!\n";
+							abort();
+						}
 						std::vector<std::string> valuesReadFromString;
 						getValuesFromString(sub_str,valuesReadFromString,',');
 						std::cout<<"CONSTRAINT_FUNCTION_OUTPUT_FILENAMES= ";
@@ -422,13 +489,13 @@ void RoDeODriver::readConfigFile(void){
 						}
 						std::cout<<"\n";
 						ifConstraintFunctionOutputFileIsSet = true;
-
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
 					case 14: {
 
-
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
@@ -437,6 +504,7 @@ void RoDeODriver::readConfigFile(void){
 						maximumNumberOfSimulations = std::stoi(sub_str);
 						std::cout<<"MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS= "<<maximumNumberOfSimulations<<"\n";
 						ifmaximumNumberOfSimulationsSet = true;
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
@@ -444,6 +512,7 @@ void RoDeODriver::readConfigFile(void){
 						maximumNumberDoESamples = std::stoi(sub_str);
 						std::cout<<"NUMBER_OF_DOE_SAMPLES= "<<maximumNumberDoESamples<<"\n";
 						ifmaximumNumberOfDoESamplesSet = true;
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
@@ -459,7 +528,7 @@ void RoDeODriver::readConfigFile(void){
 							abort();
 
 						}
-
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
@@ -467,10 +536,16 @@ void RoDeODriver::readConfigFile(void){
 						designVectorFilename = sub_str;
 						std::cout<<"DESIGN_VECTOR_FILENAME= "<<designVectorFilename<<"\n";
 						ifDesignVectorFileNameSet = true;
+						ifParameterAlreadySet[key] = true;
 						break;
 					}
 
 					case 20: {
+						if(ifParameterAlreadySet[key]){
+
+							std::cout<<"ERROR: GRADIENT_AVAILABLE are already defined in the config file!\n";
+							abort();
+						}
 
 						std::vector<std::string> valuesReadFromString;
 						getValuesFromString(sub_str,valuesReadFromString,',');
@@ -483,7 +558,23 @@ void RoDeODriver::readConfigFile(void){
 						}
 						std::cout<<"\n";
 
+						ifParameterAlreadySet[key] = true;
+						break;
+					}
 
+					case 21: {
+						if(sub_str == "YES" || sub_str == "yes") {
+							ifDoEFilesShouldBeCleaned = true;
+						}
+						else if(sub_str == "NO" || sub_str == "no"){
+
+							ifDoEFilesShouldBeCleaned = false;
+						}
+						else{
+
+							std::cout<<"Not valid input for CLEAN_DOE_FILES\n";
+							abort();
+						}
 						break;
 					}
 
@@ -499,6 +590,47 @@ void RoDeODriver::readConfigFile(void){
 	} /* end of while */
 
 	fclose(inp);
+
+
+	std::vector<std::string>::iterator it = find (executablesWithGradient.begin(), executablesWithGradient.end(), objectiveFunctionName);
+
+	if (it != executablesWithGradient.end()){
+
+		IsGradientsAvailable.push_back(true);
+
+	}
+	else{
+
+		IsGradientsAvailable.push_back(false);
+	}
+
+
+
+
+	for(unsigned int i=0; i<constraintNames.size(); i++){
+
+		std::string constraintName = constraintNames.at(i);
+
+		it = find (executablesWithGradient.begin(), executablesWithGradient.end(), constraintName);
+
+		if (it != executablesWithGradient.end()){
+
+			IsGradientsAvailable.push_back(true);
+
+		}
+		else{
+
+			IsGradientsAvailable.push_back(false);
+		}
+
+
+
+
+
+	}
+	printVector(IsGradientsAvailable);
+
+
 
 	checkConsistencyOfConfigParams();
 
@@ -673,29 +805,22 @@ void RoDeODriver::setObjectiveFunction(ObjectiveFunction & objFunc){
 
 	/* switch on gradients if they are available */
 
+
 #if 0
 	printVector(executablesWithGradient);
 #endif
-		if ( std::find(executablesWithGradient.begin(), executablesWithGradient.end(), executableNames.front()) != executablesWithGradient.end() ){
+	if ( std::find(executablesWithGradient.begin(), executablesWithGradient.end(), objectiveFunctionName) != executablesWithGradient.end() ){
 
-#if 1
-			std::cout<<"Gradients available for the objective function\n";
-#endif
-
-			objFunc.setGradientOn();
-
-
-		}
-
-
-
-
+		objFunc.setGradientOn();
+	}
 
 	objFunc.print();
 
-
-
 }
+
+
+
+
 
 void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned int indx){
 
@@ -711,6 +836,7 @@ void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned in
 
 	/* check whether executable is already specified for another constraint or objective function */
 
+
 	for(unsigned int i=0; i<executableNames.size(); i++){
 
 		if (i!= indx){
@@ -720,27 +846,33 @@ void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned in
 				std::cout<<"same exe names: "<<executableNames.at(i)<<" "<<exeName<<"\n";
 				constraintFunc.IDToFunctionsShareOutputExecutable.push_back(i);
 
-
-
 			}
 
 		}
 
-
 	}
 
-	/* check whether outputfile is already specified for another constraint or objective function */
-
-
+	unsigned int indxStartToRead = 0;
 	for(unsigned int i=0; i<executableOutputFiles.size(); i++){
 
 		if (i!= indx){
 
 			if(outputFileName == executableOutputFiles.at(i)){
 
-				std::cout<<"same output file names: "<<executableOutputFiles.at(i)<<" "<<outputFileName<<"\n";
-				constraintFunc.IDToFunctionsShareOutputFile.push_back(i);
 
+				if(i < indx){
+					if(IsGradientsAvailable.at(i)){
+
+						indxStartToRead+= dimension+1;
+
+
+					}
+					else{
+
+						indxStartToRead++;
+
+					}
+				}
 
 
 			}
@@ -748,10 +880,40 @@ void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned in
 		}
 
 
+
+
+
 	}
 
 
+	constraintFunc.readOutputStartIndex = indxStartToRead;
+
+
+
+
+
+
+
+
+	if ( std::find(executablesWithGradient.begin(), executablesWithGradient.end(), constraintFunc.name) != executablesWithGradient.end() ){
+
+#if 1
+		std::cout<<"Gradients available for the constraint: "<<constraintFunc.name<<"\n";
+#endif
+		constraintFunc.setGradientOn();
+
+
+	}
+
+
+
+
+
 }
+
+
+
+
 
 
 void RoDeODriver::runDriver(void){
@@ -781,17 +943,25 @@ void RoDeODriver::runDriver(void){
 	}
 
 #if 1
-
 	optimizationStudy.printConstraints();
 #endif
 
 
 	if(problemType == "DoE"){
 
+		if(this->ifDoEFilesShouldBeCleaned){
 
+			optimizationStudy.ifCleanDoeFiles = true;
+		}else{
+
+			optimizationStudy.ifCleanDoeFiles = false;
+		}
+
+		if(!optimizationStudy.checkSettings()){
+			std::cout<<"ERROR: Check of the settings is failed!\n";
+			abort();
+		}
 		optimizationStudy.performDoE(maximumNumberDoESamples,LHS);
-
-
 
 
 	}
@@ -807,15 +977,16 @@ void RoDeODriver::runDriver(void){
 
 		}
 
+
+		if(!optimizationStudy.checkSettings()){
+			std::cout<<"ERROR: Check of the settings is failed!\n";
+			abort();
+		}
 		optimizationStudy.EfficientGlobalOptimization();
 
 
 	}
 	else if(problemType == "SURROGATE_TEST"){
-
-
-
-
 
 	}
 
