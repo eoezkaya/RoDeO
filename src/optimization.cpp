@@ -80,11 +80,11 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	ifBoxConstraintsSet = false;
 	iterMaxEILoop = dimension*10000;
 	iterGradientEILoop = 100;
-	epsilon_EI = 10E-4;
 	optimizationType = problemType;
 	ifVisualize = false;
 	howOftenTrainModels = 10; /* train surrogates in every 10 iteration */
 	ifCleanDoeFiles = false;
+	designVectorFileName = "None";
 
 }
 
@@ -126,7 +126,11 @@ void COptimizer::setMaximumNumberOfIterations(unsigned int maxIterations){
 
 }
 
+void COptimizer::setFileNameDesignVector(std::string filename){
 
+	designVectorFileName = filename;
+
+}
 
 
 void COptimizer::setBoxConstraints(std::string filename){
@@ -265,54 +269,6 @@ void COptimizer::addConstraintValuesToDoEData(Design &d) const{
 }
 
 
-//void COptimizer::evaluateConstraints(rowvec x, rowvec &constraintValues, mat &constraintGradients, bool ifAddToData){
-//
-//	unsigned int constraintIt = 0;
-//	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-//
-//
-//		if(!it->checkIfGradientAvailable()){
-//
-//			constraintValues(constraintIt) = it->evaluate(x,ifAddToData);
-//			constraintIt++;
-//
-//		}else{
-//
-//			rowvec result = it->evaluateAdjoint(x,ifAddToData);
-//			constraintValues(constraintIt) = result(0);
-//
-//
-//			for(unsigned int i = 0; i<dimension; i++){
-//
-//				constraintGradients(constraintIt,i) = result(i+1);
-//			}
-//
-//
-//		}
-//
-//
-//	}
-//
-//
-//}
-
-
-
-
-//void COptimizer::evaluateConstraints(rowvec x, rowvec &constraintValues, bool ifAddToData){
-//
-//	unsigned int constraintIt = 0;
-//	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-//
-//		constraintValues(constraintIt) = it->evaluate(x,ifAddToData);
-//		constraintIt++;
-//	}
-//
-//
-//}
-
-
-
 
 void COptimizer::estimateConstraints(rowvec x, rowvec &constraintValues) const{
 
@@ -370,9 +326,6 @@ void COptimizer::print(void) const{
 		std::cout << "Optimization problem does not have any constraints\n";
 	}
 
-
-
-	printf("epsilon_EI = %15.10f\n",epsilon_EI );
 
 }
 
@@ -468,9 +421,9 @@ void COptimizer::updateOptimizationHistory(Design d) {
 	}
 
 
-	optimizationHistory.insert_rows( optimizationHistory.n_rows, newSample );
-	optimizationHistory.save("optimizationHistory.csv",csv_ascii);
 
+	optimizationHistory.insert_rows( optimizationHistory.n_rows, newSample );
+	appendRowVectorToCSVData(newSample,"optimizationHistory.csv");
 
 #if 0
 	printf("optimizationHistory:\n");
@@ -581,6 +534,240 @@ void COptimizer::checkIfSettingsAreOK(void) const{
 	}
 
 
+
+
+}
+
+
+rowvec COptimizer::generateRandomRowVectorAroundASample(void){
+
+	unsigned int randomIndx = generateRandomInt(0,maxNumberOfSamples-1);
+
+
+
+}
+
+/* These designs (there can be more than one) are found by maximizing the expected
+ *  Improvement function and taking the constraints into account
+ */
+void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
+
+
+	theMostPromisingDesigns.clear();
+
+	double maxEI = 0.0;
+	rowvec bestDesignVector(dimension);
+
+#pragma omp parallel for
+	for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
+
+
+		rowvec dvNotNormalized = generateRandomRowVector(lowerBounds, upperBounds);
+
+		rowvec dv = normalizeRowVector(dvNotNormalized,dataMin,dataMax);
+#if 0
+		printVector(dv);
+#endif
+
+		double EI = objFun.calculateExpectedImprovement(dv);
+
+		double penaltyTerm = computeEIPenaltyForConstraints(dv);
+
+		EI = EI + penaltyTerm;
+
+		if(EI > maxEI){
+
+			bestDesignVector = dv;
+			maxEI = EI;
+#if 0
+			printf("A design with a better EI value has been found, EI = %15.10f\n", EI);
+			best_dv.print();
+#endif
+		}
+
+	}
+
+	CDesignExpectedImprovement bestDesign;
+	bestDesign.dv = bestDesignVector;
+	bestDesign.valueExpectedImprovement = maxEI;
+
+	theMostPromisingDesigns.push_back(bestDesign);
+
+}
+
+
+/* calculate the gradient of the Expected Improvement function
+ * w.r.t design variables by finite difference approximations */
+rowvec COptimizer::calculateEIGradient(rowvec designVector) const{
+
+
+	rowvec gradient(dimension);
+
+	for(unsigned int i=0; i<dimension; i++){
+#if 0
+		printf("dv:\n");
+		dvGradientSearch.print();
+#endif
+
+		double dvSave = designVector(i);
+
+
+#if 0
+		printf("epsilon_EI = %15.10f\n",epsilon_EI);
+#endif
+
+		double epsilon = designVector(i)*0.00001;
+		designVector(i) += epsilon;
+
+#if 0
+		printf("dv perturbed:\n");
+		dvPerturbed.print();
+#endif
+
+
+		double EIplus = objFun.calculateExpectedImprovement(designVector);
+		designVector(i) -= 2*epsilon;
+		double EIminus = objFun.calculateExpectedImprovement(designVector);
+
+
+		/* obtain the forward finite difference quotient */
+		double fdVal = (EIplus - EIminus)/(2*epsilon);
+		gradient(i) = fdVal;
+		designVector(i) = dvSave;
+
+
+	} /* end of finite difference loop */
+#if 0
+	printf("Gradient vector:\n");
+	gradEI.print();
+#endif
+
+	return gradient;
+}
+
+rowvec COptimizer::designVectorGradientUpdate(rowvec dv0, rowvec gradient, double stepSize) const{
+
+	rowvec dvUpdated(dimension);
+	for(unsigned int k=0; k<dimension; k++){
+
+		dvUpdated(k) = dv0(k) + stepSize*gradient(k);
+
+	}
+
+	rowvec dvUpdatedNotNormalized = normalizeRowVectorBack(dvUpdated, lowerBounds, upperBounds);
+
+
+
+	for(unsigned int k=0; k<dimension; k++){
+
+		/* if new design vector does not satisfy the box constraints in original coordinates */
+		if(dvUpdatedNotNormalized(k) < lowerBounds(k)) dvUpdatedNotNormalized(k) = lowerBounds(k);
+		if(dvUpdatedNotNormalized(k) > upperBounds(k)) dvUpdatedNotNormalized(k) = upperBounds(k);
+
+	}
+
+	/* return the design vector in normalized coordinates */
+	dvUpdated = normalizeRowVector(dvUpdatedNotNormalized,lowerBounds,upperBounds);
+
+	return dvUpdated;
+
+
+}
+
+CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedImprovement initialDesignVector) const {
+
+	rowvec gradEI(dimension);
+	double stepSize0 = 0.0001;
+	double stepSize = 0.0;
+	rowvec bestDesignVector = initialDesignVector.dv;
+	double EI0 = initialDesignVector.valueExpectedImprovement;
+
+	bool breakOptimization = false;
+
+	for(unsigned int iterGradientSearch=0; iterGradientSearch<iterGradientEILoop; iterGradientSearch++){
+
+#if 1
+		printf("\nGradient search iteration = %d\n", iterGradientSearch);
+#endif
+
+		gradEI = calculateEIGradient(bestDesignVector);
+
+
+
+		/* save the design vector */
+		rowvec dvLineSearchSave = bestDesignVector ;
+
+#if 0
+		printf("Line search...\n");
+#endif
+
+		stepSize = stepSize0;
+
+		while(1){
+
+
+			/* design update */
+
+
+			bestDesignVector = designVectorGradientUpdate(bestDesignVector,gradEI, stepSize);
+
+
+
+			double EI_LS = objFun.calculateExpectedImprovement(bestDesignVector);
+			double penaltyTerm = computeEIPenaltyForConstraints(bestDesignVector);
+
+			EI_LS = EI_LS + penaltyTerm;
+
+#if 1
+			printf("EI_LS = %15.10f\n",EI_LS);
+
+#endif
+
+			/* if ascent is achieved */
+			if(EI_LS > EI0){
+#if 1
+				printf("Ascent is achieved with difference = %15.10f\n", EI_LS- EI0);
+#endif
+				EI0 = EI_LS;
+				break;
+			}
+
+			else{ /* else halve the stepsize and set design to initial */
+
+				stepSize = stepSize * 0.5;
+				bestDesignVector = dvLineSearchSave;
+#if 1
+				printf("stepsize = %15.10f\n",stepSize);
+
+#endif
+				if(stepSize < 10E-12) {
+#if 1
+					printf("The stepsize is getting too small!\n");
+#endif
+
+					breakOptimization = true;
+					break;
+				}
+			}
+
+		}
+#if 1
+
+
+#endif
+
+		if(breakOptimization) break;
+
+	} /* end of gradient-search loop */
+
+
+	CDesignExpectedImprovement result;
+	result.dv = bestDesignVector;
+	result.valueExpectedImprovement = EI0;
+
+	return result;
+
+
 }
 
 
@@ -601,6 +788,8 @@ void COptimizer::EfficientGlobalOptimization(void){
 	unsigned int bestIndx = -1;
 
 	while(1){
+
+
 		iterOpt++;
 
 		updateDataMinAndMax();
@@ -616,197 +805,14 @@ void COptimizer::EfficientGlobalOptimization(void){
 		}
 
 
-		double maxEI = 0.0;
-		rowvec best_dv(dimension);
+		findTheMostPromisingDesign();
 
+		CDesignExpectedImprovement optimizedDesignGradientBased = MaximizeEIGradientBased(theMostPromisingDesigns.at(0));
 
-#pragma omp parallel for
-		for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
-#if 0
-			printf("iterEI = %d\n",iterEI);
-#endif
 
-			rowvec dv = generateRandomRowVector(0.0, 1.0, dimension)*1.0/dimension;
+		rowvec best_dvNorm = optimizedDesignGradientBased.dv;
 
-
-#if 0
-			int tid = omp_get_thread_num();
-			if(tid ==0)
-			{
-				printf("dv = \n");
-				dv.print();
-
-				rowvec dvOriginalCoordinates =normalizeRowVectorBack(dv, lowerBounds,upperBounds);
-
-				printVector(dvOriginalCoordinates,"dvOriginalCoordinates");
-			}
-#endif
-
-			double EI = objFun.calculateExpectedImprovement(dv);
-
-			double penaltyTerm = computeEIPenaltyForConstraints(dv);
-
-			EI = EI + penaltyTerm;
-
-#if 0
-			printf("EI value = %15.10f\n",EI);
-#endif
-
-			if(EI > maxEI){
-
-				best_dv = dv;
-				maxEI = EI;
-#if 0
-				printf("A design with a better EI value has been found, EI = %15.10f\n", EI);
-				best_dv.print();
-#endif
-			}
-
-
-		} /* end of EI loop (end of OMP parallel for)*/
-
-
-		rowvec gradEI(dimension);
-		/* auxilliary vector used for the gradient search */
-		rowvec dvGradientSearch = best_dv;
-
-		double EI0 = maxEI;
-
-
-		/* optimize further from the best design */
-
-		bool breakOptimization = false;
-
-		for(unsigned int iterGradientSearch=0; iterGradientSearch<iterGradientEILoop; iterGradientSearch++){
-#if 0
-			printf("\nGradient search iteration = %d\n", iterGradientSearch);
-#endif
-
-			for(unsigned int iterFDLoop=0; iterFDLoop<dimension; iterFDLoop++){
-#if 0
-				printf("dv:\n");
-				dvGradientSearch.print();
-#endif
-
-
-				rowvec dvPerturbed = dvGradientSearch;
-
-#if 0
-				printf("epsilon_EI = %15.10f\n",epsilon_EI);
-#endif
-
-				dvPerturbed(iterFDLoop) += epsilon_EI;
-
-#if 0
-				printf("dv perturbed:\n");
-				dvPerturbed.print();
-#endif
-
-
-				double EIplus = objFun.calculateExpectedImprovement(dvPerturbed);
-#if 0
-				printf("FD for parameter: %d, EIplus = %15.10f, EI0 = %15.10f\n", iterFDLoop, EIplus,EI0);
-#endif
-
-				/* obtain the forward finite difference quotient */
-				double fdVal = (EIplus - EI0)/epsilon_EI;
-				gradEI(iterFDLoop) = fdVal;
-
-
-			} /* end of finite difference loop */
-
-#if 0
-			printf("Gradient vector:\n");
-			gradEI.print();
-#endif
-
-
-			double stepsize_EI = 0.0001;
-			/* save the design vector */
-			rowvec dvGradientSearchSave = dvGradientSearch;
-
-#if 0
-			printf("Line search...\n");
-#endif
-
-
-
-			while(1){
-
-
-				/* design update */
-
-				for(unsigned int k=0; k<dimension; k++){
-
-					dvGradientSearch(k) = dvGradientSearch(k) + stepsize_EI*gradEI(k);
-
-					/* if new design vector does not satisfy the box constraints in normalized coordinates*/
-
-					if(dvGradientSearch(k) < 0.0) dvGradientSearch(k) = 0.0;
-					if(dvGradientSearch(k) > 1.0/dimension) dvGradientSearch(k) = 1.0/dimension;
-
-				}
-
-				double EI_LS = objFun.calculateExpectedImprovement(dvGradientSearch);
-				double penaltyTerm = computeEIPenaltyForConstraints(dvGradientSearch);
-
-				EI_LS = EI_LS + penaltyTerm;
-
-#if 0
-				printf("EI_LS = %15.10f\n",EI_LS);
-
-#endif
-
-				/* if ascent is achieved */
-				if(EI_LS > EI0){
-#if 0
-					printf("Ascent is achieved with difference = %15.10f\n", EI_LS- EI0);
-#endif
-					EI0 = EI_LS;
-					break;
-				}
-				else{
-
-					stepsize_EI = stepsize_EI * 0.5;
-					dvGradientSearch = dvGradientSearchSave;
-#if 0
-					printf("stepsize_EI = %15.10f\n",stepsize_EI);
-
-#endif
-					if(stepsize_EI < 10E-12) {
-#if 0
-						printf("The stepsize is getting too small!\n");
-#endif
-
-						breakOptimization = true;
-						break;
-					}
-				}
-
-			}
-#if 0
-			printf("dvGradientSearch:\n");
-			dvGradientSearch.print();
-			printf("EI0 = %15.10f\n",EI0);
-
-#endif
-
-			if(breakOptimization) break;
-
-		} /* end of gradient-search loop */
-
-		best_dv = dvGradientSearch;
-
-#if 0
-		printf("The most promising design:\n");
-		best_dv.print();
-#endif
-
-
-
-		rowvec best_dvNorm = best_dv;
-
-		best_dv =normalizeRowVectorBack(best_dvNorm, dataMin,dataMax);
+		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, dataMin,dataMax);
 
 		double estimatedBestdv = objFun.ftilde(best_dvNorm,true);
 #if 1
@@ -815,7 +821,9 @@ void COptimizer::EfficientGlobalOptimization(void){
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
 #endif
 
-		Design currentBestDesign(best_dv, numberOfConstraints);
+		Design currentBestDesign(best_dv);
+		currentBestDesign.setConstraintsOn(numberOfConstraints);
+		currentBestDesign.saveDesignVector(designVectorFileName);
 
 
 		/* now make a simulation for the most promising design */
@@ -828,12 +836,13 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 			objFun.evaluateAdjoint(currentBestDesign);
 		}
+		objFun.readEvaluateOutput(currentBestDesign);
 		objFun.addDesignToData(currentBestDesign);
 
 
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 		addConstraintValuesToData(currentBestDesign);
-
+		updateOptimizationHistory(currentBestDesign);
 		if(currentBestDesign.objectiveFunctionValue < bestObjFunVal){
 
 			bestIndx = iterOpt;
@@ -847,6 +856,8 @@ void COptimizer::EfficientGlobalOptimization(void){
 #endif
 
 		}
+
+
 
 
 		simulationCount ++;
@@ -929,7 +940,7 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 		//		if(dimension == 2) DoE.visualize();
 		std::string filename= this->name + "_samples.csv";
-		DoE.saveSamplesToFile(filename);
+		DoE.saveSamplesToCSVFile(filename);
 		sampleCoordinates = DoE.getSamples();
 	}
 
@@ -944,7 +955,9 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		std::cout<<"##########################################\n";
 
 		rowvec dv = sampleCoordinates.row(sampleID);
-		Design currentDesign(dv, numberOfConstraints);
+		Design currentDesign(dv);
+		currentDesign.setConstraintsOn(numberOfConstraints);
+		currentDesign.saveDesignVector(designVectorFileName);
 
 
 

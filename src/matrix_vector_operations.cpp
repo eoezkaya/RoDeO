@@ -179,16 +179,54 @@ void appendRowVectorToCSVData(rowvec v, std::string fileName){
 	outfile.open(fileName, std::ios_base::app); // append instead of overwrite
 
 	outfile.precision(10);
-	for(unsigned int i=0; i<v.size(); i++){
+	for(unsigned int i=0; i<v.size()-1; i++){
 
 		outfile << v(i) <<",";
 	}
+	outfile << v(v.size()-1)<<"\n";
 
-	outfile << "\n";
 
 	outfile.close();
 
 }
+
+void saveMatToCVSFile(mat M, std::string fileName){
+
+
+	std::ofstream samplesFile(fileName);
+
+	if (samplesFile.is_open())
+	{
+
+		for(unsigned int i=0; i<M.n_rows; i++){
+
+			rowvec r = M.row(i);
+
+			for(unsigned int j=0; j<r.size()-1; j++){
+
+				samplesFile << r(j)<<",";
+
+
+			}
+
+			samplesFile << r(r.size()-1)<<"\n";
+
+
+		}
+
+		samplesFile.close();
+	}
+	else{
+
+		cout << "ERROR: Unable to open file";
+		abort();
+	}
+
+
+
+}
+
+
 
 
 void testHighPrecisionCholesky(void){

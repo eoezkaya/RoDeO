@@ -297,9 +297,10 @@ bool LHSSamples::testIfSamplesAreTooClose(void){
 
 
 
-void LHSSamples::saveSamplesToFile(std::string filename){
+void LHSSamples::saveSamplesToCSVFile(std::string fileName){
 
-	samples.save(filename, csv_ascii);
+
+	saveMatToCVSFile(samples,fileName);
 
 }
 
@@ -310,7 +311,7 @@ void LHSSamples::visualize(void){
 		abort();
 
 	}
-	this->saveSamplesToFile("lhs_visialization.dat");
+	saveSamplesToCSVFile("lhs_visialization.csv");
 	std::string python_command = "python -W ignore "+ settings.python_dir + "/lhs.py lhs_visialization.dat";
 
 #if 0
@@ -339,16 +340,16 @@ mat LHSSamples::getSamples(void){
 
 }
 
-void testLHS2D(void){
-
-
-	LHSSamples myDoE(2,0.0,1.0, 50);
-	myDoE.printSamples();
-	myDoE.saveSamplesToFile("myDoE.csv");
-	myDoE.visualize();
-
-
-}
+//void testLHS2D(void){
+//
+//
+//	LHSSamples myDoE(2,0.0,1.0, 50);
+//	myDoE.printSamples();
+//	myDoE.saveSamplesToFile("myDoE.csv");
+//	myDoE.visualize();
+//
+//
+//}
 
 
 RandomSamples::RandomSamples(unsigned int d, double lb, double ub, unsigned int N){
@@ -449,20 +450,21 @@ void RandomSamples::generateSamples(void){
 
 }
 
-void RandomSamples::saveSamplesToFile(std::string filename){
+void RandomSamples::saveSamplesToCSVFile(std::string fileName){
 
-	samples.save(filename, csv_ascii);
+
+	saveMatToCVSFile(samples,fileName);
 
 }
 
 void RandomSamples::visualize(void){
 
-	if(this->numberOfDesignVariables!=2){
+	if(numberOfDesignVariables!=2){
 		cout<<"ERROR: Can only visulaize 2D samples\n";
 		abort();
 
 	}
-	this->saveSamplesToFile("random_samples_visialization.dat");
+	saveSamplesToCSVFile("random_samples_visialization.csv");
 	std::string python_command = "python -W ignore "+ settings.python_dir + "/lhs.py random_samples_visialization.dat";
 
 #if 1
@@ -742,9 +744,9 @@ void FullFactorialSamples::generateSamples(void){
 
 }
 
-void FullFactorialSamples::saveSamplesToFile(std::string filename){
+void FullFactorialSamples::saveSamplesToCSVFile(std::string fileName){
 
-	samples.save(filename, csv_ascii);
+	saveMatToCVSFile(samples,fileName);
 
 }
 
@@ -755,7 +757,7 @@ void FullFactorialSamples::visualize(void){
 		abort();
 
 	}
-	this->saveSamplesToFile("full_factorial_samples_visialization.dat");
+	saveSamplesToCSVFile("full_factorial_samples_visialization.csv");
 	std::string python_command = "python -W ignore "+ settings.python_dir + "/lhs.py full_factorial_samples_visialization.dat";
 
 #if 1

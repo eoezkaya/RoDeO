@@ -64,16 +64,18 @@ ConstraintFunction::ConstraintFunction() {
 	fileNameConstraintFunctionRead = "None";
 	fileNameDesignVector = "None";
 	ifGradientAvailable = false;
+	ifFunctionPointerIsSet = false;
 
 }
 
 ConstraintFunction::ConstraintFunction(std::string constraintName,
 		std::string constraintType, double constraintValue,
-		double (*fun_ptr)(double *), unsigned int dimension, bool ifSurrogate) {
+		double (*fun_ptr)(double *), unsigned int dimension) {
 
 	dim = dimension;
 	name = constraintName;
 	pConstFun = fun_ptr;
+	pConstFunAdj = emptyAdj;
 	inequalityType = constraintType;
 	executableName = "None";
 	executablePath = "None";
@@ -84,25 +86,45 @@ ConstraintFunction::ConstraintFunction(std::string constraintName,
 	assert(constraintType == "lt" || constraintType == "gt");
 
 	targetValue = constraintValue;
-	ifNeedsSurrogate = ifSurrogate;
 	ifGradientAvailable = false;
+	ifFunctionPointerIsSet = true;
 
-	if (ifNeedsSurrogate) {
-
-		KrigingModel temp(constraintName);
-		surrogateModel = temp;
-
-	}
 
 }
 
 ConstraintFunction::ConstraintFunction(std::string constraintName,
 		std::string constraintType, double constraintValue,
-		unsigned int dimension) :
-																								surrogateModel(constraintName), surrogateModelGradient(constraintName) {
+		double (*fun_ptr)(double *, double *), unsigned int dimension) {
 
-	ifNeedsSurrogate = true;
+	dim = dimension;
+	name = constraintName;
+	pConstFun = empty;
+	pConstFunAdj = fun_ptr;
+	inequalityType = constraintType;
+	executableName = "None";
+	executablePath = "None";
+	fileNameConstraintFunctionRead = "None";
+	fileNameDesignVector = "None";
+
+	assert(dim < 1000);
+	assert(constraintType == "lt" || constraintType == "gt");
+
+	targetValue = constraintValue;
 	ifGradientAvailable = false;
+	ifFunctionPointerIsSet = true;
+
+
+}
+
+
+
+ConstraintFunction::ConstraintFunction(std::string constraintName,
+		std::string constraintType, double constraintValue,
+		unsigned int dimension) :
+						surrogateModel(constraintName), surrogateModelGradient(constraintName) {
+
+	ifGradientAvailable = false;
+	ifFunctionPointerIsSet = false;
 	pConstFun = empty;
 	pConstFunAdj = emptyAdj;
 	targetValue = constraintValue;
@@ -193,15 +215,29 @@ void ConstraintFunction::saveDoEData(std::vector<rowvec> data) const{
 
 void ConstraintFunction::trainSurrogate(void) {
 
-	assert(ifNeedsSurrogate);
-	surrogateModel.initializeSurrogateModel();
-	surrogateModel.train();
+
+
+	if(!ifGradientAvailable){
+
+		surrogateModel.initializeSurrogateModel();
+		surrogateModel.train();
+
+	}
+	else{
+
+		surrogateModelGradient.initializeSurrogateModel();
+		surrogateModelGradient.train();
+
+	}
+
+
+
 
 }
 
 double ConstraintFunction::ftilde(rowvec x) const {
 
-	assert(ifNeedsSurrogate);
+
 
 	double result = 0.0;
 	if(!ifGradientAvailable){
@@ -255,13 +291,14 @@ bool ConstraintFunction::checkIfGradientAvailable(void) const{
 void ConstraintFunction::readEvaluateOutput(Design &d) {
 
 
-	unsigned int totalNumberOfEntriesToRead = this->readOutputStartIndex;
+	unsigned int totalNumberOfEntriesToRead;
 	if(ifGradientAvailable){
 
-		totalNumberOfEntriesToRead += dim+1;
+		totalNumberOfEntriesToRead = readOutputStartIndex + dim+1;
 	}
 	else{
-		totalNumberOfEntriesToRead++;
+
+		totalNumberOfEntriesToRead = readOutputStartIndex+1;
 
 	}
 
@@ -282,7 +319,7 @@ void ConstraintFunction::readEvaluateOutput(Design &d) {
 
 	printVector(bufferRead);
 
-	d.constraintTrueValues(this->ID-1) = bufferRead(readOutputStartIndex);
+	d.constraintTrueValues(ID-1) = bufferRead(readOutputStartIndex);
 
 
 
@@ -301,15 +338,16 @@ void ConstraintFunction::readEvaluateOutput(Design &d) {
 			std::cout<<"ERROR: NaN in constraint gradient evaluation!\n";
 			abort();
 
-
 		}
-
-
-
 
 		d.constraintGradients.push_back(constraintGradient);
 	}
-	d.print();
+	else{
+
+		rowvec constraintGradient(dim);
+		constraintGradient.fill(0.0);
+		d.constraintGradients.push_back(constraintGradient);
+	}
 
 }
 
@@ -366,15 +404,6 @@ void ConstraintFunction::evaluate(Design &d) {
 
 		if (ifRun) {
 
-			bool ifSaveIsSuccessful = x.save(fileNameDesignVector, raw_ascii);
-
-			if (!ifSaveIsSuccessful) {
-
-				std::cout<< "ERROR: There was a problem while saving the design vector!\n";
-				abort();
-
-			}
-
 			std::string runCommand;
 			if (this->executablePath != "None") {
 
@@ -407,22 +436,15 @@ void ConstraintFunction::evaluateAdjoint(Design &d) {
 
 	assert(ifGradientAvailable);
 
-	rowvec x = d.designParameters;
-
 
 	if (pConstFunAdj != emptyAdj) {
 		double constraintValue = 0.0;
 		rowvec xb(dim);
 		xb.fill(0.0);
+		rowvec x = d.designParameters;
 		constraintValue = pConstFunAdj(x.memptr(), xb.memptr());
 
-		rowvec constraintGradient(dim);
-
-		for (unsigned int i = 0; i < dim; i++) {
-
-			constraintGradient(i) = xb(i);
-
-		}
+		rowvec constraintGradient = xb;
 
 		if(constraintGradient.has_nan()){
 
@@ -446,14 +468,6 @@ void ConstraintFunction::evaluateAdjoint(Design &d) {
 
 
 		if (ifRun) {
-			bool ifSaveIsSuccessful = x.save(fileNameDesignVector, raw_ascii);
-
-			if (!ifSaveIsSuccessful) {
-
-				std::cout<< "ERROR: There was a problem while saving the design vector!\n";
-				abort();
-
-			}
 
 			std::string runCommand;
 			if (this->executablePath != "None") {
@@ -488,69 +502,29 @@ void ConstraintFunction::evaluateAdjoint(Design &d) {
 
 void ConstraintFunction::addDesignToData(Design &d){
 
-	rowvec newsample;
+	if(ifGradientAvailable){
 
-	bool ifGradientsExist;
-	if(d.gradient.size() > 0){
-
-		ifGradientsExist = true;
-		assert(d.gradient.size() == dim);
-	}
-
-	if(!ifGradientsExist){
-
-		newsample = zeros<rowvec>(dim+1);
-
-		for(unsigned int i=0; i<dim; i++){
-
-			newsample(i) = d.designParameters(i);
-
-
-		}
-		newsample(dim) = d.trueValue;
-		if(surrogateModel.addNewSampleToData(newsample) !=0){
-
-			printf("Warning: The new sample cannot be added into the training data since it is too close to a sample!\n");
-
-		}
-
-	}
-	else{
-
-		newsample = zeros<rowvec>(2*dim+1);
-
-
-		for(unsigned int i=0; i<dim; i++){
-
-			newsample(i) = d.designParameters(i);
-
-		}
-		newsample(dim) = d.trueValue;
-
-		for(unsigned int i=0; i<dim; i++){
-
-
-			newsample(dim+1+i) = d.gradient(i);
-
-		}
-
+		rowvec newsample = d.constructSampleConstraintWithGradient(ID);
 
 #if 0
 		printf("new sample: \n");
 		newsample.print();
 #endif
 
-		if(surrogateModelGradient.addNewSampleToData(newsample) !=0){
+		surrogateModelGradient.addNewSampleToData(newsample);
 
-			printf("Warning: The new sample cannot be added into the training data since it is too close to a sample!\n");
+	}
+	else{
 
-		}
+		rowvec newsample = d.constructSampleConstraint(ID);
+
+		surrogateModel.addNewSampleToData(newsample);
+
 
 	}
 
 
 }
-
 
 
 void ConstraintFunction::print(void) const {
@@ -561,9 +535,7 @@ void ConstraintFunction::print(void) const {
 	std::cout << "ID: " << ID << std::endl;
 	std::cout << "Name: " << name << std::endl;
 	std::cout << "Dimension: " << dim << std::endl;
-	std::cout << "Type of constraint: " << inequalityType << " " << targetValue
-			<< std::endl;
-	std::cout << "Needs surrogate:" << ifNeedsSurrogate << std::endl;
+	std::cout << "Type of constraint: " << inequalityType << " " << targetValue<< std::endl;
 	std::cout << "Executable name: " << executableName << "\n";
 	std::cout << "Executable path: " << executablePath << "\n";
 	std::cout << "Input file name: " << fileNameDesignVector << "\n";

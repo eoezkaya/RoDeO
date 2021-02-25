@@ -39,7 +39,14 @@
 #include "constraint_functions.hpp"
 
 
+class CDesignExpectedImprovement{
 
+public:
+	rowvec dv;
+	double valueExpectedImprovement;
+
+
+};
 
 class COptimizer {
 
@@ -49,20 +56,21 @@ private:
 	vec upperBounds;
 	vec dataMin;
 	vec dataMax;
-
+	std::string designVectorFileName;
 
 	mat optimizationHistory;
 
-//	rowvec constraintValues;
-
 	std::vector<ConstraintFunction> constraintFunctions;
 	ObjectiveFunction objFun;
+
+	std::vector<CDesignExpectedImprovement> theMostPromisingDesigns;
 
 
 
 public:
 
 	std::string name;
+
 	unsigned int dimension;
 	unsigned int numberOfConstraints;
 	unsigned int numberOfConstraintsWithGradient;
@@ -75,7 +83,6 @@ public:
 	std::string optimizationType;
 	bool ifVisualize;
 
-	double epsilon_EI;
 	unsigned int iterMaxEILoop;
 
 	bool ifBoxConstraintsSet;
@@ -96,6 +103,7 @@ public:
 	void setBoxConstraints(std::string filename="BoxConstraints.csv");
 	void setBoxConstraints(double lb, double ub);
 	void setBoxConstraints(vec lb, vec ub);
+	void setFileNameDesignVector(std::string filename);
 
 	void addConstraint(ConstraintFunction &constFunc);
 
@@ -115,6 +123,13 @@ public:
 
 	void updateOptimizationHistory(Design d);
 	void addConstraintValuesToData(Design &d);
+
+	rowvec calculateEIGradient(rowvec designVector) const;
+	rowvec designVectorGradientUpdate(rowvec , rowvec , double ) const;
+	CDesignExpectedImprovement MaximizeEIGradientBased(CDesignExpectedImprovement initialDesignVector) const;
+	void findTheMostPromisingDesign(unsigned int howManyDesigns = 1);
+	rowvec generateRandomRowVectorAroundASample(void);
+
 
 
 

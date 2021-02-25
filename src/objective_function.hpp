@@ -57,11 +57,13 @@ private:
 	bool ifDoErequired;
 	bool ifWarmStart;
 	bool ifGradientAvailable;
+	bool ifFunctionPointerIsSet;
 
 public:
 
 	std::string name;
 	ObjectiveFunction(std::string, double (*objFun)(double *), unsigned int);
+	ObjectiveFunction(std::string, double (*objFun)(double *, double *), unsigned int);
 	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
 
@@ -76,7 +78,7 @@ public:
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
 	void setFileNameDesignVector(std::string);
-	double calculateExpectedImprovement(rowvec x);
+	double calculateExpectedImprovement(rowvec x) const;
 
 	void evaluate(Design &d);
 	void evaluateAdjoint(Design &d);

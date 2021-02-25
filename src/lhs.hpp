@@ -53,7 +53,7 @@ public:
 	LHSSamples(unsigned int d, vec lb, vec ub, unsigned int N);
 	LHSSamples(unsigned int d, double *lb, double* ub, unsigned int N);
 
-	void saveSamplesToFile(std::string filename);
+	void saveSamplesToCSVFile(std::string);
 	void visualize(void);
 	void printSamples(void);
 	mat getSamples(void);
@@ -89,7 +89,7 @@ public:
 	RandomSamples(unsigned int d, vec lb, vec ub, unsigned int N);
 	RandomSamples(unsigned int d, double *lb, double* ub, unsigned int N);
 
-	void saveSamplesToFile(std::string filename);
+	void saveSamplesToCSVFile(std::string filename);
 	void visualize(void);
 	void printSamples(void);
 
@@ -128,7 +128,7 @@ public:
 	FullFactorialSamples(unsigned int d, double *lb, double* ub, uvec levels);
 
 
-	void saveSamplesToFile(std::string filename);
+	void saveSamplesToCSVFile(std::string filename);
 	void visualize(void);
 	void printSamples(void);
 

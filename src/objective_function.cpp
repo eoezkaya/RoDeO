@@ -60,11 +60,30 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, double (*objF
 	objectiveFunPtr = objFun;
 	objectiveFunAdjPtr = emptyAdj;
 	ifGradientAvailable = false;
+	ifFunctionPointerIsSet = true;
 
 	assert(dim < 1000);
 
 
 }
+
+ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, double (*objFunAdj)(double *, double *), unsigned int dimension)
+: surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName){
+
+
+	dim = dimension;
+	name = objectiveFunName;
+	objectiveFunPtr = empty;
+	objectiveFunAdjPtr = objFunAdj;
+	ifGradientAvailable = true;
+	ifFunctionPointerIsSet = true;
+
+	assert(dim < 1000);
+
+
+}
+
+
 
 ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int dimension)
 : surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName){
@@ -79,6 +98,7 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int 
 	fileNameObjectiveFunctionRead = "None";
 	fileNameDesignVector = "None";
 	ifGradientAvailable = false;
+	ifFunctionPointerIsSet = false;
 	assert(dim < 1000);
 
 
@@ -96,6 +116,7 @@ ObjectiveFunction::ObjectiveFunction(){
 	fileNameObjectiveFunctionRead = "None";
 	fileNameDesignVector = "None";
 	ifGradientAvailable = false;
+	ifFunctionPointerIsSet = false;
 
 
 }
@@ -183,7 +204,7 @@ void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 
 }
 
-double ObjectiveFunction::calculateExpectedImprovement(rowvec x){
+double ObjectiveFunction::calculateExpectedImprovement(rowvec x) const{
 
 	double EIValue;
 	if(!ifGradientAvailable){
@@ -228,64 +249,18 @@ std::string ObjectiveFunction::getExecutionCommand(void) const{
 
 void ObjectiveFunction::addDesignToData(Design &d){
 
-	rowvec newsample;
+	if(ifGradientAvailable){
 
-	bool ifGradientsExist;
-	if(d.gradient.size() > 0){
+		rowvec newsample = d.constructSampleObjectiveFunctionWithGradient();
 
-		ifGradientsExist = true;
-		assert(d.gradient.size() == dim);
-	}
-
-	if(!ifGradientsExist){
-
-		newsample = zeros<rowvec>(dim+1);
-
-		for(unsigned int i=0; i<dim; i++){
-
-			newsample(i) = d.designParameters(i);
-
-
-		}
-		newsample(dim) = d.trueValue;
-		if(surrogateModel.addNewSampleToData(newsample) !=0){
-
-			printf("Warning: The new sample cannot be added into the training data since it is too close to a sample!\n");
-
-		}
+		surrogateModelGradient.addNewSampleToData(newsample);
 
 	}
 	else{
 
-		newsample = zeros<rowvec>(2*dim+1);
+		rowvec newsample = d.constructSampleObjectiveFunction();
 
-
-		for(unsigned int i=0; i<dim; i++){
-
-			newsample(i) = d.designParameters(i);
-
-		}
-		newsample(dim) = d.trueValue;
-
-		for(unsigned int i=0; i<dim; i++){
-
-
-			newsample(dim+1+i) = d.gradient(i);
-
-		}
-
-
-#if 1
-		printf("new sample: \n");
-		newsample.print();
-#endif
-
-		if(surrogateModelGradient.addNewSampleToData(newsample) !=0){
-
-			printf("Warning: The new sample cannot be added into the training data since it is too close to a sample!\n");
-
-		}
-
+		surrogateModel.addNewSampleToData(newsample);
 	}
 
 
@@ -344,11 +319,10 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 
 void ObjectiveFunction::evaluate(Design &d){
 
-	rowvec x = d.designParameters;
 
+	if(ifFunctionPointerIsSet){
 
-	if( objectiveFunPtr != empty){
-
+		rowvec x= d.designParameters;
 		double functionValue =  objectiveFunPtr(x.memptr());
 		d.trueValue = functionValue;
 		d.objectiveFunctionValue = functionValue;
@@ -357,15 +331,6 @@ void ObjectiveFunction::evaluate(Design &d){
 
 	else if (fileNameObjectiveFunctionRead != "None" && executableName != "None" && fileNameDesignVector != "None"){
 
-
-		bool ifSaveIsSuccessful= x.save(fileNameDesignVector,raw_ascii);
-
-		if(!ifSaveIsSuccessful){
-
-			std::cout << "ERROR: There was a problem while saving the design vector!\n";
-			abort();
-
-		}
 
 		std::string runCommand = getExecutionCommand();
 
@@ -388,17 +353,11 @@ void ObjectiveFunction::evaluate(Design &d){
 
 void ObjectiveFunction::evaluateAdjoint(Design &d){
 
-	rowvec x = d.designParameters;
 
-	assert(x.size() == dim);
 	assert(ifGradientAvailable);
 
-
-
-
-
-	if( objectiveFunAdjPtr != emptyAdj){
-
+	if( ifFunctionPointerIsSet){
+		rowvec x= d.designParameters;
 		rowvec xb(dim);
 		xb.fill(0.0);
 
@@ -411,16 +370,6 @@ void ObjectiveFunction::evaluateAdjoint(Design &d){
 	}
 
 	else if (fileNameObjectiveFunctionRead != "None" && executableName != "None" && fileNameDesignVector != "None"){
-
-
-		bool ifSaveIsSuccessful= x.save(fileNameDesignVector,raw_ascii);
-
-		if(!ifSaveIsSuccessful){
-
-			std::cout << "ERROR: There was a problem while saving the design vector!\n";
-			abort();
-
-		}
 
 		std::string runCommand = getExecutionCommand();
 

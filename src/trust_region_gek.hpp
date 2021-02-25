@@ -47,7 +47,7 @@ private:
 
 
 	PartitionData trainingDataForHyperParameterOptimization;
-	PartitionData trainingDataForKriging;
+	PartitionData testDataForHyperParameterOptimization;
 
 	unsigned int numberOfTrainingIterations;
 
@@ -64,14 +64,18 @@ public:
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
 	void updateAuxilliaryFields(void);
+	void prepareTrainingAndTestData(void);
 	void train(void);
+	void determineRhoBasedOnData(void);
+	void determineOptimalL1NormWeights(void);
+
 	void generateRandomHyperParams(void);
 	double interpolate(rowvec x, bool ifprint = false) const ;
 	double interpolateWithGradients(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 	double calculateExpectedImprovement(rowvec xp) const;
 	unsigned int findNearestNeighbor(rowvec xp) const;
-	int addNewSampleToData(rowvec newsample);
+	void addNewSampleToData(rowvec newsample);
 	void updateModelWithNewData(void);
 
 

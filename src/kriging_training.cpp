@@ -226,10 +226,8 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 
 	if(!flagTooClose){
 
-		rawData.resize(N+1, dim+1);
 
-		rawData.row(N) = newsample;
-		rawData.save(input_filename,csv_ascii);
+		appendRowVectorToCSVData(newsample, input_filename);
 
 		updateModelWithNewData();
 		return 0;
@@ -455,7 +453,7 @@ double KrigingModel::interpolate(rowvec xp,bool ifprint ) const{
  * */
 
 
-double KrigingModel::calculateExpectedImprovement(rowvec xp){
+double KrigingModel::calculateExpectedImprovement(rowvec xp) const{
 
 
 	double ftilde = 0.0;

@@ -40,24 +40,121 @@
 using namespace arma;
 
 
-Design::Design(rowvec dv, unsigned int numberOfConstraints){
-
-	unsigned int dimension = dv.size();
-	designParameters = dv;
-	constraintTrueValues = zeros<rowvec>(numberOfConstraints);
-	gradient = zeros<rowvec>(dimension);
-
-
-}
-
 Design::Design(rowvec dv){
 
-	unsigned int dimension = dv.size();
+	dimension = dv.size();
 	designParameters = dv;
 	gradient = zeros<rowvec>(dimension);
 
 
 }
+
+Design::Design(unsigned int dim){
+
+	dimension = dim;
+	designParameters = zeros<rowvec>(dimension);
+	gradient = zeros<rowvec>(dimension);
+
+
+}
+
+void Design::setConstraintsOn(unsigned int howManyConstraints){
+
+	numberOfConstraints = howManyConstraints;
+	constraintTrueValues = zeros<rowvec>(numberOfConstraints);
+
+
+}
+
+
+void Design::generateRandomDesignVector(vec lb, vec ub){
+
+	designParameters = generateRandomRowVector(lb,ub);
+
+
+}
+
+void Design::generateRandomDesignVector(double lb, double ub){
+
+	designParameters = generateRandomRowVector(lb,ub,dimension);
+
+
+}
+
+rowvec Design::constructSampleObjectiveFunction(void) const{
+
+	rowvec sample(dimension+1);
+
+	for(unsigned int i=0; i<dimension; i++){
+
+		sample(i) = designParameters(i);
+	}
+
+	sample(dimension) = trueValue;
+
+
+	return sample;
+}
+
+rowvec Design::constructSampleObjectiveFunctionWithGradient(void) const{
+
+	rowvec sample(2*dimension+1);
+
+	for(unsigned int i=0; i<dimension; i++){
+
+		sample(i) = designParameters(i);
+	}
+
+	sample(dimension) = trueValue;
+
+	for(unsigned int i=0; i<dimension; i++){
+
+
+		sample(dimension+1+i) = gradient(i);
+
+	}
+
+	return sample;
+}
+
+rowvec Design::constructSampleConstraint(unsigned int constraintID) const{
+
+	rowvec sample(dimension+1);
+
+	for(unsigned int i=0; i<dimension; i++){
+
+		sample(i) = designParameters(i);
+	}
+
+	sample(dimension) = constraintTrueValues(constraintID-1);
+
+
+	return sample;
+}
+
+rowvec Design::constructSampleConstraintWithGradient(unsigned int constraintID) const{
+
+	rowvec sample(2*dimension+1);
+
+	for(unsigned int i=0; i<dimension; i++){
+
+		sample(i) = designParameters(i);
+	}
+
+	sample(dimension) = constraintTrueValues(constraintID-1);
+
+	rowvec constraintGradient = constraintGradients.at(constraintID-1);
+	for(unsigned int i=0; i<dimension; i++){
+
+
+		sample(dimension+1+i) = constraintGradient(i);
+
+	}
+
+
+	return sample;
+}
+
 
 void Design::print(void) const{
 
@@ -66,8 +163,7 @@ void Design::print(void) const{
 	printVector(gradient,"gradient vector");
 	printVector(constraintTrueValues,"constraint values");
 
-
-
+	std::cout<<"Constraint gradients = \n";
 	for (auto it = constraintGradients.begin(); it != constraintGradients.end(); it++){
 
 		printVector(*it);
@@ -75,4 +171,52 @@ void Design::print(void) const{
 
 	}
 
+
 }
+
+void Design::saveDesignVectorAsCSVFile(std::string fileName) const{
+
+	std::ofstream designVectorFile (fileName);
+	designVectorFile.precision(10);
+	if (designVectorFile.is_open())
+	{
+
+		for(unsigned int i=0; i<designParameters.size()-1; i++){
+
+			designVectorFile << designParameters(i)<<",";
+		}
+
+		designVectorFile << designParameters(designParameters.size()-1);
+
+		designVectorFile.close();
+	}
+	else{
+
+		cout << "ERROR: Unable to open file";
+		abort();
+	}
+}
+
+void Design::saveDesignVector(std::string fileName) const{
+
+	std::ofstream designVectorFile (fileName);
+	designVectorFile.precision(10);
+	if (designVectorFile.is_open())
+	{
+
+		for(unsigned int i=0; i<designParameters.size()-1; i++){
+
+			designVectorFile << designParameters(i)<<" ";
+		}
+
+		designVectorFile << designParameters(designParameters.size()-1);
+
+		designVectorFile.close();
+	}
+	else{
+
+		cout << "ERROR: Unable to open file";
+		abort();
+	}
+}
+

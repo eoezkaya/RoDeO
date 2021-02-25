@@ -58,17 +58,19 @@ private:
 	std::string fileNameDesignVector;
 
 	bool ifGradientAvailable;
+	bool ifFunctionPointerIsSet;
 
 public:
 	std::string name;
-	bool ifNeedsSurrogate;
 
 	std::vector<int> IDToFunctionsShareOutputExecutable;
 
 	unsigned int readOutputStartIndex;
 
 
-	ConstraintFunction(std::string, std::string, double, double (*constFun)(double *), unsigned int dimension, bool ifNeedsSurrogate = false);
+	ConstraintFunction(std::string, std::string, double, double (*constFun)(double *), unsigned int );
+	ConstraintFunction(std::string, std::string, double, double (*constFun)(double *, double *), unsigned int );
+
 	ConstraintFunction(std::string, std::string, double, unsigned int);
 	ConstraintFunction();
 	void saveDoEData(std::vector<rowvec> data) const;

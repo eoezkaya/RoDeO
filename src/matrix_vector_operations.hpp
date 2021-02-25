@@ -126,6 +126,7 @@ void copyRowVector(rowvec &a,rowvec b);
 void copyRowVector(rowvec &a,rowvec b, unsigned int);
 
 void appendRowVectorToCSVData(rowvec v, std::string fileName);
+void saveMatToCVSFile(mat M, std::string fileName);
 
 mat normalizeMatrix(mat matrixIn);
 mat normalizeMatrix(mat matrixIn, vec xmin, vec xmax);

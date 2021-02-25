@@ -920,6 +920,9 @@ void RoDeODriver::runDriver(void){
 
 	COptimizer optimizationStudy(problemName, dimension, problemType);
 	optimizationStudy.setBoxConstraints(boxConstraintsLowerBounds,boxConstraintsUpperBounds);
+	optimizationStudy.setFileNameDesignVector(designVectorFilename);
+
+
 	ObjectiveFunction objFunc(objectiveFunctionName, dimension);
 	setObjectiveFunction(objFunc);
 	optimizationStudy.addObjectFunction(objFunc);
@@ -946,16 +949,17 @@ void RoDeODriver::runDriver(void){
 	optimizationStudy.printConstraints();
 #endif
 
+	if(ifDoEFilesShouldBeCleaned){
+
+		optimizationStudy.ifCleanDoeFiles = true;
+	}else{
+
+		optimizationStudy.ifCleanDoeFiles = false;
+	}
+
 
 	if(problemType == "DoE"){
 
-		if(this->ifDoEFilesShouldBeCleaned){
-
-			optimizationStudy.ifCleanDoeFiles = true;
-		}else{
-
-			optimizationStudy.ifCleanDoeFiles = false;
-		}
 
 		if(!optimizationStudy.checkSettings()){
 			std::cout<<"ERROR: Check of the settings is failed!\n";

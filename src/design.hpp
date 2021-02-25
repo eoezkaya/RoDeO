@@ -33,13 +33,15 @@
 
 #include <armadillo>
 #include <vector>
-
+#include "random_functions.hpp"
 using namespace arma;
 
 class Design{
 
 public:
 
+	unsigned int dimension;
+	unsigned int numberOfConstraints;
 	rowvec designParameters;
 	rowvec constraintTrueValues;
 	rowvec gradient;
@@ -47,9 +49,20 @@ public:
 	double objectiveFunctionValue;
 	std::vector<rowvec> constraintGradients;
 
-	Design(rowvec, unsigned int);
 	Design(rowvec);
+	Design(unsigned int);
+	void setConstraintsOn(unsigned int howManyConstraints);
 	void print(void) const;
+	void saveDesignVectorAsCSVFile(std::string fileName) const;
+	void saveDesignVector(std::string fileName) const;
+	void generateRandomDesignVector(vec lb, vec ub);
+	void generateRandomDesignVector(double lb, double ub);
+
+	rowvec constructSampleObjectiveFunction(void) const;
+	rowvec constructSampleObjectiveFunctionWithGradient(void) const;
+
+	rowvec constructSampleConstraint(unsigned int constraintID) const;
+	rowvec constructSampleConstraintWithGradient(unsigned int constraintID) const;
 
 };
 
