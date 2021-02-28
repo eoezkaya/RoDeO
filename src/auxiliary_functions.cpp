@@ -259,12 +259,17 @@ int check_if_lists_are_equal(int *list1, int *list2, int dim){
  * @return normal_pdf(x) with mu and sigma
  *
  */
-double pdf(double x, double mu, double sigma)
+
+
+double pdf(double x, double m, double s)
 {
-	/* Constants */
-	static const double pi = 3.14159265359;
-	return exp( (-1.0 * (x - mu) * (x - mu)) / (2 * sigma * sigma)) / (sigma * sqrt(2 * pi));
+    static const double inv_sqrt_2pi = 0.3989422804014327;
+    double a = (x - m) / s;
+
+    return inv_sqrt_2pi / s * std::exp(-0.5 * a * a);
 }
+
+
 
 /** Returns the cdf of x, given the distribution described by mu and sigma..
  *
@@ -365,7 +370,7 @@ void solveLinearSystemCholesky(mat U, vec &x, vec b){
 
 	if(dim != U.n_rows || dim != b.size()){
 
-		fprintf(stderr, "Error: dimensions does not match! at %s, line %d.\n",__FILE__, __LINE__);
+		std::cout<<"ERROR: Dimensions does not match!\n";
 		abort();
 
 	}
@@ -624,7 +629,7 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 }
 
-bool ifTooCLose(rowvec v1, rowvec v2){
+bool checkifTooCLose(rowvec v1, rowvec v2){
 
 	rowvec diff = v1 - v2;
 

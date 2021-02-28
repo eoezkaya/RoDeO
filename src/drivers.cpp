@@ -52,7 +52,7 @@
 RoDeODriver::RoDeODriver(){
 
 	dimension = 0;
-	numberOfKeywords = 22;
+	numberOfKeywords = 23;
 	problemName = "None";
 	problemType = "None";
 	designVectorFilename = "None";
@@ -69,6 +69,7 @@ RoDeODriver::RoDeODriver(){
 	ifmaximumNumberOfSimulationsSet = false;
 	ifmaximumNumberOfDoESamplesSet = false;
 	ifexecutablePathObjectiveFunctionSet = false;
+	ifSurrogateModelTypeSet = false;
 
 	ifWarmStart = false;
 
@@ -94,6 +95,7 @@ RoDeODriver::RoDeODriver(){
 	keywords[19]="DESIGN_VECTOR_FILENAME=";
 	keywords[20]="GRADIENT_AVAILABLE=";
 	keywords[21]="CLEAN_DOE_FILES=";
+	keywords[22]="SURROGATE_MODEL=";
 
 
 	configFileName = settings.config_file;
@@ -577,6 +579,13 @@ void RoDeODriver::readConfigFile(void){
 						}
 						break;
 					}
+					case 22: {
+
+						surrogateModelType = sub_str;
+						std::cout<<"SURROGATE_MODEL= "<<surrogateModelType<<"\n";
+						ifSurrogateModelTypeSet = true;
+						break;
+					}
 
 
 
@@ -912,7 +921,36 @@ void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned in
 }
 
 
+void RoDeODriver::runOptimization(void) const{
 
+//	optimizationStudy.setProblemType(problemType);
+//	optimizationStudy.ifVisualize = true;
+//	optimizationStudy.setMaximumNumberOfIterations(maximumNumberOfSimulations);
+//
+//	if(!ifWarmStart){
+//
+//		optimizationStudy.performDoE(maximumNumberDoESamples,LHS);
+//
+//	}
+//
+//
+//	if(!optimizationStudy.checkSettings()){
+//		std::cout<<"ERROR: Check of the settings is failed!\n";
+//		abort();
+//	}
+//	optimizationStudy.EfficientGlobalOptimization();
+
+
+
+}
+
+void RoDeODriver::runSurrogateModelTest(void) const{
+
+	TestFunction TestFunction(objectiveFunctionName, dimension);
+
+
+
+}
 
 
 
@@ -991,6 +1029,11 @@ void RoDeODriver::runDriver(void){
 
 	}
 	else if(problemType == "SURROGATE_TEST"){
+
+		runSurrogateModelTest();
+
+
+
 
 	}
 

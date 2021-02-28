@@ -82,7 +82,7 @@ protected:
 
 	std::string label;
 	std::string hyperparameters_filename;
-	std::string input_filename;
+	std::string filenameDataInput;
 
 
 	double ymin,ymax,yave;
@@ -105,6 +105,14 @@ public:
 
 	void ReadDataAndNormalize(void);
 
+	std::string getNameOfHyperParametersFile(void) const;
+	std::string getNameOfInputFile(void) const;
+	unsigned int getDimension(void) const;
+	unsigned int getNumberOfSamples(void) const;
+	mat getRawData(void) const;
+
+
+
 	virtual void initializeSurrogateModel(void) = 0;
 	virtual void printSurrogateModel(void) const = 0;
 	virtual void printHyperParameters(void) const = 0;
@@ -119,7 +127,7 @@ public:
 
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
-	std::string getInputFileName(void) const;
+
 
 	void updateData(mat dataMatrix);
 	void tryModelOnTestSet(PartitionData &testSet) const;

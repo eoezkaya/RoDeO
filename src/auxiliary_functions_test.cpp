@@ -52,7 +52,7 @@ TEST(testAuxiliaryFunctions, testcalculatePolynomial){
 
 }
 
-TEST(testAuxiliaryFunctions, solveLinearSystemCholesky){
+TEST(testAuxiliaryFunctions, testsolveLinearSystemCholesky){
 
 
 	unsigned int dim = 10;
@@ -80,4 +80,38 @@ TEST(testAuxiliaryFunctions, solveLinearSystemCholesky){
 
 
 }
+
+
+TEST(testAuxiliaryFunctions, testpdf){
+
+	double x = 1.6;
+	double sigma = 1.8;
+	double mu = 0.9;
+
+	double result = pdf(x, mu, sigma);
+
+	double err =fabs( result-	0.2054931699076307154202);
+
+	EXPECT_LE(err, 10E-10);
+
+
+
+}
+
+TEST(testAuxiliaryFunctions, testcdf){
+
+	double x = 1.6;
+	double sigma = 1.8;
+	double mu = 0.9;
+
+	double result = cdf(x, mu, sigma);
+
+	double err =fabs( result-	0.6513208290612620373879);
+
+	EXPECT_LE(err, 10E-10);
+
+
+
+}
+
 

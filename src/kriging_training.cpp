@@ -95,7 +95,7 @@ void KrigingModel::initializeSurrogateModel(void){
 
 				rowvec sample2 = rawData.row(j);
 
-				if(ifTooCLose(sample1, sample2)) {
+				if(checkifTooCLose(sample1, sample2)) {
 
 					printf("ERROR: Two samples in the training data are too close to each other!\n");
 
@@ -113,10 +113,6 @@ void KrigingModel::initializeSurrogateModel(void){
 		R_inv_I= zeros<vec>(N);
 		vectorOfOnes= ones<vec>(N);
 
-		if(ifUsesGradientData) {
-
-			linearModel.ifUsesGradientData = true;
-		}
 		linearModel.initializeSurrogateModel();
 
 		ifInitialized = true;
@@ -155,6 +151,8 @@ vec KrigingModel::getKrigingWeights(void) const{
 
 
 }
+
+
 
 void KrigingModel::setKrigingWeights(vec w){
 
@@ -217,7 +215,7 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 
 		rowvec sample = rawData.row(i);
 
-		if(ifTooCLose(sample, newsample)) {
+		if(checkifTooCLose(sample, newsample)) {
 
 			flagTooClose = true;
 		}
@@ -227,7 +225,7 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 	if(!flagTooClose){
 
 
-		appendRowVectorToCSVData(newsample, input_filename);
+		appendRowVectorToCSVData(newsample, filenameDataInput);
 
 		updateModelWithNewData();
 		return 0;
@@ -250,7 +248,7 @@ void KrigingModel::printSurrogateModel(void) const{
 
 
 	printf("hyperparameters_filename: %s\n",hyperparameters_filename.c_str());
-	printf("input_filename: %s\n",input_filename.c_str());
+	printf("input_filename: %s\n",filenameDataInput.c_str());
 	printf("max_number_of_kriging_iterations = %d\n",max_number_of_kriging_iterations);
 	printf("epsilonKriging = %15.10e\n",epsilonKriging);
 	printVector(kriging_weights,"kriging_weights");
@@ -500,14 +498,6 @@ double KrigingModel::calculateExpectedImprovement(rowvec xp) const{
 }
 
 
-double KrigingModel::interpolateWithGradients(rowvec xp) const{
-
-	cout << "ERROR: interpolateWithGradients does not exist for KrigingModel!\n";
-	abort();
-
-
-}
-
 
 void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const{
 
@@ -572,7 +562,7 @@ void KrigingModel::train(void){
 
 	if(ifprintToScreen){
 
-		printf("\nTraining Kriging response surface for the data : %s\n",input_filename.c_str());
+		printf("\nTraining Kriging response surface for the data : %s\n",filenameDataInput.c_str());
 
 	}
 

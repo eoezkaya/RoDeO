@@ -661,7 +661,7 @@ void AggregationModel::addNewSampleToData(rowvec newSample){
 
 		rowvec sample = rawData.row(i);
 
-		if(ifTooCLose(sample, newSample)) {
+		if(checkifTooCLose(sample, newSample)) {
 
 			flagTooClose = true;
 		}
@@ -673,7 +673,7 @@ void AggregationModel::addNewSampleToData(rowvec newSample){
 		//		rawData.insert_rows( rawData.n_rows, newSample );
 		//		rawData.save(input_filename,csv_ascii);
 
-		appendRowVectorToCSVData(newSample, input_filename);
+		appendRowVectorToCSVData(newSample, filenameDataInput);
 
 		updateModelWithNewData();
 

@@ -98,7 +98,7 @@ void GEKModel::initializeSurrogateModel(void){
 
 				rowvec sample2 = X.row(j);
 
-				if(ifTooCLose(sample1, sample2)) {
+				if(checkifTooCLose(sample1, sample2)) {
 
 					printf("ERROR: Two samples in the training data are too close to each other!\n");
 					abort();

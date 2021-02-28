@@ -71,6 +71,7 @@ private:
 	bool ifDesignVectorFileNameSet;
 
 	bool ifDoEFilesShouldBeCleaned;
+	bool ifSurrogateModelTypeSet;
 
 	std::vector<bool> IsGradientsAvailable;
 	std::vector<std::string> executablesWithGradient;
@@ -84,6 +85,8 @@ private:
 	std::string designVectorFilename;
 	std::vector<std::string> executableOutputFiles;
 
+	std::string surrogateModelType;
+
 	bool checkifProblemTypeIsValid(std::string) const;
 	void setObjectiveFunction(ObjectiveFunction & );
 	void setConstraint(ConstraintFunction & constraintFunc, unsigned int indx);
@@ -94,6 +97,8 @@ public:
 	void checkConsistencyOfConfigParams(void) const;
 	void readConfigFile(void);
 	void runDriver(void);
+	void runOptimization(void) const;
+	void runSurrogateModelTest(void) const;
 
 
 };

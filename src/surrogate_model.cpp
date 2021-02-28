@@ -155,6 +155,7 @@ SurrogateModel::SurrogateModel(){
 	ifInitialized = false;
 	ifUsesGradientData = false;
 	ifprintToScreen = false;
+	filenameDataInput = "None";
 }
 
 SurrogateModel::SurrogateModel(std::string name){
@@ -163,10 +164,44 @@ SurrogateModel::SurrogateModel(std::string name){
 	N = 0;
 	numberOfHyperParameters = 0;
 	label = name;
-	input_filename = name +".csv";
+	filenameDataInput = name +".csv";
 	ifInitialized = false;
 	ifUsesGradientData = false;
 	ifprintToScreen = false;
+
+}
+
+
+std::string SurrogateModel::getNameOfHyperParametersFile(void) const{
+
+	return this->hyperparameters_filename;
+
+}
+
+std::string SurrogateModel::getNameOfInputFile(void) const{
+
+	return this->filenameDataInput;
+
+}
+
+unsigned int SurrogateModel::getDimension(void) const{
+
+	return this->dim;
+
+
+}
+
+unsigned int SurrogateModel::getNumberOfSamples(void) const{
+
+	return this->N;
+
+
+}
+
+mat SurrogateModel::getRawData(void) const{
+
+	return this->rawData;
+
 
 }
 
@@ -176,7 +211,7 @@ void SurrogateModel::ReadDataAndNormalize(void){
 #if 0
 	std::cout<<"Loading data from the file "<<input_filename<<"...\n";
 #endif
-	bool status = rawData.load(input_filename.c_str(), csv_ascii);
+	bool status = rawData.load(filenameDataInput.c_str(), csv_ascii);
 
 	if(status == true)
 	{
@@ -424,11 +459,7 @@ void SurrogateModel::printSurrogateModel(void) const{
 }
 
 
-std::string SurrogateModel::getInputFileName(void) const{
 
-	return input_filename;
-
-}
 
 
 /** Returns the ith row of the matrix X

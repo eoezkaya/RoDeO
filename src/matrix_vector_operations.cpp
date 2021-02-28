@@ -86,66 +86,7 @@ HighPrecisionMatrix transposeHP(const HighPrecisionMatrix& input) {
 	return result;
 }
 
-/** solve a linear system Ax=b, with a given Cholesky decomposition of A
- *
- * @param[in] U
- * @param[out] x
- * @param[in] b
- *
- */
-//void solveLinearSystemCholesky(const HighPrecisionMatrix& L, vec &x, vec b){
-//
-//	int n = L.n_rows();
-//	HighPrecisionMatrix U(n,n);
-//
-//	mat L = trans(U);
-//
-//	unsigned int dim = x.size();
-//
-//	if(dim != U.n_rows || dim != b.size()){
-//
-//		fprintf(stderr, "Error: dimensions does not match! at %s, line %d.\n",__FILE__, __LINE__);
-//		abort();
-//
-//	}
-//	/* initialize x */
-//
-//	x.fill(0.0);
-//
-//	vec y(dim,fill::zeros);
-//
-//	/* forward subst. L y = b */
-//
-//	for (unsigned int i = 0; i < dim; i++) {
-//
-//		double residual = 0.0;
-//
-//		for (unsigned int j = 0; j < i; j++) {
-//
-//			residual = residual + L(i, j) * y(j);
-//
-//		}
-//
-//		y(i) = (b(i) - residual) / L(i, i);
-//	}
-//
-//
-//	/* back subst. U x = y */
-//
-//	for (int i = dim - 1; i >= 0; i--) {
-//
-//		double residual = 0.0;
-//
-//		for (int j = dim - 1; j > i; j--){
-//
-//			residual += U(i, j) * x(j);
-//		}
-//
-//
-//		x(i) = (y(i) - residual) / U(i, i);
-//	}
-//
-//}
+
 
 void copyRowVector(rowvec &a,rowvec b){
 
@@ -194,6 +135,7 @@ void saveMatToCVSFile(mat M, std::string fileName){
 
 
 	std::ofstream samplesFile(fileName);
+	samplesFile.precision(15);
 
 	if (samplesFile.is_open())
 	{
@@ -427,7 +369,7 @@ bool isEqual(const mat &A, const mat&B, double tolerance){
 
 	for(unsigned int i=0; i<m; i++){
 
-		for(unsigned int j=0; j<m; j++){
+		for(unsigned int j=0; j<n; j++){
 
 			if(checkValue(A(i,j),B(i,j), tolerance) == false) return false;
 

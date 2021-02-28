@@ -61,7 +61,14 @@ TEST(testMatrixVectorOperations, testnormalizeRowVector){
 	double error = fabs(xCheck-x(0));
 	EXPECT_LT(error, 10E-10);
 
+	x(0) = 1.3; x(1) = 10.7; x(2) = -1.3; x(3) = 0.0; x(4) = 1.7;
+	xmin.fill(1.3);
+	xmax.fill(50.0);
+	xNormalized = normalizeRowVector(x, xmin, xmax);
+	EXPECT_LT(fabs(xNormalized(0)), 10E-10);
+
 }
+
 
 
 

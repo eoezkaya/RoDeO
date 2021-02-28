@@ -188,7 +188,7 @@ void ConstraintFunction::setExecutableName(std::string exeName) {
 
 void ConstraintFunction::saveDoEData(std::vector<rowvec> data) const{
 
-	std::string fileName = surrogateModel.getInputFileName();
+	std::string fileName = surrogateModel.getNameOfInputFile();
 
 	std::ofstream myFile(fileName);
 

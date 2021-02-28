@@ -87,6 +87,8 @@ public:
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
 
+
+
 	double calculateExpectedImprovement(rowvec xp) const;
 	double getyMin(void) const;
 	vec getKrigingWeights(void) const;

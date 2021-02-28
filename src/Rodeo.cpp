@@ -58,13 +58,14 @@
 #include "gek_test.hpp"
 #include "lhs.hpp"
 #include "drivers.hpp"
+#include<gtest/gtest.h>
 Rodeo_settings settings;
 
+#define RUN_TESTS
 
 
 
-
-int main(void){
+int main(int argc, char* argv[]){
 
 
 	printf("\n\n\n");
@@ -82,12 +83,17 @@ int main(void){
 
 
 
+
 	/* initialize random seed*/
 	srand (time(NULL));
 
-
-
 	settings.read();
+
+#ifdef RUN_TESTS
+	testing::InitGoogleTest(&argc, argv);
+	return RUN_ALL_TESTS();
+
+#endif
 
 
 	int ret = chdir (settings.cwd.c_str());
@@ -97,6 +103,10 @@ int main(void){
 		cout<<"Error: Cannot change directory! Are you sure that the directory: "<<settings.cwd<<" exists?\n";
 		abort();
 	}
+
+
+
+
 
 	RoDeODriver driverToRun;
 	driverToRun.readConfigFile();
@@ -108,5 +118,14 @@ int main(void){
 
 }
 
+//TEST(testSettings, testifSettingsCanBeRead){
+//
+//	Rodeo_settings mysettings;
+//	mysettings.read();
+//	ASSERT_TRUE(mysettings.cwd != "None");
+//
+//
+//
+//}
 
 

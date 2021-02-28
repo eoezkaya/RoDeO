@@ -137,7 +137,7 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod, uvec &map);
 
 
-bool ifTooCLose(rowvec v1, rowvec v2);
+bool checkifTooCLose(rowvec v1, rowvec v2);
 
 bool checkLinearSystem(mat A, vec x, vec b, double tol);
 vec calculateResidual(mat A, vec x, vec b);

@@ -179,7 +179,7 @@ void ObjectiveFunction::trainSurrogate(void){
 
 void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 
-	std::string fileName = surrogateModel.getInputFileName();
+	std::string fileName = surrogateModel.getNameOfInputFile();
 
 	std::ofstream myFile(fileName);
 
