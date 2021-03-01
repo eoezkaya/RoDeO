@@ -29,6 +29,7 @@
  *
  */
 
+
 #include "kriging_training.hpp"
 #include "matrix_vector_operations.hpp"
 #include "test_functions.hpp"
@@ -55,16 +56,17 @@ TEST(testKriging, testReadDataAndNormalize){
 	mat samples = testFunctionEggholder.generateRandomSamples(10);
 	saveMatToCVSFile(samples,"Eggholder.csv");
 	KrigingModel testModel("Eggholder");
-	testModel.ReadDataAndNormalize();
 
-	printMatrix(samples);
+	testModel.readData();
+	testModel.setParameterBounds(0.0, 200.0);
+	testModel.normalizeData();
+
 
 	unsigned int N = testModel.getNumberOfSamples();
 	ASSERT_TRUE(N == 10);
 	unsigned int d = testModel.getDimension();
 	ASSERT_TRUE(d == 2);
 	mat rawData = testModel.getRawData();
-	printMatrix(rawData);
 	bool ifBothMatricesAreEqual = isEqual(samples,rawData,10E-10);
 
 
@@ -72,4 +74,7 @@ TEST(testKriging, testReadDataAndNormalize){
 
 	remove("Eggholder.csv");
 }
+
+
+
 

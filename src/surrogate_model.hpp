@@ -90,6 +90,8 @@ protected:
 	vec xmax;
 
 	bool ifInitialized;
+	bool ifBoundsAreSet;
+	bool ifDataIsRead;
 	unsigned int numberOfHyperParameters;
 
 
@@ -103,15 +105,22 @@ public:
 	SurrogateModel();
 	SurrogateModel(std::string name);
 
-	void ReadDataAndNormalize(void);
+	void readData(void);
+	void normalizeData(void);
+
+	void checkIfParameterBoundsAreOk(void) const;
+	void checkRawData(void) const;
+	void setParameterBounds(vec xmin, vec xmax);
+	void setParameterBounds(double xmin, double xmax);
+
 
 	std::string getNameOfHyperParametersFile(void) const;
 	std::string getNameOfInputFile(void) const;
 	unsigned int getDimension(void) const;
 	unsigned int getNumberOfSamples(void) const;
 	mat getRawData(void) const;
-
-
+	vec getxmin(void) const;
+	vec getxmax(void) const;
 
 	virtual void initializeSurrogateModel(void) = 0;
 	virtual void printSurrogateModel(void) const = 0;
@@ -128,8 +137,6 @@ public:
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
 
-
-	void updateData(mat dataMatrix);
 	void tryModelOnTestSet(PartitionData &testSet) const;
 	void visualizeTestResults(void) const;
 

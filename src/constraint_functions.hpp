@@ -34,7 +34,7 @@
 
 #include <armadillo>
 #include "kriging_training.hpp"
-#include "trust_region_gek.hpp"
+#include "aggregation_model.hpp"
 
 
 class ConstraintFunction{
@@ -100,6 +100,7 @@ public:
 	void print(void) const;
 
 	void addDesignToData(Design &d);
+	std::string getExecutionCommand(void) const;
 };
 
 

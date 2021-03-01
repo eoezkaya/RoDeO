@@ -68,15 +68,21 @@ public:
 	void train(void);
 	void determineRhoBasedOnData(void);
 	void determineOptimalL1NormWeights(void);
+	void setRho(double);
+
+	vec getL1NormWeights(void) const;
+	PartitionData getTrainingData(void) const;
+	PartitionData getTestData(void) const;
 
 	void generateRandomHyperParams(void);
 	double interpolate(rowvec x, bool ifprint = false) const ;
 	double interpolateWithGradients(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 	double calculateExpectedImprovement(rowvec xp) const;
-	unsigned int findNearestNeighbor(rowvec xp) const;
+	unsigned int findNearestNeighbor(const rowvec &) const;
 	void addNewSampleToData(rowvec newsample);
 	void updateModelWithNewData(void);
+	void modifyRawDataAndAssociatedVariables(mat dataMatrix);
 
 
 };

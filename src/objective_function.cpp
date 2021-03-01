@@ -37,8 +37,6 @@
 #include <unistd.h>
 #include <cassert>
 #include "auxiliary_functions.hpp"
-#include "kriging_training.hpp"
-#include "trust_region_gek.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
 #include "test_functions.hpp"

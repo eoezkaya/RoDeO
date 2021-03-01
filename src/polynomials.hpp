@@ -52,11 +52,8 @@ public:
 	double differentiate(double x) const;
 	void print(void) const;
 	void initializeRandomCoefficients(void);
+	void setCoefficients(vec);
 
-	friend void testPolynomialEvaluate(void);
-	friend void testPolynomialDifferentiate(void);
-	friend void testPolynomialProductEvaluate(void);
-	friend void testPolynomialProductDifferentiate(void);
 
 };
 

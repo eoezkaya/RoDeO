@@ -59,6 +59,14 @@ double Polynomial::evaluate(double x) const{
 
 }
 
+void Polynomial::setCoefficients(vec coefficients){
+
+	assert( ((this->degree) +1) == coefficients.size());
+	this->coefficients = coefficients;
+
+
+}
+
 double Polynomial::differentiate(double x) const{
 
 	double sum = 0.0;

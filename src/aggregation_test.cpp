@@ -29,96 +29,173 @@
  *
  */
 
-#include "trust_region_gek.hpp"
-#include "aggregation_test.hpp"
+
+#include "aggregation_model.hpp"
 #include "auxiliary_functions.hpp"
 #include "test_functions.hpp"
+#include "random_functions.hpp"
 #include "polynomials.hpp"
 #include <vector>
 #include <armadillo>
 
-
-void testAllAggregationModel(void){
-
-	testAggregationModeltrain();
-
-}
-
-void testAggregationModeltrain(void){
-	cout<<__func__<<"\n";
-	int dim = generateRandomInt(4,8);
-	int N =  generateRandomInt(100,200);
-	generateRandomTestAndValidationDataForGradientModels(dim,N);
-
-	AggregationModel testModel("testData");
+#include<gtest/gtest.h>
 
 
-	testModel.train();
-
-	cout<<__func__<<" is finished\n";
-
-}
-
-void testAggregationModelHimmelblau(void){
+TEST(testAggrregationModel, testfindNearestNeighbor){
 
 
-	TestFunction testFunHimmelblau("Himmelblau",2);
-//	testFunHimmelblau.adj_ptr = HimmelblauAdj;
-	testFunHimmelblau.func_ptr = Himmelblau;
-	testFunHimmelblau.setVisualizationOn();
-	testFunHimmelblau.setBoxConstraints(0.0,5.0);
-	testFunHimmelblau.testSurrogateModel(KERNEL_REGRESSION,100);
+	mat samples(100,5,fill::randu);
+	saveMatToCVSFile(samples,"AggregationTest.csv");
+	AggregationModel testModel("AggregationTest");
 
+	testModel.readData();
+	testModel.setParameterBounds(0.0, 1.0);
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+
+
+	rowvec x = testModel.getRowX(1);
+	unsigned int NNIndex = testModel.findNearestNeighbor(x);
+	ASSERT_EQ(NNIndex,1);
+	x = testModel.getRowX(45);
+	x(0) += 0.0001;
+	x(1) -= 0.0001;
+	NNIndex = testModel.findNearestNeighbor(x);
+	ASSERT_EQ(NNIndex,45);
+	remove("AggregationTest.csv");
 
 }
 
 
-void testAggregationInterpolate(void){
-	cout<<__func__<<"\n";
-	int dim = generateRandomInt(4,8);
-	int N =  generateRandomInt(100,200);
+TEST(testAggrregationModel, testinterpolateWithLinearFunction){
 
-	generateRandomTestAndValidationDataForGradientModels(dim,N);
+	mat samples(100,5);
 
-	AggregationModel testModel("testData");
+	/* we construct first test data using a linear function 2*x1 + x2, including gradients */
+	for (unsigned int i=0; i<samples.n_rows; i++){
+		rowvec x(5);
+		x(0) = generateRandomDouble(0.0,1.0);
+		x(1) = generateRandomDouble(0.0,1.0);
 
-
-	testModel.train();
-
-	mat validationData;
-
-	validationData.load("testDataValidationPoints.csv",arma::csv_ascii);
-
-	validationData.print("validationData");
-
-	mat Xvalidation = validationData.submat(0,0,validationData.n_rows-1,dim-1);
-	Xvalidation = (1.0/dim)*Xvalidation;
-
-
-	vec yvalidation = validationData.col(dim);
-
-	printMatrix(Xvalidation,"Xvalidation");
-	printVector(yvalidation,"yvalidation");
-
-
-
-	for(unsigned int i=0; i<validationData.n_rows; i++){
-
-		rowvec x= Xvalidation.row(i);
-
-		double fSurrogate = testModel.interpolate(x);
-		cout<<"\nfSurrogate = "<<fSurrogate<<"\n";
-		cout<<"fExact = "<<yvalidation(i)<<"\n\n";
+		x(2) = 2*x(0) + x(1);
+		x(3) = 2.0;
+		x(4) = 1.0;
+		samples.row(i) = x;
 
 	}
 
 
+	saveMatToCVSFile(samples,"AggregationTest.csv");
+	AggregationModel testModel("AggregationTest");
 
-	cout<<__func__<<" is finished\n";
+	testModel.readData();
+	testModel.setParameterBounds(0.0, 1.0);
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+	testModel.setRho(0.0);
+
+	rowvec xTest(2);
+	xTest.fill(0.25);
+	vec xmax = testModel.getxmax();
+	vec xmin = testModel.getxmin();
+	rowvec xTestNotNormalized = normalizeRowVectorBack(xTest, xmin, xmax);
+
+	double testValue = testModel. interpolate(xTest);
+	double exactValue = 2*xTestNotNormalized(0) + xTestNotNormalized(1);
+	double error = fabs(testValue - exactValue);
+	EXPECT_LT(error, 10E-010);
+
+	remove("AggregationTest.csv");
 
 }
 
 
+TEST(testAggrregationModel, prepareTrainingAndTestData){
+
+	mat samples(10,7);
+
+	/* we construct first test data using a linear function 2*x1 + x2 + 0 x3, including gradients */
+	for (unsigned int i=0; i<samples.n_rows; i++){
+		rowvec x(7);
+		x(0) = generateRandomDouble(0.0,1.0);
+		x(1) = generateRandomDouble(0.0,1.0);
+		x(2) = generateRandomDouble(0.0,1.0);
+
+		x(3) = 2*x(0) + x(1);
+		x(4) = 2.0;
+		x(5) = 1.0;
+		x(6) = 0.0;
+		samples.row(i) = x;
+
+	}
+
+
+	saveMatToCVSFile(samples,"AggregationTest.csv");
+
+	printMatrix(samples);
+
+	AggregationModel testModel("AggregationTest");
+
+	testModel.readData();
+	testModel.setParameterBounds(0.0, 1.0);
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+	testModel.prepareTrainingAndTestData();
+	testModel.setRho(0.0);
+
+	PartitionData testData= testModel.getTestData();
+	PartitionData trainingData= testModel.getTrainingData();
+
+	testModel.modifyRawDataAndAssociatedVariables(trainingData.rawData);
+	testData.print();
+	trainingData.print();
+
+    testModel.tryModelOnTestSet(testData);
+    double validationError = testData.calculateMeanSquaredError();
+    EXPECT_LT(validationError, 10E-010);
+
+	remove("AggregationTest.csv");
+
+}
+
+TEST(testAggrregationModel, determineOptimalL1NormWeights){
+
+	mat samples(200,7);
+
+	for (unsigned int i=0; i<samples.n_rows; i++){
+		rowvec x(7);
+		x(0) = generateRandomDouble(0.0,1.0);
+		x(1) = generateRandomDouble(0.0,1.0);
+		x(2) = generateRandomDouble(0.0,1.0);
+
+		x(3) = 2*x(0)*x(0);
+		x(4) = 2.0;
+		x(5) = 0.0;
+		x(6) = 0.0;
+		samples.row(i) = x;
+
+	}
+
+
+	saveMatToCVSFile(samples,"AggregationTest.csv");
+
+	printMatrix(samples);
+
+	AggregationModel testModel("AggregationTest");
+
+	testModel.readData();
+	testModel.setParameterBounds(0.0, 1.0);
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+
+	testModel.determineOptimalL1NormWeights();
+
+	vec optimalWeights = testModel.getL1NormWeights();
+	EXPECT_LT(optimalWeights(1), 0.01);
+	EXPECT_LT(optimalWeights(2), 0.01);
+	remove("AggregationTest.csv");
+
+}
 
 
 

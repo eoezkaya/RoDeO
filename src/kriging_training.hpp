@@ -46,6 +46,8 @@ class KrigingModel : public SurrogateModel{
 
 private:
 	vec kriging_weights;
+	vec theta;
+	vec gamma;
 	vec R_inv_ys_min_beta;
 	vec R_inv_I;
 	vec vectorOfOnes;
@@ -100,10 +102,15 @@ public:
 	void setLinearRegressionOff(void);
 	void setNumberOfTrainingIterations(unsigned int);
 
+	vec getTheta(void) const;
+	vec getGamma(void) const;
+	void setTheta(vec theta);
+	void setGamma(vec gamma);
+
 	void resetDataObjects(void);
 	void resizeDataObjects(void);
 	int addNewSampleToData(rowvec newsample);
-	void updateModelWithNewData(mat newData);
+//	void updateModelWithNewData(mat newData);
 	void updateModelWithNewData(void);
 	void updateAuxilliaryFields(void);
 

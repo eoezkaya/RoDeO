@@ -43,15 +43,9 @@
 #include "Rodeo_globals.hpp"
 #include "auxiliary_functions.hpp"
 #include "read_settings.hpp"
-
-#include "aggregation_test.hpp"
 #include "surrogate_model.hpp"
 
-#ifdef GPU_VERSION
-#include "kernel_regression_cuda.h"
-#endif
-
-#include "trust_region_gek.hpp"
+#include "aggregation_model.hpp"
 #include "kriging_training.hpp"
 #include "polynomials.hpp"
 #include "polynomials_test.hpp"
@@ -61,7 +55,6 @@
 #include<gtest/gtest.h>
 Rodeo_settings settings;
 
-#define RUN_TESTS
 
 
 
@@ -89,7 +82,9 @@ int main(int argc, char* argv[]){
 
 	settings.read();
 
-#ifdef RUN_TESTS
+
+
+#ifdef UNIT_TESTS
 	testing::InitGoogleTest(&argc, argv);
 	return RUN_ALL_TESTS();
 

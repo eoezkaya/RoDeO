@@ -37,8 +37,6 @@
 #include <unistd.h>
 #include <cassert>
 #include "auxiliary_functions.hpp"
-#include "kriging_training.hpp"
-#include "trust_region_gek.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
 #include "test_functions.hpp"
@@ -121,7 +119,7 @@ ConstraintFunction::ConstraintFunction(std::string constraintName,
 ConstraintFunction::ConstraintFunction(std::string constraintName,
 		std::string constraintType, double constraintValue,
 		unsigned int dimension) :
-						surrogateModel(constraintName), surrogateModelGradient(constraintName) {
+								surrogateModel(constraintName), surrogateModelGradient(constraintName) {
 
 	ifGradientAvailable = false;
 	ifFunctionPointerIsSet = false;
@@ -404,16 +402,9 @@ void ConstraintFunction::evaluate(Design &d) {
 
 		if (ifRun) {
 
-			std::string runCommand;
-			if (this->executablePath != "None") {
+			std::string runCommand = getExecutionCommand();
 
-				runCommand = executablePath + "/" + executableName;
-			} else {
-				runCommand = "./" + executableName;
-			}
-#if 0
-			std::cout<<runCommand<<"\n";
-#endif
+			system(runCommand.c_str());
 
 			system(runCommand.c_str());
 
@@ -469,16 +460,9 @@ void ConstraintFunction::evaluateAdjoint(Design &d) {
 
 		if (ifRun) {
 
-			std::string runCommand;
-			if (this->executablePath != "None") {
+			std::string runCommand = getExecutionCommand();
 
-				runCommand = executablePath + "/" + executableName;
-			} else {
-				runCommand = "./" + executableName;
-			}
-#if 0
-			std::cout<<runCommand<<"\n";
-#endif
+			system(runCommand.c_str());
 
 			system(runCommand.c_str());
 
@@ -522,6 +506,22 @@ void ConstraintFunction::addDesignToData(Design &d){
 
 
 	}
+
+
+}
+
+std::string ConstraintFunction::getExecutionCommand(void) const{
+
+	std::string runCommand;
+	if(executablePath!= "None") {
+
+		runCommand = executablePath +"/" + executableName;
+	}
+	else{
+		runCommand = "./" + executableName;
+	}
+
+	return runCommand;
 
 
 }

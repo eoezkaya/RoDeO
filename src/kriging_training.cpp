@@ -72,37 +72,28 @@ KrigingModel::KrigingModel(std::string name):SurrogateModel(name),linearModel(na
 
 void KrigingModel::initializeSurrogateModel(void){
 
-	if(label != "None"){
+	assert(this->ifDataIsRead);
+	assert(this->ifBoundsAreSet);
 
+
+#if 0
 		printf("Initializing settings for the Kriging model...\n");
+#endif
 
-		modelID = KRIGING;
-
-		ReadDataAndNormalize();
 
 		numberOfHyperParameters = 2*dim;
 
 		kriging_weights =zeros<vec>(numberOfHyperParameters);
+
+		theta = zeros<vec>(dim);
+		theta.fill(1.0);
+		gamma = zeros<vec>(dim);
+		gamma.fill(2.0);
+
+
 		epsilonKriging = 10E-12;
 		max_number_of_kriging_iterations = 20000;
 
-
-		for(unsigned int i=0; i<N; i++){
-
-			rowvec sample1 = rawData.row(i);
-
-			for(unsigned int j=i+1; j<N; j++){
-
-				rowvec sample2 = rawData.row(j);
-
-				if(checkifTooCLose(sample1, sample2)) {
-
-					printf("ERROR: Two samples in the training data are too close to each other!\n");
-
-					abort();
-				}
-			}
-		}
 
 		sigmaSquared = 0.0;
 		beta0 = 0.0;
@@ -113,13 +104,21 @@ void KrigingModel::initializeSurrogateModel(void){
 		R_inv_I= zeros<vec>(N);
 		vectorOfOnes= ones<vec>(N);
 
+		if(this->ifUsesGradientData) {
+
+			linearModel.ifUsesGradientData = true;
+
+		}
+		linearModel.readData();
+		linearModel.setParameterBounds(xmin,xmax);
+		linearModel.normalizeData();
 		linearModel.initializeSurrogateModel();
 
 		ifInitialized = true;
-
+#if 0
 		std::cout << "Kriging model initialization is done...\n";
+#endif
 
-	}
 }
 
 void KrigingModel::printHyperParameters(void) const{
@@ -151,8 +150,31 @@ vec KrigingModel::getKrigingWeights(void) const{
 
 
 }
+vec KrigingModel::getTheta(void) const{
+
+	return theta;
 
 
+}
+vec KrigingModel::getGamma(void) const{
+
+	return gamma;
+
+
+}
+
+void KrigingModel::setTheta(vec theta){
+
+	this->theta = theta;
+
+
+}
+void KrigingModel::setGamma(vec gamma){
+
+	this->gamma = gamma;
+
+
+}
 
 void KrigingModel::setKrigingWeights(vec w){
 
@@ -210,17 +232,8 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 
 	/* avoid points that are too close to each other */
 
-	bool flagTooClose=false;
-	for(unsigned int i=0; i<N; i++){
+	bool flagTooClose= checkifTooCLose(newsample, rawData);
 
-		rowvec sample = rawData.row(i);
-
-		if(checkifTooCLose(sample, newsample)) {
-
-			flagTooClose = true;
-		}
-
-	}
 
 	if(!flagTooClose){
 
@@ -293,29 +306,6 @@ void KrigingModel::resizeDataObjects(void){
 }
 
 
-void KrigingModel::updateModelWithNewData(mat newData){
-
-
-	resetDataObjects();
-
-
-	updateData(newData);
-
-	resizeDataObjects();
-
-	ymin = min(rawData.col(dim));
-	ymax = max(rawData.col(dim));
-	yave = mean(rawData.col(dim));
-
-#if 0
-	printf("ymin = %15.10f, ymax = %15.10f, yave = %15.10f\n",ymin,ymax,yave);
-#endif
-	updateAuxilliaryFields();
-
-	linearModel.updateData(newData);
-
-
-}
 
 void KrigingModel::updateAuxilliaryFields(void){
 #if 0
@@ -373,7 +363,8 @@ void KrigingModel::updateModelWithNewData(void){
 	resetDataObjects();
 
 
-	ReadDataAndNormalize();
+	readData();
+	normalizeData();
 
 	correlationMatrix.set_size(N,N);
 	correlationMatrix.fill(0.0);
@@ -554,11 +545,7 @@ void KrigingModel::computeCorrelationMatrix(void)  {
 
 void KrigingModel::train(void){
 
-	if(ifInitialized == false){
-
-		printf("ERROR: Kriging model must be initialized before training!\n");
-		abort();
-	}
+	assert(ifInitialized);
 
 	if(ifprintToScreen){
 
@@ -585,8 +572,11 @@ void KrigingModel::train(void){
 		ysKriging = ysKriging - ysLinearModel;
 	}
 	else{
+		if(ifprintToScreen){
 
-		printf("Linear regression is not active...\n");
+			printf("Linear regression is not active...\n");
+
+		}
 	}
 
 	int max_number_of_function_calculations = max_number_of_kriging_iterations;
@@ -995,7 +985,7 @@ int EAdesign::calculate_fitness(double epsilon, mat &X,vec &ys){
 
 		logdetR += log(U_diagonal(i));
 
-		//		printf("%d %30.25f %30.25f\n",i,logdetR,log(U_diagonal(i)));
+
 	}
 
 	logdetR = 2.0 * logdetR;

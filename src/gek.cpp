@@ -79,7 +79,8 @@ void GEKModel::initializeSurrogateModel(void){
 		modelID = GRADIENT_ENHANCED_KRIGING;
 		ifUsesGradientData = true;
 
-		ReadDataAndNormalize();
+		readData();
+		normalizeData();
 
 		numberOfHyperParameters = dim;
 

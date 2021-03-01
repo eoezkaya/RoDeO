@@ -38,7 +38,7 @@
 #include <cassert>
 #include "auxiliary_functions.hpp"
 #include "kriging_training.hpp"
-#include "trust_region_gek.hpp"
+#include "aggregation_model.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
 #include "test_functions.hpp"
@@ -75,8 +75,8 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	maxNumberOfSamples  = 0;
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
-	dataMin.zeros(dimension);
-	dataMax.zeros(dimension);
+//	dataMin.zeros(dimension);
+//	dataMax.zeros(dimension);
 	ifBoxConstraintsSet = false;
 	iterMaxEILoop = dimension*10000;
 	iterGradientEILoop = 100;
@@ -379,28 +379,28 @@ void COptimizer::trainSurrogates(void){
 
 }
 
-void COptimizer::updateDataMinAndMax(void){
-
-	std::string filenameObjectiveFunction = objFun.name + ".csv";
-	mat rawData;
-	rawData.load(filenameObjectiveFunction,csv_ascii);
-
-#if 0
-	printMatrix(rawData);
-#endif
-
-	for(unsigned int i=0; i<dimension; i++){
-
-		vec x = rawData.col(i);
-		dataMin(i) = min(x);
-		dataMax(i) = max(x);
-	}
-#if 0
-	printVector(dataMin,"dataMin");
-	printVector(dataMax,"dataMax");
-#endif
-
-}
+//void COptimizer::updateDataMinAndMax(void){
+//
+//	std::string filenameObjectiveFunction = objFun.name + ".csv";
+//	mat rawData;
+//	rawData.load(filenameObjectiveFunction,csv_ascii);
+//
+//#if 0
+//	printMatrix(rawData);
+//#endif
+//
+//	for(unsigned int i=0; i<dimension; i++){
+//
+//		vec x = rawData.col(i);
+//		dataMin(i) = min(x);
+//		dataMax(i) = max(x);
+//	}
+//#if 0
+//	printVector(dataMin,"dataMin");
+//	printVector(dataMax,"dataMax");
+//#endif
+//
+//}
 
 void COptimizer::updateOptimizationHistory(Design d) {
 
@@ -792,7 +792,6 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 		iterOpt++;
 
-		updateDataMinAndMax();
 
 #if 0
 		printf("Optimization Iteration = %d\n",iterOpt);

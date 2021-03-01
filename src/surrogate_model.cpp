@@ -153,8 +153,10 @@ SurrogateModel::SurrogateModel(){
 	N = 0;
 	numberOfHyperParameters = 0;
 	ifInitialized = false;
+	ifBoundsAreSet = false;
 	ifUsesGradientData = false;
 	ifprintToScreen = false;
+	ifDataIsRead = false;
 	filenameDataInput = "None";
 }
 
@@ -168,7 +170,49 @@ SurrogateModel::SurrogateModel(std::string name){
 	ifInitialized = false;
 	ifUsesGradientData = false;
 	ifprintToScreen = false;
+	ifBoundsAreSet = false;
+	ifDataIsRead = false;
 
+}
+
+void SurrogateModel::checkIfParameterBoundsAreOk(void) const{
+
+	for(unsigned int i=0; i<dim; i++){
+
+		assert(xmin(i) < xmax(i));
+	}
+
+}
+
+
+void SurrogateModel::setParameterBounds(vec xmin, vec xmax){
+
+	assert(ifDataIsRead);
+	assert(xmin.size() == dim);
+	assert(xmax.size() == dim);
+
+	this->xmin = xmin;
+	this->xmax = xmax;
+
+	checkIfParameterBoundsAreOk();
+
+
+	ifBoundsAreSet = true;
+}
+
+void SurrogateModel::setParameterBounds(double xmin, double xmax){
+	assert(ifDataIsRead);
+	vec xminTemp(dim);
+	xminTemp.fill(xmin);
+	vec xmaxTemp(dim);
+	xmaxTemp.fill(xmax);
+	this->xmin = xminTemp;
+	this->xmax = xmaxTemp;
+
+	checkIfParameterBoundsAreOk();
+
+
+	ifBoundsAreSet = true;
 }
 
 
@@ -205,8 +249,30 @@ mat SurrogateModel::getRawData(void) const{
 
 }
 
+void SurrogateModel::checkRawData(void) const{
 
-void SurrogateModel::ReadDataAndNormalize(void){
+	for(unsigned int i=0; i<N; i++){
+
+		rowvec sample1 = rawData.row(i);
+
+		for(unsigned int j=i+1; j<N; j++){
+
+			rowvec sample2 = rawData.row(j);
+
+			if(checkifTooCLose(sample1, sample2)) {
+
+				printf("ERROR: Two samples in the training data are too close to each other!\n");
+
+				abort();
+			}
+		}
+	}
+
+
+
+}
+
+void SurrogateModel::readData(void){
 
 #if 0
 	std::cout<<"Loading data from the file "<<input_filename<<"...\n";
@@ -225,6 +291,8 @@ void SurrogateModel::ReadDataAndNormalize(void){
 		abort();
 	}
 
+
+
 	if(ifUsesGradientData){
 
 		assert((rawData.n_cols - 1)%2 == 0);
@@ -238,6 +306,9 @@ void SurrogateModel::ReadDataAndNormalize(void){
 	/* set number of sample points */
 	N = rawData.n_rows;
 
+	checkRawData();
+
+
 	Xraw = rawData.submat(0, 0, N - 1, dim - 1);
 
 	X = Xraw;
@@ -248,21 +319,6 @@ void SurrogateModel::ReadDataAndNormalize(void){
 
 	}
 
-
-	xmax.set_size(dim);
-	xmin.set_size(dim);
-
-	for (unsigned int i = 0; i < dim; i++) {
-
-		xmax(i) = rawData.col(i).max();
-		xmin(i) = rawData.col(i).min();
-
-	}
-
-	X = normalizeMatrix(X);
-	X = (1.0/dim)*X;
-
-
 	y = rawData.col(dim);
 
 
@@ -270,80 +326,19 @@ void SurrogateModel::ReadDataAndNormalize(void){
 	ymax = max(y);
 	yave = mean(y);
 
+	ifDataIsRead = true;
+
 }
 
-void SurrogateModel::updateData(mat dataMatrix){
 
-	rawData.reset();
-	X.reset();
-	Xraw.reset();
-	gradientData.reset();
-	y.reset();
+void SurrogateModel::normalizeData(void){
 
-	unsigned int dimDataMatrix;
-
-	if(ifUsesGradientData){
-
-		dimDataMatrix = (dataMatrix.n_cols - 1)/2;
-
-	}
-	else{
-
-		dimDataMatrix = dataMatrix.n_cols - 1;
-
-	}
-
-
-
-	if(dimDataMatrix !=dim){
-
-		cout<<"ERROR: Dimension of the new data does not match with the problem dimension!\n";
-		cout<<"dimDataMatrix = "<<dimDataMatrix<<"\n";
-		cout<<"dim = "<<dim<<"\n";
-		abort();
-
-
-	}
-
-	rawData = dataMatrix;
-
-	/* set number of sample points */
-	N = rawData.n_rows;
-
-	Xraw = rawData.submat(0, 0, N - 1, dim - 1);
-
-	X = Xraw;
-	if(ifUsesGradientData){
-
-		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
-
-	}
-
-
-	xmax.set_size(dim);
-	xmin.set_size(dim);
-
-	for (unsigned int i = 0; i < dim; i++) {
-
-		xmax(i) = rawData.col(i).max();
-		xmin(i) = rawData.col(i).min();
-
-	}
-
-	X = normalizeMatrix(X);
+	assert(ifDataIsRead);
+	assert(ifBoundsAreSet);
+	X = normalizeMatrix(X,xmin,xmax);
 	X = (1.0/dim)*X;
 
-	y = rawData.col(dim);
-
-
-	ymin = min(y);
-	ymax = max(y);
-	yave = mean(y);
-
-
 }
-
-
 
 void SurrogateModel::tryModelOnTestSet(PartitionData &testSet) const{
 
@@ -459,8 +454,16 @@ void SurrogateModel::printSurrogateModel(void) const{
 }
 
 
+vec SurrogateModel::getxmin(void) const{
 
+	return this->xmin;
 
+}
+vec SurrogateModel::getxmax(void) const{
+
+	return this->xmax;
+
+}
 
 /** Returns the ith row of the matrix X
  * @param[in] index

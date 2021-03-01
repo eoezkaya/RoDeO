@@ -54,13 +54,8 @@ LinearModel::LinearModel():SurrogateModel(){
 
 void LinearModel::initializeSurrogateModel(void){
 
-	if(label != "None"){
-
-		ReadDataAndNormalize();
-		numberOfHyperParameters = dim+1;
-		weights = zeros<vec>(numberOfHyperParameters);
-
-	}
+	numberOfHyperParameters = dim+1;
+	weights = zeros<vec>(numberOfHyperParameters);
 
 	ifInitialized = true;
 

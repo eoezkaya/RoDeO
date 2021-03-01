@@ -154,7 +154,7 @@ void abortIfFalse(bool flag){
 
 double calculatePolynomial(double x, const rowvec &coeffs){
 
-//	printVector(coeffs,"coeffs");
+	//	printVector(coeffs,"coeffs");
 	double sum = 0.0;
 
 	for(unsigned int i=0; i<coeffs.size(); i++){
@@ -263,10 +263,10 @@ int check_if_lists_are_equal(int *list1, int *list2, int dim){
 
 double pdf(double x, double m, double s)
 {
-    static const double inv_sqrt_2pi = 0.3989422804014327;
-    double a = (x - m) / s;
+	static const double inv_sqrt_2pi = 0.3989422804014327;
+	double a = (x - m) / s;
 
-    return inv_sqrt_2pi / s * std::exp(-0.5 * a * a);
+	return inv_sqrt_2pi / s * std::exp(-0.5 * a * a);
 }
 
 
@@ -629,16 +629,38 @@ void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmo
 
 }
 
-bool checkifTooCLose(rowvec v1, rowvec v2){
+bool checkifTooCLose(const rowvec &v1, const rowvec &v2, double tol){
 
 	rowvec diff = v1 - v2;
 
 	double distance = L1norm(diff, v1.size());
 
-	if(distance < 10E-6) return true;
+	if(distance < tol) return true;
 	else return false;
 
 }
+
+bool checkifTooCLose(const rowvec &v1, const mat &M, double tol){
+
+
+	unsigned int nRows = M.n_rows;
+	bool ifTooClose = false;
+
+	for(unsigned int i=0; i<nRows; i++){
+
+		rowvec r = M.row(i);
+		ifTooClose = checkifTooCLose(v1,r, tol);
+
+		if(ifTooClose) {
+			break;
+		}
+
+	}
+
+	return ifTooClose;
+}
+
+
 
 
 bool file_exist(std::string filename)
@@ -666,19 +688,19 @@ void getValuesFromString(std::string str, std::vector<std::string> &values,char 
 
 	if(str[str.length()-1] == '}' || str[str.length()-1] == ']'){
 
-			str.erase(str.length()-1,1);
+		str.erase(str.length()-1,1);
 	}
 
 	while(1){
 
 		std::size_t found = str.find(delimiter);
-		  if (found==std::string::npos) break;
+		if (found==std::string::npos) break;
 
-		  std::string buffer;
-		  buffer.assign(str,0,found);
-		  str.erase(0,found+1);
+		std::string buffer;
+		buffer.assign(str,0,found);
+		str.erase(0,found+1);
 
-		  values.push_back(buffer);
+		values.push_back(buffer);
 
 	}
 

@@ -35,18 +35,13 @@
 using namespace arma;
 
 
-#include "trust_region_gek.hpp"
+#include "aggregation_model.hpp"
 #include "Rodeo_macros.hpp"
+#include "Rodeo_globals.hpp"
 #include "kriging_training.hpp"
 #include "test_functions.hpp"
 #include "auxiliary_functions.hpp"
-
-
-#include "Rodeo_globals.hpp"
 #include "linear_regression.hpp"
-#include "Rodeo_macros.hpp"
-#include "trust_region_gek.hpp"
-
 
 AggregationModel::AggregationModel():SurrogateModel(){}
 
@@ -147,48 +142,19 @@ void AggregationModel::initializeSurrogateModel(void){
 
 
 		krigingModel.ifUsesGradientData = true;
+
+		krigingModel.readData();
+		krigingModel.setParameterBounds(xmin,xmax);
+		krigingModel.normalizeData();
 		krigingModel.initializeSurrogateModel();
 
-		ReadDataAndNormalize();
+		readData();
+		normalizeData();
 
 		numberOfHyperParameters = dim + 1;
 
 		L1NormWeights = zeros<vec>(dim);
 		L1NormWeights.fill(1.0);
-
-		//		int NvalidationSet = N/5;
-		//
-		//
-		//		int Ntraining = N - NvalidationSet;
-		//
-		//		cout << "N = "<<N<<"\n";
-		//		cout << "Ntraining = "<<Ntraining<<"\n";
-		//
-		//		mat shuffledrawData = rawData;
-		//		if(NvalidationSet > 0){
-		//
-		//			shuffledrawData = shuffle(rawData);
-		//		}
-		//
-		//		mat dataTraining  = shuffledrawData.submat( 0, 0, Ntraining-1, 2*dim );
-		//
-		//		trainingDataForKriging.ifHasGradientData = true;
-		//		trainingDataForKriging.fillWithData(dataTraining);
-		//		trainingDataForKriging.normalizeAndScaleData(xmin,xmax);
-		//
-		//		if(NvalidationSet > 10){
-		//
-		//			mat dataValidation    = shuffledrawData.submat( Ntraining, 0, N-1, 2*dim );
-		//			trainingDataForHyperParameterOptimization.ifHasGradientData = true;
-		//			trainingDataForHyperParameterOptimization.fillWithData(dataValidation);
-		//			trainingDataForHyperParameterOptimization.normalizeAndScaleData(xmin,xmax);
-		//
-		//
-		//		}else{
-		//
-		//			std::cout<<"ERROR: There are not enough samples to train the aggregation model!\n";
-		//			abort();
-		//		}
 
 
 
@@ -196,7 +162,7 @@ void AggregationModel::initializeSurrogateModel(void){
 
 	ifInitialized = true;
 
-#if 1
+#if 0
 	printSurrogateModel();
 #endif
 
@@ -214,7 +180,7 @@ void AggregationModel::prepareTrainingAndTestData(void){
 	cout << "NTestSet  = "<<NTestSet<<"\n";
 	cout << "NTrainingSet = "<<NTrainingSet<<"\n";
 
-	mat shuffledrawData = rawData;
+	mat shuffledrawData = shuffle(rawData);
 
 	mat trainingRawData = shuffledrawData.submat( 0, 0, NTrainingSet-1, 2*dim );
 	mat testRawData = shuffledrawData.submat( NTrainingSet, 0, N-1, 2*dim );
@@ -231,6 +197,17 @@ void AggregationModel::prepareTrainingAndTestData(void){
 
 
 }
+
+PartitionData  AggregationModel::getTrainingData(void) const{
+
+	return trainingDataForHyperParameterOptimization;
+}
+
+PartitionData AggregationModel::getTestData(void) const{
+
+	return testDataForHyperParameterOptimization;
+}
+
 
 
 void AggregationModel::printSurrogateModel(void) const{
@@ -304,13 +281,22 @@ void AggregationModel::updateAuxilliaryFields(void){
 
 }
 
+
+vec AggregationModel::getL1NormWeights(void) const{
+
+	return this->L1NormWeights;
+
+
+}
+
+
 void AggregationModel::determineOptimalL1NormWeights(void){
 
 	prepareTrainingAndTestData();
 
 	mat rawDataSave = rawData;
 
-	updateData(trainingDataForHyperParameterOptimization.rawData);
+	modifyRawDataAndAssociatedVariables(trainingDataForHyperParameterOptimization.rawData);
 
 	loadHyperParameters();
 #if 1
@@ -339,10 +325,10 @@ void AggregationModel::determineOptimalL1NormWeights(void){
 		tryModelOnTestSet(testDataForHyperParameterOptimization);
 		double validationError = testDataForHyperParameterOptimization.calculateMeanSquaredError();
 #if 0
-		printf("validationError = %10.7f\n",validationError);
+		printf("validationError = %10.7f, minimumValidationError = %10.7f\n",validationError,minimumValidationError);
 #endif
 
-		if(validationError + 10E06 < minimumValidationError ){
+		if(validationError + 10E-06 < minimumValidationError ){
 #if 1
 			cout<<"A better set of hyper-parameters is found\n";
 			cout<<"Error = "<<validationError<<"\n";
@@ -364,10 +350,11 @@ void AggregationModel::determineOptimalL1NormWeights(void){
 
 
 	L1NormWeights = weightsBest;
-
-	updateData(rawDataSave);
-
 	saveHyperParameters();
+
+	modifyRawDataAndAssociatedVariables(rawDataSave);
+
+
 
 }
 
@@ -411,6 +398,31 @@ void AggregationModel::generateRandomHyperParams(void){
 
 
 
+}
+
+void AggregationModel::setRho(double rho){
+	this->rho = rho;
+
+
+}
+
+/* Be very careful using this method */
+
+void AggregationModel::modifyRawDataAndAssociatedVariables(mat dataMatrix){
+
+	assert(dataMatrix.n_cols == rawData.n_cols);
+	this->rawData = dataMatrix;
+	N = rawData.n_rows;
+	Xraw = rawData.submat(0, 0, N - 1, dim - 1);
+	y = rawData.col(dim);
+	if(ifUsesGradientData){
+
+		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
+
+	}
+
+	X = normalizeMatrix(Xraw, xmin, xmax);
+	X = (1.0/dim)*X;
 }
 
 double AggregationModel::interpolate(rowvec x,bool ifprint) const{
@@ -461,6 +473,7 @@ double AggregationModel::interpolate(rowvec x,bool ifprint) const{
 
 	rowvec gradientVector = gradientData.row(indx);
 	if(ifprint){
+		printMatrix(gradientVector);
 		printVector(gradientVector,"gradientVector");
 	}
 
@@ -618,8 +631,9 @@ double AggregationModel::calculateExpectedImprovement(rowvec xp) const{
 }
 
 
-unsigned int AggregationModel::findNearestNeighbor(rowvec xp) const{
+unsigned int AggregationModel::findNearestNeighbor(const rowvec &xp) const{
 
+	assert(ifInitialized);
 	unsigned int index = -1;
 	double minL1Distance = LARGE;
 
@@ -688,7 +702,8 @@ void AggregationModel::addNewSampleToData(rowvec newSample){
 
 void AggregationModel::updateModelWithNewData(void){
 
-	ReadDataAndNormalize();
+	readData();
+	normalizeData();
 
 	krigingModel.updateModelWithNewData();
 

@@ -39,14 +39,11 @@
 #include "auxiliary_functions.hpp"
 #include "test_functions.hpp"
 #include "kriging_training.hpp"
-#include "trust_region_gek.hpp"
+#include "aggregation_model.hpp"
 
 #include "optimization.hpp"
 #include "random_functions.hpp"
 #include "gek.hpp"
-#ifdef GPU_VERSION
-#include "kernel_regression_cuda.h"
-#endif
 
 
 
@@ -449,9 +446,9 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 
 
 mat TestFunction::generateRandomSamples(unsigned int howManySamples){
-
+#if 0
 	printf("Generating %d random samples for the function: %s\n",howManySamples,function_name.c_str());
-
+#endif
 	if(!ifBoxConstraintsSet){
 
 		cout<<"\nERROR: Box constraints are not set!\n";

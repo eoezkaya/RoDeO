@@ -34,7 +34,7 @@
 
 #include <armadillo>
 #include "kriging_training.hpp"
-#include "trust_region_gek.hpp"
+#include "aggregation_model.hpp"
 #include "objective_function.hpp"
 #include "constraint_functions.hpp"
 
