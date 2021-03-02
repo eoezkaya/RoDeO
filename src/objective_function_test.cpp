@@ -1,0 +1,117 @@
+/*
+ * RoDeO, a Robust Design Optimization Package
+ *
+ * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Homepage: http://www.scicomp.uni-kl.de
+ * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
+ *
+ * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ *
+ * This file is part of RoDeO
+ *
+ * RoDeO is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * RoDeO is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ * You should have received a copy of the GNU
+ * General Public License along with CoDiPack.
+ * If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ *
+ *
+ *
+ */
+
+#include<gtest/gtest.h>
+#include "objective_function.hpp"
+#include "matrix_vector_operations.hpp"
+TEST(testObjectiveFunction, initializeSurrogate){
+
+	mat samples(100,5,fill::randu);
+	saveMatToCVSFile(samples,"testObjectiveFunction.csv");
+	vec lb(4); lb.fill(0.0);
+	vec ub(4); ub.fill(1.0);
+
+	ObjectiveFunction objFunTest("testObjectiveFunction",4);
+	objFunTest.setParameterBounds(lb,ub);
+
+	objFunTest.initializeSurrogate();
+
+	KrigingModel testModel = objFunTest.getSurrogateModel();
+	mat rawData = testModel.getRawData();
+
+	bool ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
+	ASSERT_TRUE(ifrawDataIsConsistent);
+	samples(0,0) += 1000;
+	ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
+	ASSERT_FALSE(ifrawDataIsConsistent);
+
+	/* check dimension */
+	ASSERT_EQ(testModel.getDimension(), 4);
+	ASSERT_FALSE(testModel.ifUsesGradientData);
+	ASSERT_TRUE(testModel.ifDataIsLoaded());
+	ASSERT_TRUE(testModel.ifBoundsAreSpecified());
+
+
+	remove("ObjectiveFunctionTest.csv");
+}
+
+TEST(testObjectiveFunction, initializeSurrogateWithAdjoint){
+
+	mat samples(100,5,fill::randu);
+	saveMatToCVSFile(samples,"testObjectiveFunction.csv");
+	vec lb(2); lb.fill(0.0);
+	vec ub(2); ub.fill(1.0);
+
+	ObjectiveFunction objFunTest("testObjectiveFunction",2);
+	objFunTest.setParameterBounds(lb,ub);
+	objFunTest.setGradientOn();
+
+	objFunTest.initializeSurrogate();
+	AggregationModel testModel = objFunTest.getSurrogateModelGradient();
+	mat rawData = testModel.getRawData();
+
+	bool ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
+	ASSERT_TRUE(ifrawDataIsConsistent);
+	samples(0,0) += 1000;
+	ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
+	ASSERT_FALSE(ifrawDataIsConsistent);
+
+	/* check dimension */
+	ASSERT_EQ(testModel.getDimension(), 2);
+	ASSERT_TRUE(testModel.ifUsesGradientData);
+	ASSERT_TRUE(testModel.ifDataIsLoaded());
+	ASSERT_TRUE(testModel.ifBoundsAreSpecified());
+
+
+	remove("ObjectiveFunctionTest.csv");
+}
+
+
+TEST(testObjectiveFunction, readEvaluateOutput){
+
+	ObjectiveFunction objFunTest;
+
+	Design d(4);
+
+	std::ofstream readOutputTestFile;
+	readOutputTestFile.open ("readOutputTestFile.txt");
+	readOutputTestFile << "2.144\n";
+	readOutputTestFile.close();
+
+	objFunTest.setFileNameReadObjectFunction("readOutputTestFile.txt");
+	objFunTest.readEvaluateOutput(d);
+	ASSERT_EQ(d.trueValue,2.144);
+	ASSERT_EQ(d.objectiveFunctionValue,2.144);
+	remove("readOutputTestFile.txt");
+
+}
+
+
