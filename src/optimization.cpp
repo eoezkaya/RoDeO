@@ -75,8 +75,8 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	maxNumberOfSamples  = 0;
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
-//	dataMin.zeros(dimension);
-//	dataMax.zeros(dimension);
+	//	dataMin.zeros(dimension);
+	//	dataMax.zeros(dimension);
 	ifBoxConstraintsSet = false;
 	iterMaxEILoop = dimension*10000;
 	iterGradientEILoop = 100;
@@ -90,15 +90,15 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 
 bool COptimizer::checkSettings(void) const{
 
-	bool ifAllSetiingsOk = true;
+	bool ifAllSettingsOk = true;
 
 	if(!ifBoxConstraintsSet){
 
-		ifAllSetiingsOk = false;
+		ifAllSettingsOk = false;
 
 	}
 
-	return ifAllSetiingsOk;
+	return ifAllSettingsOk;
 }
 
 
@@ -359,6 +359,19 @@ void COptimizer::visualizeOptimizationHistory(void) const{
 }
 
 
+void COptimizer::initializeSurrogates(void){
+
+	objFun.initializeSurrogate();
+
+	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+
+		it->initializeSurrogate();
+
+	}
+
+}
+
+
 void COptimizer::trainSurrogates(void){
 	printf("Training surrogate model for the objective function...\n");
 	objFun.trainSurrogate();
@@ -379,28 +392,7 @@ void COptimizer::trainSurrogates(void){
 
 }
 
-//void COptimizer::updateDataMinAndMax(void){
-//
-//	std::string filenameObjectiveFunction = objFun.name + ".csv";
-//	mat rawData;
-//	rawData.load(filenameObjectiveFunction,csv_ascii);
-//
-//#if 0
-//	printMatrix(rawData);
-//#endif
-//
-//	for(unsigned int i=0; i<dimension; i++){
-//
-//		vec x = rawData.col(i);
-//		dataMin(i) = min(x);
-//		dataMax(i) = max(x);
-//	}
-//#if 0
-//	printVector(dataMin,"dataMin");
-//	printVector(dataMax,"dataMax");
-//#endif
-//
-//}
+
 
 void COptimizer::updateOptimizationHistory(Design d) {
 
@@ -539,13 +531,13 @@ void COptimizer::checkIfSettingsAreOK(void) const{
 }
 
 
-rowvec COptimizer::generateRandomRowVectorAroundASample(void){
-
-	unsigned int randomIndx = generateRandomInt(0,maxNumberOfSamples-1);
-
-
-
-}
+//rowvec COptimizer::generateRandomRowVectorAroundASample(void){
+//
+//	unsigned int randomIndx = generateRandomInt(0,maxNumberOfSamples-1);
+//
+//
+//
+//}
 
 /* These designs (there can be more than one) are found by maximizing the expected
  *  Improvement function and taking the constraints into account
@@ -564,7 +556,7 @@ void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 
 		rowvec dvNotNormalized = generateRandomRowVector(lowerBounds, upperBounds);
 
-		rowvec dv = normalizeRowVector(dvNotNormalized,dataMin,dataMax);
+		rowvec dv = normalizeRowVector(dvNotNormalized,lowerBounds, upperBounds);
 #if 0
 		printVector(dv);
 #endif
@@ -769,15 +761,63 @@ CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedIm
 
 
 }
+void COptimizer::prepareOptimizationHistoryFile(void) const{
+
+	std::string header;
+	for(unsigned int i=0; i<dimension; i++){
+
+		header+="x";
+		header+=std::to_string(i+1);
+		header+=",";
+
+	}
+
+	if(this->numberOfConstraints == 0){
+		header+="Objective Function";
+
+	}
+	else{
+		header+="Objective Function,";
+
+	}
 
 
 
+	for(unsigned int i=0; i<this->numberOfConstraints; i++){
+		header+="Constraint";
+		header+=std::to_string(i+1);
+
+		if(i < this->numberOfConstraints -1){
+
+			header+=",";
+		}
+
+	}
+	header+="\n";
+
+	std::ofstream optimizationHistoryFile;
+	optimizationHistoryFile.open (optimizationHistoryFileName);
+	optimizationHistoryFile << header;
+	optimizationHistoryFile.close();
+
+
+
+}
+
+void COptimizer::clearOptimizationHistoryFile(void) const{
+
+	remove(optimizationHistoryFileName.c_str());
+
+}
 
 
 void COptimizer::EfficientGlobalOptimization(void){
 
+
 	checkIfSettingsAreOK();
 
+	clearOptimizationHistoryFile();
+	prepareOptimizationHistoryFile();
 
 	/* main loop for optimization */
 	unsigned int simulationCount = 0;
@@ -786,6 +826,8 @@ void COptimizer::EfficientGlobalOptimization(void){
 	double bestObjFunVal = LARGE;
 	rowvec best_dvGlobal(dimension);
 	unsigned int bestIndx = -1;
+
+	initializeSurrogates();
 
 	while(1){
 
@@ -811,7 +853,7 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 		rowvec best_dvNorm = optimizedDesignGradientBased.dv;
 
-		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, dataMin,dataMax);
+		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds, upperBounds);
 
 		double estimatedBestdv = objFun.ftilde(best_dvNorm,true);
 #if 1
@@ -821,7 +863,7 @@ void COptimizer::EfficientGlobalOptimization(void){
 #endif
 
 		Design currentBestDesign(best_dv);
-		currentBestDesign.setConstraintsOn(numberOfConstraints);
+		currentBestDesign.setNumberOfConstraints(numberOfConstraints);
 		currentBestDesign.saveDesignVector(designVectorFileName);
 
 
@@ -840,6 +882,19 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 
 		computeConstraintsandPenaltyTerm(currentBestDesign);
+
+
+		if(currentBestDesign.checkIfHasNan()){
+
+			cout<<"ERROR: NaN while reading external executable outputs!\n";
+			abort();
+
+
+
+		}
+
+
+
 		addConstraintValuesToData(currentBestDesign);
 		updateOptimizationHistory(currentBestDesign);
 		if(currentBestDesign.objectiveFunctionValue < bestObjFunVal){
@@ -890,7 +945,7 @@ void COptimizer::EfficientGlobalOptimization(void){
 }
 void COptimizer::cleanDoEFiles(void) const{
 
-	std::string fileNameObjectiveFunction = objFun.name+".csv";
+	std::string fileNameObjectiveFunction = objFun.getName()+".csv";
 	if(file_exist(fileNameObjectiveFunction)){
 
 		remove(fileNameObjectiveFunction.c_str());
@@ -955,7 +1010,7 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 		rowvec dv = sampleCoordinates.row(sampleID);
 		Design currentDesign(dv);
-		currentDesign.setConstraintsOn(numberOfConstraints);
+		currentDesign.setNumberOfConstraints(numberOfConstraints);
 		currentDesign.saveDesignVector(designVectorFileName);
 
 
@@ -968,7 +1023,7 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 			rowvec temp(dimension+1);
 			copyRowVector(temp,dv);
 			temp(dimension) = currentDesign.trueValue;
-			appendRowVectorToCSVData(temp,objFun.name+".csv");
+			appendRowVectorToCSVData(temp,objFun.getName()+".csv");
 
 
 		}
@@ -982,7 +1037,7 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 			copyRowVector(temp,currentDesign.gradient, dimension+1);
 
 
-			appendRowVectorToCSVData(temp,objFun.name+".csv");
+			appendRowVectorToCSVData(temp,objFun.getName()+".csv");
 
 
 		}

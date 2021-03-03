@@ -176,10 +176,10 @@ void AggregationModel::prepareTrainingAndTestData(void){
 
 
 	int NTrainingSet = N - NTestSet;
-
+#if 0
 	cout << "NTestSet  = "<<NTestSet<<"\n";
 	cout << "NTrainingSet = "<<NTrainingSet<<"\n";
-
+#endif
 	mat shuffledrawData = shuffle(rawData);
 
 	mat trainingRawData = shuffledrawData.submat( 0, 0, NTrainingSet-1, 2*dim );
@@ -299,7 +299,7 @@ void AggregationModel::determineOptimalL1NormWeights(void){
 	modifyRawDataAndAssociatedVariables(trainingDataForHyperParameterOptimization.rawData);
 
 	loadHyperParameters();
-#if 1
+#if 0
 	std::cout<<"Initial weights for the L1norm:\n";
 	printVector(L1NormWeights,"L1NormWeights");
 #endif
@@ -329,7 +329,7 @@ void AggregationModel::determineOptimalL1NormWeights(void){
 #endif
 
 		if(validationError + 10E-06 < minimumValidationError ){
-#if 1
+#if 0
 			cout<<"A better set of hyper-parameters is found\n";
 			cout<<"Error = "<<validationError<<"\n";
 			printVector(L1NormWeights);
@@ -343,7 +343,7 @@ void AggregationModel::determineOptimalL1NormWeights(void){
 
 
 
-#if 1
+#if 0
 	std::cout<<"Optimal values found:\n";
 	printVector(weightsBest,"L1NormWeights");
 #endif
@@ -683,9 +683,6 @@ void AggregationModel::addNewSampleToData(rowvec newSample){
 	}
 
 	if(!flagTooClose){
-
-		//		rawData.insert_rows( rawData.n_rows, newSample );
-		//		rawData.save(input_filename,csv_ascii);
 
 		appendRowVectorToCSVData(newSample, filenameDataInput);
 

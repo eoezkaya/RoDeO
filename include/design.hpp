@@ -51,12 +51,13 @@ public:
 
 	Design(rowvec);
 	Design(unsigned int);
-	void setConstraintsOn(unsigned int howManyConstraints);
+	void setNumberOfConstraints(unsigned int howManyConstraints);
 	void print(void) const;
 	void saveDesignVectorAsCSVFile(std::string fileName) const;
 	void saveDesignVector(std::string fileName) const;
 	void generateRandomDesignVector(vec lb, vec ub);
 	void generateRandomDesignVector(double lb, double ub);
+	bool checkIfHasNan(void) const;
 
 	rowvec constructSampleObjectiveFunction(void) const;
 	rowvec constructSampleObjectiveFunctionWithGradient(void) const;

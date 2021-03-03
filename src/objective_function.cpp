@@ -57,7 +57,7 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, double (*objF
 	name = objectiveFunName;
 	objectiveFunPtr = objFun;
 	objectiveFunAdjPtr = emptyAdj;
-	ifGradientAvailable = false;
+
 	ifFunctionPointerIsSet = true;
 
 	assert(dim < 1000);
@@ -91,12 +91,6 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int 
 	name = objectiveFunName;
 	objectiveFunPtr = empty;
 	objectiveFunAdjPtr = emptyAdj;
-	executableName = "None";
-	executablePath = "None";
-	fileNameObjectiveFunctionRead = "None";
-	fileNameDesignVector = "None";
-	ifGradientAvailable = false;
-	ifFunctionPointerIsSet = false;
 	assert(dim < 1000);
 
 
@@ -105,16 +99,9 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int 
 
 ObjectiveFunction::ObjectiveFunction(){
 
-	dim = 0;
-	name = "None";
 	objectiveFunPtr = empty;
 	objectiveFunAdjPtr = emptyAdj;
-	executableName = "None";
-	executablePath = "None";
-	fileNameObjectiveFunctionRead = "None";
-	fileNameDesignVector = "None";
-	ifGradientAvailable = false;
-	ifFunctionPointerIsSet = false;
+
 
 
 }
@@ -130,11 +117,6 @@ void ObjectiveFunction::setGradientOff(void){
 
 }
 
-void ObjectiveFunction::setFileNameReadObjectFunction(std::string fileName){
-
-	fileNameObjectiveFunctionRead = fileName;
-
-}
 
 
 void ObjectiveFunction::setFileNameDesignVector(std::string fileName){
@@ -155,17 +137,70 @@ void ObjectiveFunction::setExecutableName(std::string exeName){
 
 }
 
-void ObjectiveFunction::trainSurrogate(void){
+void ObjectiveFunction::setParameterBounds(vec lb, vec ub){
+
+	assert(dim == lb.size());
+	assert(dim == ub.size());
+	this->lb = lb;
+	this->ub = ub;
+
+	ifParameterBoundsAreSet = true;
+}
+
+
+KrigingModel ObjectiveFunction::getSurrogateModel(void) const{
+
+	return this->surrogateModel;
+
+}
+
+AggregationModel ObjectiveFunction::getSurrogateModelGradient(void) const{
+
+	return this->surrogateModelGradient;
+
+}
+
+
+
+
+void ObjectiveFunction::initializeSurrogate(void){
+
+	assert(ifParameterBoundsAreSet);
 
 	if(!ifGradientAvailable){
 
+		surrogateModel.readData();
+		surrogateModel.setParameterBounds(lb,ub);
+		surrogateModel.normalizeData();
 		surrogateModel.initializeSurrogateModel();
+
+	}
+	else{
+
+		surrogateModelGradient.readData();
+		surrogateModelGradient.setParameterBounds(lb,ub);
+		surrogateModelGradient.normalizeData();
+		surrogateModelGradient.initializeSurrogateModel();
+
+	}
+
+	ifInitialized = true;
+
+}
+
+void ObjectiveFunction::trainSurrogate(void){
+
+	assert(ifInitialized);
+
+	if(!ifGradientAvailable){
+
+
 		surrogateModel.train();
 
 	}
 	else{
 
-		surrogateModelGradient.initializeSurrogateModel();
+
 		surrogateModelGradient.train();
 
 	}
@@ -229,7 +264,7 @@ bool ObjectiveFunction::checkIfGradientAvailable(void) const{
 std::string ObjectiveFunction::getExecutionCommand(void) const{
 
 	std::string runCommand;
-	if(executablePath!= "None") {
+	if(!executablePath.empty()) {
 
 		runCommand = executablePath +"/" + executableName;
 	}
@@ -267,8 +302,13 @@ void ObjectiveFunction::addDesignToData(Design &d){
 
 void ObjectiveFunction::readEvaluateOutput(Design &d){
 
+	assert(!this->fileNameInputRead.empty());
+	assert(d.dimension == dim);
+
 	if( objectiveFunPtr == empty){
-		std::ifstream ifile(fileNameObjectiveFunctionRead, std::ios::in);
+
+
+		std::ifstream ifile(fileNameInputRead, std::ios::in);
 
 		if (!ifile.is_open()) {
 
@@ -279,12 +319,6 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 		double functionValue;
 		ifile >> functionValue;
 
-		if(std::isnan(functionValue)){
-
-			cout<<"ERROR: NaN as the objective function value!\n";
-			abort();
-
-		}
 
 		d.trueValue = functionValue;
 		d.objectiveFunctionValue = functionValue;
@@ -296,18 +330,8 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 
 			}
 
-			if(d.gradient.has_nan()){
-
-				cout<<"ERROR: NaN in the objective function gradients!\n";
-				abort();
-
-
-			}
-
-
-
 		}
-
+		ifile.close();
 
 	}
 
@@ -327,7 +351,7 @@ void ObjectiveFunction::evaluate(Design &d){
 
 	}
 
-	else if (fileNameObjectiveFunctionRead != "None" && executableName != "None" && fileNameDesignVector != "None"){
+	else if (executableName != "None" && fileNameDesignVector != "None"){
 
 
 		std::string runCommand = getExecutionCommand();
@@ -367,7 +391,7 @@ void ObjectiveFunction::evaluateAdjoint(Design &d){
 
 	}
 
-	else if (fileNameObjectiveFunctionRead != "None" && executableName != "None" && fileNameDesignVector != "None"){
+	else if (executableName != "None" && fileNameDesignVector != "None"){
 
 		std::string runCommand = getExecutionCommand();
 
@@ -406,7 +430,7 @@ void ObjectiveFunction::print(void) const{
 	std::cout<<"Dimension: "<<dim<<std::endl;
 	std::cout<<"ExecutableName: "<<executableName<<"\n";
 	std::cout<<"ExecutablePath: "<<executablePath<<"\n";
-	std::cout<<"Output filename: "<<fileNameObjectiveFunctionRead<<"\n";
+	std::cout<<"Output filename: "<<fileNameInputRead<<"\n";
 	std::cout<<"Input filename: "<<fileNameDesignVector<<"\n";
 	if(ifGradientAvailable){
 		std::cout<<"Uses gradient vector: Yes\n";

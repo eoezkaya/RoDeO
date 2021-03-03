@@ -50,8 +50,9 @@ bool checkValue(double value, double expected, double tolerance){
 	assert(tolerance > 0.0);
 
 	if(fabs(value-expected) > tolerance) {
-
+#if 0
 		printf("\nvalue = %10.7f, expected = %10.7f, error = %10.7f, tolerance = %10.7f\n",value, expected,fabs(value-expected),tolerance );
+#endif
 		return false;
 	}
 	else return true;
@@ -75,7 +76,9 @@ bool checkValue(double value, double expected){
 	double error = fabs(value-expected);
 	if(error > tolerance) {
 
+#if 0
 		printf("\nvalue = %10.7f, expected = %10.7f, error = %10.7f, tolerance = %10.7f\n",value, expected,error, tolerance);
+#endif
 		return false;
 	}
 	else return true;
@@ -675,6 +678,12 @@ bool file_exist(const char *fileName)
 	return infile.good();
 }
 
+
+std::string removeSpacesFromString(std::string inputString){
+
+	inputString.erase(remove_if(inputString.begin(), inputString.end(), isspace), inputString.end());
+	return inputString;
+}
 
 
 void getValuesFromString(std::string str, std::vector<std::string> &values,char delimiter){

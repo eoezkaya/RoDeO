@@ -116,7 +116,7 @@ bool file_exist(const char *fileName);
 bool file_exist(std::string filename);
 
 void getValuesFromString(std::string sub_str,std::vector<std::string> &values, char delimiter);
-
+std::string removeSpacesFromString(std::string );
 
 
 int check_if_lists_are_equal(int *list1, int *list2, int dim);

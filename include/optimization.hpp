@@ -54,9 +54,9 @@ private:
 
 	vec lowerBounds;
 	vec upperBounds;
-	vec dataMin;
-	vec dataMax;
+
 	std::string designVectorFileName;
+	const std::string optimizationHistoryFileName = "optimizationHistory.csv";
 
 	mat optimizationHistory;
 
@@ -94,8 +94,10 @@ public:
 	void printConstraints(void) const;
 	void visualizeOptimizationHistory(void) const;
 	void EfficientGlobalOptimization(void);
-	void updateDataMinAndMax(void);
+
+	void initializeSurrogates(void);
 	void trainSurrogates(void);
+
 	void performDoE(unsigned int howManySamples, DoE_METHOD methodID);
 	void cleanDoEFiles(void) const;
 	void setProblemType(std::string);
@@ -122,6 +124,10 @@ public:
 	void computeConstraintsandPenaltyTerm(Design &);
 
 	void updateOptimizationHistory(Design d);
+	void clearOptimizationHistoryFile(void) const;
+	void prepareOptimizationHistoryFile(void) const;
+
+
 	void addConstraintValuesToData(Design &d);
 
 	rowvec calculateEIGradient(rowvec designVector) const;

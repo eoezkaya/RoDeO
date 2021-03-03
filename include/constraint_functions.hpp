@@ -33,20 +33,22 @@
 
 
 #include <armadillo>
+#include "objective_function.hpp"
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
-
+#include "design.hpp"
+#include <cassert>
 
 class ConstraintFunction{
 
 
 private:
-	unsigned int ID;
-	unsigned int dim;
+	unsigned int ID = -1;
+	unsigned int dim = 0;
 
 	double (*pConstFun)(double *);
 	double (*pConstFunAdj)(double *,double *);
-	double targetValue;
+	double targetValue  = 0.0;
 	std::string inequalityType;
 
 	KrigingModel surrogateModel;
@@ -57,9 +59,12 @@ private:
 	std::string fileNameConstraintFunctionRead;
 	std::string fileNameDesignVector;
 
-	bool ifGradientAvailable;
-	bool ifFunctionPointerIsSet;
+	vec ub;
+	vec lb;
 
+	bool ifGradientAvailable = false;
+	bool ifFunctionPointerIsSet = false;
+	bool ifInitialized = false;
 public:
 	std::string name;
 
@@ -74,11 +79,15 @@ public:
 	ConstraintFunction(std::string, std::string, double, unsigned int);
 	ConstraintFunction();
 	void saveDoEData(std::vector<rowvec> data) const;
+
+	void initializeSurrogate(void);
 	void trainSurrogate(void);
 
 
 	void setGradientOn(void);
 	void setGradientOff(void);
+	void setParameterBounds(vec , vec );
+
 	void setFileNameReadConstraintFunction(std::string);
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
@@ -101,6 +110,51 @@ public:
 
 	void addDesignToData(Design &d);
 	std::string getExecutionCommand(void) const;
+};
+
+
+
+
+class ConstraintFunctionv2: public ObjectiveFunction {
+
+
+private:
+	double targetValue  = 0.0;
+	std::string inequalityType;
+	int ID = -1;
+	bool ifInequalityConstraintSpecified  = false;
+
+public:
+
+	unsigned int readOutputStartIndex = 0;
+	std::vector<int> IDToFunctionsShareOutputExecutable;
+
+	ConstraintFunctionv2(std::string, unsigned int);
+	ConstraintFunctionv2(std::string, double (*objFun)(double *), unsigned int);
+
+	void readEvaluateOutput(Design &d);
+	bool checkFeasibility(double value) const;
+
+
+
+
+	void setInequalityConstraint(std::string inequalityStatement);
+
+	void setID(int givenID) {
+		assert(givenID>0);
+		ID = givenID;
+
+	}
+
+	int getID(void) const {
+
+		return ID;
+
+	}
+
+	void print(void) const;
+
+
 };
 
 

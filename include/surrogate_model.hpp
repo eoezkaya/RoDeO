@@ -114,6 +114,23 @@ public:
 	void setParameterBounds(double xmin, double xmax);
 
 
+	bool isInitialized(void) const{
+
+		return ifInitialized;
+	}
+
+	bool ifDataIsLoaded(void) const{
+
+		return ifDataIsRead;
+	}
+
+	bool ifBoundsAreSpecified(void) const{
+
+		return ifBoundsAreSet;
+	}
+
+
+
 	std::string getNameOfHyperParametersFile(void) const;
 	std::string getNameOfInputFile(void) const;
 	unsigned int getDimension(void) const;

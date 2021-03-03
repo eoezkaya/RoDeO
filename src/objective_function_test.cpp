@@ -97,7 +97,7 @@ TEST(testObjectiveFunction, initializeSurrogateWithAdjoint){
 
 TEST(testObjectiveFunction, readEvaluateOutput){
 
-	ObjectiveFunction objFunTest;
+	ObjectiveFunction objFunTest("testObjFun",4);
 
 	Design d(4);
 
@@ -106,7 +106,7 @@ TEST(testObjectiveFunction, readEvaluateOutput){
 	readOutputTestFile << "2.144\n";
 	readOutputTestFile.close();
 
-	objFunTest.setFileNameReadObjectFunction("readOutputTestFile.txt");
+	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
 	objFunTest.readEvaluateOutput(d);
 	ASSERT_EQ(d.trueValue,2.144);
 	ASSERT_EQ(d.objectiveFunctionValue,2.144);
@@ -114,4 +114,29 @@ TEST(testObjectiveFunction, readEvaluateOutput){
 
 }
 
+
+TEST(testObjectiveFunction, readEvaluateOutputAdjoint){
+
+	ObjectiveFunction objFunTest("testObjFun",4);
+
+	Design d(4);
+
+	std::ofstream readOutputTestFile;
+	readOutputTestFile.open ("readOutputTestFile.txt");
+	readOutputTestFile << "2.144 2.944 -1.2 18.1 9.2\n";
+	readOutputTestFile.close();
+
+	objFunTest.setGradientOn();
+	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
+	objFunTest.readEvaluateOutput(d);
+
+	ASSERT_EQ(d.trueValue,2.144);
+	ASSERT_EQ(d.objectiveFunctionValue,2.144);
+	ASSERT_EQ(d.gradient(0),2.944);
+	ASSERT_EQ(d.gradient(1),-1.2);
+	ASSERT_EQ(d.gradient(2),18.1);
+	ASSERT_EQ(d.gradient(3),9.2);
+	remove("readOutputTestFile.txt");
+
+}
 

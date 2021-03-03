@@ -113,14 +113,6 @@ int main(int argc, char* argv[]){
 
 }
 
-//TEST(testSettings, testifSettingsCanBeRead){
-//
-//	Rodeo_settings mysettings;
-//	mysettings.read();
-//	ASSERT_TRUE(mysettings.cwd != "None");
-//
-//
-//
-//}
+
 
 

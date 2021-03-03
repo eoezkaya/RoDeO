@@ -147,8 +147,6 @@ TEST(testAggrregationModel, prepareTrainingAndTestData){
 	PartitionData trainingData= testModel.getTrainingData();
 
 	testModel.modifyRawDataAndAssociatedVariables(trainingData.rawData);
-	testData.print();
-	trainingData.print();
 
     testModel.tryModelOnTestSet(testData);
     double validationError = testData.calculateMeanSquaredError();
@@ -179,7 +177,6 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 
 	saveMatToCVSFile(samples,"AggregationTest.csv");
 
-	printMatrix(samples);
 
 	AggregationModel testModel("AggregationTest");
 
@@ -187,6 +184,7 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 	testModel.setParameterBounds(0.0, 1.0);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
+	testModel.setNumberOfTrainingIterations(1000);
 
 	testModel.determineOptimalL1NormWeights();
 

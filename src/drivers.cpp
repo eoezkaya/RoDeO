@@ -809,8 +809,9 @@ void RoDeODriver::setObjectiveFunction(ObjectiveFunction & objFunc){
 
 	}
 
-	objFunc.setFileNameReadObjectFunction(executableOutputFiles.front());
+	objFunc.setFileNameReadInput(executableOutputFiles.front());
 	objFunc.setFileNameDesignVector(designVectorFilename);
+	objFunc.setParameterBounds(boxConstraintsLowerBounds,boxConstraintsUpperBounds);
 
 	/* switch on gradients if they are available */
 
@@ -841,6 +842,8 @@ void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned in
 	constraintFunc.setFileNameReadConstraintFunction(executableOutputFiles.at(indx));
 	constraintFunc.setFileNameDesignVector(designVectorFilename);
 	constraintFunc.setID(indx);
+	constraintFunc.setParameterBounds(boxConstraintsLowerBounds,boxConstraintsUpperBounds);
+
 
 
 	/* check whether executable is already specified for another constraint or objective function */

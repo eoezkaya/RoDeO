@@ -35,7 +35,6 @@
 #include <armadillo>
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
-#include "optimization.hpp"
 #include "design.hpp"
 
 
@@ -44,37 +43,76 @@ class ObjectiveFunction{
 
 private:
 
+
+
+protected:
+
+	std::string name;
 	double (*objectiveFunPtr)(double *);
 	double (*objectiveFunAdjPtr)(double *,double *);
 	std::string executableName;
 	std::string executablePath;
-	std::string fileNameObjectiveFunctionRead;
+	std::string fileNameInputRead;
 	std::string fileNameDesignVector;
+
+	vec ub;
+	vec lb;
 
 	KrigingModel surrogateModel;
 	AggregationModel surrogateModelGradient;
-	unsigned int dim;
-	bool ifDoErequired;
-	bool ifWarmStart;
-	bool ifGradientAvailable;
-	bool ifFunctionPointerIsSet;
+
+	unsigned int dim = 0;
+	bool ifDoErequired = true;
+	bool ifWarmStart = false;
+	bool ifGradientAvailable = false;
+	bool ifFunctionPointerIsSet = false;
+	bool ifInitialized = false;
+	bool ifParameterBoundsAreSet = false;
 
 public:
 
-	std::string name;
+
 	ObjectiveFunction(std::string, double (*objFun)(double *), unsigned int);
 	ObjectiveFunction(std::string, double (*objFun)(double *, double *), unsigned int);
 	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
 
-	void readConfigFile(void);
 
+	void initializeSurrogate(void);
 	void trainSurrogate(void);
+	KrigingModel getSurrogateModel(void) const;
+	AggregationModel getSurrogateModelGradient(void) const;
+
 
 	void setGradientOn(void);
 	void setGradientOff(void);
+	void setParameterBounds(vec , vec );
+
+	unsigned int getDimension(void) const{
+
+		return dim;
+	}
+
+	std::string getName(void) const{
+
+		return name;
+	}
+
+	bool ifHasFunctionFunctionPointer(void) const{
+
+		return ifFunctionPointerIsSet;
+
+	}
+
+
+	void setFileNameReadInput(std::string fileName){
+
+		fileNameInputRead = fileName;
+
+	}
+
+
 	void saveDoEData(std::vector<rowvec>) const;
-	void setFileNameReadObjectFunction(std::string);
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
 	void setFileNameDesignVector(std::string);

@@ -114,7 +114,7 @@ TEST(testAuxiliaryFunctions, testcdf){
 
 }
 
-TEST(testAuxiliaryFunctions, checkifTooCLose){
+TEST(testAuxiliaryFunctions, testcheckifTooCLose){
 
 	rowvec x1(3, fill::randu);
 
@@ -131,7 +131,7 @@ TEST(testAuxiliaryFunctions, checkifTooCLose){
 
 }
 
-TEST(testAuxiliaryFunctions, checkifTooCLoseVectorMatrixVersion){
+TEST(testAuxiliaryFunctions, testcheckifTooCLoseVectorMatrixVersion){
 
 	rowvec x1(3, fill::randu);
 	mat M(20,3,fill::randu);
@@ -146,6 +146,16 @@ TEST(testAuxiliaryFunctions, checkifTooCLoseVectorMatrixVersion){
 }
 
 
+TEST(testAuxiliaryFunctions, testremoveSpacesFromString){
 
+std::string testString = " this is a test string ";
+
+testString = removeSpacesFromString(testString);
+
+int ifEqual = testString.compare("thisisateststring");
+ASSERT_EQ(ifEqual,0);
+
+
+}
 
 

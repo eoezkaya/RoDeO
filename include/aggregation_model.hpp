@@ -69,6 +69,10 @@ public:
 	void determineRhoBasedOnData(void);
 	void determineOptimalL1NormWeights(void);
 	void setRho(double);
+	void setNumberOfTrainingIterations(unsigned int numberOfIterations){
+
+		this->numberOfTrainingIterations = numberOfIterations;
+	}
 
 	vec getL1NormWeights(void) const;
 	PartitionData getTrainingData(void) const;

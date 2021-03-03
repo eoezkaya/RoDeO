@@ -58,7 +58,7 @@ Design::Design(unsigned int dim){
 
 }
 
-void Design::setConstraintsOn(unsigned int howManyConstraints){
+void Design::setNumberOfConstraints(unsigned int howManyConstraints){
 
 	numberOfConstraints = howManyConstraints;
 	constraintTrueValues = zeros<rowvec>(numberOfConstraints);
@@ -115,6 +115,37 @@ rowvec Design::constructSampleObjectiveFunctionWithGradient(void) const{
 	}
 
 	return sample;
+}
+
+bool Design::checkIfHasNan(void) const{
+
+	bool ifHasNan = false;
+	if(std::isnan(trueValue )) {
+
+		ifHasNan = true;
+	}
+	if(gradient.has_nan()){
+
+		ifHasNan = true;
+	}
+
+	if(constraintTrueValues.has_nan()){
+
+		ifHasNan = true;
+	}
+
+	for (auto it = constraintGradients.begin(); it != constraintGradients.end(); it++){
+
+		if(it->has_nan()){
+
+			ifHasNan = true;
+		}
+
+
+	}
+	return ifHasNan;
+
+
 }
 
 rowvec Design::constructSampleConstraint(unsigned int constraintID) const{
