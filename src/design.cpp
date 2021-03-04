@@ -189,6 +189,7 @@ rowvec Design::constructSampleConstraintWithGradient(unsigned int constraintID) 
 
 void Design::print(void) const{
 
+
 	printVector(designParameters,"designParameters");
 	std::cout<<"Value = "<<trueValue<<"\n";
 	printVector(gradient,"gradient vector");

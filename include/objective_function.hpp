@@ -117,7 +117,7 @@ public:
 	void setExecutableName(std::string);
 	void setFileNameDesignVector(std::string);
 
-	double calculateExpectedImprovement(rowvec x) const;
+//	double calculateExpectedImprovement(rowvec x) const;
 	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
 
 	void evaluate(Design &d);

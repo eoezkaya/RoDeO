@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -59,6 +59,7 @@ private:
 	std::vector<CDesignExpectedImprovement> theMostPromisingDesigns;
 
 	bool ifObjectFunctionIsSpecied = false;
+	bool ifSurrogatesAreInitialized = false;
 
 
 public:
@@ -81,7 +82,7 @@ public:
 	bool ifBoxConstraintsSet;
 	bool ifCleanDoeFiles;
 
-	COptimizer(std::string ,int, std::string);
+	COptimizer(std::string ,int, std::string = "minimize");
 	bool checkSettings(void) const;
 	void print(void) const;
 	void printConstraints(void) const;
@@ -105,7 +106,8 @@ public:
 	void evaluateConstraints(Design &d);
 	void addConstraintValuesToDoEData(Design &d) const;
 
-	void estimateConstraints(rowvec x, rowvec &constraintValues) const;
+
+	void estimateConstraints(CDesignExpectedImprovement &design) const;
 
 	void checkIfSettingsAreOK(void) const;
 	bool checkBoxConstraints(void) const;
@@ -113,7 +115,9 @@ public:
 
 	void addObjectFunction(ObjectiveFunction &objFunc);
 
-	double computeEIPenaltyForConstraints(rowvec dv) const;
+
+	void addPenaltyToExpectedImprovementForConstraints(CDesignExpectedImprovement &designCalculated) const;
+
 	void computeConstraintsandPenaltyTerm(Design &);
 
 	void updateOptimizationHistory(Design d);
@@ -123,10 +127,12 @@ public:
 
 	void addConstraintValuesToData(Design &d);
 
-	rowvec calculateEIGradient(rowvec designVector) const;
-	rowvec designVectorGradientUpdate(rowvec , rowvec , double ) const;
+
+	rowvec calculateEIGradient(CDesignExpectedImprovement &currentDesign) const;
 	CDesignExpectedImprovement MaximizeEIGradientBased(CDesignExpectedImprovement initialDesignVector) const;
 	void findTheMostPromisingDesign(unsigned int howManyDesigns = 1);
+	CDesignExpectedImprovement getDesignWithMaxExpectedImprovement(void) const;
+
 	rowvec generateRandomRowVectorAroundASample(void);
 
 

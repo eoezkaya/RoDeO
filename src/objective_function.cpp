@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -222,20 +222,7 @@ void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 
 }
 
-double ObjectiveFunction::calculateExpectedImprovement(rowvec x) const{
 
-	double EIValue;
-	if(!ifGradientAvailable){
-
-		EIValue = surrogateModel.calculateExpectedImprovement(x);
-	}else{
-
-		EIValue = surrogateModelGradient.calculateExpectedImprovement(x);
-	}
-
-	return EIValue;
-
-}
 
 
 void ObjectiveFunction::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
@@ -251,6 +238,7 @@ void ObjectiveFunction::calculateExpectedImprovement(CDesignExpectedImprovement 
 	}
 
 	designCalculated.valueExpectedImprovement = EIValue;
+
 
 }
 

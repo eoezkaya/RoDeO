@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -54,29 +54,73 @@ public:
 
 	}
 
-	CDesignExpectedImprovement(rowvec designVector, unsigned int numberOfConstraints){
+	CDesignExpectedImprovement(unsigned int dimension){
 
-			dv = designVector;
-			constraintValues = zeros<rowvec>(numberOfConstraints);
-			valueExpectedImprovement = 0.0;
-			objectiveFunctionValue = 0.0;
+		dim = dimension;
+		valueExpectedImprovement = 0.0;
+		objectiveFunctionValue = 0.0;
 
 	}
 
+	CDesignExpectedImprovement(rowvec designVector, unsigned int numberOfConstraints){
+
+		dv = designVector;
+		dim = designVector.size();
+		constraintValues = zeros<rowvec>(numberOfConstraints);
+		valueExpectedImprovement = 0.0;
+		objectiveFunctionValue = 0.0;
+
+	}
+
+	CDesignExpectedImprovement(rowvec designVector){
+
+		dv = designVector;
+		dim = designVector.size();
+		valueExpectedImprovement = 0.0;
+		objectiveFunctionValue = 0.0;
+
+	}
+
+
 	void generateRandomDesignVector(void){
 
-		dv = generateRandomRowVector(0.0,1.0/dim, dim);
+		double lowerBound = 0.0;
+		double upperBound = 1.0/dim;
+		dv = generateRandomRowVector(lowerBound, upperBound , dim);
+
+
+	}
+
+	void gradientUpdateDesignVector(rowvec gradient, double stepSize){
+
+
+		dv = dv - stepSize*gradient;
+
+		double lowerBound = 0.0;
+		double upperBound = 1.0/dim;
+
+		for(unsigned int k=0; k<dim; k++){
+
+			/* if new design vector does not satisfy the box constraints */
+			if(dv(k) < lowerBound) dv(k) = lowerBound;
+			if(dv(k) > upperBound) dv(k) = upperBound;
+
+		}
 
 	}
 
 	void print(void) const{
-
+		std::cout.precision(15);
 		std::cout<<"Design vector = \n";
 		dv.print();
-		std::cout<<"Objective function value ="<<objectiveFunctionValue<<"\n";
+		std::cout<<"Objective function value = "<<objectiveFunctionValue<<"\n";
 		std::cout<<"Expected Improvement value = "<<valueExpectedImprovement<<"\n";
-		std::cout<<"Constraint values = \n";
-		constraintValues.print();
+
+		if(constraintValues.size() > 0){
+
+			std::cout<<"Constraint values = \n";
+			constraintValues.print();
+		}
 	}
 
 

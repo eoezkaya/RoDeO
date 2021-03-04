@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -51,12 +51,7 @@
 using namespace arma;
 
 
-
-
-
-
-
-COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams, std::string problemType = "minimize"){
+COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams, std::string problemType){
 
 	/* RoDeO does not allow problems with too many optimization parameters */
 
@@ -75,8 +70,7 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	maxNumberOfSamples  = 0;
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
-	//	dataMin.zeros(dimension);
-	//	dataMax.zeros(dimension);
+
 	ifBoxConstraintsSet = false;
 	iterMaxEILoop = dimension*10000;
 	iterGradientEILoop = 100;
@@ -267,17 +261,22 @@ void COptimizer::addConstraintValuesToDoEData(Design &d) const{
 
 
 
-void COptimizer::estimateConstraints(rowvec x, rowvec &constraintValues) const{
 
-	unsigned int contraintIt = 0;
+void COptimizer::estimateConstraints(CDesignExpectedImprovement &design) const{
+
+	rowvec x = design.dv;
+
+	unsigned int constraintIt = 0;
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
-		constraintValues(contraintIt) = it->interpolate(x);
-		contraintIt++;
+		design.constraintValues(constraintIt) = it->interpolate(x);
+		constraintIt++;
 	}
 
 
 }
+
+
 
 
 bool COptimizer::checkBoxConstraints(void) const{
@@ -366,6 +365,7 @@ void COptimizer::initializeSurrogates(void){
 
 	}
 
+	ifSurrogatesAreInitialized = true;
 }
 
 
@@ -423,35 +423,30 @@ void COptimizer::updateOptimizationHistory(Design d) {
 
 }
 
-double COptimizer::computeEIPenaltyForConstraints(rowvec dv) const{
 
-	double penaltyTerm = 0.0;
 
-	if(constraintFunctions.size() > 0){
-		rowvec estimatesForConstaints(constraintFunctions.size());
+void COptimizer::addPenaltyToExpectedImprovementForConstraints(CDesignExpectedImprovement &designCalculated) const{
 
-		estimateConstraints(dv,estimatesForConstaints);
-#if 0
-		if(tid ==0)
-		{
-			printVector(estimatesForConstaints,"estimatesForConstaints");
+	if(numberOfConstraints > 0){
 
-		}
-#endif
-		bool ifConstraintsSatisfied = checkConstraintFeasibility(estimatesForConstaints);
+		estimateConstraints(designCalculated);
+
+		bool ifConstraintsSatisfied = checkConstraintFeasibility(designCalculated.constraintValues);
 
 		if(!ifConstraintsSatisfied){
 
-
-			penaltyTerm = -LARGE;
+			designCalculated.valueExpectedImprovement = 0.0;
 
 		}
 
 	}
 
 
-	return penaltyTerm;
 }
+
+
+
+
 
 void COptimizer::computeConstraintsandPenaltyTerm(Design &d) {
 
@@ -541,56 +536,57 @@ void COptimizer::checkIfSettingsAreOK(void) const{
  */
 void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 
+	assert(ifSurrogatesAreInitialized);
 
 	theMostPromisingDesigns.clear();
 
-	double maxEI = 0.0;
-	rowvec bestDesignVector(dimension);
+
+	CDesignExpectedImprovement designWithMaxEI(dimension,numberOfConstraints);
 
 #pragma omp parallel for
 	for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
 
 
-		rowvec dvNotNormalized = generateRandomRowVector(lowerBounds, upperBounds);
+		CDesignExpectedImprovement designToBeTried(dimension,numberOfConstraints);
+		designToBeTried.generateRandomDesignVector();
 
-		rowvec dv = normalizeRowVector(dvNotNormalized,lowerBounds, upperBounds);
+		objFun.calculateExpectedImprovement(designToBeTried);
+		addPenaltyToExpectedImprovementForConstraints(designToBeTried);
+
 #if 0
-		printVector(dv);
+		designToBeTried.print();
 #endif
+		if(designToBeTried.valueExpectedImprovement > designWithMaxEI.valueExpectedImprovement){
 
-		double EI = objFun.calculateExpectedImprovement(dv);
-
-		double penaltyTerm = computeEIPenaltyForConstraints(dv);
-
-		EI = EI + penaltyTerm;
-
-		if(EI > maxEI){
-
-			bestDesignVector = dv;
-			maxEI = EI;
-#if 0
-			printf("A design with a better EI value has been found, EI = %15.10f\n", EI);
-			best_dv.print();
+			designWithMaxEI = designToBeTried;
+#if 1
+			printf("A design with a better EI value has been found\n");
+			designToBeTried.print();
 #endif
 		}
 
 	}
 
-	CDesignExpectedImprovement bestDesign(5,2);
-	bestDesign.dv = bestDesignVector;
-	bestDesign.valueExpectedImprovement = maxEI;
 
-	theMostPromisingDesigns.push_back(bestDesign);
+	theMostPromisingDesigns.push_back(designWithMaxEI);
 
 }
 
 
+CDesignExpectedImprovement COptimizer::getDesignWithMaxExpectedImprovement(void) const{
+
+	return this->theMostPromisingDesigns.front();
+
+
+}
+
 /* calculate the gradient of the Expected Improvement function
  * w.r.t design variables by finite difference approximations */
-rowvec COptimizer::calculateEIGradient(rowvec designVector) const{
+rowvec COptimizer::calculateEIGradient(CDesignExpectedImprovement &currentDesign) const{
 
 
 	rowvec gradient(dimension);
+
 
 	for(unsigned int i=0; i<dimension; i++){
 #if 0
@@ -598,31 +594,33 @@ rowvec COptimizer::calculateEIGradient(rowvec designVector) const{
 		dvGradientSearch.print();
 #endif
 
-		double dvSave = designVector(i);
-
-
+		double dvSave = currentDesign.dv(i);
 #if 0
 		printf("epsilon_EI = %15.10f\n",epsilon_EI);
 #endif
 
-		double epsilon = designVector(i)*0.00001;
-		designVector(i) += epsilon;
+		double epsilon = currentDesign.dv(i)*0.00001;
+		currentDesign.dv(i) += epsilon;
 
 #if 0
 		printf("dv perturbed:\n");
 		dvPerturbed.print();
 #endif
 
+		objFun.calculateExpectedImprovement(currentDesign);
 
-		double EIplus = objFun.calculateExpectedImprovement(designVector);
-		designVector(i) -= 2*epsilon;
-		double EIminus = objFun.calculateExpectedImprovement(designVector);
+		double EIplus = currentDesign.valueExpectedImprovement;
+		currentDesign.dv(i) -= 2*epsilon;
+
+		objFun.calculateExpectedImprovement(currentDesign);
+
+		double EIminus = currentDesign.valueExpectedImprovement;;
 
 
 		/* obtain the forward finite difference quotient */
 		double fdVal = (EIplus - EIminus)/(2*epsilon);
 		gradient(i) = fdVal;
-		designVector(i) = dvSave;
+		currentDesign.dv(i) = dvSave;
 
 
 	} /* end of finite difference loop */
@@ -634,42 +632,19 @@ rowvec COptimizer::calculateEIGradient(rowvec designVector) const{
 	return gradient;
 }
 
-rowvec COptimizer::designVectorGradientUpdate(rowvec dv0, rowvec gradient, double stepSize) const{
-
-	rowvec dvUpdated(dimension);
-	for(unsigned int k=0; k<dimension; k++){
-
-		dvUpdated(k) = dv0(k) + stepSize*gradient(k);
-
-	}
-
-	rowvec dvUpdatedNotNormalized = normalizeRowVectorBack(dvUpdated, lowerBounds, upperBounds);
 
 
-
-	for(unsigned int k=0; k<dimension; k++){
-
-		/* if new design vector does not satisfy the box constraints in original coordinates */
-		if(dvUpdatedNotNormalized(k) < lowerBounds(k)) dvUpdatedNotNormalized(k) = lowerBounds(k);
-		if(dvUpdatedNotNormalized(k) > upperBounds(k)) dvUpdatedNotNormalized(k) = upperBounds(k);
-
-	}
-
-	/* return the design vector in normalized coordinates */
-	dvUpdated = normalizeRowVector(dvUpdatedNotNormalized,lowerBounds,upperBounds);
-
-	return dvUpdated;
-
-
-}
-
-CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedImprovement initialDesignVector) const {
+CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedImprovement initialDesign) const {
 
 	rowvec gradEI(dimension);
 	double stepSize0 = 0.0001;
 	double stepSize = 0.0;
-	rowvec bestDesignVector = initialDesignVector.dv;
-	double EI0 = initialDesignVector.valueExpectedImprovement;
+
+
+	CDesignExpectedImprovement bestDesign = initialDesign;
+
+
+	double EI0 = initialDesign.valueExpectedImprovement;
 
 	bool breakOptimization = false;
 
@@ -679,12 +654,10 @@ CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedIm
 		printf("\nGradient search iteration = %d\n", iterGradientSearch);
 #endif
 
-		gradEI = calculateEIGradient(bestDesignVector);
-
-
+		gradEI = calculateEIGradient(bestDesign);
 
 		/* save the design vector */
-		rowvec dvLineSearchSave = bestDesignVector ;
+		CDesignExpectedImprovement dvLineSearchSave = bestDesign ;
 
 #if 0
 		printf("Line search...\n");
@@ -697,34 +670,30 @@ CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedIm
 
 			/* design update */
 
+			bestDesign.gradientUpdateDesignVector(gradEI,stepSize);
 
-			bestDesignVector = designVectorGradientUpdate(bestDesignVector,gradEI, stepSize);
+			objFun.calculateExpectedImprovement(bestDesign);
+			addPenaltyToExpectedImprovementForConstraints(bestDesign);
 
-
-
-			double EI_LS = objFun.calculateExpectedImprovement(bestDesignVector);
-			double penaltyTerm = computeEIPenaltyForConstraints(bestDesignVector);
-
-			EI_LS = EI_LS + penaltyTerm;
 
 #if 1
-			printf("EI_LS = %15.10f\n",EI_LS);
+			printf("EI_LS = %15.10f\n",bestDesign.valueExpectedImprovement );
 
 #endif
 
 			/* if ascent is achieved */
-			if(EI_LS > EI0){
+			if(bestDesign.valueExpectedImprovement > EI0){
 #if 1
-				printf("Ascent is achieved with difference = %15.10f\n", EI_LS- EI0);
+				printf("Ascent is achieved with difference = %15.10f\n", bestDesign.valueExpectedImprovement -  EI0);
 #endif
-				EI0 = EI_LS;
+				EI0 = bestDesign.valueExpectedImprovement;
 				break;
 			}
 
 			else{ /* else halve the stepsize and set design to initial */
 
 				stepSize = stepSize * 0.5;
-				bestDesignVector = dvLineSearchSave;
+				bestDesign = dvLineSearchSave;
 #if 1
 				printf("stepsize = %15.10f\n",stepSize);
 
@@ -750,11 +719,9 @@ CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedIm
 	} /* end of gradient-search loop */
 
 
-	CDesignExpectedImprovement result(3,3);
-//	result.dv = bestDesignVector;
-//	result.valueExpectedImprovement = EI0;
 
-	return result;
+
+	return bestDesign;
 
 
 }
@@ -1052,120 +1019,6 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 
 }
-//void testOptimizationWingweight(void){
-//	/*
-//	Sw: Wing Area (ft^2) (150,200)
-//	 *  Wfw: Weight of fuel in the wing (lb) (220,300)
-//	 *  A: Aspect ratio (6,10)
-//	 *  Lambda: quarter chord sweep (deg) (-10,10)
-//	 *  q: dynamic pressure at cruise (lb/ft^2)  (16,45)
-//	 *  lambda: taper ratio (0.5,1)
-//	 *  tc: aerofoil thickness to chord ratio (0.08,0.18)
-//	 *  Nz: ultimate load factor (2.5,6)
-//	 *  Wdg: flight design gross weight (lb)  (1700,2500)
-//	 *  Wp: paint weight (lb/ft^2) (0.025, 0.08)
-//
-//
-//	 */
-//	vec lb(10);
-//	vec ub(10);
-//	lb(0) = 150; ub(0) = 200;
-//	lb(1) = 220; ub(1) = 300;
-//	lb(2) = 6;   ub(2) = 10;
-//	lb(3) = -10; ub(3) = 10;
-//	lb(4) = 16; ub(4) = 45;
-//	lb(5) = 0.5; ub(5) = 1;
-//	lb(6) = 0.08; ub(6) = 0.18;
-//	lb(7) = 2.5; ub(7) = 6;
-//	lb(8) = 1700; ub(8) = 2500;
-//	lb(9) = 0.025; ub(9) = 0.08;
-//
-//
-//
-//	std::string problemName = "Wingweight";
-//	unsigned int dimension = 10;
-//	Optimizer OptimizationStudy(problemName, dimension);
-//
-//	ObjectiveFunction objFunc(problemName, Wingweight, dimension);
-//	OptimizationStudy.addObjectFunction(objFunc);
-//
-//	OptimizationStudy.maxNumberOfSamples = 100;
-//
-//	OptimizationStudy.setBoxConstraints(lb,ub);
-//	OptimizationStudy.performDoE(100,LHS);
-//
-//
-//	OptimizationStudy.EfficientGlobalOptimization();
-//
-//
-//}
-//
-//void testOptimizationEggholder(void){
-//
-//
-//	std::string problemName = "Eggholder";
-//	unsigned int dimension = 2;
-//	Optimizer OptimizationStudy(problemName, dimension);
-//
-//	ObjectiveFunction objFunc(problemName, Eggholder, dimension);
-//	OptimizationStudy.addObjectFunction(objFunc);
-//
-//	OptimizationStudy.maxNumberOfSamples = 50;
-//
-//	OptimizationStudy.setBoxConstraints(0.0,200.0);
-//	OptimizationStudy.performDoE(50,LHS);
-//
-//	OptimizationStudy.ifVisualize = true;
-//	OptimizationStudy.EfficientGlobalOptimization();
-//
-//
-//}
-//
-//void testOptimizationHimmelblau(void){
-//
-//
-//	std::string problemName = "Himmelblau";
-//	unsigned int dimension = 2;
-//	Optimizer OptimizationStudy(problemName, dimension);
-//
-//	ObjectiveFunction objFunc(problemName, Himmelblau, dimension);
-//	OptimizationStudy.addObjectFunction(objFunc);
-//
-//	OptimizationStudy.maxNumberOfSamples = 100;
-//
-//	OptimizationStudy.setBoxConstraints(-5.0,5.0);
-//	OptimizationStudy.performDoE(50,LHS);
-//
-//	OptimizationStudy.ifVisualize = true;
-//	OptimizationStudy.EfficientGlobalOptimization();
-//
-//
-//}
-//
-//void testOptimizationHimmelblauExternalExe(void){
-//
-//
-//	std::string problemName = "Himmelblau";
-//	unsigned int dimension = 2;
-//	Optimizer OptimizationStudy(problemName, dimension);
-//
-//	ObjectiveFunction objFunc(problemName, dimension);
-//	objFunc.setFileNameReadObjectFunction("objFunVal.dat");
-//	objFunc.setExecutablePath("/home/emre/RoDeO/Tests/HimmelblauOptimization");
-//	objFunc.setExecutableName("himmelblau");
-//	objFunc.setFileNameDesignVector("dv.csv");
-//	OptimizationStudy.addObjectFunction(objFunc);
-//
-//	OptimizationStudy.maxNumberOfSamples = 100;
-//
-//	OptimizationStudy.setBoxConstraints(-5.0,5.0);
-//	OptimizationStudy.performDoE(50,LHS);
-//
-//	OptimizationStudy.ifVisualize = true;
-//	OptimizationStudy.EfficientGlobalOptimization();
-//
-//
-//}
 
 
 

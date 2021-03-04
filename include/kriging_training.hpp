@@ -45,7 +45,7 @@ using namespace arma;
 class KrigingModel : public SurrogateModel{
 
 private:
-	vec kriging_weights;
+//	vec kriging_weights;
 	vec theta;
 	vec gamma;
 	vec R_inv_ys_min_beta;
@@ -69,7 +69,7 @@ private:
 	void updateModelParams(void);
 	void computeCorrelationMatrix(void);
 	vec computeCorrelationVector(rowvec x) const;
-	double computeCorrelation(rowvec x_i, rowvec x_j, vec theta, vec gamma) const;
+	double computeCorrelation(rowvec x_i, rowvec x_j) const;
 
 public:
 
@@ -93,8 +93,7 @@ public:
 
 	double calculateExpectedImprovement(rowvec xp) const;
 	double getyMin(void) const;
-	vec getKrigingWeights(void) const;
-	void setKrigingWeights(vec);
+
 	vec getRegressionWeights(void) const;
 	void setRegressionWeights(vec weights);
 	void setEpsilon(double inp);
@@ -110,7 +109,7 @@ public:
 	void resetDataObjects(void);
 	void resizeDataObjects(void);
 	int addNewSampleToData(rowvec newsample);
-//	void updateModelWithNewData(mat newData);
+
 	void updateModelWithNewData(void);
 	void updateAuxilliaryFields(void);
 

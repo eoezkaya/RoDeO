@@ -1435,16 +1435,7 @@ double WingweightAdj(double *x, double *xb) {
 	return(W);
 }
 
-void testEGOWithHimmelblau(void){
 
-	TestFunction HimmelblauFunction("Himmelblau",2);
-	HimmelblauFunction.func_ptr = Himmelblau;
-	HimmelblauFunction.setBoxConstraints(-5.0,5.0);
-	HimmelblauFunction.plot(100);
-	HimmelblauFunction.testEfficientGlobalOptimization(50,100,true);
-
-
-}
 
 
 

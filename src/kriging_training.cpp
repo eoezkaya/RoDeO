@@ -72,8 +72,8 @@ KrigingModel::KrigingModel(std::string name):SurrogateModel(name),linearModel(na
 
 void KrigingModel::initializeSurrogateModel(void){
 
-	assert(this->ifDataIsRead);
-	assert(this->ifBoundsAreSet);
+	assert(ifDataIsRead);
+	assert(ifBoundsAreSet);
 
 
 #if 0
@@ -83,7 +83,7 @@ void KrigingModel::initializeSurrogateModel(void){
 
 		numberOfHyperParameters = 2*dim;
 
-		kriging_weights =zeros<vec>(numberOfHyperParameters);
+//		kriging_weights =zeros<vec>(numberOfHyperParameters);
 
 		theta = zeros<vec>(dim);
 		theta.fill(1.0);
@@ -114,6 +114,9 @@ void KrigingModel::initializeSurrogateModel(void){
 		linearModel.normalizeData();
 		linearModel.initializeSurrogateModel();
 
+
+		updateAuxilliaryFields();
+
 		ifInitialized = true;
 #if 0
 		std::cout << "Kriging model initialization is done...\n";
@@ -123,18 +126,24 @@ void KrigingModel::initializeSurrogateModel(void){
 
 void KrigingModel::printHyperParameters(void) const{
 
-	printVector(kriging_weights,"kriging_weights");
+
+	printVector(theta,"theta");
+	printVector(gamma,"gamma");
 
 }
 void KrigingModel::saveHyperParameters(void) const{
 
-	kriging_weights.save(hyperparameters_filename, csv_ascii);
+	rowvec saveBuffer(2*dim);
+	for(unsigned int i=0; i<dim; i++) saveBuffer(i) = theta(i);
+	for(unsigned int i=0; i<dim; i++) saveBuffer(i+dim) = gamma(i);
+
+	saveBuffer.save(this->hyperparameters_filename,csv_ascii);
 
 }
 
 void KrigingModel::loadHyperParameters(void){
 
-	kriging_weights.load(hyperparameters_filename, csv_ascii);
+
 
 }
 
@@ -144,12 +153,7 @@ double KrigingModel::getyMin(void) const{
 
 }
 
-vec KrigingModel::getKrigingWeights(void) const{
 
-	return kriging_weights;
-
-
-}
 vec KrigingModel::getTheta(void) const{
 
 	return theta;
@@ -176,12 +180,7 @@ void KrigingModel::setGamma(vec gamma){
 
 }
 
-void KrigingModel::setKrigingWeights(vec w){
 
-	kriging_weights = w;
-
-
-}
 
 vec KrigingModel::getRegressionWeights(void) const{
 
@@ -264,7 +263,7 @@ void KrigingModel::printSurrogateModel(void) const{
 	printf("input_filename: %s\n",filenameDataInput.c_str());
 	printf("max_number_of_kriging_iterations = %d\n",max_number_of_kriging_iterations);
 	printf("epsilonKriging = %15.10e\n",epsilonKriging);
-	printVector(kriging_weights,"kriging_weights");
+	printHyperParameters();
 	printf("\n");
 
 
@@ -393,12 +392,9 @@ vec KrigingModel::computeCorrelationVector(rowvec x) const{
 
 	vec r(N);
 
-	vec theta = kriging_weights.head(dim);
-	vec gamma = kriging_weights.tail(dim);
-
 	for(unsigned int i=0;i<N;i++){
 
-		r(i) = computeCorrelation(x, X.row(i), theta, gamma);
+		r(i) = computeCorrelation(x, X.row(i));
 
 	}
 	return r;
@@ -508,7 +504,7 @@ void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double
 }
 
 
-double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j, vec theta, vec gamma) const {
+double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j) const {
 
 
 	double sum = 0.0;
@@ -524,13 +520,11 @@ double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j, vec theta, vec g
 
 void KrigingModel::computeCorrelationMatrix(void)  {
 
-	vec theta = kriging_weights.head(dim);
-	vec gamma = kriging_weights.tail(dim);
 
 	for (unsigned int i = 0; i < N; i++) {
 		for (unsigned int j = i + 1; j < N; j++) {
 
-			double corrVal = computeCorrelation(X.row(i), X.row(j), theta, gamma);
+			double corrVal = computeCorrelation(X.row(i), X.row(j));
 			correlationMatrix(i, j) = corrVal;
 			correlationMatrix(j, i) = corrVal;
 		}
@@ -873,21 +867,11 @@ void KrigingModel::train(void){
 			population.at(population_max_index).print();
 #endif
 
-			kriging_weights.reset();
-			kriging_weights = zeros(2*d);
 
+			theta = population.at(population_max_index).theta;
+			gamma = population.at(population_max_index).gamma;
 
-			for(unsigned int i=0;i<d;i++) {
-
-				kriging_weights(i) = population.at(population_max_index).theta(i);
-			}
-			for(unsigned int i=0;i<d;i++) {
-
-				kriging_weights(i+d)= population.at(population_max_index).gamma(i);
-			}
-
-
-			kriging_weights.save(hyperparameters_filename.c_str(),csv_ascii);
+			saveHyperParameters();
 
 		}
 
@@ -895,8 +879,8 @@ void KrigingModel::train(void){
 
 	if(ifprintToScreen){
 		printf("Kring training is done\n");
-		printf("Kriging weights:\n");
-		printVector(kriging_weights);
+		printHyperParameters();
+
 	}
 
 	updateAuxilliaryFields();

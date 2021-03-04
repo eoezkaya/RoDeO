@@ -144,12 +144,33 @@ TEST(testObjectiveFunction, testreadEvaluateOutputAdjoint){
 TEST(testObjectiveFunction, calculateExpectedImprovement){
 
 
+	mat samples(100,3);
+
+	/* we construct first test data using the function x1*x1 + x2 * x2 */
+	for (unsigned int i=0; i<samples.n_rows; i++){
+		rowvec x(3);
+		x(0) = generateRandomDouble(0.0,1.0);
+		x(1) = generateRandomDouble(0.0,1.0);
+
+		x(2) = x(0)*x(0) + x(1)*x(1);
+		samples.row(i) = x;
+
+	}
+
+
+	vec lb(2); lb.fill(0.0);
+	vec ub(2); ub.fill(1.0);
+	saveMatToCVSFile(samples,"EITest.csv");
+
 	CDesignExpectedImprovement testDesign(2,1);
 	testDesign.generateRandomDesignVector();
 
-	ObjectiveFunction objFunTest("testObjFun",2);
-	objFunTest.calculateExpectedImprovement(testDesign);
+	ObjectiveFunction objFunTest("EITest",2);
+	objFunTest.setParameterBounds(lb,ub);
+	objFunTest.initializeSurrogate();
 
+	objFunTest.calculateExpectedImprovement(testDesign);
+	EXPECT_GE(testDesign.valueExpectedImprovement, 0.0);
 
 }
 
