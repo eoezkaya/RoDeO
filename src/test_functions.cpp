@@ -715,7 +715,8 @@ void TestFunction::testEfficientGlobalOptimization(int nsamplesTrainingData, int
 
 	std::cout<<"Initializing the objective function..."<<std::endl;
 
-	ObjectiveFunction objFunc(function_name, func_ptr, numberOfInputParams);
+	ObjectiveFunction objFunc(function_name, numberOfInputParams);
+	objFunc.setFunctionPointer(func_ptr);
 
 	OptimizationStudy.addObjectFunction(objFunc);
 

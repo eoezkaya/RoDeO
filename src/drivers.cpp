@@ -839,7 +839,8 @@ void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned in
 	std::string outputFileName = executableOutputFiles.at(indx);
 	constraintFunc.setExecutableName(exeName);
 
-	constraintFunc.setFileNameReadConstraintFunction(executableOutputFiles.at(indx));
+	constraintFunc.setFileNameReadInput(executableOutputFiles.at(indx));
+
 	constraintFunc.setFileNameDesignVector(designVectorFilename);
 	constraintFunc.setID(indx);
 	constraintFunc.setParameterBounds(boxConstraintsLowerBounds,boxConstraintsUpperBounds);
@@ -900,17 +901,10 @@ void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned in
 
 	constraintFunc.readOutputStartIndex = indxStartToRead;
 
-
-
-
-
-
-
-
-	if ( std::find(executablesWithGradient.begin(), executablesWithGradient.end(), constraintFunc.name) != executablesWithGradient.end() ){
+	if ( std::find(executablesWithGradient.begin(), executablesWithGradient.end(), constraintFunc.getName()) != executablesWithGradient.end() ){
 
 #if 1
-		std::cout<<"Gradients available for the constraint: "<<constraintFunc.name<<"\n";
+		std::cout<<"Gradients available for the constraint: "<<constraintFunc.getName()<<"\n";
 #endif
 		constraintFunc.setGradientOn();
 
@@ -976,10 +970,17 @@ void RoDeODriver::runDriver(void){
 		std::string name = constraintNames.at(i);
 		std::string constraintType = constraintTypes.at(i);
 		double constraintValue = constraintValues(i);
-#if 1
+#if 0
 		std::cout<<name<<" "<<constraintType<<" "<<constraintValue<<"\n";
 #endif
-		ConstraintFunction constraintFunc(name, constraintType, constraintValue,dimension);
+		ConstraintFunction constraintFunc(name,dimension);
+
+		std::string inequalityStatement = constraintType+std::to_string(constraintValue);
+#if 0
+		std::cout<<inequalityStatement<<"\n";
+#endif
+		constraintFunc.setInequalityConstraint(inequalityStatement);
+
 		setConstraint(constraintFunc,i+1);
 		optimizationStudy.addConstraint(constraintFunc);
 

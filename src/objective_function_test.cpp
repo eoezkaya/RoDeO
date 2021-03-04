@@ -31,6 +31,7 @@
 
 #include<gtest/gtest.h>
 #include "objective_function.hpp"
+#include "optimization.hpp"
 #include "matrix_vector_operations.hpp"
 TEST(testObjectiveFunction, initializeSurrogate){
 
@@ -115,7 +116,7 @@ TEST(testObjectiveFunction, readEvaluateOutput){
 }
 
 
-TEST(testObjectiveFunction, readEvaluateOutputAdjoint){
+TEST(testObjectiveFunction, testreadEvaluateOutputAdjoint){
 
 	ObjectiveFunction objFunTest("testObjFun",4);
 
@@ -139,4 +140,18 @@ TEST(testObjectiveFunction, readEvaluateOutputAdjoint){
 	remove("readOutputTestFile.txt");
 
 }
+
+TEST(testObjectiveFunction, calculateExpectedImprovement){
+
+
+	CDesignExpectedImprovement testDesign(2,1);
+	testDesign.generateRandomDesignVector();
+
+	ObjectiveFunction objFunTest("testObjFun",2);
+	objFunTest.calculateExpectedImprovement(testDesign);
+
+
+}
+
+
 

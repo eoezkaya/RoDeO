@@ -71,7 +71,7 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	dimension = numberOfOptimizationParams;
 	sampleDim = dimension;
 	numberOfConstraints = 0;
-	numberOfConstraintsWithGradient = 0;
+
 	maxNumberOfSamples  = 0;
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
@@ -190,11 +190,6 @@ void COptimizer::addConstraint(ConstraintFunction &constFunc){
 
 	constraintFunctions.push_back(constFunc);
 	numberOfConstraints++;
-
-	if(constFunc.checkIfGradientAvailable()){
-
-		numberOfConstraintsWithGradient++;
-	}
 	sampleDim++;
 
 }
@@ -202,8 +197,10 @@ void COptimizer::addConstraint(ConstraintFunction &constFunc){
 
 void COptimizer::addObjectFunction(ObjectiveFunction &objFunc){
 
+	assert(ifObjectFunctionIsSpecied == false);
 	objFun = objFunc;
 	sampleDim++;
+	ifObjectFunctionIsSpecied = true;
 
 }
 
@@ -245,7 +242,7 @@ void COptimizer::addConstraintValuesToDoEData(Design &d) const{
 			rowvec saveBuffer(dimension+1);
 			copyRowVector(saveBuffer,d.designParameters);
 			saveBuffer(dimension) = d.constraintTrueValues(it->getID()-1);
-			appendRowVectorToCSVData(saveBuffer,it->name+".csv");
+			appendRowVectorToCSVData(saveBuffer,it->getName()+".csv");
 
 
 		}else{
@@ -258,7 +255,7 @@ void COptimizer::addConstraintValuesToDoEData(Design &d) const{
 			countConstraintWithGradient++;
 			copyRowVector(saveBuffer,gradient,dimension+1);
 
-			appendRowVectorToCSVData(saveBuffer,it->name+".csv");
+			appendRowVectorToCSVData(saveBuffer,it->getName()+".csv");
 
 		}
 
@@ -275,7 +272,7 @@ void COptimizer::estimateConstraints(rowvec x, rowvec &constraintValues) const{
 	unsigned int contraintIt = 0;
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
-		constraintValues(contraintIt) = it->ftilde(x);
+		constraintValues(contraintIt) = it->interpolate(x);
 		contraintIt++;
 	}
 
@@ -579,7 +576,7 @@ void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 
 	}
 
-	CDesignExpectedImprovement bestDesign;
+	CDesignExpectedImprovement bestDesign(5,2);
 	bestDesign.dv = bestDesignVector;
 	bestDesign.valueExpectedImprovement = maxEI;
 
@@ -753,9 +750,9 @@ CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedIm
 	} /* end of gradient-search loop */
 
 
-	CDesignExpectedImprovement result;
-	result.dv = bestDesignVector;
-	result.valueExpectedImprovement = EI0;
+	CDesignExpectedImprovement result(3,3);
+//	result.dv = bestDesignVector;
+//	result.valueExpectedImprovement = EI0;
 
 	return result;
 
@@ -855,11 +852,12 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds, upperBounds);
 
-		double estimatedBestdv = objFun.ftilde(best_dvNorm,true);
+		double estimatedBestdv = objFun.interpolate(best_dvNorm,true);
 #if 1
 		printf("The most promising design (not normalized):\n");
 		best_dv.print();
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
+
 #endif
 
 		Design currentBestDesign(best_dv);
@@ -953,7 +951,7 @@ void COptimizer::cleanDoEFiles(void) const{
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
-		std::string fileNameConstraint = it->name+".csv";
+		std::string fileNameConstraint = it->getName()+".csv";
 		if(file_exist(fileNameConstraint)){
 
 			remove(fileNameConstraint.c_str());

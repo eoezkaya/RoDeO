@@ -49,38 +49,6 @@
 
 using namespace arma;
 
-ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, double (*objFun)(double *), unsigned int dimension)
-: surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName){
-
-
-	dim = dimension;
-	name = objectiveFunName;
-	objectiveFunPtr = objFun;
-	objectiveFunAdjPtr = emptyAdj;
-
-	ifFunctionPointerIsSet = true;
-
-	assert(dim < 1000);
-
-
-}
-
-ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, double (*objFunAdj)(double *, double *), unsigned int dimension)
-: surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName){
-
-
-	dim = dimension;
-	name = objectiveFunName;
-	objectiveFunPtr = empty;
-	objectiveFunAdjPtr = objFunAdj;
-	ifGradientAvailable = true;
-	ifFunctionPointerIsSet = true;
-
-	assert(dim < 1000);
-
-
-}
-
 
 
 ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int dimension)
@@ -105,6 +73,23 @@ ObjectiveFunction::ObjectiveFunction(){
 
 
 }
+
+void ObjectiveFunction::setFunctionPointer(double (*objFun)(double *)){
+
+	this->objectiveFunPtr = objFun;
+	this->ifFunctionPointerIsSet = true;
+
+}
+
+void ObjectiveFunction::setFunctionPointer(double (*objFun)(double *, double *)){
+
+	this->objectiveFunAdjPtr = objFun;
+	this->ifFunctionPointerIsSet = true;
+
+}
+
+
+
 
 void ObjectiveFunction::setGradientOn(void){
 
@@ -251,6 +236,24 @@ double ObjectiveFunction::calculateExpectedImprovement(rowvec x) const{
 	return EIValue;
 
 }
+
+
+void ObjectiveFunction::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
+
+	double EIValue;
+	rowvec x = designCalculated.dv;
+	if(!ifGradientAvailable){
+
+		EIValue = surrogateModel.calculateExpectedImprovement(x);
+	}else{
+
+		EIValue = surrogateModelGradient.calculateExpectedImprovement(x);
+	}
+
+	designCalculated.valueExpectedImprovement = EIValue;
+
+}
+
 
 
 
@@ -408,7 +411,7 @@ void ObjectiveFunction::evaluateAdjoint(Design &d){
 }
 
 
-double ObjectiveFunction::ftilde(rowvec x, bool ifdebug) const{
+double ObjectiveFunction::interpolate(rowvec x, bool ifdebug) const{
 
 	double result;
 	if(!ifGradientAvailable){

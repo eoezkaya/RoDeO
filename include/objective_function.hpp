@@ -38,6 +38,7 @@
 #include "design.hpp"
 
 
+
 class ObjectiveFunction{
 
 
@@ -71,12 +72,11 @@ protected:
 
 public:
 
-
-	ObjectiveFunction(std::string, double (*objFun)(double *), unsigned int);
-	ObjectiveFunction(std::string, double (*objFun)(double *, double *), unsigned int);
 	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
 
+	void setFunctionPointer(double (*objFun)(double *));
+	void setFunctionPointer(double (*objFun)(double *, double *));
 
 	void initializeSurrogate(void);
 	void trainSurrogate(void);
@@ -116,7 +116,9 @@ public:
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
 	void setFileNameDesignVector(std::string);
+
 	double calculateExpectedImprovement(rowvec x) const;
+	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
 
 	void evaluate(Design &d);
 	void evaluateAdjoint(Design &d);
@@ -126,7 +128,7 @@ public:
 	void addDesignToData(Design &d);
 
 	bool checkIfGradientAvailable(void) const;
-	double ftilde(rowvec x, bool ifdebug = false) const;
+	double interpolate(rowvec x, bool ifdebug = false) const;
 	void print(void) const;
 	std::string getExecutionCommand(void) const;
 };

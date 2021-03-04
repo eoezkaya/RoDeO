@@ -37,7 +37,7 @@
 
 TEST(testConstraintFunctions, testConstructor){
 
-	ConstraintFunctionv2 constraintFunTest("testConstraintFunction",4);
+	ConstraintFunction constraintFunTest("testConstraintFunction",4);
 	unsigned int dim = constraintFunTest.getDimension();
 	std::string name = constraintFunTest.getName();
 
@@ -49,7 +49,8 @@ TEST(testConstraintFunctions, testConstructor){
 
 TEST(testConstraintFunctions, testConstructorWithFunctionPointer){
 
-	ConstraintFunctionv2 constraintFunTest("testConstraintFunction",Himmelblau,2);
+	ConstraintFunction constraintFunTest("testConstraintFunction",2);
+	constraintFunTest.setFunctionPointer(Himmelblau);
 
 
 	unsigned int dim = constraintFunTest.getDimension();
@@ -64,7 +65,7 @@ TEST(testConstraintFunctions, testConstructorWithFunctionPointer){
 
 TEST(testConstraintFunctions, testsetInequalityConstraint){
 
-	ConstraintFunctionv2 constraintFunTest("testConstraintFunction",Himmelblau,2);
+	ConstraintFunction constraintFunTest("testConstraintFunction",2);
 	constraintFunTest.setInequalityConstraint(" > 18.2");
 
 
@@ -72,7 +73,7 @@ TEST(testConstraintFunctions, testsetInequalityConstraint){
 
 TEST(testConstraintFunctions, checkFeasibility){
 
-	ConstraintFunctionv2 constraintFunTest("testConstraintFunction",4);
+	ConstraintFunction constraintFunTest("testConstraintFunction",4);
 
 	constraintFunTest.setInequalityConstraint(" > 18.2");
 	bool ifFeasible = constraintFunTest.checkFeasibility(18.4);
@@ -93,7 +94,7 @@ TEST(testConstraintFunctions, testEvaluateExternal){
 	system(compileCommand.c_str());
 
 
-	ConstraintFunctionv2 constraintFunTest("testConstraintFunction",2);
+	ConstraintFunction constraintFunTest("testConstraintFunction",2);
 	constraintFunTest.setExecutableName("himmelblau");
 	constraintFunTest.evaluate(d);
 
@@ -119,7 +120,7 @@ TEST(testConstraintFunctions, testreadEvaluateOutput){
 	readOutputTestFile << "2.144\n";
 	readOutputTestFile.close();
 
-	ConstraintFunctionv2 constraintFunTest("testConstraintFunction",4);
+	ConstraintFunction constraintFunTest("testConstraintFunction",4);
 	constraintFunTest.setFileNameReadInput("readOutputTestFile.txt");
 	constraintFunTest.setID(1);
 
@@ -137,7 +138,7 @@ TEST(testConstraintFunctions, testreadEvaluateOutputWithGradient){
 	readOutputTestFile << "2.144 -1 -2 -3 -4\n";
 	readOutputTestFile.close();
 
-	ConstraintFunctionv2 constraintFunTest("testConstraintFunction",4);
+	ConstraintFunction constraintFunTest("testConstraintFunction",4);
 	constraintFunTest.setFileNameReadInput("readOutputTestFile.txt");
 	constraintFunTest.setID(1);
 	constraintFunTest.setGradientOn();
@@ -161,11 +162,11 @@ TEST(testConstraintFunctions, testreadEvaluateTwoOutputsInTheSameFile){
 	readOutputTestFile << "2.144 -1\n";
 	readOutputTestFile.close();
 
-	ConstraintFunctionv2 constraintFunTest("testConstraintFunction",4);
+	ConstraintFunction constraintFunTest("testConstraintFunction",4);
 	constraintFunTest.setFileNameReadInput("readOutputTestFile.txt");
 	constraintFunTest.setID(1);
 
-	ConstraintFunctionv2 constraintFunTest2("testConstraintFunction2",4);
+	ConstraintFunction constraintFunTest2("testConstraintFunction2",4);
 	constraintFunTest2.setFileNameReadInput("readOutputTestFile.txt");
 	constraintFunTest2.setID(2);
 	constraintFunTest2.readOutputStartIndex = 1;
@@ -177,6 +178,7 @@ TEST(testConstraintFunctions, testreadEvaluateTwoOutputsInTheSameFile){
 	EXPECT_EQ(d.constraintTrueValues(1),-1);
 
 }
+
 
 
 

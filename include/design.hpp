@@ -36,6 +36,55 @@
 #include "random_functions.hpp"
 using namespace arma;
 
+class CDesignExpectedImprovement{
+
+public:
+	rowvec dv;
+	double valueExpectedImprovement;
+	double objectiveFunctionValue;
+	rowvec constraintValues;
+	unsigned int dim;
+
+	CDesignExpectedImprovement(unsigned int dimension, unsigned int numberOfConstraints){
+
+		dim = dimension;
+		constraintValues = zeros<rowvec>(numberOfConstraints);
+		valueExpectedImprovement = 0.0;
+		objectiveFunctionValue = 0.0;
+
+	}
+
+	CDesignExpectedImprovement(rowvec designVector, unsigned int numberOfConstraints){
+
+			dv = designVector;
+			constraintValues = zeros<rowvec>(numberOfConstraints);
+			valueExpectedImprovement = 0.0;
+			objectiveFunctionValue = 0.0;
+
+	}
+
+	void generateRandomDesignVector(void){
+
+		dv = generateRandomRowVector(0.0,1.0/dim, dim);
+
+	}
+
+	void print(void) const{
+
+		std::cout<<"Design vector = \n";
+		dv.print();
+		std::cout<<"Objective function value ="<<objectiveFunctionValue<<"\n";
+		std::cout<<"Expected Improvement value = "<<valueExpectedImprovement<<"\n";
+		std::cout<<"Constraint values = \n";
+		constraintValues.print();
+	}
+
+
+};
+
+
+
+
 class Design{
 
 public:

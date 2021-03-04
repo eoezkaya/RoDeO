@@ -37,16 +37,9 @@
 #include "aggregation_model.hpp"
 #include "objective_function.hpp"
 #include "constraint_functions.hpp"
+#include "random_functions.hpp"
 
 
-class CDesignExpectedImprovement{
-
-public:
-	rowvec dv;
-	double valueExpectedImprovement;
-
-
-};
 
 class COptimizer {
 
@@ -65,6 +58,7 @@ private:
 
 	std::vector<CDesignExpectedImprovement> theMostPromisingDesigns;
 
+	bool ifObjectFunctionIsSpecied = false;
 
 
 public:
@@ -73,7 +67,6 @@ public:
 
 	unsigned int dimension;
 	unsigned int numberOfConstraints;
-	unsigned int numberOfConstraintsWithGradient;
 	unsigned int maxNumberOfSamples;
 	unsigned int howOftenTrainModels;
 
