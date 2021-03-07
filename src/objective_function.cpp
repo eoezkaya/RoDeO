@@ -74,6 +74,9 @@ ObjectiveFunction::ObjectiveFunction(){
 
 }
 
+
+
+
 void ObjectiveFunction::setFunctionPointer(double (*objFun)(double *)){
 
 	this->objectiveFunPtr = objFun;
@@ -227,17 +230,19 @@ void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 
 void ObjectiveFunction::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
 
-	double EIValue;
-	rowvec x = designCalculated.dv;
+//	double EIValue;
+//	rowvec x = designCalculated.dv;
 	if(!ifGradientAvailable){
 
-		EIValue = surrogateModel.calculateExpectedImprovement(x);
+//		EIValue = surrogateModel.calculateExpectedImprovement(x);
+		surrogateModel.calculateExpectedImprovement(designCalculated);
+
 	}else{
 
-		EIValue = surrogateModelGradient.calculateExpectedImprovement(x);
+		surrogateModelGradient.calculateExpectedImprovement(designCalculated);
 	}
 
-	designCalculated.valueExpectedImprovement = EIValue;
+//	designCalculated.valueExpectedImprovement = EIValue;
 
 
 }

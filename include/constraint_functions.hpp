@@ -134,7 +134,7 @@ public:
 
 	void readEvaluateOutput(Design &d);
 	bool checkFeasibility(double value) const;
-
+	void addDesignToData(Design &);
 
 
 

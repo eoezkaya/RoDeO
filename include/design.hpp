@@ -94,7 +94,8 @@ public:
 	void gradientUpdateDesignVector(rowvec gradient, double stepSize){
 
 
-		dv = dv - stepSize*gradient;
+		/* we go in the direction of gradient since we maximize */
+		dv = dv + stepSize*gradient;
 
 		double lowerBound = 0.0;
 		double upperBound = 1.0/dim;

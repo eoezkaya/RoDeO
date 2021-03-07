@@ -77,49 +77,46 @@ void KrigingModel::initializeSurrogateModel(void){
 
 
 #if 0
-		printf("Initializing settings for the Kriging model...\n");
+	printf("Initializing settings for the Kriging model...\n");
 #endif
 
 
-		numberOfHyperParameters = 2*dim;
-
-//		kriging_weights =zeros<vec>(numberOfHyperParameters);
-
-		theta = zeros<vec>(dim);
-		theta.fill(1.0);
-		gamma = zeros<vec>(dim);
-		gamma.fill(2.0);
+	numberOfHyperParameters = 2*dim;
+	theta = zeros<vec>(dim);
+	theta.fill(1.0);
+	gamma = zeros<vec>(dim);
+	gamma.fill(2.0);
 
 
-		epsilonKriging = 10E-12;
-		max_number_of_kriging_iterations = 20000;
+	epsilonKriging = 10E-12;
+	max_number_of_kriging_iterations = 20000;
 
 
-		sigmaSquared = 0.0;
-		beta0 = 0.0;
+	sigmaSquared = 0.0;
+	beta0 = 0.0;
 
-		correlationMatrix = zeros<mat>(N,N);
-		upperDiagonalMatrix= zeros<mat>(N,N);
-		R_inv_ys_min_beta = zeros<vec>(N);
-		R_inv_I= zeros<vec>(N);
-		vectorOfOnes= ones<vec>(N);
+	correlationMatrix = zeros<mat>(N,N);
+	upperDiagonalMatrix= zeros<mat>(N,N);
+	R_inv_ys_min_beta = zeros<vec>(N);
+	R_inv_I= zeros<vec>(N);
+	vectorOfOnes= ones<vec>(N);
 
-		if(this->ifUsesGradientData) {
+	if(this->ifUsesGradientData) {
 
-			linearModel.ifUsesGradientData = true;
+		linearModel.ifUsesGradientData = true;
 
-		}
-		linearModel.readData();
-		linearModel.setParameterBounds(xmin,xmax);
-		linearModel.normalizeData();
-		linearModel.initializeSurrogateModel();
+	}
+	linearModel.readData();
+	linearModel.setParameterBounds(xmin,xmax);
+	linearModel.normalizeData();
+	linearModel.initializeSurrogateModel();
 
 
-		updateAuxilliaryFields();
+	updateAuxilliaryFields();
 
-		ifInitialized = true;
+	ifInitialized = true;
 #if 0
-		std::cout << "Kriging model initialization is done...\n";
+	std::cout << "Kriging model initialization is done...\n";
 #endif
 
 }
@@ -142,6 +139,22 @@ void KrigingModel::saveHyperParameters(void) const{
 }
 
 void KrigingModel::loadHyperParameters(void){
+
+
+	rowvec saveBuffer;
+	saveBuffer.load(this->hyperparameters_filename,csv_ascii);
+
+	if(2*dim == saveBuffer.size()) {
+
+		for(unsigned int i=0; i<dim; i++) theta(i) = saveBuffer(i);
+		for(unsigned int i=0; i<dim; i++) gamma(i) = saveBuffer(i+dim);
+
+
+	}
+	else{
+
+		std::cout<<"WARNING: Cannot load hyperparameter since problem dimension does not match!\n";
+	}
 
 
 
@@ -265,6 +278,8 @@ void KrigingModel::printSurrogateModel(void) const{
 	printf("epsilonKriging = %15.10e\n",epsilonKriging);
 	printHyperParameters();
 	printf("\n");
+
+
 
 
 
@@ -430,21 +445,14 @@ double KrigingModel::interpolate(rowvec xp,bool ifprint ) const{
 
 }
 
-/*
- * Evaluates the expected improvement value surrogate model at x = xp
- * @param[in] xp (normalized)
- * @return y=EI(xp)
- *
- * */
 
 
-double KrigingModel::calculateExpectedImprovement(rowvec xp) const{
-
+void KrigingModel::calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const{
 
 	double ftilde = 0.0;
 	double ssqr   = 0.0;
 
-	interpolateWithVariance(xp,&ftilde,&ssqr);
+	interpolateWithVariance(currentDesign.dv,&ftilde,&ssqr);
 
 #if 0
 	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
@@ -456,7 +464,7 @@ double KrigingModel::calculateExpectedImprovement(rowvec xp) const{
 	printf("standart_ERROR = %15.10f\n",sigma);
 #endif
 
-	double EI = 0.0;
+	double expectedImprovementValue = 0.0;
 
 
 	if(sigma!=0.0){
@@ -464,29 +472,38 @@ double KrigingModel::calculateExpectedImprovement(rowvec xp) const{
 
 		double	Z = (ymin - ftilde)/sigma;
 #if 0
-		printf("EIfac = %15.10f\n",EIfac);
+		printf("Z = %15.10f\n",Z);
 		printf("ymin = %15.10f\n",ymin);
 #endif
 
 
 		/* calculate the Expected Improvement value */
-		EI = (ymin - ftilde)*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
+		expectedImprovementValue = (ymin - ftilde)*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
 	}
 	else{
 
-		EI = 0.0;
+		expectedImprovementValue = 0.0;
 
 	}
 #if 0
-	printf("EI = %15.10f\n",EI);
+	printf("expectedImprovementValue = %20.20f\n",expectedImprovementValue);
 #endif
-	return EI;
+
+	currentDesign.objectiveFunctionValue = ftilde;
+	currentDesign.valueExpectedImprovement = expectedImprovementValue;
+
+
 
 }
 
 
 
+
+
+
 void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const{
+
+	assert(this->ifInitialized);
 
 	*ftildeOutput =  interpolate(xp);
 
@@ -651,58 +668,23 @@ void KrigingModel::train(void){
 			}
 
 
-			vec weights_read_from_file;
+			loadHyperParameters();
 
-			bool status = weights_read_from_file.load(hyperparameters_filename.c_str(),csv_ascii);
+			for(unsigned int i=0; i<d;i++) {
 
-			if(status == false)
-			{
-				fprintf(stderr, "ERROR: Some problem with the hyperparameter input! at %s, line %d.\n",__FILE__, __LINE__);
-				exit(-1);
+				if(theta(i) < 100.0){
+
+					initial_design.theta(i) = theta(i);
+				}
 
 			}
+			for(unsigned int i=0; i<d;i++) {
 
-#if 1
-#pragma omp master
-			{
-				if(ifprintToScreen){
-					printf("hyperparameters read from the file (theta; gamma):\n");
-					printVector(weights_read_from_file);
-				}
-			}
-#endif
+				if( gamma(i) < 2.0) {
 
-			if(weights_read_from_file.size() != 2*d){
-#if 1
-#pragma omp master
-				{
-					if(ifprintToScreen){
-						printf("Warning: Hyper parameters read from the file do not match the problem dimensions!\n");
-					}
-				}
-#endif
-
-			}
-
-			else{
-
-				for(unsigned int i=0; i<d;i++) {
-
-					if(weights_read_from_file(i) < 100.0){
-
-						initial_design.theta(i) = weights_read_from_file(i);
-					}
+					initial_design.gamma(i) = gamma(i);
 
 				}
-				for(unsigned int i=d; i<2*d;i++) {
-
-					if( weights_read_from_file(i) < 2.0) {
-
-						initial_design.gamma(i-d) = weights_read_from_file(i);
-
-					}
-				}
-
 			}
 
 

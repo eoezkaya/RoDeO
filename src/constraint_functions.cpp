@@ -206,5 +206,22 @@ bool ConstraintFunction::checkFeasibility(double value) const{
 	return result;
 }
 
+void ConstraintFunction::addDesignToData(Design &d){
 
+	if(ifGradientAvailable){
+
+		rowvec newsample = d.constructSampleConstraintWithGradient(this->ID);
+
+		surrogateModelGradient.addNewSampleToData(newsample);
+
+	}
+	else{
+
+		rowvec newsample = d.constructSampleConstraint(this->ID);
+
+		surrogateModel.addNewSampleToData(newsample);
+	}
+
+
+}
 

@@ -265,6 +265,7 @@ void COptimizer::addConstraintValuesToDoEData(Design &d) const{
 void COptimizer::estimateConstraints(CDesignExpectedImprovement &design) const{
 
 	rowvec x = design.dv;
+	assert(design.constraintValues.size() == numberOfConstraints);
 
 	unsigned int constraintIt = 0;
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
@@ -300,6 +301,11 @@ bool COptimizer::checkConstraintFeasibility(rowvec constraintValues) const{
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
 		flagFeasibility = it->checkFeasibility(constraintValues(i));
+
+		if(flagFeasibility == false) {
+
+			break;
+		}
 		i++;
 	}
 
@@ -370,6 +376,7 @@ void COptimizer::initializeSurrogates(void){
 
 
 void COptimizer::trainSurrogates(void){
+
 	printf("Training surrogate model for the objective function...\n");
 	objFun.trainSurrogate();
 
@@ -443,9 +450,6 @@ void COptimizer::addPenaltyToExpectedImprovementForConstraints(CDesignExpectedIm
 
 
 }
-
-
-
 
 
 void COptimizer::computeConstraintsandPenaltyTerm(Design &d) {
@@ -559,7 +563,7 @@ void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 		if(designToBeTried.valueExpectedImprovement > designWithMaxEI.valueExpectedImprovement){
 
 			designWithMaxEI = designToBeTried;
-#if 1
+#if 0
 			printf("A design with a better EI value has been found\n");
 			designToBeTried.print();
 #endif
@@ -637,20 +641,23 @@ rowvec COptimizer::calculateEIGradient(CDesignExpectedImprovement &currentDesign
 CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedImprovement initialDesign) const {
 
 	rowvec gradEI(dimension);
-	double stepSize0 = 0.0001;
+	double stepSize0 = 0.001;
 	double stepSize = 0.0;
 
 
-	CDesignExpectedImprovement bestDesign = initialDesign;
+
+	objFun.calculateExpectedImprovement(initialDesign);
+	addPenaltyToExpectedImprovementForConstraints(initialDesign);
 
 
 	double EI0 = initialDesign.valueExpectedImprovement;
+	CDesignExpectedImprovement bestDesign = initialDesign;
 
 	bool breakOptimization = false;
 
 	for(unsigned int iterGradientSearch=0; iterGradientSearch<iterGradientEILoop; iterGradientSearch++){
 
-#if 1
+#if 0
 		printf("\nGradient search iteration = %d\n", iterGradientSearch);
 #endif
 
@@ -676,15 +683,17 @@ CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedIm
 			addPenaltyToExpectedImprovementForConstraints(bestDesign);
 
 
-#if 1
+#if 0
 			printf("EI_LS = %15.10f\n",bestDesign.valueExpectedImprovement );
 
 #endif
 
 			/* if ascent is achieved */
 			if(bestDesign.valueExpectedImprovement > EI0){
-#if 1
+#if 0
 				printf("Ascent is achieved with difference = %15.10f\n", bestDesign.valueExpectedImprovement -  EI0);
+
+				bestDesign.print();
 #endif
 				EI0 = bestDesign.valueExpectedImprovement;
 				break;
@@ -694,12 +703,12 @@ CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedIm
 
 				stepSize = stepSize * 0.5;
 				bestDesign = dvLineSearchSave;
-#if 1
+#if 0
 				printf("stepsize = %15.10f\n",stepSize);
 
 #endif
 				if(stepSize < 10E-12) {
-#if 1
+#if 0
 					printf("The stepsize is getting too small!\n");
 #endif
 
@@ -709,10 +718,6 @@ CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedIm
 			}
 
 		}
-#if 1
-
-
-#endif
 
 		if(breakOptimization) break;
 
@@ -815,11 +820,14 @@ void COptimizer::EfficientGlobalOptimization(void){
 		CDesignExpectedImprovement optimizedDesignGradientBased = MaximizeEIGradientBased(theMostPromisingDesigns.at(0));
 
 
+		optimizedDesignGradientBased.print();
+
+
+
 		rowvec best_dvNorm = optimizedDesignGradientBased.dv;
-
 		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds, upperBounds);
-
 		double estimatedBestdv = objFun.interpolate(best_dvNorm,true);
+
 #if 1
 		printf("The most promising design (not normalized):\n");
 		best_dv.print();
@@ -854,11 +862,9 @@ void COptimizer::EfficientGlobalOptimization(void){
 			cout<<"ERROR: NaN while reading external executable outputs!\n";
 			abort();
 
-
-
 		}
 
-
+		currentBestDesign.print();
 
 		addConstraintValuesToData(currentBestDesign);
 		updateOptimizationHistory(currentBestDesign);
@@ -875,8 +881,6 @@ void COptimizer::EfficientGlobalOptimization(void){
 #endif
 
 		}
-
-
 
 
 		simulationCount ++;
@@ -963,7 +967,7 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		sampleCoordinates = DoE.getSamples();
 	}
 
-#if 1
+#if 0
 	printMatrix(sampleCoordinates,"sampleCoordinates");
 #endif
 

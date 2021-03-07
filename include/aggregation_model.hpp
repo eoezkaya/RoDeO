@@ -33,6 +33,7 @@
 
 #include "Rodeo_macros.hpp"
 #include "kriging_training.hpp"
+#include "design.hpp"
 
 
 class AggregationModel : public SurrogateModel {
@@ -82,7 +83,11 @@ public:
 	double interpolate(rowvec x, bool ifprint = false) const ;
 	double interpolateWithGradients(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
-	double calculateExpectedImprovement(rowvec xp) const;
+
+//	double calculateExpectedImprovement(rowvec xp) const;
+	void calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const;
+
+
 	unsigned int findNearestNeighbor(const rowvec &) const;
 	void addNewSampleToData(rowvec newsample);
 	void updateModelWithNewData(void);

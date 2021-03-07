@@ -35,6 +35,7 @@
 #include "Rodeo_macros.hpp"
 #include "surrogate_model.hpp"
 #include "linear_regression.hpp"
+#include "design.hpp"
 
 
 
@@ -91,7 +92,9 @@ public:
 
 
 
-	double calculateExpectedImprovement(rowvec xp) const;
+//	double calculateExpectedImprovement(rowvec xp) const;
+	void calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const;
+
 	double getyMin(void) const;
 
 	vec getRegressionWeights(void) const;

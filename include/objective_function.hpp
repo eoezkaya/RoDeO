@@ -75,6 +75,7 @@ public:
 	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
 
+
 	void setFunctionPointer(double (*objFun)(double *));
 	void setFunctionPointer(double (*objFun)(double *, double *));
 
@@ -117,13 +118,11 @@ public:
 	void setExecutableName(std::string);
 	void setFileNameDesignVector(std::string);
 
-//	double calculateExpectedImprovement(rowvec x) const;
 	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
 
 	void evaluate(Design &d);
 	void evaluateAdjoint(Design &d);
 	void readEvaluateOutput(Design &d);
-
 
 	void addDesignToData(Design &d);
 
