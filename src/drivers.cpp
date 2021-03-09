@@ -253,13 +253,14 @@ void RoDeODriver::readConfigFile(void){
 
 						for (unsigned int i = 0; i<valuesReadFromString.size() ; i++){
 
-							boxConstraintsUpperBounds(i) = std::stoi(valuesReadFromString[i]);
+							boxConstraintsUpperBounds(i) = std::stod(valuesReadFromString[i]);
 
 						}
 						std::cout<<"UPPER_BOUNDS=";
 						trans(boxConstraintsUpperBounds).print();
 						ifUpperBoundsSet = true;
 						ifParameterAlreadySet[key] = true;
+
 						break;
 					}/* end of case 3 */
 
@@ -300,7 +301,7 @@ void RoDeODriver::readConfigFile(void){
 
 						for (unsigned int i = 0; i<valuesReadFromString.size() ; i++){
 
-							boxConstraintsLowerBounds(i) = std::stoi(valuesReadFromString[i]);
+							boxConstraintsLowerBounds(i) = std::stod(valuesReadFromString[i]);
 
 						}
 						std::cout<<"LOWER_BOUNDS=";
@@ -784,6 +785,12 @@ void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 
 	}
 
+	if( (numberOfConstraints+1) != executableOutputFiles.size()){
+
+		std::cout<<"ERROR: There is some problem with output file definitions, did you set OBJECTIVE_FUNCTION_OUTPUT_FILENAME and CONSTRAINT_FUNCTION_OUTPUT_FILENAMES properly?\n";
+		abort();
+
+	}
 
 
 }
@@ -920,22 +927,22 @@ void RoDeODriver::setConstraint(ConstraintFunction & constraintFunc, unsigned in
 
 void RoDeODriver::runOptimization(void) const{
 
-//	optimizationStudy.setProblemType(problemType);
-//	optimizationStudy.ifVisualize = true;
-//	optimizationStudy.setMaximumNumberOfIterations(maximumNumberOfSimulations);
-//
-//	if(!ifWarmStart){
-//
-//		optimizationStudy.performDoE(maximumNumberDoESamples,LHS);
-//
-//	}
-//
-//
-//	if(!optimizationStudy.checkSettings()){
-//		std::cout<<"ERROR: Check of the settings is failed!\n";
-//		abort();
-//	}
-//	optimizationStudy.EfficientGlobalOptimization();
+	//	optimizationStudy.setProblemType(problemType);
+	//	optimizationStudy.ifVisualize = true;
+	//	optimizationStudy.setMaximumNumberOfIterations(maximumNumberOfSimulations);
+	//
+	//	if(!ifWarmStart){
+	//
+	//		optimizationStudy.performDoE(maximumNumberDoESamples,LHS);
+	//
+	//	}
+	//
+	//
+	//	if(!optimizationStudy.checkSettings()){
+	//		std::cout<<"ERROR: Check of the settings is failed!\n";
+	//		abort();
+	//	}
+	//	optimizationStudy.EfficientGlobalOptimization();
 
 
 

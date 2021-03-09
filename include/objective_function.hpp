@@ -62,6 +62,7 @@ protected:
 	KrigingModel surrogateModel;
 	AggregationModel surrogateModelGradient;
 
+
 	unsigned int dim = 0;
 	bool ifDoErequired = true;
 	bool ifWarmStart = false;
@@ -130,6 +131,8 @@ public:
 	double interpolate(rowvec x, bool ifdebug = false) const;
 	void print(void) const;
 	std::string getExecutionCommand(void) const;
+
+
 };
 
 

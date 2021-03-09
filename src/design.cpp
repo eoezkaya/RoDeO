@@ -187,6 +187,11 @@ rowvec Design::constructSampleConstraintWithGradient(unsigned int constraintID) 
 }
 
 
+Design::Design(void){
+
+
+}
+
 void Design::print(void) const{
 
 
@@ -195,13 +200,18 @@ void Design::print(void) const{
 	printVector(gradient,"gradient vector");
 	printVector(constraintTrueValues,"constraint values");
 
-	std::cout<<"Constraint gradients = \n";
-	for (auto it = constraintGradients.begin(); it != constraintGradients.end(); it++){
+	if(!constraintGradients.empty()){
+		std::cout<<"Constraint gradients = \n";
+		for (auto it = constraintGradients.begin(); it != constraintGradients.end(); it++){
 
-		printVector(*it);
+			printVector(*it);
 
 
+		}
 	}
+
+	std::cout<<"Objective function value = "<<objectiveFunctionValue<<"\n";
+	std::cout<<"Improvement = "<<improvementValue<<"\n";
 
 
 }

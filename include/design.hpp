@@ -91,6 +91,33 @@ public:
 
 	}
 
+	void generateRandomDesignVectorAroundASample(const rowvec &sample){
+
+
+		vec lowerBounds(dim);
+		vec upperBounds(dim);
+
+		double factor = 1.0/dim;
+		double dx = factor*0.01;
+
+
+		for(unsigned int i=0; i<dim; i++){
+
+			lowerBounds(i) = sample(i) - dx;
+			upperBounds(i) = sample(i) + dx;
+			if(lowerBounds(i) < 0.0)    lowerBounds(i) = 0.0;
+			if(upperBounds(i) > factor) upperBounds(i) = factor;
+
+		}
+
+		dv = generateRandomRowVector(lowerBounds, upperBounds);
+
+
+	}
+
+
+
+
 	void gradientUpdateDesignVector(rowvec gradient, double stepSize){
 
 
@@ -134,15 +161,19 @@ class Design{
 
 public:
 
-	unsigned int dimension;
-	unsigned int numberOfConstraints;
+	unsigned int dimension = 0;
+	unsigned int numberOfConstraints = 0;
 	rowvec designParameters;
 	rowvec constraintTrueValues;
 	rowvec gradient;
-	double trueValue;
-	double objectiveFunctionValue;
+	double trueValue = 0;
+	double objectiveFunctionValue = 0.0;
+	double improvementValue = 0.0;
 	std::vector<rowvec> constraintGradients;
 
+	bool isDesignFeasible = true;
+
+	Design();
 	Design(rowvec);
 	Design(unsigned int);
 	void setNumberOfConstraints(unsigned int howManyConstraints);

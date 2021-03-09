@@ -53,6 +53,7 @@ private:
 
 	mat optimizationHistory;
 
+
 	std::vector<ConstraintFunction> constraintFunctions;
 	ObjectiveFunction objFun;
 
@@ -60,6 +61,13 @@ private:
 
 	bool ifObjectFunctionIsSpecied = false;
 	bool ifSurrogatesAreInitialized = false;
+	bool isHistoryFileInitialized = false;
+
+	bool IfinitialValueForObjFunIsSet= false;
+
+	Design globalOptimalDesign;
+
+	double initialobjectiveFunctionValue = 0.0;
 
 
 public:
@@ -101,6 +109,9 @@ public:
 	void setBoxConstraints(vec lb, vec ub);
 	void setFileNameDesignVector(std::string filename);
 
+	void setInitialObjectiveFunctionValue(double value);
+	void calculateImprovementValue(Design &d);
+
 	void addConstraint(ConstraintFunction &constFunc);
 
 	void evaluateConstraints(Design &d);
@@ -119,6 +130,10 @@ public:
 	void addPenaltyToExpectedImprovementForConstraints(CDesignExpectedImprovement &designCalculated) const;
 
 	void computeConstraintsandPenaltyTerm(Design &);
+
+
+	Design findTheGlobalOptimalDesign(void);
+
 
 	void updateOptimizationHistory(Design d);
 	void clearOptimizationHistoryFile(void) const;

@@ -155,6 +155,8 @@ void ObjectiveFunction::initializeSurrogate(void){
 
 	assert(ifParameterBoundsAreSet);
 
+
+
 	if(!ifGradientAvailable){
 
 		surrogateModel.readData();
@@ -179,6 +181,7 @@ void ObjectiveFunction::initializeSurrogate(void){
 void ObjectiveFunction::trainSurrogate(void){
 
 	assert(ifInitialized);
+
 
 	if(!ifGradientAvailable){
 
@@ -230,19 +233,15 @@ void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 
 void ObjectiveFunction::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
 
-//	double EIValue;
-//	rowvec x = designCalculated.dv;
+
 	if(!ifGradientAvailable){
 
-//		EIValue = surrogateModel.calculateExpectedImprovement(x);
 		surrogateModel.calculateExpectedImprovement(designCalculated);
 
 	}else{
 
 		surrogateModelGradient.calculateExpectedImprovement(designCalculated);
 	}
-
-//	designCalculated.valueExpectedImprovement = EIValue;
 
 
 }
@@ -415,6 +414,7 @@ double ObjectiveFunction::interpolate(rowvec x, bool ifdebug) const{
 		result = surrogateModelGradient.interpolate(x, ifdebug);
 	}
 
+
 	return result;
 }
 
@@ -445,3 +445,6 @@ void ObjectiveFunction::print(void) const{
 	std::cout << "#####################################################\n";
 
 }
+
+
+

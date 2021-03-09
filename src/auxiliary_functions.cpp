@@ -688,6 +688,9 @@ std::string removeSpacesFromString(std::string inputString){
 
 void getValuesFromString(std::string str, std::vector<std::string> &values,char delimiter){
 
+
+	std::cout<<str<<"\n";
+
 	assert(values.size() == 0);
 
 	if(str[0] == '{' || str[0] == '['){

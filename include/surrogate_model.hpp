@@ -33,7 +33,7 @@
 #define SURROAGE_MODEL_HPP
 #include <armadillo>
 #include "Rodeo_macros.hpp"
-
+#include "design.hpp"
 
 
 using namespace arma;

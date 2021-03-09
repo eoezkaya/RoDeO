@@ -101,11 +101,13 @@ void COptimizer::setProblemType(std::string type){
 	if(type == "MAXIMIZATION" || type == "Maximize" || type == "maximization" || type == "maximize" ){
 
 		type = "maximize";
+
 	}
 
 	if(type == "MINIMIZATION" || type == "Minimize" || type == "minimization" || type == "minimization"){
 
 		type = "minimize";
+
 	}
 
 
@@ -114,6 +116,14 @@ void COptimizer::setProblemType(std::string type){
 
 
 }
+
+void COptimizer::setInitialObjectiveFunctionValue(double value){
+
+	initialobjectiveFunctionValue = value;
+	IfinitialValueForObjFunIsSet = true;
+
+}
+
 void COptimizer::setMaximumNumberOfIterations(unsigned int maxIterations){
 
 	maxNumberOfSamples = maxIterations;
@@ -400,7 +410,7 @@ void COptimizer::trainSurrogates(void){
 
 void COptimizer::updateOptimizationHistory(Design d) {
 
-	rowvec newSample(sampleDim);
+	rowvec newSample(sampleDim+1);
 
 	for(unsigned int i=0; i<dimension; i++) {
 
@@ -415,6 +425,7 @@ void COptimizer::updateOptimizationHistory(Design d) {
 
 		newSample(i+dimension+1) = 	d.constraintTrueValues(i);
 	}
+	newSample(sampleDim) = d.improvementValue;
 
 
 
@@ -472,10 +483,12 @@ void COptimizer::computeConstraintsandPenaltyTerm(Design &d) {
 			if(optimizationType == "minimize"){
 
 				penaltyTerm = LARGE;
+				d.isDesignFeasible = false;
 			}
 			else if(optimizationType == "maximize"){
 
 				penaltyTerm = -LARGE;
+				d.isDesignFeasible = false;
 			}
 			else{
 
@@ -527,13 +540,39 @@ void COptimizer::checkIfSettingsAreOK(void) const{
 }
 
 
-//rowvec COptimizer::generateRandomRowVectorAroundASample(void){
-//
-//	unsigned int randomIndx = generateRandomInt(0,maxNumberOfSamples-1);
-//
-//
-//
-//}
+Design COptimizer::findTheGlobalOptimalDesign(void){
+
+
+	uword indexMin = index_max(this->optimizationHistory.col(this->sampleDim));
+
+	rowvec bestSample = optimizationHistory.row(indexMin);
+
+	Design bestDesign(dimension);
+
+	rowvec dv(dimension);
+	for(unsigned int i=0; i<dimension; i++){
+
+		dv(i) = bestSample(i);
+	}
+
+	bestDesign.designParameters  = dv;
+	bestDesign.trueValue = bestSample(dimension);
+
+	rowvec constraintValues(numberOfConstraints);
+	for(unsigned int i=0; i<numberOfConstraints; i++){
+
+		constraintValues(i) = bestSample(i+dimension+1);
+	}
+
+	bestDesign.constraintTrueValues = constraintValues;
+
+
+	return bestDesign;
+
+
+}
+
+
 
 /* These designs (there can be more than one) are found by maximizing the expected
  *  Improvement function and taking the constraints into account
@@ -552,6 +591,7 @@ void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 
 
 		CDesignExpectedImprovement designToBeTried(dimension,numberOfConstraints);
+
 		designToBeTried.generateRandomDesignVector();
 
 		objFun.calculateExpectedImprovement(designToBeTried);
@@ -565,6 +605,32 @@ void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 			designWithMaxEI = designToBeTried;
 #if 0
 			printf("A design with a better EI value has been found\n");
+			designToBeTried.print();
+#endif
+		}
+
+	}
+
+
+#pragma omp parallel for
+	for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
+
+
+		CDesignExpectedImprovement designToBeTried(dimension,numberOfConstraints);
+
+		designToBeTried.generateRandomDesignVectorAroundASample(designWithMaxEI.dv);
+
+		objFun.calculateExpectedImprovement(designToBeTried);
+		addPenaltyToExpectedImprovementForConstraints(designToBeTried);
+
+#if 0
+		designToBeTried.print();
+#endif
+		if(designToBeTried.valueExpectedImprovement > designWithMaxEI.valueExpectedImprovement){
+
+			designWithMaxEI = designToBeTried;
+#if 0
+			printf("A design with a better EI value has been found (second loop) \n");
 			designToBeTried.print();
 #endif
 		}
@@ -741,27 +807,18 @@ void COptimizer::prepareOptimizationHistoryFile(void) const{
 
 	}
 
-	if(this->numberOfConstraints == 0){
-		header+="Objective Function";
-
-	}
-	else{
-		header+="Objective Function,";
-
-	}
-
+	header+="Objective Function,";
 
 
 	for(unsigned int i=0; i<this->numberOfConstraints; i++){
 		header+="Constraint";
 		header+=std::to_string(i+1);
 
-		if(i < this->numberOfConstraints -1){
-
-			header+=",";
-		}
+		header+=",";
 
 	}
+
+	header+="Improvement";
 	header+="\n";
 
 	std::ofstream optimizationHistoryFile;
@@ -785,16 +842,17 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 	checkIfSettingsAreOK();
 
-	clearOptimizationHistoryFile();
-	prepareOptimizationHistoryFile();
+	if(!isHistoryFileInitialized){
+
+		clearOptimizationHistoryFile();
+		prepareOptimizationHistoryFile();
+
+	}
 
 	/* main loop for optimization */
 	unsigned int simulationCount = 0;
 	unsigned int iterOpt=0;
 
-	double bestObjFunVal = LARGE;
-	rowvec best_dvGlobal(dimension);
-	unsigned int bestIndx = -1;
 
 	initializeSurrogates();
 
@@ -856,6 +914,8 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 
+		calculateImprovementValue(currentBestDesign);
+
 
 		if(currentBestDesign.checkIfHasNan()){
 
@@ -868,19 +928,12 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 		addConstraintValuesToData(currentBestDesign);
 		updateOptimizationHistory(currentBestDesign);
-		if(currentBestDesign.objectiveFunctionValue < bestObjFunVal){
 
-			bestIndx = iterOpt;
-			bestObjFunVal = currentBestDesign.objectiveFunctionValue;
-			best_dvGlobal = currentBestDesign.designParameters;
-#if 0
-			printf("\nBetter design has been found:\n");
-			printf("dv =");
-			best_dv.print();
-			printf("Objective function value = %15.10f\n",objFunVal);
-#endif
 
-		}
+		Design globalBestDesign = findTheGlobalOptimalDesign();
+		std::cout<<"######## Best Design ############\n\n";
+		globalBestDesign.print();
+		std::cout<<"\n\n";
 
 
 		simulationCount ++;
@@ -889,11 +942,7 @@ void COptimizer::EfficientGlobalOptimization(void){
 		if(simulationCount >= maxNumberOfSamples){
 
 			printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
-			printf("Global optimal solution:\n");
-			printf("design vector =");
-			best_dvGlobal.print();
-			printf("Objective function value = %15.10f\n",bestObjFunVal);
-			printf("Index = %d\n",bestIndx);
+
 
 			if(ifVisualize){
 
@@ -934,7 +983,42 @@ void COptimizer::cleanDoEFiles(void) const{
 
 }
 
+void COptimizer::calculateImprovementValue(Design &d){
 
+	if(d.isDesignFeasible){
+
+		if(!IfinitialValueForObjFunIsSet){
+
+			initialobjectiveFunctionValue  = d.objectiveFunctionValue;
+			IfinitialValueForObjFunIsSet = true;
+
+		}
+
+
+		if(optimizationType == "minimize"){
+
+			if(d.objectiveFunctionValue < initialobjectiveFunctionValue){
+
+				d.improvementValue = initialobjectiveFunctionValue - d.objectiveFunctionValue;
+
+			}
+
+		}
+		if(optimizationType == "maximize"){
+
+			if(d.objectiveFunctionValue > initialobjectiveFunctionValue){
+
+				d.improvementValue = d.objectiveFunctionValue - initialobjectiveFunctionValue;
+
+			}
+
+		}
+
+
+	}
+
+
+}
 
 
 
@@ -952,6 +1036,15 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		cleanDoEFiles();
 	}
 
+	if(!isHistoryFileInitialized){
+
+		clearOptimizationHistoryFile();
+		prepareOptimizationHistoryFile();
+		isHistoryFileInitialized = true;
+
+	}
+
+
 
 	mat sampleCoordinates;
 
@@ -960,8 +1053,6 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 		LHSSamples DoE(dimension, lowerBounds, upperBounds, howManySamples);
 
-
-		//		if(dimension == 2) DoE.visualize();
 		std::string filename= this->name + "_samples.csv";
 		DoE.saveSamplesToCSVFile(filename);
 		sampleCoordinates = DoE.getSamples();
@@ -1011,9 +1102,15 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 		}
 
-		evaluateConstraints(currentDesign);
+		computeConstraintsandPenaltyTerm(currentDesign);
+
+		calculateImprovementValue(currentDesign);
+
+		currentDesign.print();
 
 		addConstraintValuesToDoEData(currentDesign);
+
+		updateOptimizationHistory(currentDesign);
 
 
 
