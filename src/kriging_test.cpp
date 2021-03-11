@@ -51,7 +51,9 @@ TEST(testKriging, testKrigingConstructor){
 TEST(testKriging, testReadDataAndNormalize){
 
 	TestFunction testFunctionEggholder("Eggholder",2);
-	testFunctionEggholder.func_ptr = Eggholder;
+
+	testFunctionEggholder.setFunctionPointer(Eggholder);
+
 	testFunctionEggholder.setBoxConstraints(0,200.0);
 	mat samples = testFunctionEggholder.generateRandomSamples(10);
 	saveMatToCVSFile(samples,"Eggholder.csv");

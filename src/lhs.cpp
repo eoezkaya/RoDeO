@@ -160,8 +160,9 @@ uvec LHSSamples::returnAValidInterval(mat validIntervals){
 
 void LHSSamples::generateSamples(void){
 
+#if 0
 	cout<<"Generating "<<numberOfSamples<<" samples using LHS...\n";
-
+#endif
 	vec dx(numberOfDesignVariables);
 	mat validIntervals(numberOfDesignVariables,numberOfSamples, fill::zeros);
 
@@ -240,7 +241,7 @@ void LHSSamples::generateSamples(void){
 bool LHSSamples::testIfSamplesAreTooClose(void){
 
 	bool ifTooClose = false;
-#if 1
+#if 0
 	std::cout<<"Testing Latin Hypercube samples...\n";
 #endif
 
@@ -340,16 +341,6 @@ mat LHSSamples::getSamples(void){
 
 }
 
-//void testLHS2D(void){
-//
-//
-//	LHSSamples myDoE(2,0.0,1.0, 50);
-//	myDoE.printSamples();
-//	myDoE.saveSamplesToFile("myDoE.csv");
-//	myDoE.visualize();
-//
-//
-//}
 
 
 RandomSamples::RandomSamples(unsigned int d, double lb, double ub, unsigned int N){

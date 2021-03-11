@@ -34,6 +34,8 @@
 
 #include<armadillo>
 #include<vector>
+#include "objective_function.hpp"
+#include "constraint_functions.hpp"
 using namespace arma;
 
 
@@ -90,6 +92,7 @@ private:
 	bool checkifProblemTypeIsValid(std::string) const;
 	void setObjectiveFunction(ObjectiveFunction & );
 	void setConstraint(ConstraintFunction & constraintFunc, unsigned int indx);
+
 
 
 public:

@@ -32,9 +32,9 @@
 #define TEST_FUNCTIONS_HPP
 #include "Rodeo_macros.hpp"
 #include "surrogate_model.hpp"
+#include "design.hpp"
 
 #include <string>
-
 #include <armadillo>
 
 
@@ -46,43 +46,88 @@ class TestFunction {
 
 private:
 
-	unsigned int numberOfInputParams;
+	unsigned int dimension;
 	std::string function_name;
 
 	vec lb; /*lower bounds */
 	vec ub; /*upper bounds */
 
+	mat trainingSamples;
+	mat testSamples;
+
+	mat trainingSamplesInput;
+	mat testSamplesInput;
+
+
+	unsigned int numberOfTrainingSamples = 0;
+	unsigned int numberOfTestSamples = 0;
+
 	SurrogateModel *surrogateModel;
 
-	bool ifFunctionIsNoisy;
-	bool ifBoxConstraintsSet;
+	bool ifFunctionIsNoisy = false;
+	bool ifBoxConstraintsSet = false;
+	bool ifGradientsAvailable = false;
 
-	bool ifVisualize;
-	double noiseLevel;
+	bool ifExecutableNameIsSet = false;
+	bool ifExecutablePathIsSet = false;
+	bool ifExecutableInputFileIsSet = false;
+	bool ifExecutableInputOutputIsSet = false;
+
+	bool ifFunctionPointerIsSet = false;
+
+	bool ifVisualize = false;
+	double noiseLevel = 0.0;
+
+	std::string nameOfExecutable;
+	std::string executablePath;
+	std::string nameInputFileExecutable;
+	std::string nameOutputFileExecutable;
+
+	double (*func_ptr)(double *);
+	double (*adj_ptr)(double *, double *);
+
+	std::string getExecutionCommand(void) const;
+
+
 
 public:
 
-	short int numberOfSamplesUsedForVisualization;
+	void evaluate(Design &d) const;
+	void evaluateAdjoint(Design &d) const;
 
-    double (*func_ptr)(double *);
-    double (*adj_ptr)(double *, double *);
+	short int numberOfSamplesUsedForVisualization = 100;
+
+
 
     TestFunction(std::string name,int dimension);
+
     void plot(int resolution = 100) const;
+
+    void generateSamplesInput(void);
+    void generateSamples(void);
+    mat getTrainingSamplesInput(void) const;
+    mat getTestSamplesInput(void) const;
+
+
 
     void validateAdjoints(void);
 
 
-    void addNoise(double);
+    void setNoiseLevel(double);
     void setVisualizationOn(void);
     void setVisualizationOff(void);
+    void setGradientsOn(void);
+    void setGradientsOff(void);
+    void setNumberOfTrainingSamples(unsigned int);
+    void setNumberOfTestSamples(unsigned int);
+
 
     void visualizeSurrogate1D(SurrogateModel *TestFunSurrogate, unsigned int resolution=1000) const;
     void visualizeSurrogate2D(SurrogateModel *TestFunSurrogate, unsigned int resolution=100) const;
 
     void print(void);
-    mat  generateRandomSamples(unsigned int howManySamples);
-    mat  generateRandomSamplesWithGradients(unsigned int nsamples);
+    mat  generateRandomSamples(unsigned int);
+    mat  generateRandomSamplesWithGradients(unsigned int);
 
     mat  generateUniformSamples(unsigned int howManySamples) const;
     double testSurrogateModel(SURROGATE_MODEL modelId, unsigned int nsamples, bool warmStart = false);
@@ -92,6 +137,17 @@ public:
     void setBoxConstraints(double lowerBound, double upperBound);
     void setBoxConstraints(vec lowerBound, vec upperBound);
 
+    void setNameOfExecutable(std::string);
+    void setPathOfExecutable(std::string);
+    void setNameOfInputForExecutable(std::string);
+    void setNameOfOutputForExecutable(std::string);
+
+    void readEvaluateOutput(Design &d) const;
+
+    void setFunctionPointer(double (*testFunction)(double *));
+    void setFunctionPointer(double (*testFunctionAdjoint)(double *, double *));
+
+    bool checkIfExecutableIsReadyToRun(void) const;
 
 } ;
 
@@ -167,10 +223,6 @@ double WingweightAdj(double *xin, double *xb);
 double empty(double *x);
 double emptyAdj(double *x, double *xb);
 
-
-/* test functions for the efficient global optimization */
-
-void testEGOWithHimmelblau(void);
 
 
 

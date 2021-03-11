@@ -34,6 +34,7 @@
 #include <string>
 #include <stdlib.h>
 #include <stack>
+#include <cassert>
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
 #include "auxiliary_functions.hpp"
@@ -44,6 +45,7 @@
 #include "optimization.hpp"
 #include "random_functions.hpp"
 #include "gek.hpp"
+#include "lhs.hpp"
 
 
 
@@ -54,23 +56,15 @@ using namespace arma;
 
 
 
-TestFunction::TestFunction(std::string name,int dimension){
+TestFunction::TestFunction(std::string name,int dim){
 
-	if(dimension <= 0){
+	assert(dim > 0);
+	assert(!name.empty());
 
-		fprintf(stderr, "Error: dimension must be at least 1! at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
-
-	}
-
-	numberOfSamplesUsedForVisualization = 100;
-	numberOfInputParams = dimension;
+	dimension = dim;
 	function_name = name;
 	func_ptr = empty;
 	adj_ptr  = emptyAdj;
-	noiseLevel = 0.0;
-	ifFunctionIsNoisy = false;
-	ifBoxConstraintsSet = false;
 
 	lb.zeros(dimension);
 	ub.zeros(dimension);
@@ -79,12 +73,13 @@ TestFunction::TestFunction(std::string name,int dimension){
 }
 
 
-void TestFunction::addNoise(double noise){
+void TestFunction::setNoiseLevel(double noise){
 
 	noiseLevel = noise;
 	ifFunctionIsNoisy = true;
 
 }
+
 void TestFunction::setVisualizationOn(void){
 
 	ifVisualize = true;
@@ -95,16 +90,21 @@ void TestFunction::setVisualizationOff(void){
 
 }
 
+void TestFunction::setGradientsOn(void){
+
+	ifGradientsAvailable = true;
+
+}
+void TestFunction::setGradientsOff(void){
+
+	ifGradientsAvailable = false;
+
+}
 
 
 void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
 
-	if(lowerBound >= upperBound){
-
-		fprintf(stderr, "Error: lowerBound cannot be equal or greater than the upperBound! at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
-
-	}
+	assert(lowerBound < upperBound);
 	lb.fill(lowerBound);
 	ub.fill(upperBound);
 	ifBoxConstraintsSet = true;
@@ -116,20 +116,13 @@ void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
 void TestFunction::setBoxConstraints(vec lowerBound, vec upperBound){
 
 
-	for(unsigned int i=0; i<numberOfInputParams; i++){
+	for(unsigned int i=0; i<dimension; i++){
 
-		if(lowerBound(i) >= upperBound(i)){
 
-			fprintf(stderr, "Error: lowerBound cannot be equal or greater than the upperBound! at %s, line %d.\n",__FILE__, __LINE__);
-			exit(-1);
+		lb(i) = lowerBound(i);
+		ub(i) = upperBound(i);
+		assert(lb(i) < ub(i));
 
-		}
-		else{
-
-			lb(i) = lowerBound(i);
-			ub(i) = upperBound(i);
-
-		}
 
 	}
 
@@ -137,17 +130,71 @@ void TestFunction::setBoxConstraints(vec lowerBound, vec upperBound){
 
 }
 
+
+void TestFunction::setNameOfExecutable(std::string exeName){
+
+	assert(!ifFunctionPointerIsSet);
+	nameOfExecutable = exeName;
+
+	ifExecutableNameIsSet = true;
+
+
+}
+
+void TestFunction::setPathOfExecutable(std::string exePath){
+
+	assert(!ifFunctionPointerIsSet);
+	executablePath=  exePath;
+	ifExecutablePathIsSet = true;
+
+}
+
+void TestFunction::setNameOfInputForExecutable(std::string filename){
+
+	nameInputFileExecutable = filename;
+	ifExecutableInputFileIsSet = true;
+
+}
+
+void TestFunction::setNameOfOutputForExecutable(std::string filename){
+
+	nameOutputFileExecutable = filename;
+	ifExecutableInputOutputIsSet = true;
+
+
+}
+
+
+bool TestFunction::checkIfExecutableIsReadyToRun(void) const{
+
+	if(this->ifExecutableInputFileIsSet == false) return false;
+	if(this->ifExecutableInputOutputIsSet == false) return false;
+	if(this->ifExecutableNameIsSet == false) return false;
+
+	return true;
+
+}
+
+
+void TestFunction::setNumberOfTrainingSamples(unsigned int nSamples){
+
+	numberOfTrainingSamples = nSamples;
+
+}
+
+void TestFunction::setNumberOfTestSamples(unsigned int nSamples){
+
+	numberOfTestSamples = nSamples;
+
+}
+
+
 void TestFunction::evaluateGlobalExtrema(void) const{
 
-	if(!ifBoxConstraintsSet){
+	assert(ifBoxConstraintsSet);
 
-		cout<<"\nERROR: Box constraints are not set!\n";
-		abort();
-
-	}
-
-	rowvec maxx(numberOfInputParams);
-	rowvec minx(numberOfInputParams);
+	rowvec maxx(dimension);
+	rowvec minx(dimension);
 
 	double globalMin = LARGE;
 	double globalMax = -LARGE;
@@ -188,10 +235,10 @@ void TestFunction::print(void){
 
 	printf("printing function information...\n");
 	printf("function name = %s\n",function_name.c_str());
-	printf("Number of independent variables = %d\n",numberOfInputParams);
+	printf("Number of independent variables = %d\n",dimension);
 	printf("Parameter bounds:\n");
 
-	for(unsigned int i=0; i<numberOfInputParams; i++){
+	for(unsigned int i=0; i<dimension; i++){
 
 		printf("x[%d]: %15.10f , %15.10f\n",i,lb(i),ub(i));
 
@@ -204,33 +251,12 @@ void TestFunction::print(void){
 
 void TestFunction::plot(int resolution) const{
 
-	if(!ifBoxConstraintsSet){
-
-		cout<<"\nERROR: Box constraints are not set!\n";
-		abort();
-
-	}
-
-	if(numberOfInputParams !=2 && numberOfInputParams !=1){
-
-		fprintf(stderr, "Error: only 1D or 2D functions can be visualized! at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
-
-	}
-
-	for(unsigned int j=0; j<numberOfInputParams;j++) {
-
-		if(lb(j) >= ub(j)){
-
-			fprintf(stderr, "Error: Parameter bounds are not set correctly! at %s, line %d.\n",__FILE__, __LINE__);
-			exit(-1);
-
-		}
-	}
+	assert(ifBoxConstraintsSet);
+	assert(dimension ==2 || dimension == 1);
 
 	std::string filename= function_name +"_FunctionPlot.csv";
 
-	if(numberOfInputParams == 1){
+	if(dimension == 1){
 
 
 		const int resolution = 1000;
@@ -270,7 +296,7 @@ void TestFunction::plot(int resolution) const{
 
 	}
 
-	if(numberOfInputParams == 2){
+	if(dimension == 2){
 
 
 		const int resolution = 100;
@@ -442,6 +468,224 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 	return testError;
 }
 
+std::string TestFunction::getExecutionCommand(void) const{
+
+	std::string runCommand;
+
+	if(!executablePath.empty()) {
+
+		runCommand = executablePath +"/" + nameOfExecutable;
+	}
+	else{
+		runCommand = "./" + nameOfExecutable;
+	}
+
+	return runCommand;
+
+
+}
+
+void TestFunction::setFunctionPointer(double (*testFunction)(double *)){
+
+	assert(!ifExecutableNameIsSet);
+	func_ptr = testFunction;
+	ifFunctionPointerIsSet = true;
+
+}
+
+void TestFunction::setFunctionPointer(double (*testFunctionAdjoint)(double *, double *)){
+
+	assert(!ifExecutableNameIsSet);
+	adj_ptr = testFunctionAdjoint;
+	ifFunctionPointerIsSet = true;
+	ifGradientsAvailable = true;
+
+}
+
+
+
+
+
+void TestFunction::evaluate(Design &d) const{
+
+	assert(ifFunctionPointerIsSet || ifExecutableNameIsSet);
+
+	if(ifFunctionPointerIsSet){
+
+		rowvec x= d.designParameters;
+		double functionValue =  func_ptr(x.memptr());
+		d.trueValue = functionValue;
+
+	}
+
+	else{
+
+		assert(checkIfExecutableIsReadyToRun());
+
+		d.saveDesignVector(nameInputFileExecutable);
+
+		std::string runCommand = getExecutionCommand();
+
+		system(runCommand.c_str());
+
+	}
+
+}
+
+void TestFunction::evaluateAdjoint(Design &d) const{
+
+	assert(ifFunctionPointerIsSet || ifExecutableNameIsSet);
+	assert(ifGradientsAvailable);
+
+	if(ifFunctionPointerIsSet){
+
+		rowvec x= d.designParameters;
+		rowvec xb(dimension);
+		double functionValue =  adj_ptr(x.memptr(), xb.memptr());
+		d.trueValue = functionValue;
+		d.gradient = xb;
+
+	}
+
+	else{
+
+		assert(checkIfExecutableIsReadyToRun());
+		d.saveDesignVector(nameInputFileExecutable);
+		std::string runCommand = getExecutionCommand();
+
+		system(runCommand.c_str());
+
+	}
+
+}
+
+
+
+void TestFunction::generateSamplesInput(void){
+
+	assert(numberOfTrainingSamples> 0);
+	assert(numberOfTestSamples> 0);
+	assert(ifBoxConstraintsSet);
+
+
+	LHSSamples samplesTraining(dimension, lb, ub, numberOfTrainingSamples);
+
+	trainingSamplesInput = samplesTraining.getSamples();
+
+
+	LHSSamples samplesTest(dimension, lb, ub, numberOfTestSamples);
+
+	testSamplesInput = samplesTest.getSamples();
+
+
+}
+
+
+void TestFunction::readEvaluateOutput(Design &d) const{
+
+	assert(!this->nameOutputFileExecutable.empty());
+	assert(d.dimension == dimension);
+
+	std::ifstream ifile(nameOutputFileExecutable, std::ios::in);
+
+	if (!ifile.is_open()) {
+
+		std::cout << "ERROR: There was a problem opening the input file!\n";
+		abort();
+	}
+
+	double functionValue;
+	ifile >> functionValue;
+
+
+	d.trueValue = functionValue;
+	d.objectiveFunctionValue = functionValue;
+
+	if(ifGradientsAvailable){
+
+		for(unsigned int i=0; i<dimension;i++){
+			ifile >> d.gradient(i);
+
+		}
+
+	}
+	ifile.close();
+
+
+}
+
+void TestFunction::generateSamples(void){
+
+	assert(trainingSamplesInput.n_rows>0);
+	assert(testSamplesInput.n_rows>0);
+
+	unsigned int nColsSampleMatrix;
+
+	if(this->ifGradientsAvailable){
+
+		nColsSampleMatrix = 2*dimension +1;
+
+	}
+	else{
+
+		nColsSampleMatrix = dimension +1;
+	}
+
+
+	trainingSamples.set_size(numberOfTrainingSamples,nColsSampleMatrix);
+	testSamples.set_size(numberOfTestSamples,nColsSampleMatrix);
+
+
+	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
+
+		rowvec dv = this->trainingSamplesInput.row(i);
+		Design d(dv);
+
+		if(this->ifGradientsAvailable){
+
+			this->evaluateAdjoint(d);
+			rowvec sample(2*dimension +1);
+			copyRowVector(sample,dv);
+			sample(dimension) = d.trueValue;
+			copyRowVector(sample,d.gradient,dimension+1);
+			trainingSamples.row(i) = sample;
+
+		}
+		else{
+
+			this->evaluate(d);
+			rowvec sample(2*dimension +1);
+			copyRowVector(sample,dv);
+			sample(dimension) = d.trueValue;
+			trainingSamples.row(i) = sample;
+		}
+
+
+
+
+
+	}
+
+
+
+
+
+
+
+}
+
+
+mat TestFunction::getTrainingSamplesInput(void) const{
+
+	return this->trainingSamplesInput;
+
+}
+
+mat TestFunction::getTestSamplesInput(void) const{
+
+	return this->testSamplesInput;
+
+}
 
 
 
@@ -456,7 +700,7 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 
 	}
 
-	for(unsigned int j=0; j<numberOfInputParams;j++) {
+	for(unsigned int j=0; j<dimension;j++) {
 
 		if (lb(j) >= ub(j)){
 
@@ -468,13 +712,13 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 	}
 
 
-	mat sampleMatrix = zeros(howManySamples,numberOfInputParams+1 );
+	mat sampleMatrix = zeros(howManySamples,dimension+1 );
 
-	double *x  = new double[numberOfInputParams];
+	double *x  = new double[dimension];
 
 	for(unsigned int i=0; i<howManySamples; i++ ){
 
-		for(unsigned int j=0; j<numberOfInputParams;j++) {
+		for(unsigned int j=0; j<dimension;j++) {
 
 			x[j] = generateRandomDouble(lb(j), ub(j));
 
@@ -493,7 +737,7 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 		}
 		else if(adj_ptr != emptyAdj){
 
-			double *xb  = new double[numberOfInputParams];
+			double *xb  = new double[dimension];
 
 			functionValue = adj_ptr(x,xb);
 
@@ -505,20 +749,20 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 			abort();
 		}
 
-		for(unsigned int j=0;j<numberOfInputParams;j++){
+		for(unsigned int j=0;j<dimension;j++){
 
 			sampleMatrix(i,j) = x[j];
 
 		}
 
-		sampleMatrix(i,numberOfInputParams) = functionValue;
+		sampleMatrix(i,dimension) = functionValue;
 
 
 	}
 
 	delete[] x;
 
-	if(numberOfInputParams == 1){
+	if(dimension == 1){
 
 		sampleMatrix = sort(sampleMatrix);
 	}
@@ -541,7 +785,7 @@ mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples
 
 	}
 
-	for(unsigned int j=0; j<numberOfInputParams;j++) {
+	for(unsigned int j=0; j<dimension;j++) {
 
 		if (lb(j) >= ub(j)){
 
@@ -552,36 +796,36 @@ mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples
 		}
 	}
 
-	mat sampleMatrix = zeros(howManySamples,2*numberOfInputParams+1 );
+	mat sampleMatrix = zeros(howManySamples,2*dimension+1 );
 
-	double *x   = new double[numberOfInputParams];
-	double *xb  = new double[numberOfInputParams];
+	double *x   = new double[dimension];
+	double *xb  = new double[dimension];
 
 
 	for(unsigned int i=0; i<howManySamples; i++ ){
 
 
-		for(unsigned int j=0; j<numberOfInputParams;j++) {
+		for(unsigned int j=0; j<dimension;j++) {
 
 			x[j] = generateRandomDouble(lb(j), ub(j));
 		}
 
-		for(unsigned int k=0; k<numberOfInputParams;k++) xb[k] = 0.0;
+		for(unsigned int k=0; k<dimension;k++) xb[k] = 0.0;
 
 		double fVal = adj_ptr(x,xb);
 
-		for(unsigned int j=0;j<numberOfInputParams;j++){
+		for(unsigned int j=0;j<dimension;j++){
 
 			sampleMatrix(i,j) = x[j];
 
 		}
 
-		sampleMatrix(i,numberOfInputParams) = fVal;
+		sampleMatrix(i,dimension) = fVal;
 
 
-		for(unsigned int j=numberOfInputParams+1;j<2*numberOfInputParams+1;j++){
+		for(unsigned int j=dimension+1;j<2*dimension+1;j++){
 
-			sampleMatrix(i,j) = xb[j-numberOfInputParams-1];
+			sampleMatrix(i,j) = xb[j-dimension-1];
 
 		}
 
@@ -613,14 +857,14 @@ void TestFunction::validateAdjoints(void){
 	}
 
 	unsigned int NValidationPoints = 100;
-	double *x  = new double[numberOfInputParams];
-	double *xb  = new double[numberOfInputParams];
+	double *x  = new double[dimension];
+	double *xb  = new double[dimension];
 
 	bool passTest = false;
 
 	for(unsigned int i=0; i<NValidationPoints; i++ ){
 
-		generateRandomVector(lb, ub, numberOfInputParams, x);
+		generateRandomVector(lb, ub, dimension, x);
 
 
 		double functionValueFromAdjoint = adj_ptr(x,xb);
@@ -633,7 +877,7 @@ void TestFunction::validateAdjoints(void){
 			abort();
 		}
 
-		for(unsigned int j=0; j<numberOfInputParams; j++ ){
+		for(unsigned int j=0; j<dimension; j++ ){
 
 			double xsave = x[j];
 
@@ -664,73 +908,6 @@ void TestFunction::validateAdjoints(void){
 
 	delete[] x;
 	delete[] xb;
-
-
-
-}
-
-
-void TestFunction::testEfficientGlobalOptimization(int nsamplesTrainingData, int maxnsamples, bool ifVisualize, bool ifWarmStart, bool ifMinimize){
-
-	printf("Testing Efficient Global Optimization with the function: %s ...\n", function_name.c_str());
-	std::cout<<"Number of samples used for DoE = "<<nsamplesTrainingData<<"\n";
-	std::cout<<"Maximum number of samples used for the optimization = "<<maxnsamples<<"\n";
-
-	std::string filenameEGOTest = function_name+".csv";
-
-	mat samplesMatrix;
-
-	if(!ifWarmStart) { /*the default value of ifWarmStart is false */
-
-		samplesMatrix = generateRandomSamples(nsamplesTrainingData);
-
-	}
-
-	samplesMatrix.save(filenameEGOTest, csv_ascii);
-
-
-
-	std::string problemType;
-
-	if(ifMinimize){ /*the default value of ifMinimize is true */
-
-		problemType = "minimize";
-
-	}
-	else{
-
-		problemType = "maximize";
-
-	}
-
-	COptimizer OptimizationStudy(function_name,numberOfInputParams,problemType);
-
-	if(ifVisualize) {
-
-		OptimizationStudy.ifVisualize = true;
-	}
-
-	OptimizationStudy.howOftenTrainModels = 1000000;
-
-
-	std::cout<<"Initializing the objective function..."<<std::endl;
-
-	ObjectiveFunction objFunc(function_name, numberOfInputParams);
-	objFunc.setFunctionPointer(func_ptr);
-
-	OptimizationStudy.addObjectFunction(objFunc);
-
-	OptimizationStudy.maxNumberOfSamples = maxnsamples;
-
-	OptimizationStudy.setBoxConstraints(lb,ub);
-
-	std::cout<<"Initialization done ..."<<std::endl;
-
-
-
-	OptimizationStudy.EfficientGlobalOptimization();
-
-	evaluateGlobalExtrema();
 
 
 
