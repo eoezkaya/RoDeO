@@ -69,6 +69,8 @@ TestFunction::TestFunction(std::string name,int dim){
 	lb.zeros(dimension);
 	ub.zeros(dimension);
 
+	fileNameSurrogateModelData = function_name + ".csv";
+
 
 }
 
@@ -101,6 +103,16 @@ void TestFunction::setGradientsOff(void){
 
 }
 
+void TestFunction::setWarmStartOn(void){
+
+	warmStart = true;
+
+}
+void TestFunction::setWarmStartOff(void){
+
+	warmStart = false;
+
+}
 
 void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
 
@@ -343,45 +355,18 @@ void TestFunction::plot(int resolution) const{
 }
 
 
-double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int howManySamples, bool warmStart){
+void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID){
 
 
 	printf("\nTesting surrogate model with the %s function...\n",function_name.c_str());
 
-	if(!ifBoxConstraintsSet){
-
-		cout<<"\nERROR: Box constraints are not set!\n";
-		abort();
-
-	}
+	assert(ifBoxConstraintsSet);
 
 
-	std::string label = function_name;
-
-	std::string filenameSurrogateTest = label+".csv";
-
-	mat sampleMatrix;
-
-	if(modelID == GRADIENT_ENHANCED_KERNEL_REGRESSION || modelID == AGGREGATION || modelID == GRADIENT_ENHANCED_KRIGING) {
-
-		sampleMatrix = generateRandomSamplesWithGradients(howManySamples);
-	}
-	else{
-
-		sampleMatrix = generateRandomSamples(howManySamples);
-	}
-
-#if 1
-	printMatrix(sampleMatrix,"sampleMatrix");
-#endif
-
-	cout << "\nSaving data file: " <<filenameSurrogateTest<<"\n";
-	sampleMatrix.save(filenameSurrogateTest.c_str(), csv_ascii);
-
-	KrigingModel TestFunModelKriging(label);
-	LinearModel TestFunModelLinearRegression(label);
-	AggregationModel TestFunModelAggregation(label);
-	GEKModel TestFunModelGEK(label);
+	KrigingModel TestFunModelKriging(function_name);
+	LinearModel TestFunModelLinearRegression(function_name);
+	AggregationModel TestFunModelAggregation(function_name);
+	GEKModel TestFunModelGEK(function_name);
 
 
 	switch (modelID) {
@@ -413,13 +398,17 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 	}
 	}
 
+
+	surrogateModel->readData();
+	surrogateModel->setParameterBounds(lb,ub);
+	surrogateModel->normalizeData();
 	surrogateModel->initializeSurrogateModel();
+	surrogateModel->ifprintToScreen = true;
 
 	if(warmStart == true){
 
 		surrogateModel->loadHyperParameters();
 		surrogateModel->updateAuxilliaryFields();
-
 	}
 	else{
 
@@ -428,44 +417,45 @@ double TestFunction::testSurrogateModel(SURROGATE_MODEL modelID, unsigned int ho
 
 	surrogateModel->printSurrogateModel();
 
-
-	double inSampleError = surrogateModel->calculateInSampleError();
+	inSampleError = surrogateModel->calculateInSampleError();
 #if 1
 	printf("inSampleError = %15.10f\n",inSampleError);
 #endif
 
 
-
-	mat testSetMatrix = generateRandomSamples(numberOfSamplesUsedForVisualization);
-
-	PartitionData testSet;
-	testSet.fillWithData(testSetMatrix);
-
-
-
-	surrogateModel->tryModelOnTestSet(testSet);
-
-
-	label = function_name + "_SurrogateTestResults";
-
-	std::string filenameSurrogateTestResults = label+".csv";
-
-	testSet.saveAsCSVFile(filenameSurrogateTestResults);
-
-	double testError = testSet.calculateMeanSquaredError();
-#if 1
-	printf("Test Error (MSE)= %15.10f\n",testError);
-#endif
-
-
-	if(ifVisualize){
-
-		surrogateModel->visualizeTestResults();
-
-	}
-
-
-	return testError;
+	abort();
+	//
+	//
+	//	mat testSetMatrix = generateRandomSamples(numberOfSamplesUsedForVisualization);
+	//
+	//	PartitionData testSet;
+	//	testSet.fillWithData(testSetMatrix);
+	//
+	//
+	//
+	//	surrogateModel->tryModelOnTestSet(testSet);
+	//
+	//
+	//	label = function_name + "_SurrogateTestResults";
+	//
+	//	std::string filenameSurrogateTestResults = label+".csv";
+	//
+	//	testSet.saveAsCSVFile(filenameSurrogateTestResults);
+	//
+	//	double testError = testSet.calculateMeanSquaredError();
+	//#if 1
+	//	printf("Test Error (MSE)= %15.10f\n",testError);
+	//#endif
+	//
+	//
+	//	if(ifVisualize){
+	//
+	//		surrogateModel->visualizeTestResults();
+	//
+	//	}
+	//
+	//
+	//	return testError;
 }
 
 std::string TestFunction::getExecutionCommand(void) const{
@@ -528,6 +518,8 @@ void TestFunction::evaluate(Design &d) const{
 
 		system(runCommand.c_str());
 
+		readEvaluateOutput(d);
+
 	}
 
 }
@@ -554,7 +546,7 @@ void TestFunction::evaluateAdjoint(Design &d) const{
 		std::string runCommand = getExecutionCommand();
 
 		system(runCommand.c_str());
-
+		readEvaluateOutput(d);
 	}
 
 }
@@ -633,17 +625,17 @@ void TestFunction::generateSamples(void){
 
 
 	trainingSamples.set_size(numberOfTrainingSamples,nColsSampleMatrix);
-	testSamples.set_size(numberOfTestSamples,nColsSampleMatrix);
+	testSamples.set_size(numberOfTestSamples,dimension+1);
 
 
 	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
 
-		rowvec dv = this->trainingSamplesInput.row(i);
+		rowvec dv = trainingSamplesInput.row(i);
 		Design d(dv);
 
-		if(this->ifGradientsAvailable){
+		if(ifGradientsAvailable){
 
-			this->evaluateAdjoint(d);
+			evaluateAdjoint(d);
 			rowvec sample(2*dimension +1);
 			copyRowVector(sample,dv);
 			sample(dimension) = d.trueValue;
@@ -653,37 +645,60 @@ void TestFunction::generateSamples(void){
 		}
 		else{
 
-			this->evaluate(d);
-			rowvec sample(2*dimension +1);
+			evaluate(d);
+			rowvec sample(dimension +1);
 			copyRowVector(sample,dv);
 			sample(dimension) = d.trueValue;
 			trainingSamples.row(i) = sample;
 		}
 
+	}
 
+	/* test samples are evaluated without gradients in any case */
+	for(unsigned int i=0; i<numberOfTestSamples; i++){
 
+		rowvec dv = testSamplesInput.row(i);
+		Design d(dv);
+
+		evaluate(d);
+		rowvec sample(dimension +1);
+		copyRowVector(sample,dv);
+		sample(dimension) = d.trueValue;
+		testSamples.row(i) = sample;
 
 
 	}
 
+#if 1
+	printMatrix(this->trainingSamples);
+	printMatrix(this->testSamples);
+#endif
 
 
-
-
-
-
+	saveMatToCVSFile(trainingSamples, fileNameSurrogateModelData);
 }
 
 
 mat TestFunction::getTrainingSamplesInput(void) const{
 
-	return this->trainingSamplesInput;
+	return trainingSamplesInput;
 
 }
 
 mat TestFunction::getTestSamplesInput(void) const{
 
-	return this->testSamplesInput;
+	return testSamplesInput;
+
+}
+mat TestFunction::getTrainingSamples(void) const{
+
+	return trainingSamples;
+
+}
+
+mat TestFunction::getTestSamples(void) const{
+
+	return testSamples;
 
 }
 

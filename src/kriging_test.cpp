@@ -43,7 +43,7 @@ TEST(testKriging, testKrigingConstructor){
 	std::string filenameDataInput = testModel.getNameOfInputFile();
 	ASSERT_TRUE(filenameHyperParams == "testKrigingModel_kriging_hyperparameters.csv");
 	ASSERT_TRUE(filenameDataInput == "testKrigingModel.csv");
-	ASSERT_TRUE(testModel.ifUsesGradientData == false);
+	ASSERT_FALSE(testModel.ifUsesGradients());
 
 
 }
@@ -77,6 +77,89 @@ TEST(testKriging, testReadDataAndNormalize){
 	remove("Eggholder.csv");
 }
 
+
+TEST(testKriging, testInSampleErrorCloseToZeroWithoutTraining){
+
+
+	mat samples(10,3);
+
+	/* we construct first test data using the function x1*x1 + x2 * x2 */
+	for (unsigned int i=0; i<samples.n_rows; i++){
+		rowvec x(3);
+		x(0) = generateRandomDouble(-1.0,2.0);
+		x(1) = generateRandomDouble(-1.0,2.0);
+
+		x(2) = x(0)*x(0) + x(1)*x(1);
+		samples.row(i) = x;
+
+	}
+
+
+	vec lb(2); lb.fill(-1.0);
+	vec ub(2); ub.fill(2.0);
+	saveMatToCVSFile(samples,"KrigingTest.csv");
+
+	KrigingModel testModel("KrigingTest");
+	testModel.readData();
+	testModel.setParameterBounds(lb, ub);
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+
+
+
+	rowvec xp(2); xp(0) = samples(0,0); xp(1) = samples(0,1);
+
+	rowvec xpnorm = normalizeRowVector(xp,lb,ub);
+
+	double ftilde = testModel.interpolate(xpnorm);
+
+	double error = fabs(ftilde - samples(0,2));
+	EXPECT_LT(error, 10E-6);
+
+
+}
+
+TEST(testKriging, testInSampleErrorCloseToZeroAfterTraining){
+
+
+	mat samples(10,3);
+
+	/* we construct first test data using the function x1*x1 + x2 * x2 */
+	for (unsigned int i=0; i<samples.n_rows; i++){
+		rowvec x(3);
+		x(0) = generateRandomDouble(-1.0,2.0);
+		x(1) = generateRandomDouble(-1.0,2.0);
+
+		x(2) = x(0)*x(0) + x(1)*x(1);
+		samples.row(i) = x;
+
+	}
+
+
+	vec lb(2); lb.fill(-1.0);
+	vec ub(2); ub.fill(2.0);
+	saveMatToCVSFile(samples,"KrigingTest.csv");
+
+	KrigingModel testModel("KrigingTest");
+	testModel.readData();
+	testModel.setParameterBounds(lb, ub);
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+
+	testModel.setNumberOfTrainingIterations(100);
+
+
+	rowvec xp(2); xp(0) = samples(0,0); xp(1) = samples(0,1);
+
+	rowvec xpnorm = normalizeRowVector(xp,lb,ub);
+
+	double ftilde = testModel.interpolate(xpnorm);
+
+	double error = fabs(ftilde - samples(0,2));
+	EXPECT_LT(error, 10E-6);
+
+
+}
 
 
 

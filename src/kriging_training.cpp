@@ -63,7 +63,7 @@ KrigingModel::KrigingModel():SurrogateModel(){}
 
 KrigingModel::KrigingModel(std::string name):SurrogateModel(name),linearModel(name){
 
-	linear_regression = false;
+
 	modelID = KRIGING;
 	hyperparameters_filename = label + "_kriging_hyperparameters.csv";
 
@@ -74,6 +74,7 @@ void KrigingModel::initializeSurrogateModel(void){
 
 	assert(ifDataIsRead);
 	assert(ifBoundsAreSet);
+	assert(ifNormalized);
 
 
 #if 0
@@ -101,15 +102,21 @@ void KrigingModel::initializeSurrogateModel(void){
 	R_inv_I= zeros<vec>(N);
 	vectorOfOnes= ones<vec>(N);
 
-	if(this->ifUsesGradientData) {
 
-		linearModel.ifUsesGradientData = true;
+	if(ifUsesLinearRegression){
+
+		if(ifHasGradientData) {
+
+			linearModel.setGradientsOn();
+
+		}
+		linearModel.readData();
+		linearModel.setParameterBounds(xmin,xmax);
+		linearModel.normalizeData();
+		linearModel.initializeSurrogateModel();
+
 
 	}
-	linearModel.readData();
-	linearModel.setParameterBounds(xmin,xmax);
-	linearModel.normalizeData();
-	linearModel.initializeSurrogateModel();
 
 
 	updateAuxilliaryFields();
@@ -223,11 +230,13 @@ void KrigingModel::setEpsilon(double inp){
 }
 
 void KrigingModel::setLinearRegressionOn(void){
-	linear_regression = true;
+
+	ifUsesLinearRegression  = true;
 
 }
 void KrigingModel::setLinearRegressionOff(void){
-	linear_regression = false;
+
+	ifUsesLinearRegression  = false;
 
 }
 
@@ -277,6 +286,11 @@ void KrigingModel::printSurrogateModel(void) const{
 	printf("max_number_of_kriging_iterations = %d\n",max_number_of_kriging_iterations);
 	printf("epsilonKriging = %15.10e\n",epsilonKriging);
 	printHyperParameters();
+
+	printVector(R_inv_ys_min_beta,"R_inv_ys_min_beta");
+	std::cout<<"beta0 = "<<beta0<<"\n";
+	printMatrix(correlationMatrix,"correlationMatrix");
+
 	printf("\n");
 
 
@@ -327,7 +341,7 @@ void KrigingModel::updateAuxilliaryFields(void){
 #endif
 	vec ys = y;
 
-	if(linear_regression){
+	if(ifUsesLinearRegression){
 
 		vec ysLinearRegression = linearModel.interpolateAll(X);
 		ys = ys - ysLinearRegression;
@@ -342,8 +356,8 @@ void KrigingModel::updateAuxilliaryFields(void){
 	int cholesky_return = chol(upperDiagonalMatrix, correlationMatrix);
 
 	if (cholesky_return == 0) {
-		printf("ERROR: Ill conditioned correlation matrix, Cholesky decomposition failed at %s, line %d.\n",__FILE__, __LINE__);
-		exit(-1);
+		printf("ERROR: Ill conditioned correlation matrix, Cholesky decomposition failed!\n");
+		abort();
 	}
 
 
@@ -412,6 +426,7 @@ vec KrigingModel::computeCorrelationVector(rowvec x) const{
 		r(i) = computeCorrelation(x, X.row(i));
 
 	}
+
 	return r;
 
 }
@@ -432,7 +447,7 @@ double KrigingModel::interpolate(rowvec xp,bool ifprint ) const{
 	double fKriging = 0.0;
 
 
-	if(linear_regression){
+	if(ifUsesLinearRegression ){
 
 		fLinearRegression = linearModel.interpolate(xp);
 	}
@@ -537,6 +552,7 @@ double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j) const {
 
 void KrigingModel::computeCorrelationMatrix(void)  {
 
+	correlationMatrix.fill(0.0);
 
 	for (unsigned int i = 0; i < N; i++) {
 		for (unsigned int j = i + 1; j < N; j++) {
@@ -567,7 +583,7 @@ void KrigingModel::train(void){
 	vec ysKriging = y;
 
 
-	if(linear_regression){
+	if(ifUsesLinearRegression ){
 
 		if(ifprintToScreen){
 

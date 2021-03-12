@@ -64,6 +64,8 @@ private:
 
 	SurrogateModel *surrogateModel;
 
+	bool warmStart = false;
+
 	bool ifFunctionIsNoisy = false;
 	bool ifBoxConstraintsSet = false;
 	bool ifGradientsAvailable = false;
@@ -83,6 +85,8 @@ private:
 	std::string nameInputFileExecutable;
 	std::string nameOutputFileExecutable;
 
+	std::string fileNameSurrogateModelData;
+
 	double (*func_ptr)(double *);
 	double (*adj_ptr)(double *, double *);
 
@@ -91,6 +95,9 @@ private:
 
 
 public:
+
+	double inSampleError = 0.0;
+	double outSampleError = 0.0; /*generalization error */
 
 	void evaluate(Design &d) const;
 	void evaluateAdjoint(Design &d) const;
@@ -107,6 +114,8 @@ public:
     void generateSamples(void);
     mat getTrainingSamplesInput(void) const;
     mat getTestSamplesInput(void) const;
+    mat getTrainingSamples(void) const;
+    mat getTestSamples(void) const;
 
 
 
@@ -118,6 +127,8 @@ public:
     void setVisualizationOff(void);
     void setGradientsOn(void);
     void setGradientsOff(void);
+    void setWarmStartOn(void);
+    void setWarmStartOff(void);
     void setNumberOfTrainingSamples(unsigned int);
     void setNumberOfTestSamples(unsigned int);
 
@@ -130,8 +141,7 @@ public:
     mat  generateRandomSamplesWithGradients(unsigned int);
 
     mat  generateUniformSamples(unsigned int howManySamples) const;
-    double testSurrogateModel(SURROGATE_MODEL modelId, unsigned int nsamples, bool warmStart = false);
-    void testEfficientGlobalOptimization(int nsamplesTrainingData, int maxnsamples, bool ifVisualize = false, bool ifWarmStart = false, bool ifMinimize = true);
+    void testSurrogateModel(SURROGATE_MODEL modelId);
 
     void evaluateGlobalExtrema(void) const;
     void setBoxConstraints(double lowerBound, double upperBound);

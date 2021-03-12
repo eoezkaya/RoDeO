@@ -77,7 +77,7 @@ void GEKModel::initializeSurrogateModel(void){
 		printf("Initializing settings for the GEK model...\n");
 
 		modelID = GRADIENT_ENHANCED_KRIGING;
-		ifUsesGradientData = true;
+		ifHasGradientData = true;
 
 		readData();
 		normalizeData();
@@ -197,7 +197,8 @@ void GEKModel::train(void){
 	}
 
 	KrigingModel auxModelForTraining(label);
-	auxModelForTraining.ifUsesGradientData = true;
+	auxModelForTraining.setGradientsOn();
+
 	auxModelForTraining.initializeSurrogateModel();
 	auxModelForTraining.max_number_of_kriging_iterations = maxNumberOfTrainingIterations;
 	auxModelForTraining.printSurrogateModel();

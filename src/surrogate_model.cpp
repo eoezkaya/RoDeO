@@ -48,19 +48,12 @@ using namespace arma;
 
 PartitionData::PartitionData(){
 
-	ifNormalized = false;
-	ifHasGradientData = false;
-	numberOfSamples = 0;
-	dim = 0;
 }
 
 PartitionData::PartitionData(std::string name){
 
 	label = name;
-	ifNormalized = false;
-	ifHasGradientData = false;
-	numberOfSamples = 0;
-	dim = 0;
+
 }
 
 
@@ -147,31 +140,13 @@ void PartitionData::print(void) const{
 
 SurrogateModel::SurrogateModel(){
 
-	modelID = NONE;
-	dim = 0;
-	label = "None";
-	N = 0;
-	numberOfHyperParameters = 0;
-	ifInitialized = false;
-	ifBoundsAreSet = false;
-	ifUsesGradientData = false;
-	ifprintToScreen = false;
-	ifDataIsRead = false;
-	filenameDataInput = "None";
+
 }
 
 SurrogateModel::SurrogateModel(std::string name){
 
-	dim = 0;
-	N = 0;
-	numberOfHyperParameters = 0;
 	label = name;
 	filenameDataInput = name +".csv";
-	ifInitialized = false;
-	ifUsesGradientData = false;
-	ifprintToScreen = false;
-	ifBoundsAreSet = false;
-	ifDataIsRead = false;
 
 }
 
@@ -292,8 +267,7 @@ void SurrogateModel::readData(void){
 	}
 
 
-
-	if(ifUsesGradientData){
+	if(ifHasGradientData){
 
 		assert((rawData.n_cols - 1)%2 == 0);
 		dim = (rawData.n_cols - 1)/2;
@@ -313,7 +287,7 @@ void SurrogateModel::readData(void){
 
 	X = Xraw;
 
-	if(ifUsesGradientData){
+	if(ifHasGradientData){
 
 		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
 
@@ -337,6 +311,7 @@ void SurrogateModel::normalizeData(void){
 	assert(ifBoundsAreSet);
 	X = normalizeMatrix(X,xmin,xmax);
 	X = (1.0/dim)*X;
+	ifNormalized = true;
 
 }
 

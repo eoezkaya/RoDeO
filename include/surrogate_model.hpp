@@ -52,13 +52,15 @@ public:
 	vec ySurrogate;
 	vec squaredError;
 
+	bool ifHasGradientData = false;
+	bool ifNormalized  = false;
+
 	PartitionData();
 	PartitionData(std::string name);
 	void fillWithData(mat);
-	bool ifNormalized;
-	bool ifHasGradientData;
-	unsigned int numberOfSamples;
-	unsigned int dim;
+
+	unsigned int numberOfSamples = 0;
+	unsigned int dim = 0;
 	void normalizeAndScaleData(vec xmin, vec xmax);
 	double calculateMeanSquaredError(void) const;
 	rowvec getRow(unsigned int indx) const;
@@ -70,8 +72,8 @@ public:
 class SurrogateModel{
 
 protected:
-	unsigned int dim;
-	unsigned int N;
+	unsigned int dim = 0;
+	unsigned int N = 0;
 
 	mat rawData;
 	mat X;
@@ -89,18 +91,19 @@ protected:
 	vec xmin;
 	vec xmax;
 
-	bool ifInitialized;
-	bool ifBoundsAreSet;
-	bool ifDataIsRead;
-	unsigned int numberOfHyperParameters;
+	bool ifInitialized = false;
+	bool ifBoundsAreSet = false;
+	bool ifDataIsRead = false;
+	bool ifNormalized = false;
+	bool ifHasGradientData = false;
+	unsigned int numberOfHyperParameters  = 0;
 
 
 
 public:
 
 	SURROGATE_MODEL modelID;
-	bool ifUsesGradientData;
-	bool ifprintToScreen;
+	bool ifprintToScreen = false;
 
 	SurrogateModel();
 	SurrogateModel(std::string name);
@@ -114,9 +117,26 @@ public:
 	void setParameterBounds(double xmin, double xmax);
 
 
+	void setGradientsOn(void){
+
+		ifHasGradientData = true;
+
+	}
+
+	void setGradientsOff(void){
+
+		ifHasGradientData = false;
+
+	}
+
 	bool isInitialized(void) const{
 
 		return ifInitialized;
+	}
+
+	bool ifUsesGradients(void) const{
+
+		return ifHasGradientData;
 	}
 
 	bool ifDataIsLoaded(void) const{

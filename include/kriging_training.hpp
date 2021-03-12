@@ -46,7 +46,7 @@ using namespace arma;
 class KrigingModel : public SurrogateModel{
 
 private:
-//	vec kriging_weights;
+
 	vec theta;
 	vec gamma;
 	vec R_inv_ys_min_beta;
@@ -58,7 +58,7 @@ private:
 	double beta0;
 	double sigmaSquared;
 
-	bool linear_regression;
+	bool ifUsesLinearRegression = false;
 	double epsilonKriging;
 
 	double genErrorKriging;
@@ -90,9 +90,6 @@ public:
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
 
-
-
-//	double calculateExpectedImprovement(rowvec xp) const;
 	void calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const;
 
 	double getyMin(void) const;

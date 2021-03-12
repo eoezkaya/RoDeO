@@ -130,7 +130,7 @@ TEST(testTestFunctions, testevaluateAdjointWithExecutable){
 	testFun.evaluateAdjoint(testDesign);
 	testFun.readEvaluateOutput(testDesign);
 
-	double expectedResult = pow( (dv(0)*dv(0)+dv(1)-11.0), 2.0 ) + pow( (dv(0)+dv(1)*dv(1)-7.0), 2.0 );;
+	double expectedResult = pow( (dv(0)*dv(0)+dv(1)-11.0), 2.0 ) + pow( (dv(0)+dv(1)*dv(1)-7.0), 2.0 );
 
 	EXPECT_EQ(testDesign.trueValue, expectedResult);
 
@@ -144,5 +144,76 @@ TEST(testTestFunctions, testevaluateAdjointWithExecutable){
 
 }
 
+TEST(testTestFunctions, testgenerateSamples){
+	std::string compileCommand = "g++ himmelblauAdjoint.cpp -o himmelblau -lm";
+	system(compileCommand.c_str());
 
+	TestFunction testFun("testFunction",2);
+	testFun.setNameOfExecutable("himmelblau");
+	testFun.setNameOfInputForExecutable("dv.dat");
+	testFun.setNameOfOutputForExecutable("objFunVal.dat");
+
+	testFun.setNumberOfTrainingSamples(100);
+	testFun.setNumberOfTestSamples(10);
+	testFun.setBoxConstraints(0.0, 2.0);
+	testFun.setGradientsOn();
+
+	testFun.generateSamplesInput();
+	testFun.generateSamples();
+
+	mat trainingSamples = testFun.getTrainingSamples();
+
+	rowvec sample = trainingSamples.row(27);
+	ASSERT_EQ(sample.size(),5);
+
+
+	double x1 = sample(0);
+	double x2 = sample(1);
+
+	/* check functional value */
+	double expectedResult = pow( (x1*x1+x2-11.0), 2.0 ) + pow( (x1+x2*x2-7.0), 2.0 );
+	double error = fabs(expectedResult - sample(2));
+	EXPECT_LT(error, 10E-8);
+
+	/* check derivatives */
+
+	double tempb = 2.0*pow(x1*x1+x2-11.0, 2.0-1);
+	double tempb0 = 2.0*pow(x1+x2*x2-7.0, 2.0-1);
+	double dydx1 = tempb0 + 2*x1*tempb;
+	double dydx2 = 2*x2*tempb0 + tempb;
+
+
+	error = fabs(dydx1 - sample(3));
+	EXPECT_LT(error, 10E-8);
+
+	error = fabs(dydx2 - sample(4));
+	EXPECT_LT(error, 10E-8);
+
+}
+
+
+TEST(testTestFunctions, testKrigingModel){
+
+
+	std::string compileCommand = "g++ himmelblau.cpp -o himmelblau -lm";
+	system(compileCommand.c_str());
+
+	TestFunction testFun("testFunction",2);
+	testFun.setNameOfExecutable("himmelblau");
+	testFun.setNameOfInputForExecutable("dv.dat");
+	testFun.setNameOfOutputForExecutable("objFunVal.dat");
+
+	testFun.setNumberOfTrainingSamples(10);
+	testFun.setNumberOfTestSamples(10);
+	testFun.setBoxConstraints(0.0, 2.0);
+
+	testFun.generateSamplesInput();
+	testFun.generateSamples();
+
+	testFun.setWarmStartOn();
+	testFun.testSurrogateModel(KRIGING);
+
+
+
+}
 

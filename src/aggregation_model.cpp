@@ -50,7 +50,7 @@ AggregationModel::AggregationModel(std::string name):SurrogateModel(name),krigin
 
 	modelID = AGGREGATION;
 	hyperparameters_filename = label + "_aggregation_model_hyperparameters.csv";
-	ifUsesGradientData = true;
+	this->ifHasGradientData = true;
 
 
 }
@@ -136,29 +136,24 @@ void AggregationModel::determineRhoBasedOnData(void){
 
 void AggregationModel::initializeSurrogateModel(void){
 
-	if(label != "None"){
+	numberOfTrainingIterations = 10000;
 
-		numberOfTrainingIterations = 10000;
+	krigingModel.setGradientsOn();
 
+	krigingModel.readData();
+	krigingModel.setParameterBounds(xmin,xmax);
+	krigingModel.normalizeData();
+	krigingModel.initializeSurrogateModel();
 
-		krigingModel.ifUsesGradientData = true;
+	readData();
+	normalizeData();
 
-		krigingModel.readData();
-		krigingModel.setParameterBounds(xmin,xmax);
-		krigingModel.normalizeData();
-		krigingModel.initializeSurrogateModel();
+	numberOfHyperParameters = dim + 1;
 
-		readData();
-		normalizeData();
-
-		numberOfHyperParameters = dim + 1;
-
-		L1NormWeights = zeros<vec>(dim);
-		L1NormWeights.fill(1.0);
+	L1NormWeights = zeros<vec>(dim);
+	L1NormWeights.fill(1.0);
 
 
-
-	}
 
 	ifInitialized = true;
 
@@ -415,7 +410,7 @@ void AggregationModel::modifyRawDataAndAssociatedVariables(mat dataMatrix){
 	N = rawData.n_rows;
 	Xraw = rawData.submat(0, 0, N - 1, dim - 1);
 	y = rawData.col(dim);
-	if(ifUsesGradientData){
+	if(ifHasGradientData){
 
 		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
 
@@ -630,51 +625,6 @@ void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &
 
 }
 
-//double AggregationModel::calculateExpectedImprovement(rowvec xp) const{
-//
-//
-//	double ftilde = 0.0;
-//	double ssqr   = 0.0;
-//
-//	interpolateWithVariance(xp,&ftilde,&ssqr);
-//
-//#if 0
-//	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
-//#endif
-//
-//	double	sigma = sqrt(ssqr)	;
-//
-//#if 0
-//	printf("standart_ERROR = %15.10f\n",sigma);
-//#endif
-//
-//	double EI = 0.0;
-//
-//
-//	if(sigma!=0.0){
-//
-//
-//		double	Z = (ymin - ftilde)/sigma;
-//#if 0
-//		printf("EIfac = %15.10f\n",EIfac);
-//		printf("ymin = %15.10f\n",ymin);
-//#endif
-//
-//
-//		/* calculate the Expected Improvement value */
-//		EI = (ymin - ftilde)*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
-//	}
-//	else{
-//
-//		EI = 0.0;
-//
-//	}
-//#if 0
-//	printf("EI = %15.10f\n",EI);
-//#endif
-//	return EI;
-//
-//}
 
 
 unsigned int AggregationModel::findNearestNeighbor(const rowvec &xp) const{
