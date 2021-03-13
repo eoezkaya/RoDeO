@@ -148,7 +148,6 @@ TEST(testKriging, testInSampleErrorCloseToZeroAfterTraining){
 
 	testModel.setNumberOfTrainingIterations(100);
 
-
 	rowvec xp(2); xp(0) = samples(0,0); xp(1) = samples(0,1);
 
 	rowvec xpnorm = normalizeRowVector(xp,lb,ub);

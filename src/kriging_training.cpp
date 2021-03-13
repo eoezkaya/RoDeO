@@ -148,22 +148,17 @@ void KrigingModel::saveHyperParameters(void) const{
 void KrigingModel::loadHyperParameters(void){
 
 
-	rowvec saveBuffer;
-	saveBuffer.load(this->hyperparameters_filename,csv_ascii);
+	rowvec loadBuffer;
+	bool ifLoadIsOK =  loadBuffer.load(this->hyperparameters_filename,csv_ascii);
 
-	if(2*dim == saveBuffer.size()) {
+	unsigned int numberOfEntriesInTheBuffer = loadBuffer.size();
 
-		for(unsigned int i=0; i<dim; i++) theta(i) = saveBuffer(i);
-		for(unsigned int i=0; i<dim; i++) gamma(i) = saveBuffer(i+dim);
+	if(ifLoadIsOK && numberOfEntriesInTheBuffer == 2*dim) {
 
+		for(unsigned int i=0; i<dim; i++) theta(i) = loadBuffer(i);
+		for(unsigned int i=0; i<dim; i++) gamma(i) = loadBuffer(i+dim);
 
 	}
-	else{
-
-		std::cout<<"WARNING: Cannot load hyperparameter since problem dimension does not match!\n";
-	}
-
-
 
 }
 

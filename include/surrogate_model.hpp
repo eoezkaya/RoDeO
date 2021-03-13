@@ -74,17 +74,21 @@ class SurrogateModel{
 protected:
 	unsigned int dim = 0;
 	unsigned int N = 0;
+	unsigned int NTest = 0;
 
 	mat rawData;
 	mat X;
 	mat Xraw;
 	mat gradientData;
 	vec y;
-
+	vec yTest;
+	mat XTestraw;
+	mat XTest;
 
 	std::string label;
 	std::string hyperparameters_filename;
 	std::string filenameDataInput;
+	std::string filenameTestResults;
 
 
 	double ymin,ymax,yave;
@@ -96,11 +100,15 @@ protected:
 	bool ifDataIsRead = false;
 	bool ifNormalized = false;
 	bool ifHasGradientData = false;
+	bool ifHasTestData = false;
+
 	unsigned int numberOfHyperParameters  = 0;
 
 
 
 public:
+
+	mat testResults;
 
 	SURROGATE_MODEL modelID;
 	bool ifprintToScreen = false;
@@ -150,6 +158,7 @@ public:
 	}
 
 
+	void setTestData(mat testData);
 
 	std::string getNameOfHyperParametersFile(void) const;
 	std::string getNameOfInputFile(void) const;
@@ -170,6 +179,10 @@ public:
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
 
 	double calculateInSampleError(void) const;
+	void calculateOutSampleError(void);
+	double getOutSampleErrorMSE(void) const;
+	void saveTestResults(void) const;
+
 
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;

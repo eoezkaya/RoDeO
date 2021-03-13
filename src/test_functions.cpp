@@ -358,9 +358,13 @@ void TestFunction::plot(int resolution) const{
 void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID){
 
 
-	printf("\nTesting surrogate model with the %s function...\n",function_name.c_str());
-
 	assert(ifBoxConstraintsSet);
+
+	if(ifDisplayResults){
+
+		std::cout<<"\nTesting surrogate model with the function: "<<function_name<<"\n";
+
+	}
 
 
 	KrigingModel TestFunModelKriging(function_name);
@@ -403,7 +407,6 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID){
 	surrogateModel->setParameterBounds(lb,ub);
 	surrogateModel->normalizeData();
 	surrogateModel->initializeSurrogateModel();
-	surrogateModel->ifprintToScreen = true;
 
 	if(warmStart == true){
 
@@ -415,47 +418,33 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID){
 		surrogateModel->train();
 	}
 
-	surrogateModel->printSurrogateModel();
 
 	inSampleError = surrogateModel->calculateInSampleError();
-#if 1
-	printf("inSampleError = %15.10f\n",inSampleError);
-#endif
 
 
-	abort();
-	//
-	//
-	//	mat testSetMatrix = generateRandomSamples(numberOfSamplesUsedForVisualization);
-	//
-	//	PartitionData testSet;
-	//	testSet.fillWithData(testSetMatrix);
-	//
-	//
-	//
-	//	surrogateModel->tryModelOnTestSet(testSet);
-	//
-	//
-	//	label = function_name + "_SurrogateTestResults";
-	//
-	//	std::string filenameSurrogateTestResults = label+".csv";
-	//
-	//	testSet.saveAsCSVFile(filenameSurrogateTestResults);
-	//
-	//	double testError = testSet.calculateMeanSquaredError();
-	//#if 1
-	//	printf("Test Error (MSE)= %15.10f\n",testError);
-	//#endif
-	//
-	//
-	//	if(ifVisualize){
-	//
-	//		surrogateModel->visualizeTestResults();
-	//
-	//	}
-	//
-	//
-	//	return testError;
+	surrogateModel->setTestData(testSamples);
+
+	surrogateModel->calculateOutSampleError();
+
+	outSampleError = surrogateModel->getOutSampleErrorMSE();
+
+	if(ifDisplayResults){
+
+		printf("outSampleError = %15.10f\n",outSampleError);
+		printf("inSampleError = %15.10f\n",inSampleError);
+	}
+
+
+	surrogateModel->saveTestResults();
+
+	if(ifVisualize){
+
+		surrogateModel->visualizeTestResults();
+
+	}
+
+
+
 }
 
 std::string TestFunction::getExecutionCommand(void) const{
@@ -669,7 +658,7 @@ void TestFunction::generateSamples(void){
 
 	}
 
-#if 1
+#if 0
 	printMatrix(this->trainingSamples);
 	printMatrix(this->testSamples);
 #endif

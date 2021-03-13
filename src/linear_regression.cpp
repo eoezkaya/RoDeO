@@ -173,11 +173,13 @@ void LinearModel::train(void){
 		}
 
 	}
-#if 1
-	printf("Linear regression weights:\n");
-	trans(weights).print();
 
-#endif
+	if(ifprintToScreen){
+
+		printf("Linear regression weights:\n");
+		trans(weights).print();
+
+	}
 
 }
 

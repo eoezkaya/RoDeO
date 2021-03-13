@@ -32,11 +32,6 @@
 #include "auxiliary_functions.hpp"
 #include<gtest/gtest.h>
 
-TEST(testAuxiliaryFunctions, testifGoogleTestWorks){
-
-
-}
-
 
 TEST(testAuxiliaryFunctions, testcalculatePolynomial){
 

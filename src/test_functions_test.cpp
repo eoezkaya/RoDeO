@@ -203,17 +203,50 @@ TEST(testTestFunctions, testKrigingModel){
 	testFun.setNameOfInputForExecutable("dv.dat");
 	testFun.setNameOfOutputForExecutable("objFunVal.dat");
 
-	testFun.setNumberOfTrainingSamples(10);
+	testFun.setNumberOfTrainingSamples(100);
 	testFun.setNumberOfTestSamples(10);
 	testFun.setBoxConstraints(0.0, 2.0);
 
 	testFun.generateSamplesInput();
 	testFun.generateSamples();
 
+	rowvec hyperParams(4);
+
+	hyperParams(0) = 1.0;
+	hyperParams(1) = 1.0;
+	hyperParams(2) = 2.0;
+	hyperParams(3) = 2.0;
+
+	hyperParams.save("testFunction_kriging_hyperparameters.csv", csv_ascii);
 	testFun.setWarmStartOn();
 	testFun.testSurrogateModel(KRIGING);
 
+	EXPECT_LT(testFun.outSampleError, 1.0);
 
+
+
+}
+
+
+TEST(testTestFunctions, testLinearModel){
+
+	std::string compileCommand = "g++ linearTestFunction.cpp -o linearTestFunction -lm";
+	system(compileCommand.c_str());
+
+	TestFunction testFun("testFunction",5);
+	testFun.setNameOfExecutable("linearTestFunction");
+	testFun.setNameOfInputForExecutable("dv.dat");
+	testFun.setNameOfOutputForExecutable("objFunVal.dat");
+
+	testFun.setNumberOfTrainingSamples(100);
+	testFun.setNumberOfTestSamples(10);
+	testFun.setBoxConstraints(0.0, 2.0);
+
+	testFun.generateSamplesInput();
+	testFun.generateSamples();
+
+	testFun.testSurrogateModel(LINEAR_REGRESSION);
+	EXPECT_LT(testFun.outSampleError, 10E-5);
 
 }
 

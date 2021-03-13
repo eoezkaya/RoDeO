@@ -78,6 +78,7 @@ private:
 	bool ifFunctionPointerIsSet = false;
 
 	bool ifVisualize = false;
+	bool ifDisplayResults = false;
 	double noiseLevel = 0.0;
 
 	std::string nameOfExecutable;

@@ -85,8 +85,14 @@ int main(int argc, char* argv[]){
 
 
 #ifdef UNIT_TESTS
+
+
+	chdir ("../UnitTests");
 	testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
+	int runTestsResult = RUN_ALL_TESTS();
+
+
+	return runTestsResult;
 
 #endif
 

@@ -145,9 +145,10 @@ SurrogateModel::SurrogateModel(){
 
 SurrogateModel::SurrogateModel(std::string name){
 
+	assert(!name.empty());
 	label = name;
 	filenameDataInput = name +".csv";
-
+	filenameTestResults = name + "_TestResults.csv";
 }
 
 void SurrogateModel::checkIfParameterBoundsAreOk(void) const{
@@ -357,8 +358,34 @@ void SurrogateModel::updateAuxilliaryFields(void){
 
 }
 
+
+
+
+void SurrogateModel::setTestData(mat testData){
+
+	assert(testData.n_rows > 0);
+	assert(testData.n_cols == dim +1);
+	assert(ifBoundsAreSet);
+
+	NTest = testData.n_rows;
+
+	XTestraw = testData.submat(0,0,NTest-1, dim-1);
+
+	yTest = testData.col(dim);
+
+	XTest = normalizeMatrix(XTestraw, xmin, xmax);
+
+	XTest = (1.0/dim)*XTest;
+
+	ifHasTestData = true;
+}
+
+
+
+
 double SurrogateModel::calculateInSampleError(void) const{
 
+	assert(ifInitialized);
 
 	double meanSquaredError = 0.0;
 
@@ -368,7 +395,7 @@ double SurrogateModel::calculateInSampleError(void) const{
 
 		rowvec x  = getRowXRaw(i);
 
-#if 1
+#if 0
 		printf("\nData point = %d\n", i+1);
 		printf("Interpolation at x:\n");
 		x.print();
@@ -382,7 +409,7 @@ double SurrogateModel::calculateInSampleError(void) const{
 		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
 
 		meanSquaredError+= squaredError;
-#if 1
+#if 0
 		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
 #endif
 
@@ -397,6 +424,88 @@ double SurrogateModel::calculateInSampleError(void) const{
 
 }
 
+void SurrogateModel::calculateOutSampleError(void){
+
+	assert(ifInitialized);
+	assert(ifHasTestData);
+	unsigned int numberOfEntries = dim + 3;
+
+	testResults = zeros<mat>(NTest, numberOfEntries);
+
+
+
+	for(unsigned int i=0;i<NTest;i++){
+
+		rowvec xp = XTest.row(i);
+
+		rowvec x  = XTestraw.row(i);
+
+#if 0
+		printf("\nData point = %d\n", i+1);
+		printf("Interpolation at x:\n");
+		x.print();
+		printf("xnorm:\n");
+		xp.print();
+#endif
+		double functionValueSurrogate = interpolate(xp);
+
+		double functionValueExact = yTest(i);
+
+		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
+
+
+#if 0
+		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
+#endif
+
+
+		rowvec sample(numberOfEntries);
+		copyRowVector(sample,x);
+		sample(dim) =   functionValueExact;
+		sample(dim+1) = functionValueSurrogate;
+		sample(dim+2) = squaredError;
+
+		testResults.row(i) = sample;
+	}
+
+
+
+}
+
+
+double SurrogateModel::getOutSampleErrorMSE(void) const{
+
+	assert(testResults.n_rows > 0);
+	vec squaredError = this->testResults.col(dim+2);
+
+
+	return mean(squaredError);
+
+
+
+}
+
+
+
+void SurrogateModel::saveTestResults(void) const{
+
+	field<std::string> header(testResults.n_cols);
+
+	for(unsigned int i=0; i<dim; i++){
+
+		header(i) ="x"+std::to_string(i+1);
+
+	}
+
+
+	header(dim)   = "True value";
+	header(dim+1) = "Estimated value";
+	header(dim+2) = "Squared Error";
+
+	testResults.save( csv_name(filenameTestResults, header) );
+
+
+}
 
 void SurrogateModel::visualizeTestResults(void) const{
 

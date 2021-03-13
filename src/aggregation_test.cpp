@@ -132,7 +132,6 @@ TEST(testAggrregationModel, prepareTrainingAndTestData){
 
 	saveMatToCVSFile(samples,"AggregationTest.csv");
 
-	printMatrix(samples);
 
 	AggregationModel testModel("AggregationTest");
 
@@ -184,13 +183,13 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 	testModel.setParameterBounds(0.0, 1.0);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
-	testModel.setNumberOfTrainingIterations(1000);
+	testModel.setNumberOfTrainingIterations(100);
 
 	testModel.determineOptimalL1NormWeights();
 
 	vec optimalWeights = testModel.getL1NormWeights();
-	EXPECT_LT(optimalWeights(1), 0.01);
-	EXPECT_LT(optimalWeights(2), 0.01);
+	EXPECT_LT(optimalWeights(1), 0.1);
+	EXPECT_LT(optimalWeights(2), 0.1);
 	remove("AggregationTest.csv");
 
 }
