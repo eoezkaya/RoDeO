@@ -434,18 +434,20 @@ void SurrogateModel::calculateOutSampleError(void){
 
 
 
+
 	for(unsigned int i=0;i<NTest;i++){
 
 		rowvec xp = XTest.row(i);
 
 		rowvec x  = XTestraw.row(i);
 
-#if 0
-		printf("\nData point = %d\n", i+1);
-		printf("Interpolation at x:\n");
+#if 1
+		std::cout<<"\n"<<i+1<<") Data point at x = \n";
+
+//		printf("Interpolation at x:\n");
 		x.print();
-		printf("xnorm:\n");
-		xp.print();
+//		printf("xnorm:\n");
+//		xp.print();
 #endif
 		double functionValueSurrogate = interpolate(xp);
 
@@ -454,8 +456,8 @@ void SurrogateModel::calculateOutSampleError(void){
 		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
 
 
-#if 0
-		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
+#if 1
+		printf("True value = %15.10f, Estimated value = %15.10f, Squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
 #endif
 
 

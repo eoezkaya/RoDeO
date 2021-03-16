@@ -52,12 +52,12 @@
 RoDeODriver::RoDeODriver(){
 
 	dimension = 0;
-	numberOfKeywords = 23;
+	numberOfKeywords = 26;
 	problemName = "None";
 	problemType = "None";
 	designVectorFilename = "None";
 	numberOfConstraints = 0;
-	objectiveFunctionName = "Objective function";
+	objectiveFunctionName = "ObjectiveFunction";
 	ifObjectiveFunctionNameIsSet = false;
 	ifObjectiveFunctionOutputFileIsSet = false;
 	ifDesignVectorFileNameSet = false;
@@ -89,6 +89,8 @@ RoDeODriver::RoDeODriver(){
 	keywords[11]="CONSTRAINT_EXECUTABLE_PATHS=";
 	keywords[12]="OBJECTIVE_FUNCTION_OUTPUT_FILENAME=";
 	keywords[13]="CONSTRAINT_FUNCTION_OUTPUT_FILENAMES=";
+	keywords[14]="NUMBER_OF_TRAINING_SAMPLES=";
+	keywords[15]="NUMBER_OF_TEST_SAMPLES=";
 	keywords[16]="MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS=";
 	keywords[17]="NUMBER_OF_DOE_SAMPLES=";
 	keywords[18]="WARM_START=";
@@ -96,7 +98,16 @@ RoDeODriver::RoDeODriver(){
 	keywords[20]="GRADIENT_AVAILABLE=";
 	keywords[21]="CLEAN_DOE_FILES=";
 	keywords[22]="SURROGATE_MODEL=";
+	keywords[23]="VISUALIZATION=";
+	keywords[24]="FILENAME_TRAINING_DATA=";
+	keywords[25]="FILENAME_TEST_DATA=";
 
+
+	availableSurrogateModels.push_back("ORDINARY_KRIGING");
+	availableSurrogateModels.push_back("UNIVERSAL_KRIGING");
+	availableSurrogateModels.push_back("GRADIENT_ENHANCED_KRIGING");
+	availableSurrogateModels.push_back("LINEAR_REGRESSION");
+	availableSurrogateModels.push_back("AGGREGATION");
 
 	configFileName = settings.config_file;
 
@@ -502,7 +513,15 @@ void RoDeODriver::readConfigFile(void){
 
 					case 14: {
 
-						ifParameterAlreadySet[key] = true;
+						numberOfTrainingSamples = std::stoi(sub_str);
+						std::cout<<"NUMBER_OF_TRAINING_SAMPLES= "<<numberOfTrainingSamples<<"\n";
+						break;
+					}
+
+					case 15: {
+
+						numberOfTestSamples = std::stoi(sub_str);
+						std::cout<<"NUMBER_OF_TEST_SAMPLES= "<<numberOfTrainingSamples<<"\n";
 						break;
 					}
 
@@ -526,9 +545,11 @@ void RoDeODriver::readConfigFile(void){
 					case 18: {
 						if(sub_str == "YES" || sub_str == "yes") {
 							this->ifWarmStart = true;
+							std::cout<<"WARM_START= YES\n";
 						}
 						else if(sub_str == "NO" || sub_str == "no"){
 							this->ifWarmStart = false;
+							std::cout<<"WARM_START= NO\n";
 						}
 						else{
 							std::cout<<"ERROR: Unknown keyword for WARM_START\n";
@@ -588,7 +609,45 @@ void RoDeODriver::readConfigFile(void){
 
 						surrogateModelType = sub_str;
 						std::cout<<"SURROGATE_MODEL= "<<surrogateModelType<<"\n";
+						checkIFSurrogateModelTypeIsOK();
 						ifSurrogateModelTypeSet = true;
+						break;
+					}
+					case 23: {
+						if(sub_str == "YES" || sub_str == "yes") {
+							this->ifVisualization = true;
+							std::cout<<"VISUALIZATION= YES\n";
+						}
+						else if(sub_str == "NO" || sub_str == "no"){
+							this->ifVisualization = false;
+							std::cout<<"VISUALIZATION= NO\n";
+						}
+						else{
+							std::cout<<"ERROR: Unknown keyword for VISUALIZATION\n";
+							abort();
+
+						}
+						ifParameterAlreadySet[key] = true;
+						break;
+					}
+					case 24: {
+
+						fileNametrainingDataForSurrogateTest = sub_str;
+						std::cout<<"FILENAME_TRAINING_DATA= "<<fileNametrainingDataForSurrogateTest<<"\n";
+
+						sub_str.erase(sub_str.length()-4);
+						objectiveFunctionName = sub_str;
+						ifFileNameTrainingDataForSurrogateTestIsSet = true;
+
+						break;
+					}
+
+					case 25: {
+
+						fileNametestDataForSurrogateTest = sub_str;
+						std::cout<<"FILENAME_TEST_DATA= "<<fileNametestDataForSurrogateTest<<"\n";
+						ifFileNameTestDataForSurrogateTestIsSet = true;
+
 						break;
 					}
 
@@ -642,35 +701,64 @@ void RoDeODriver::readConfigFile(void){
 
 
 	}
-	printVector(IsGradientsAvailable);
 
 
-
-	checkConsistencyOfConfigParams();
+	//	checkConsistencyOfConfigParams();
 
 
 
 
 
 }
+void RoDeODriver::checkIfProblemDimensionIsSet(void) const{
 
-void RoDeODriver::checkConsistencyOfConfigParams(void) const{
+	if(!ifProblemDimensionSet){
 
-	unsigned int numberOfExeNames = executableNames.size();
+		std::cout<<"ERROR: Number of optimization parameters is not set, did you set DIMENSION properly?\n";
+		abort();
+
+	}
+
+	if(dimension>1000){
+
+		std::cout<<"ERROR: Problem dimension is too large, did you set DIMENSION properly?\n";
+		abort();
+
+	}
 
 
-	if(!ifProblemTypeSet){
 
-		std::cout<<"ERROR: Problem type is defined, did you set PROBLEM_TYPE?\n";
+}
+
+void RoDeODriver::checkIfObjectiveFunctionIsSetProperly(void) const{
+
+
+	if(!ifObjectiveFunctionNameIsSet){
+
+		std::cout<<"ERROR: Objective function is required, did you set OBJECTIVE_FUNCTION_EXECUTABLE_NAME properly?\n";
 		abort();
 	}
 
-	if(problemType != "DoE" && !ifmaximumNumberOfSimulationsSet){
 
-		std::cout<<"ERROR: Computational budget is not set, did you set MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS?\n";
+	if(!ifObjectiveFunctionOutputFileIsSet){
+
+		std::cout<<"ERROR: Objective function output file is required, did you set OBJECTIVE_FUNCTION_OUTPUT_FILENAME properly?\n";
 		abort();
 	}
 
+	if(!ifDesignVectorFileNameSet){
+
+		std::cout<<"ERROR: Design vector file name is required, did you set DESIGN_VECTOR_FILENAME properly?\n";
+		abort();
+	}
+
+
+}
+
+
+void RoDeODriver::checkIfBoundsAreSetPropertly(void) const{
+
+	assert(dimension>0);
 
 	if(!ifLowerBoundsSet){
 
@@ -716,20 +804,102 @@ void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 
 		}
 
+	}
 
+}
+
+void RoDeODriver::checkIfNumberOfTrainingAndTestSamplesAreProper(void) const{
+
+	if(!ifFileNameTrainingDataForSurrogateTestIsSet){
+
+		if( !(numberOfTrainingSamples > 0) ){
+
+			std::cout<<"ERROR: Number of training samples must be specified, did you set NUMBER_OF_TRAINING_SAMPLES properly?\n";
+			abort();
+
+		}
+
+	}
+
+	if(!ifFileNameTestDataForSurrogateTestIsSet){
+
+		if( !(numberOfTestSamples > 0) ){
+
+			std::cout<<"ERROR: Number of test samples must be specified, did you set NUMBER_OF_TEST_SAMPLES properly?\n";
+			abort();
+
+		}
 
 	}
 
 
 
 
-	if(!ifProblemDimensionSet){
 
-		std::cout<<"ERROR: Number of optimization parameters is not set, did you set DIMENSION properly?\n";
+}
+
+void RoDeODriver::checkIFSurrogateModelTypeIsOK(void) const{
+
+	bool ifTypeIsOK = ifIsInTheList(availableSurrogateModels, surrogateModelType);
+
+	if(!ifTypeIsOK){
+
+		std::cout<<"ERROR: Surrogate model is not available, did you set SURROGATE_MODEL properly?\n";
 		abort();
 
-
 	}
+
+
+}
+
+
+
+void RoDeODriver::checkSettingsForSurrogateModelTest(void) const{
+
+
+	assert(problemType == "SURROGATE_TEST");
+
+	if(!ifFileNameTrainingDataForSurrogateTestIsSet){
+
+		checkIfProblemDimensionIsSet();
+		checkIfBoundsAreSetPropertly();
+		checkIfObjectiveFunctionIsSetProperly();
+	}
+
+	checkIfNumberOfTrainingAndTestSamplesAreProper();
+
+
+}
+
+
+
+
+
+
+void RoDeODriver::checkConsistencyOfConfigParams(void) const{
+
+	unsigned int numberOfExeNames = executableNames.size();
+
+
+	if(!ifProblemTypeSet){
+
+		std::cout<<"ERROR: Problem type is defined, did you set PROBLEM_TYPE?\n";
+		abort();
+	}
+
+	if(problemType != "DoE" && !ifmaximumNumberOfSimulationsSet){
+
+		std::cout<<"ERROR: Computational budget is not set, did you set MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS?\n";
+		abort();
+	}
+
+
+
+
+
+
+
+
 
 	if(!ifObjectiveFunctionNameIsSet){
 
@@ -802,7 +972,7 @@ void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 
 bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 
-	if (s == "DoE" || s == "MINIMIZATION" || s == "MAXIMIZATION"){
+	if (s == "DoE" || s == "MINIMIZATION" || s == "MAXIMIZATION" || s == "SURROGATE_TEST"){
 
 		return true;
 	}
@@ -952,17 +1122,155 @@ void RoDeODriver::runOptimization(void) const{
 
 }
 
-void RoDeODriver::runSurrogateModelTest(void) const{
+bool RoDeODriver::ifIsAGradientBasedMethod(std::string modelType) const{
+
+	if(modelType == "GRADIENT_ENHANCED_KRIGING" || modelType == "AGGREGATION"){
+
+		return true;
+	}
+	else return false;
+
+
+}
+
+
+void RoDeODriver::determineProblemDimensionAndBoxConstraintsFromTrainingData(void){
+
+	assert(ifFileNameTrainingDataForSurrogateTestIsSet);
+
+	mat bufferData;
+	bufferData.load(fileNametrainingDataForSurrogateTest);
+
+	unsigned int nCols = bufferData.n_cols;
+
+	if(  ifIsAGradientBasedMethod(surrogateModelType)){
+
+		dimension = (nCols -1)/2;
+
+	}
+	else{
+
+		dimension = (nCols -1);
+
+	}
+
+	boxConstraintsLowerBounds = zeros<vec>(dimension);
+	boxConstraintsUpperBounds = zeros<vec>(dimension);
+
+	for(unsigned int i=0; i<dimension; i++){
+
+		vec columnOfData = bufferData.col(i);
+
+		boxConstraintsLowerBounds(i) = min(columnOfData);
+		boxConstraintsUpperBounds(i) = max(columnOfData);
+
+	}
+
+	ifLowerBoundsSet = true;
+	ifUpperBoundsSet = true;
+
+#if 1
+	printVector(boxConstraintsLowerBounds,"boxConstraintsLowerBounds");
+	printVector(boxConstraintsUpperBounds,"boxConstraintsUpperBounds");
+#endif
+}
+
+
+
+void RoDeODriver::runSurrogateModelTest(void){
+
+	if(ifFileNameTrainingDataForSurrogateTestIsSet){
+
+		determineProblemDimensionAndBoxConstraintsFromTrainingData();
+
+
+	}
 
 	TestFunction TestFunction(objectiveFunctionName, dimension);
 
+	if(ifFileNameTrainingDataForSurrogateTestIsSet){
+
+		TestFunction.setNameFilenameTrainingData(fileNametrainingDataForSurrogateTest);
+
+	}else{
+
+		TestFunction.setNameOfExecutable(executableNames.front());
+		TestFunction.setNameOfInputForExecutable(designVectorFilename);
+		TestFunction.setNameOfOutputForExecutable(executableOutputFiles.front());
+		TestFunction.setNumberOfTrainingSamples(numberOfTrainingSamples);
+
+	}
+
+	if(ifFileNameTestDataForSurrogateTestIsSet){
+
+		TestFunction.setNameFilenameTestData(fileNametestDataForSurrogateTest);
+
+	}else{
+
+
+		TestFunction.setNumberOfTestSamples(numberOfTestSamples);
+
+	}
+
+
+
+	TestFunction.setBoxConstraints(boxConstraintsLowerBounds, boxConstraintsUpperBounds);
+
+
+	if(ifFileNameTrainingDataForSurrogateTestIsSet){
+
+		TestFunction.readFileTrainingData();
+
+	}
+	else{
+
+		TestFunction.generateSamplesInputTrainingData();
+		TestFunction.generateTrainingSamples();
+
+	}
+
+	if(ifFileNameTestDataForSurrogateTestIsSet){
+
+		TestFunction.readFileTestData();
+
+	}
+	else{
+
+		TestFunction.generateSamplesInputTestData();
+		TestFunction.generateTestSamples();
+	}
+
+
+	if(this->ifVisualization) TestFunction.setVisualizationOn();
+
+
+	TestFunction.print();
+
+	TestFunction.testSurrogateModel(this->surrogateModelType);
 
 
 }
 
 
 
-void RoDeODriver::runDriver(void){
+int RoDeODriver::runDriver(void){
+
+
+	if(problemType == "SURROGATE_TEST"){
+
+		checkSettingsForSurrogateModelTest();
+
+
+		std::cout<<"\n################################## STARTING SURROGATE MODEL TEST ##################################\n";
+		runSurrogateModelTest();
+
+		std::cout<<"\n################################## FINISHED SURROGATE MODEL TEST ##################################\n";
+
+		return 0;
+	}
+
+
+
 
 	COptimizer optimizationStudy(problemName, dimension, problemType);
 	optimizationStudy.setBoxConstraints(boxConstraintsLowerBounds,boxConstraintsUpperBounds);
@@ -1040,14 +1348,6 @@ void RoDeODriver::runDriver(void){
 			abort();
 		}
 		optimizationStudy.EfficientGlobalOptimization();
-
-
-	}
-	else if(problemType == "SURROGATE_TEST"){
-
-		runSurrogateModelTest();
-
-
 
 
 	}

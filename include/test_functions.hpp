@@ -62,6 +62,9 @@ private:
 	unsigned int numberOfTrainingSamples = 0;
 	unsigned int numberOfTestSamples = 0;
 
+	std::string filenameTrainingData;
+	std::string filenameTestData;
+
 	SurrogateModel *surrogateModel;
 
 	bool warmStart = false;
@@ -79,6 +82,10 @@ private:
 
 	bool ifVisualize = false;
 	bool ifDisplayResults = false;
+
+	bool ifTrainingDataFileExists = false;
+	bool ifTestDataFileExists = false;
+
 	double noiseLevel = 0.0;
 
 	std::string nameOfExecutable;
@@ -111,8 +118,12 @@ public:
 
     void plot(int resolution = 100) const;
 
-    void generateSamplesInput(void);
-    void generateSamples(void);
+    void generateSamplesInputTrainingData(void);
+    void generateSamplesInputTestData(void);
+
+    void generateTestSamples(void);
+    void generateTrainingSamples(void);
+
     mat getTrainingSamplesInput(void) const;
     mat getTestSamplesInput(void) const;
     mat getTrainingSamples(void) const;
@@ -133,6 +144,11 @@ public:
     void setNumberOfTrainingSamples(unsigned int);
     void setNumberOfTestSamples(unsigned int);
 
+    void setNameFilenameTrainingData(std::string);
+    void setNameFilenameTestData(std::string );
+
+    void readFileTestData(void);
+    void readFileTrainingData(void);
 
     void visualizeSurrogate1D(SurrogateModel *TestFunSurrogate, unsigned int resolution=1000) const;
     void visualizeSurrogate2D(SurrogateModel *TestFunSurrogate, unsigned int resolution=100) const;
@@ -142,7 +158,7 @@ public:
     mat  generateRandomSamplesWithGradients(unsigned int);
 
     mat  generateUniformSamples(unsigned int howManySamples) const;
-    void testSurrogateModel(SURROGATE_MODEL modelId);
+    void testSurrogateModel(std::string);
 
     void evaluateGlobalExtrema(void) const;
     void setBoxConstraints(double lowerBound, double upperBound);

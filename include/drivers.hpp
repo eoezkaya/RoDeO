@@ -51,10 +51,21 @@ private:
 	std::string configFileName;
 	std::string problemType;
 	std::string problemName;
-	unsigned int dimension;
-	unsigned int numberOfConstraints;
-	unsigned int maximumNumberOfSimulations;
-	unsigned int maximumNumberDoESamples;
+
+
+	std::vector<std::string> availableSurrogateModels;
+
+	unsigned int dimension = 0;
+	unsigned int numberOfConstraints = 0;
+	unsigned int maximumNumberOfSimulations = 0;
+	unsigned int maximumNumberDoESamples = 0;
+
+	unsigned int numberOfTrainingSamples = 0;
+	unsigned int numberOfTestSamples = 0;
+
+	std::string fileNametrainingDataForSurrogateTest;
+	std::string fileNametestDataForSurrogateTest;
+
 	vec boxConstraintsUpperBounds;
 	vec boxConstraintsLowerBounds;
 	vec constraintValues;
@@ -75,10 +86,16 @@ private:
 	bool ifDoEFilesShouldBeCleaned;
 	bool ifSurrogateModelTypeSet;
 
+	bool ifFileNameTrainingDataForSurrogateTestIsSet = false;
+	bool ifFileNameTestDataForSurrogateTestIsSet = false;
+
+
 	std::vector<bool> IsGradientsAvailable;
 	std::vector<std::string> executablesWithGradient;
 
-	bool ifWarmStart;
+	bool ifWarmStart = false;
+	bool ifVisualization = false;
+
 	std::string objectiveFunctionName;
 	std::vector<std::string> constraintNames;
 	std::vector<std::string> constraintTypes;
@@ -97,11 +114,21 @@ private:
 
 public:
 	RoDeODriver();
+	void checkIfProblemDimensionIsSet(void) const;
+	void checkIfBoundsAreSetPropertly(void) const;
+	void checkIfNumberOfTrainingAndTestSamplesAreProper(void) const;
+	void checkIfObjectiveFunctionIsSetProperly(void) const;
+	void checkIFSurrogateModelTypeIsOK(void) const;
+	void checkSettingsForSurrogateModelTest(void) const;
+
+	bool ifIsAGradientBasedMethod(std::string) const;
+	void determineProblemDimensionAndBoxConstraintsFromTrainingData(void);
+
 	void checkConsistencyOfConfigParams(void) const;
 	void readConfigFile(void);
-	void runDriver(void);
+	int runDriver(void);
 	void runOptimization(void) const;
-	void runSurrogateModelTest(void) const;
+	void runSurrogateModelTest(void);
 
 
 };

@@ -16,7 +16,7 @@ fExact = data[:,problemDimension]
 fSurrogate = data[:,problemDimension+1]
 SE = data[:,problemDimension+2]
 MSE = np.mean(SE)
-textstr="Mean Squared Error (MSE)="+str(MSE)
+textstr="Mean Squared Error = "+str(MSE)
 
 fig, ax = plt.subplots(figsize=(10,7))
 ax.set_title(function_name,fontsize=22)

@@ -124,7 +124,7 @@ int is_in_the_list(int entry, int *list, int list_size);
 int is_in_the_list(int entry, std::vector<int> &list);
 int is_in_the_list(unsigned int entry, uvec &list);
 
-
+bool ifIsInTheList(const std::vector<std::string> &vec, std::string item);
 
 
 void compute_max_min_distance_data(mat &x, double &max_distance, double &min_distance);

@@ -64,7 +64,7 @@ KrigingModel::KrigingModel():SurrogateModel(){}
 KrigingModel::KrigingModel(std::string name):SurrogateModel(name),linearModel(name){
 
 
-	modelID = KRIGING;
+	modelID = ORDINARY_KRIGING;
 	hyperparameters_filename = label + "_kriging_hyperparameters.csv";
 
 
@@ -114,6 +114,7 @@ void KrigingModel::initializeSurrogateModel(void){
 		linearModel.setParameterBounds(xmin,xmax);
 		linearModel.normalizeData();
 		linearModel.initializeSurrogateModel();
+		linearModel.train();
 
 
 	}
@@ -227,12 +228,13 @@ void KrigingModel::setEpsilon(double inp){
 void KrigingModel::setLinearRegressionOn(void){
 
 	ifUsesLinearRegression  = true;
+	modelID = UNIVERSAL_KRIGING;
 
 }
 void KrigingModel::setLinearRegressionOff(void){
 
 	ifUsesLinearRegression  = false;
-
+	modelID = ORDINARY_KRIGING;
 }
 
 
@@ -338,8 +340,10 @@ void KrigingModel::updateAuxilliaryFields(void){
 
 	if(ifUsesLinearRegression){
 
+
 		vec ysLinearRegression = linearModel.interpolateAll(X);
 		ys = ys - ysLinearRegression;
+
 
 	}
 
@@ -451,7 +455,7 @@ double KrigingModel::interpolate(rowvec xp,bool ifprint ) const{
 
 	fKriging = beta0+ dot(r,R_inv_ys_min_beta);
 
-	return fLinearRegression+fKriging;;
+	return fLinearRegression+fKriging;
 
 }
 

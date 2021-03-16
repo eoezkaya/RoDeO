@@ -153,4 +153,17 @@ ASSERT_EQ(ifEqual,0);
 
 }
 
+TEST(testAuxiliaryFunctions, testIfIsInTheList){
 
+	std::vector<std::string> list;
+	list.push_back("This");
+	list.push_back("is");
+	list.push_back("an");
+	list.push_back("apple");
+
+	bool ifExists = ifIsInTheList(list,"apple");
+	ASSERT_TRUE(ifExists);
+	ifExists = ifIsInTheList(list,"orange");
+	ASSERT_FALSE(ifExists);
+
+}

@@ -163,6 +163,8 @@ void TestFunction::setPathOfExecutable(std::string exePath){
 
 void TestFunction::setNameOfInputForExecutable(std::string filename){
 
+	assert(!filename.empty());
+
 	nameInputFileExecutable = filename;
 	ifExecutableInputFileIsSet = true;
 
@@ -170,8 +172,27 @@ void TestFunction::setNameOfInputForExecutable(std::string filename){
 
 void TestFunction::setNameOfOutputForExecutable(std::string filename){
 
+	assert(!filename.empty());
 	nameOutputFileExecutable = filename;
 	ifExecutableInputOutputIsSet = true;
+
+
+}
+
+void TestFunction::setNameFilenameTrainingData(std::string filename){
+
+	assert(!filename.empty());
+	filenameTrainingData = filename;
+	ifTrainingDataFileExists = true;
+
+
+}
+
+void TestFunction::setNameFilenameTestData(std::string filename){
+
+	assert(!filename.empty());
+	filenameTestData = filename;
+	ifTestDataFileExists = true;
 
 
 }
@@ -355,7 +376,7 @@ void TestFunction::plot(int resolution) const{
 }
 
 
-void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID){
+void TestFunction::testSurrogateModel(std::string surrogateModelType){
 
 
 	assert(ifBoxConstraintsSet);
@@ -372,35 +393,24 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID){
 	AggregationModel TestFunModelAggregation(function_name);
 	GEKModel TestFunModelGEK(function_name);
 
-
-	switch (modelID) {
-	case KRIGING:
-	{
+	if(surrogateModelType == "ORDINARY_KRIGING"){
 		surrogateModel =  &TestFunModelKriging;
-		break;
 	}
-	case LINEAR_REGRESSION:
-	{
+	if(surrogateModelType == "UNIVERSAL_KRIGING"){
+		TestFunModelKriging.setLinearRegressionOn();
+		surrogateModel =  &TestFunModelKriging;
+	}
+	if(surrogateModelType == "LINEAR_REGRESSION"){
 		surrogateModel = &TestFunModelLinearRegression;
-		break;
 	}
-	case GRADIENT_ENHANCED_KRIGING:
-	{
-		surrogateModel =  &TestFunModelGEK;
-		break;
+	if(surrogateModelType == "GRADIENT_ENHANCED_KRIGING"){
+		surrogateModel = &TestFunModelGEK;
 	}
-	case AGGREGATION:
-	{
 
-		surrogateModel =  &TestFunModelAggregation;
-		break;
+	if(surrogateModelType == "AGGREGATION"){
+		surrogateModel = &TestFunModelAggregation;
 	}
-	default:
-	{
-		cout << "ERROR: Non valid modelID\n";
-		abort();
-	}
-	}
+
 
 
 	surrogateModel->readData();
@@ -415,24 +425,25 @@ void TestFunction::testSurrogateModel(SURROGATE_MODEL modelID){
 	}
 	else{
 
+		std::cout<<"Training surrogate model...\n";
 		surrogateModel->train();
 	}
 
 
 	inSampleError = surrogateModel->calculateInSampleError();
 
-
+	std::cout<<"Evaluating estimates for the test data...\n";
 	surrogateModel->setTestData(testSamples);
 
 	surrogateModel->calculateOutSampleError();
 
 	outSampleError = surrogateModel->getOutSampleErrorMSE();
 
-	if(ifDisplayResults){
 
-		printf("outSampleError = %15.10f\n",outSampleError);
-		printf("inSampleError = %15.10f\n",inSampleError);
-	}
+
+	std::cout<<"\n\nOut of sample error (MSE) = "<<outSampleError<<"\n";
+	std::cout<<"In sample error     (MSE) = "<<inSampleError<<"\n\n";
+
 
 
 	surrogateModel->saveTestResults();
@@ -542,10 +553,9 @@ void TestFunction::evaluateAdjoint(Design &d) const{
 
 
 
-void TestFunction::generateSamplesInput(void){
+void TestFunction::generateSamplesInputTrainingData(void){
 
 	assert(numberOfTrainingSamples> 0);
-	assert(numberOfTestSamples> 0);
 	assert(ifBoxConstraintsSet);
 
 
@@ -554,9 +564,19 @@ void TestFunction::generateSamplesInput(void){
 	trainingSamplesInput = samplesTraining.getSamples();
 
 
+
+
+}
+
+void TestFunction::generateSamplesInputTestData(void){
+
+	assert(numberOfTestSamples> 0);
+	assert(ifBoxConstraintsSet);
+
 	LHSSamples samplesTest(dimension, lb, ub, numberOfTestSamples);
 
 	testSamplesInput = samplesTest.getSamples();
+
 
 
 }
@@ -595,10 +615,54 @@ void TestFunction::readEvaluateOutput(Design &d) const{
 
 }
 
-void TestFunction::generateSamples(void){
+void TestFunction::readFileTestData(void){
 
+	assert(this->ifTestDataFileExists);
+	testSamples.load(this->filenameTestData, csv_ascii);
+
+	assert(testSamples.n_cols == dimension + 1);
+
+	numberOfTestSamples = testSamples.n_rows;
+
+	testSamplesInput = testSamples.submat(0,0,numberOfTestSamples-1,dimension-1);
+
+
+}
+
+void TestFunction::readFileTrainingData(void){
+	assert(this->ifTrainingDataFileExists);
+	trainingSamples.load(this->filenameTrainingData, csv_ascii);
+
+	if(this->ifGradientsAvailable){
+
+		if( trainingSamples.n_cols != 2*dimension+1){
+
+			std::cout<<"ERROR: Number of columns in the training data does not match the problem dimension!\n";
+			abort();
+		}
+
+	}
+	else{
+
+		if(trainingSamples.n_cols != dimension+1){
+
+			std::cout<<"ERROR: Number of columns in the training data does not match the problem dimension!\n";
+			abort();
+
+		}
+
+	}
+
+	numberOfTrainingSamples = trainingSamples.n_rows;
+	trainingSamplesInput = trainingSamples.submat(0,0,numberOfTrainingSamples-1,dimension-1);
+
+}
+
+void TestFunction::generateTrainingSamples(void){
+
+
+	assert(!ifTrainingDataFileExists);
 	assert(trainingSamplesInput.n_rows>0);
-	assert(testSamplesInput.n_rows>0);
 
 	unsigned int nColsSampleMatrix;
 
@@ -614,7 +678,6 @@ void TestFunction::generateSamples(void){
 
 
 	trainingSamples.set_size(numberOfTrainingSamples,nColsSampleMatrix);
-	testSamples.set_size(numberOfTestSamples,dimension+1);
 
 
 	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
@@ -643,6 +706,18 @@ void TestFunction::generateSamples(void){
 
 	}
 
+
+	saveMatToCVSFile(trainingSamples, fileNameSurrogateModelData);
+}
+
+void TestFunction::generateTestSamples(void){
+
+	assert(!ifTestDataFileExists);
+	assert(testSamplesInput.n_rows>0);
+
+	testSamples.set_size(numberOfTestSamples,dimension+1);
+
+
 	/* test samples are evaluated without gradients in any case */
 	for(unsigned int i=0; i<numberOfTestSamples; i++){
 
@@ -658,14 +733,10 @@ void TestFunction::generateSamples(void){
 
 	}
 
-#if 0
-	printMatrix(this->trainingSamples);
-	printMatrix(this->testSamples);
-#endif
-
-
-	saveMatToCVSFile(trainingSamples, fileNameSurrogateModelData);
 }
+
+
+
 
 
 mat TestFunction::getTrainingSamplesInput(void) const{

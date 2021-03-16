@@ -219,13 +219,57 @@ TEST(testTestFunctions, testKrigingModel){
 
 	hyperParams.save("testFunction_kriging_hyperparameters.csv", csv_ascii);
 	testFun.setWarmStartOn();
-	testFun.testSurrogateModel(KRIGING);
+	testFun.testSurrogateModel("ORDINARY_KRIGING");
 
 	EXPECT_LT(testFun.outSampleError, 1.0);
 
 
 
 }
+
+TEST(testTestFunctions, testKrigingModelWithLinearRegression){
+
+
+	std::string compileCommand = "g++ linearTestFunction.cpp -o linearTestFunction -lm";
+	system(compileCommand.c_str());
+
+	TestFunction testFun("testFunction",5);
+	testFun.setNameOfExecutable("linearTestFunction");
+	testFun.setNameOfInputForExecutable("dv.dat");
+	testFun.setNameOfOutputForExecutable("objFunVal.dat");
+
+	testFun.setNumberOfTrainingSamples(100);
+	testFun.setNumberOfTestSamples(10);
+	testFun.setBoxConstraints(-4.0, 4.0);
+
+	testFun.generateSamplesInput();
+	testFun.generateSamples();
+
+	rowvec hyperParams(10);
+
+	hyperParams(0) = 1.0;
+	hyperParams(1) = 1.0;
+	hyperParams(2) = 1.0;
+	hyperParams(3) = 1.0;
+	hyperParams(4) = 1.0;
+
+	hyperParams(5) = 2.0;
+	hyperParams(6) = 2.0;
+	hyperParams(7) = 2.0;
+	hyperParams(8) = 2.0;
+	hyperParams(9) = 2.0;
+
+	hyperParams.save("testFunction_kriging_hyperparameters.csv", csv_ascii);
+	testFun.setWarmStartOn();
+
+	testFun.testSurrogateModel("UNIVERSAL_KRIGING");
+
+	EXPECT_LT(testFun.outSampleError, 10E-08);
+
+
+
+}
+
 
 
 TEST(testTestFunctions, testLinearModel){
@@ -245,7 +289,7 @@ TEST(testTestFunctions, testLinearModel){
 	testFun.generateSamplesInput();
 	testFun.generateSamples();
 
-	testFun.testSurrogateModel(LINEAR_REGRESSION);
+	testFun.testSurrogateModel("LINEAR_REGRESSION");
 	EXPECT_LT(testFun.outSampleError, 10E-5);
 
 }

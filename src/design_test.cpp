@@ -84,8 +84,5 @@ TEST(testDesign, testgenerateRandomDesignVectorAroundASample){
 	testDesign.generateRandomDesignVectorAroundASample(randomSample);
 
 
-	randomSample.print();
-	testDesign.dv.print();
-
 }
 

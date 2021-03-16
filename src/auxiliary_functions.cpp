@@ -358,6 +358,18 @@ int is_in_the_list(unsigned int entry, uvec &list){
 
 
 
+bool ifIsInTheList(const std::vector<std::string> &vec, std::string item){
+
+	if ( std::find(vec.begin(), vec.end(), item) != vec.end() )
+	   return true;
+	else
+	   return false;
+
+
+
+}
+
+
 /** solve a linear system Ax=b, with a given Cholesky decomposition of A
  *
  * @param[in] U
@@ -688,8 +700,6 @@ std::string removeSpacesFromString(std::string inputString){
 
 void getValuesFromString(std::string str, std::vector<std::string> &values,char delimiter){
 
-
-	std::cout<<str<<"\n";
 
 	assert(values.size() == 0);
 
