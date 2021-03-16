@@ -121,10 +121,9 @@ void AggregationModel::determineRhoBasedOnData(void){
 
 
 #if 1
-	printf("average distance in the training data= %10.7f\n",average_distance_sample);
 	printf("rho = %10.7f\n",rho);
-	printf("factor at maximum distance = %15.10f\n",exp(-rho*max(probe_distances_sample)* avg_norm_grad));
-	printf("factor at minimum distance = %15.10f\n",exp(-rho*min(probe_distances_sample)* avg_norm_grad));
+	printf("dual model weight at the maximum distance = %15.10f\n",exp(-rho*max(probe_distances_sample)* avg_norm_grad));
+	printf("dual model weight at the minimum distance = %15.10f\n",exp(-rho*min(probe_distances_sample)* avg_norm_grad));
 #endif
 
 
@@ -293,11 +292,6 @@ void AggregationModel::determineOptimalL1NormWeights(void){
 
 	modifyRawDataAndAssociatedVariables(trainingDataForHyperParameterOptimization.rawData);
 
-	loadHyperParameters();
-#if 0
-	std::cout<<"Initial weights for the L1norm:\n";
-	printVector(L1NormWeights,"L1NormWeights");
-#endif
 
 
 	/* we set rho to zero because we want to use only dual model in the training */
@@ -345,7 +339,6 @@ void AggregationModel::determineOptimalL1NormWeights(void){
 
 
 	L1NormWeights = weightsBest;
-	saveHyperParameters();
 
 	modifyRawDataAndAssociatedVariables(rawDataSave);
 
@@ -363,12 +356,22 @@ void AggregationModel::train(void){
 	}
 
 
+	loadHyperParameters();
+#if 0
+	std::cout<<"Initial weights for the L1norm:\n";
+	printVector(L1NormWeights,"L1NormWeights");
+#endif
+
+
 	krigingModel.train();
 
 
 	determineOptimalL1NormWeights();
 
 	determineRhoBasedOnData();
+
+	saveHyperParameters();
+
 
 }
 

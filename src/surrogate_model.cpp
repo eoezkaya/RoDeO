@@ -444,7 +444,6 @@ void SurrogateModel::calculateOutSampleError(void){
 #if 1
 		std::cout<<"\n"<<i+1<<") Data point at x = \n";
 
-//		printf("Interpolation at x:\n");
 		x.print();
 //		printf("xnorm:\n");
 //		xp.print();

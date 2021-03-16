@@ -1,5 +1,5 @@
 # current working directory
-WORKING_DIRECTORY= /home/emre/RoDeO/Tests/SurrogateModels/OrdinaryKriging/TestUsingOnlyData
+WORKING_DIRECTORY= /home/emre/RoDeO/Tests/SurrogateModels/Aggregation/TestUsingOnlyData
 # directory for the python scripts
 PYTHON_DIRECTORY= /home/emre/RoDeO/python
 # name of the configuration file

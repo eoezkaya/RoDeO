@@ -1172,6 +1172,7 @@ void RoDeODriver::determineProblemDimensionAndBoxConstraintsFromTrainingData(voi
 #if 1
 	printVector(boxConstraintsLowerBounds,"boxConstraintsLowerBounds");
 	printVector(boxConstraintsUpperBounds,"boxConstraintsUpperBounds");
+	std::cout<<"dimension = "<<dimension<<"\n";
 #endif
 }
 
@@ -1187,6 +1188,13 @@ void RoDeODriver::runSurrogateModelTest(void){
 	}
 
 	TestFunction TestFunction(objectiveFunctionName, dimension);
+
+	if(  ifIsAGradientBasedMethod(surrogateModelType)){
+
+		TestFunction.setGradientsOn();
+
+	}
+
 
 	if(ifFileNameTrainingDataForSurrogateTestIsSet){
 
@@ -1244,7 +1252,11 @@ void RoDeODriver::runSurrogateModelTest(void){
 	if(this->ifVisualization) TestFunction.setVisualizationOn();
 
 
+
+
 	TestFunction.print();
+
+
 
 	TestFunction.testSurrogateModel(this->surrogateModelType);
 

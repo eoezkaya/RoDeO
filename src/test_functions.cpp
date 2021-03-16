@@ -633,6 +633,10 @@ void TestFunction::readFileTrainingData(void){
 	assert(this->ifTrainingDataFileExists);
 	trainingSamples.load(this->filenameTrainingData, csv_ascii);
 
+#if 1
+	trainingSamples.print();
+#endif
+
 	if(this->ifGradientsAvailable){
 
 		if( trainingSamples.n_cols != 2*dimension+1){
