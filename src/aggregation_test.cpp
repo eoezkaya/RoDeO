@@ -183,13 +183,13 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 	testModel.setParameterBounds(0.0, 1.0);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
-	testModel.setNumberOfTrainingIterations(100);
+	testModel.setNumberOfTrainingIterations(1000);
 
 	testModel.determineOptimalL1NormWeights();
 
 	vec optimalWeights = testModel.getL1NormWeights();
-	EXPECT_LT(optimalWeights(1), 0.1);
-	EXPECT_LT(optimalWeights(2), 0.1);
+	EXPECT_LT(optimalWeights(1), 0.5);
+	EXPECT_LT(optimalWeights(2), 0.5);
 	remove("AggregationTest.csv");
 
 }

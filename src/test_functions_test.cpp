@@ -39,7 +39,8 @@ TEST(testTestFunctions, testGenerateSamplesInput){
 	testFun.setBoxConstraints(0.0, 2.0);
 	testFun.setNumberOfTrainingSamples(100);
 	testFun.setNumberOfTestSamples(10);
-	testFun.generateSamplesInput();
+	testFun.generateSamplesInputTrainingData();
+	testFun.generateSamplesInputTestData();
 
 	mat samplesInput = testFun.getTrainingSamplesInput();
 
@@ -158,8 +159,10 @@ TEST(testTestFunctions, testgenerateSamples){
 	testFun.setBoxConstraints(0.0, 2.0);
 	testFun.setGradientsOn();
 
-	testFun.generateSamplesInput();
-	testFun.generateSamples();
+	testFun.generateSamplesInputTrainingData();
+	testFun.generateSamplesInputTestData();
+	testFun.generateTestSamples();
+	testFun.generateTrainingSamples();
 
 	mat trainingSamples = testFun.getTrainingSamples();
 
@@ -207,8 +210,10 @@ TEST(testTestFunctions, testKrigingModel){
 	testFun.setNumberOfTestSamples(10);
 	testFun.setBoxConstraints(0.0, 2.0);
 
-	testFun.generateSamplesInput();
-	testFun.generateSamples();
+	testFun.generateSamplesInputTrainingData();
+	testFun.generateSamplesInputTestData();
+	testFun.generateTestSamples();
+	testFun.generateTrainingSamples();
 
 	rowvec hyperParams(4);
 
@@ -242,8 +247,10 @@ TEST(testTestFunctions, testKrigingModelWithLinearRegression){
 	testFun.setNumberOfTestSamples(10);
 	testFun.setBoxConstraints(-4.0, 4.0);
 
-	testFun.generateSamplesInput();
-	testFun.generateSamples();
+	testFun.generateSamplesInputTrainingData();
+	testFun.generateSamplesInputTestData();
+	testFun.generateTestSamples();
+	testFun.generateTrainingSamples();
 
 	rowvec hyperParams(10);
 
@@ -286,8 +293,10 @@ TEST(testTestFunctions, testLinearModel){
 	testFun.setNumberOfTestSamples(10);
 	testFun.setBoxConstraints(0.0, 2.0);
 
-	testFun.generateSamplesInput();
-	testFun.generateSamples();
+	testFun.generateSamplesInputTrainingData();
+	testFun.generateSamplesInputTestData();
+	testFun.generateTestSamples();
+	testFun.generateTrainingSamples();
 
 	testFun.testSurrogateModel("LINEAR_REGRESSION");
 	EXPECT_LT(testFun.outSampleError, 10E-5);

@@ -577,8 +577,6 @@ void AggregationModel::interpolateWithVariance(rowvec x,double *f_tilde,double *
 	*f_tilde =  w1*fSurrogateKriging+ w2* fSurrogateDual;
 
 
-
-
 }
 
 void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const{
