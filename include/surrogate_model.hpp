@@ -162,6 +162,8 @@ public:
 
 	std::string getNameOfHyperParametersFile(void) const;
 	std::string getNameOfInputFile(void) const;
+	void setNameOfInputFile(std::string filename);
+
 	unsigned int getDimension(void) const;
 	unsigned int getNumberOfSamples(void) const;
 	mat getRawData(void) const;

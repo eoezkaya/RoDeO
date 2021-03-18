@@ -198,6 +198,13 @@ std::string SurrogateModel::getNameOfHyperParametersFile(void) const{
 
 }
 
+void SurrogateModel::setNameOfInputFile(std::string filename) {
+
+	assert(!filename.empty());
+	filenameDataInput = filename;
+
+}
+
 std::string SurrogateModel::getNameOfInputFile(void) const{
 
 	return this->filenameDataInput;
