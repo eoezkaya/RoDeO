@@ -34,7 +34,7 @@
 
 #include<string>
 #include "surrogate_model.hpp"
-#include "kriging_training.hpp"
+
 
 class MultiLevelModel : public SurrogateModel {
 
@@ -48,16 +48,32 @@ private:
 	std::string inputFileNameHighFidelityData;
 
 	SurrogateModel *lowFidelityModel;
-	KrigingModel errorModel;
+	SurrogateModel *errorModel;
 
-	unsigned int dimension = 0;
+	mat rawDataHighFidelity;
+	unsigned int NHiFi = 0;
 
-	bool ifLowFidelityModelIsSet = false;
+	mat rawDataLowFidelity;
+	unsigned int NLoFi = 0;
+
+	mat rawDataError;
+
+	unsigned int dimHiFi = 0;
+	unsigned int dimLoFi = 0;
+
 
 
 public:
 
+	bool ifLowFidelityModelIsSet = false;
+	bool ifErrorModelIsSet = false;
+	bool ifErrorDataIsSet = false;
+	bool ifHighFidelityDataHasGradients = false;
+	bool ifLowFidelityDataHasGradients = false;
+
 	MultiLevelModel(std::string);
+
+	void readData(void);
 
 	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;
@@ -70,6 +86,23 @@ public:
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
 
+	void readHighFidelityData(void);
+	void readLowFidelityData(void);
+
+	void setDimensionsHiFiandLowFiModels(void);
+
+	void prepareErrorData(void);
+	unsigned int findIndexHiFiToLowFiData(unsigned int indexHiFiData) const;
+
+
+	void setinputFileNameHighFidelityData(std::string);
+	void setinputFileNameLowFidelityData(std::string);
+	void setParameterBounds(vec, vec);
+	void setLowFidelityModel(std::string);
+	void setErrorModel(std::string);
+
+	mat getRawDataHighFidelity(void) const;
+	mat getRawDataLowFidelity(void) const;
 
 };
 

@@ -131,6 +131,30 @@ void appendRowVectorToCSVData(rowvec v, std::string fileName){
 
 }
 
+
+mat readMatFromCVSFile(std::string fileName){
+
+
+	assert(!fileName.empty());
+
+
+	mat dataBuffer;
+	bool isReadOk  = dataBuffer.load(fileName,csv_ascii);
+
+	if(isReadOk == false)
+	{
+
+		std::cout << "ERROR: Problem with loading data from file: "<<fileName<< endl;
+		abort();
+	}
+
+
+	return dataBuffer;
+
+
+}
+
+
 void saveMatToCVSFile(mat M, std::string fileName){
 
 

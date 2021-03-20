@@ -34,9 +34,122 @@
 TEST(testMultiLevelModel, testConstructor){
 
 	MultiLevelModel testModel("MLtestModel");
-	ASSERT_FALSE(testModel.ifDataIsLoaded());
-	ASSERT_FALSE(testModel.ifBoundsAreSpecified());
-	ASSERT_FALSE(testModel.isInitialized());
+	ASSERT_FALSE(testModel.ifDataIsRead);
+	ASSERT_FALSE(testModel.ifBoundsAreSet);
+	ASSERT_FALSE(testModel.ifInitialized);
 
 
 }
+
+
+TEST(testMultiLevelModel, testfindIndexHiFiToLowFiData){
+
+	mat testHifiData(10,9,fill::randu);
+	mat testLofiData(20,9,fill::randu);
+
+	for(unsigned int i=0; i<10; i++){
+
+		testLofiData.row(i+10) = testHifiData.row(i);
+	}
+
+	testLofiData = shuffle(testLofiData);
+
+	testHifiData.save("HiFiData.csv", csv_ascii);
+	testLofiData.save("LoFiData.csv", csv_ascii);
+
+	MultiLevelModel testModel("MLtestModel");
+	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
+	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
+
+	testModel.setLowFidelityModel("ORDINARY_KRIGING");
+	testModel.setErrorModel("ORDINARY_KRIGING");
+
+
+	testModel.readHighFidelityData();
+	testModel.readLowFidelityData();
+	testModel.setDimensionsHiFiandLowFiModels();
+
+	unsigned int index = testModel.findIndexHiFiToLowFiData(2);
+
+
+	mat dataLowFi = testModel.getRawDataLowFidelity();
+	mat dataHiFi = testModel.getRawDataHighFidelity();
+
+
+	rowvec dx = dataLowFi.row(index) - dataHiFi.row(2);
+
+	for(unsigned int i=0; i<9; i++){
+
+		EXPECT_LT(dx(i),10E-10);
+	}
+
+
+}
+
+TEST(testMultiLevelModel, prepareErrorData){
+	mat testHifiData(100,9,fill::randu);
+	mat testLofiData(200,9,fill::randu);
+
+	testHifiData.save("HiFiData.csv", csv_ascii);
+	testLofiData.save("LoFiData.csv", csv_ascii);
+
+	MultiLevelModel testModel("MLtestModel");
+	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
+	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
+
+	testModel.setLowFidelityModel("ORDINARY_KRIGING");
+	testModel.setErrorModel("ORDINARY_KRIGING");
+
+
+	testModel.readHighFidelityData();
+	testModel.readLowFidelityData();
+	testModel.setDimensionsHiFiandLowFiModels();
+
+	testModel.prepareErrorData();
+
+	ASSERT_TRUE(testModel.ifErrorDataIsSet);
+
+
+}
+//
+//
+//TEST(testMultiLevelModel, testReadData){
+//	mat testHifiData(100,9,fill::randu);
+//	mat testLofiData(200,9,fill::randu);
+//
+//	testHifiData.save("HiFiData.csv", csv_ascii);
+//	testLofiData.save("LoFiData.csv", csv_ascii);
+//
+//	MultiLevelModel testModel("MLtestModel");
+//	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
+//	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
+//
+//	testModel.setLowFidelityModel("ORDINARY_KRIGING");
+//	testModel.setErrorModel("ORDINARY_KRIGING");
+//	testModel.readData();
+//	ASSERT_TRUE(testModel.ifDataIsRead);
+//
+//
+//
+//}
+//
+//TEST(testMultiLevelModel, testSetParameterBounds){
+//
+//	mat testHifiData(100,9,fill::randu);
+//	mat testLofiData(200,9,fill::randu);
+//
+//	testHifiData.save("HiFiData.csv", csv_ascii);
+//	testLofiData.save("LoFiData.csv", csv_ascii);
+//
+//	MultiLevelModel testModel("MLtestModel");
+//
+//	vec lb(2); lb.fill(-2);
+//	vec ub(2); ub.fill(-2);
+//
+//	testModel.setLowFidelityModel("ORDINARY_KRIGING");
+//	testModel.setErrorModel("ORDINARY_KRIGING");
+//
+//	testModel.readData();
+//	testModel.setParameterBounds(lb,ub);
+//
+//}

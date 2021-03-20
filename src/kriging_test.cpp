@@ -43,7 +43,7 @@ TEST(testKriging, testKrigingConstructor){
 	std::string filenameDataInput = testModel.getNameOfInputFile();
 	ASSERT_TRUE(filenameHyperParams == "testKrigingModel_kriging_hyperparameters.csv");
 	ASSERT_TRUE(filenameDataInput == "testKrigingModel.csv");
-	ASSERT_FALSE(testModel.ifUsesGradients());
+	ASSERT_FALSE(testModel.ifHasGradientData);
 
 
 }

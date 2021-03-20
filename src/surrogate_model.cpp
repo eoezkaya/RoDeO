@@ -581,4 +581,16 @@ rowvec SurrogateModel::getRowXRaw(unsigned int index) const{
 }
 
 
+bool SurrogateModel::ifModelIsValid(std::string modelType) const{
+
+
+	if(modelType == "ORDINARY_KRIGING") return true;
+	if(modelType == "UNIVERSAL_KRIGING") return true;
+	if(modelType == "AGGREGATION") return true;
+	if(modelType == "LINEAR_REGRESSION") return true;
+	if(modelType == "GRADIENT_ENHANCED_KRIGING") return true;
+
+	return false;
+
+}
 

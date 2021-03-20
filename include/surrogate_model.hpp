@@ -95,18 +95,20 @@ protected:
 	vec xmin;
 	vec xmax;
 
-	bool ifInitialized = false;
-	bool ifBoundsAreSet = false;
-	bool ifDataIsRead = false;
-	bool ifNormalized = false;
-	bool ifHasGradientData = false;
-	bool ifHasTestData = false;
+
 
 	unsigned int numberOfHyperParameters  = 0;
 
 
 
 public:
+
+	bool ifInitialized = false;
+	bool ifBoundsAreSet = false;
+	bool ifDataIsRead = false;
+	bool ifNormalized = false;
+	bool ifHasGradientData = false;
+	bool ifHasTestData = false;
 
 	mat testResults;
 
@@ -137,25 +139,7 @@ public:
 
 	}
 
-	bool isInitialized(void) const{
 
-		return ifInitialized;
-	}
-
-	bool ifUsesGradients(void) const{
-
-		return ifHasGradientData;
-	}
-
-	bool ifDataIsLoaded(void) const{
-
-		return ifDataIsRead;
-	}
-
-	bool ifBoundsAreSpecified(void) const{
-
-		return ifBoundsAreSet;
-	}
 
 
 	void setTestData(mat testData);
@@ -191,6 +175,8 @@ public:
 
 	void tryModelOnTestSet(PartitionData &testSet) const;
 	void visualizeTestResults(void) const;
+
+	bool ifModelIsValid(std::string) const;
 
 
 

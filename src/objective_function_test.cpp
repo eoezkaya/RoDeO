@@ -56,10 +56,9 @@ TEST(testObjectiveFunction, initializeSurrogate){
 
 	/* check dimension */
 	ASSERT_EQ(testModel.getDimension(), 4);
-	ASSERT_FALSE(testModel.ifUsesGradients());
-	ASSERT_TRUE(testModel.ifDataIsLoaded());
-	ASSERT_TRUE(testModel.ifBoundsAreSpecified());
-
+	ASSERT_FALSE(testModel.ifHasGradientData);
+	ASSERT_TRUE(testModel.ifDataIsRead);
+	ASSERT_TRUE(testModel.ifBoundsAreSet);
 
 	remove("ObjectiveFunctionTest.csv");
 }
@@ -87,9 +86,9 @@ TEST(testObjectiveFunction, initializeSurrogateWithAdjoint){
 
 	/* check dimension */
 	ASSERT_EQ(testModel.getDimension(), 2);
-	ASSERT_TRUE(testModel.ifUsesGradients());
-	ASSERT_TRUE(testModel.ifDataIsLoaded());
-	ASSERT_TRUE(testModel.ifBoundsAreSpecified());
+	ASSERT_TRUE(testModel.ifHasGradientData);
+	ASSERT_TRUE(testModel.ifDataIsRead);
+	ASSERT_TRUE(testModel.ifBoundsAreSet);
 
 
 	remove("ObjectiveFunctionTest.csv");
