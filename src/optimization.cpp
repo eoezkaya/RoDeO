@@ -884,7 +884,7 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 		rowvec best_dvNorm = optimizedDesignGradientBased.dv;
 		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds, upperBounds);
-		double estimatedBestdv = objFun.interpolate(best_dvNorm,true);
+		double estimatedBestdv = objFun.interpolate(best_dvNorm);
 
 #if 1
 		printf("The most promising design (not normalized):\n");

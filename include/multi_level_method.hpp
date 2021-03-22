@@ -46,6 +46,7 @@ private:
 
 	std::string inputFileNameLowFidelityData;
 	std::string inputFileNameHighFidelityData;
+	std::string inputFileNameError;
 
 	SurrogateModel *lowFidelityModel;
 	SurrogateModel *errorModel;
@@ -82,7 +83,7 @@ public:
 	void loadHyperParameters(void);
 	void updateAuxilliaryFields(void);
 	void train(void);
-	double interpolate(rowvec x, bool ifprint = false) const ;
+	double interpolate(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
 
@@ -103,6 +104,7 @@ public:
 
 	mat getRawDataHighFidelity(void) const;
 	mat getRawDataLowFidelity(void) const;
+	mat getRawDataError(void) const;
 
 };
 

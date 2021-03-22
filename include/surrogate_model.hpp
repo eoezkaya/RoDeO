@@ -110,10 +110,12 @@ public:
 	bool ifHasGradientData = false;
 	bool ifHasTestData = false;
 
+
 	mat testResults;
 
 	SURROGATE_MODEL modelID;
 	bool ifprintToScreen = false;
+
 
 	SurrogateModel();
 	SurrogateModel(std::string name);
@@ -161,7 +163,7 @@ public:
 	virtual void loadHyperParameters(void) = 0;
 	virtual void updateAuxilliaryFields(void);
 	virtual void train(void) = 0;
-	virtual double interpolate(rowvec x, bool ifprint = false) const = 0;
+	virtual double interpolate(rowvec x) const = 0;
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
 
 	double calculateInSampleError(void) const;

@@ -128,7 +128,7 @@ public:
 	void addDesignToData(Design &d);
 
 	bool checkIfGradientAvailable(void) const;
-	double interpolate(rowvec x, bool ifdebug = false) const;
+	double interpolate(rowvec x) const;
 	void print(void) const;
 	std::string getExecutionCommand(void) const;
 

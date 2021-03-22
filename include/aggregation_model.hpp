@@ -80,7 +80,7 @@ public:
 	PartitionData getTestData(void) const;
 
 	void generateRandomHyperParams(void);
-	double interpolate(rowvec x, bool ifprint = false) const ;
+	double interpolate(rowvec x) const ;
 	double interpolateWithGradients(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 

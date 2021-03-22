@@ -423,7 +423,7 @@ void AggregationModel::modifyRawDataAndAssociatedVariables(mat dataMatrix){
 	X = (1.0/dim)*X;
 }
 
-double AggregationModel::interpolate(rowvec x,bool ifprint) const{
+double AggregationModel::interpolate(rowvec x) const{
 
 	/* find the closest seeding point to the xp in the data set */
 
@@ -436,64 +436,28 @@ double AggregationModel::interpolate(rowvec x,bool ifprint) const{
 
 	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
 
-	if(ifprint){
-		printVector(x,"x");
-		printVector(xp,"xp");
-		cout <<"The closest point to x has an index = "<<indx<<":\n";
-		printVector(xNearestPoint,"xNearestPoint");
-		printVector(xNearestPointRaw,"xNearestPointRaw");
-		std::cout<<"y = "<<yNearestPoint<<"\n";
-
-	}
 
 
 	rowvec xDiff = x - xNearestPoint;
 	rowvec xDiffRaw = xp - xNearestPointRaw;
 
-
-	if(ifprint){
-		printVector(xDiff,"xDiff");
-		printVector(xDiffRaw,"xDiffRaw");
-	}
-
 	double min_dist = calculateWeightedL1norm(xDiff, L1NormWeights);
-	if(ifprint){
-		cout<<"min_dist = "<<min_dist<<"\n";
-	}
-
 
 
 	double fSurrogateKriging = krigingModel.interpolate(x);
-	if(ifprint){
-		cout<<"fSurrogateKriging = "<<fSurrogateKriging<<"\n";
-	}
 
 
 	rowvec gradientVector = gradientData.row(indx);
-	if(ifprint){
-		printMatrix(gradientVector);
-		printVector(gradientVector,"gradientVector");
-	}
+
 
 	double normgrad = calculateL1norm(gradientVector);
-	if(ifprint){
-		cout<<"normgrad = "<<normgrad<<"\n";
-	}
+
 
 	double fSurrogateDual = yNearestPoint+ dot(xDiffRaw,gradientVector);
-	if(ifprint){
-		cout<<"fSurrogateDual = "<<fSurrogateDual<<"\n";
 
-	}
 
 	double w2 = exp(-rho*min_dist*normgrad);
 	double w1 = 1.0 - w2;
-	if(ifprint){
-		cout<<"w2 = "<<w2<<"\n";
-		cout<<"w1 = "<<w1<<"\n";
-		cout<<"result  = "<<w1*fSurrogateKriging+ w2* fSurrogateDual<<"\n";
-
-	}
 
 
 	return w1*fSurrogateKriging+ w2* fSurrogateDual;

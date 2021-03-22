@@ -403,7 +403,7 @@ void ObjectiveFunction::evaluateAdjoint(Design &d){
 }
 
 
-double ObjectiveFunction::interpolate(rowvec x, bool ifdebug) const{
+double ObjectiveFunction::interpolate(rowvec x) const{
 
 	double result;
 	if(!ifGradientAvailable){
@@ -411,7 +411,7 @@ double ObjectiveFunction::interpolate(rowvec x, bool ifdebug) const{
 		result = surrogateModel.interpolate(x);
 	}else{
 
-		result = surrogateModelGradient.interpolate(x, ifdebug);
+		result = surrogateModelGradient.interpolate(x);
 	}
 
 

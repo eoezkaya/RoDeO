@@ -215,7 +215,7 @@ void GEKModel::train(void){
 }
 
 
-double GEKModel::interpolate(rowvec x,bool ifprint ) const {
+double GEKModel::interpolate(rowvec x ) const {
 
 
 	vec r = computeCorrelationVectorDot(x);

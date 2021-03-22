@@ -186,7 +186,7 @@ void LinearModel::train(void){
 
 
 
-double LinearModel::interpolate(rowvec x,bool ifprint ) const{
+double LinearModel::interpolate(rowvec x ) const{
 
 	double fRegression = 0.0;
 	for(unsigned int i=0; i<dim; i++){
