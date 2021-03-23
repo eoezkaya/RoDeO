@@ -3,8 +3,8 @@ CPP     = g++
 #CPPFLAGS  = -Wall -O2 -fopenmp  
 #CPPFLAGS  = -Wall -g -fopenmp -DUNIT_TESTS -I../include
 CPPFLAGS  = -Wall -O2 -fopenmp -I../include
-LDFLAGS = -lm -larmadillo -lgomp -lquadmath 
-LDFLAGS_UNIT_TESTS = -lm -larmadillo -lgomp -lquadmath -lgtest -lpthread
+LDFLAGS = -lm -larmadillo -lgomp 
+LDFLAGS_UNIT_TESTS = -lm -larmadillo -lgomp -lgtest -lpthread
 
 OBJ = auxiliary_functions.o aggregation_model.o constraint_functions.o design.o drivers.o \
 gek.o gek_test.o kriging_training.o lhs.o linear_regression.o  \
@@ -14,6 +14,7 @@ optimization.o polynomials.o  random_functions.o Rodeo.o surrogate_model.o test_
 OBJ_UNIT_TESTS =  aggregation_test.o auxiliary_functions_test.o constraint_functions_test.o \
 design_test.o driver_test.o kriging_test.o matrix_vector_operations_test.o \
 objective_function_test.o multi_level_model_test.o optimization_test.o polynomials_test.o test_functions_test.o
+
 all : $(OBJ)
 	$(CPP) $(CPPFLAGS) -o rodeo $(OBJ) $(LDFLAGS)
 test: $(OBJ) $(OBJ_UNIT_TESTS)

@@ -39,54 +39,6 @@
 #include <armadillo>
 
 
-HighPrecisionMatrix factorizeCholeskyHP(const HighPrecisionMatrix& input) {
-
-	int n = input.n_rows();
-	HighPrecisionMatrix result(n, n);
-	for (int i = 0; i < n; ++i) {
-		for (int k = 0; k < i; ++k) {
-			__float128 value = input(i, k);
-			for (int j = 0; j < k; ++j)
-				value -= result(i, j) * result(k, j);
-			result(i, k) = value/result(k, k);
-		}
-		__float128 value = input(i, i);
-		for (int j = 0; j < i; ++j)
-			value -= result(i, j) * result(i, j);
-
-		if(value < 0.0){
-			cout<<"ERROR: Cholesky decomposition failed!\n";
-			abort();
-
-		}
-		result(i, i) = sqrtq(value);
-	}
-	return result;
-}
-
-
-HighPrecisionMatrix transposeHP(const HighPrecisionMatrix& input) {
-
-	int n = input.n_rows();
-	HighPrecisionMatrix result(n, n);
-
-	for (int i = 0; i < n; ++i) {
-
-		for (int j = i; j < n; ++j){
-
-			result(i,j) = input(j,i);
-
-
-		}
-
-
-	}
-
-
-	return result;
-}
-
-
 
 void copyRowVector(rowvec &a,rowvec b){
 
@@ -194,26 +146,6 @@ void saveMatToCVSFile(mat M, std::string fileName){
 
 
 
-
-void testHighPrecisionCholesky(void){
-
-	int N = 10;
-	HighPrecisionMatrix  A(N, N);
-
-	mat L(N,N,fill::randu);
-
-	mat M = L*trans(L);
-
-	printMatrix(M,"M");
-
-	A = M;
-
-	HighPrecisionMatrix Lchol = factorizeCholeskyHP(A);
-	Lchol.print();
-
-	HighPrecisionMatrix Uchol = transposeHP(Lchol);
-	Uchol.print();
-}
 
 
 void printMatrix(mat M, std::string name){

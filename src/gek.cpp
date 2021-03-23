@@ -468,9 +468,6 @@ void GEKModel::updateAuxilliaryFields(void){
 #endif
 	vec ys = yGEK;
 
-
-	this->GEK_weights(0) = 6.4;
-	this->GEK_weights(1) = 8.4;
 	computeCorrelationMatrixDot();
 
 
@@ -499,25 +496,14 @@ void GEKModel::updateAuxilliaryFields(void){
 	correlationMatrixDot.save("correlationMatrix.csv",csv_ascii);
 
 
-	//	int cholesky_return = chol(upperDiagonalMatrixDot, correlationMatrixDot);
-	//
-	//	if (cholesky_return == 0) {
-	//
-	//		printf("ERROR: Ill conditioned correlation matrix, Cholesky decomposition failed at %s, line %d.\n",__FILE__, __LINE__);
-	//		exit(-1);
-	//	}
+	int cholesky_return = chol(upperDiagonalMatrixDot, correlationMatrixDot);
 
+	if (cholesky_return == 0) {
 
-	HighPrecisionMatrix	correlationMatrixDotHP(N*(dim+1),N*(dim+1));
-	correlationMatrixDotHP = correlationMatrixDot;
-	HighPrecisionMatrix LowerDiagonalMatrixHP = factorizeCholeskyHP(correlationMatrixDotHP);
+		printf("ERROR: Ill conditioned correlation matrix, Cholesky decomposition failed at %s, line %d.\n",__FILE__, __LINE__);
+		exit(-1);
+	}
 
-
-	HighPrecisionMatrix UpperDiagonalMatrixHP = transposeHP(LowerDiagonalMatrixHP);
-
-	for(unsigned int i=0; i<N*(dim+1); i++)
-		for(unsigned int j=0; j<N*(dim+1); j++)
-			upperDiagonalMatrixDot(i,j) = UpperDiagonalMatrixHP(i,j);
 
 
 
@@ -531,19 +517,6 @@ void GEKModel::updateAuxilliaryFields(void){
 
 	solveLinearSystemCholesky(upperDiagonalMatrixDot, R_inv_ys, ys);    /* solve R x = ys */
 
-	ys.save("ys.csv",csv_ascii);
-	R_inv_ys.save("R_inv_ys.csv",csv_ascii);
-
-	printVector(ys,"ys");
-	printVector(R_inv_ys,"R_inv_ys");
-
-
-	vec res1 = ys-correlationMatrixDot*R_inv_ys;
-
-
-	for(unsigned int i=0; i<N*(dim+1); i++){
-		printf("%20.15e\n",res1(i));
-	}
 
 
 
@@ -553,12 +526,6 @@ void GEKModel::updateAuxilliaryFields(void){
 
 	solveLinearSystemCholesky(upperDiagonalMatrixDot, R_inv_F, vectorOfF);      /* solve R x = F */
 
-
-	vec res2 =  vectorOfF-correlationMatrixDot*R_inv_F;
-
-	printVector(vectorOfF,"vectorOfF");
-
-	printVector(res2,"res2");
 
 	beta0 = (1.0/dot(vectorOfF,R_inv_F)) * (dot(vectorOfF,R_inv_ys));
 
@@ -573,10 +540,6 @@ void GEKModel::updateAuxilliaryFields(void){
 	solveLinearSystemCholesky(upperDiagonalMatrixDot, R_inv_ys_min_beta , ys_min_betaF);
 
 
-	vec res3 =  ys_min_betaF-correlationMatrixDot*R_inv_ys_min_beta;
-
-
-	printVector(res3,"res3");
 
 
 	sigmaSquared = (1.0 / (N*(dim+1))) * dot(ys_min_betaF, R_inv_ys_min_beta);
