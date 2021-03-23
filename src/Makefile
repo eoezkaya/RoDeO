@@ -2,7 +2,7 @@ VERSION = 0.2
 CPP     = g++
 #CPPFLAGS  = -Wall -O2 -fopenmp  
 #CPPFLAGS  = -Wall -g -fopenmp -DUNIT_TESTS -I../include
-CPPFLAGS  = -Wall -O2 -fopenmp -I../include
+CPPFLAGS  = -Wall -O2 -fopenmp -I./include
 LDFLAGS = -lm -larmadillo -lgomp 
 LDFLAGS_UNIT_TESTS = -lm -larmadillo -lgomp -lgtest -lpthread
 
