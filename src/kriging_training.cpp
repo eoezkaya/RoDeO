@@ -107,7 +107,7 @@ void KrigingModel::initializeSurrogateModel(void){
 
 		if(ifHasGradientData) {
 
-			linearModel.setGradientsOn();
+			linearModel.ifHasGradientData = true;
 
 		}
 		linearModel.readData();

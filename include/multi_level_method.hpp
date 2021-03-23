@@ -78,14 +78,16 @@ public:
 
 	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;
+
 	void printHyperParameters(void) const;
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
+
 	void updateAuxilliaryFields(void);
 	void train(void);
+
 	double interpolate(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
-
 
 	void readHighFidelityData(void);
 	void readLowFidelityData(void);
@@ -98,6 +100,7 @@ public:
 
 	void setinputFileNameHighFidelityData(std::string);
 	void setinputFileNameLowFidelityData(std::string);
+
 	void setParameterBounds(vec, vec);
 	void setLowFidelityModel(std::string);
 	void setErrorModel(std::string);

@@ -271,11 +271,6 @@ TEST(testMultiLevelModel, testInterpolate){
 	}
 
 
-	samplesLowFi.print();
-	std::cout<<"\n";
-	samplesHiFi.print();
-	std::cout<<"\n";
-
 	vec lb(2); lb.fill(-1.0);
 	vec ub(2); ub.fill(2.0);
 	samplesLowFi.save("LowFiData.csv", csv_ascii);
@@ -298,6 +293,7 @@ TEST(testMultiLevelModel, testInterpolate){
 
 	double ftildeTest = testModel.interpolate(xTestNorm);
 
-	std::cout<<"ftildeTest = "<<ftildeTest<<"\n";
+	double error = ftildeTest - 0.5;
+	EXPECT_LT(error, 0.1);
 
 }

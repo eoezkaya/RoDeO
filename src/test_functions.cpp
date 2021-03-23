@@ -424,15 +424,18 @@ void TestFunction::testSurrogateModel(std::string surrogateModelType){
 		surrogateModel->updateAuxilliaryFields();
 	}
 	else{
+		if(ifDisplayResults){
 
-		std::cout<<"Training surrogate model...\n";
+			std::cout<<"Training surrogate model...\n";
+
+		}
 		surrogateModel->train();
 	}
 
 
 	inSampleError = surrogateModel->calculateInSampleError();
 
-	std::cout<<"Evaluating estimates for the test data...\n";
+
 	surrogateModel->setTestData(testSamples);
 
 	surrogateModel->calculateOutSampleError();
@@ -440,10 +443,11 @@ void TestFunction::testSurrogateModel(std::string surrogateModelType){
 	outSampleError = surrogateModel->getOutSampleErrorMSE();
 
 
+	if(ifDisplayResults){
 
-	std::cout<<"\n\nOut of sample error (MSE) = "<<outSampleError<<"\n";
-	std::cout<<"In sample error     (MSE) = "<<inSampleError<<"\n\n";
-
+		std::cout<<"\n\nOut of sample error (MSE) = "<<outSampleError<<"\n";
+		std::cout<<"In sample error     (MSE) = "<<inSampleError<<"\n\n";
+	}
 
 
 	surrogateModel->saveTestResults();

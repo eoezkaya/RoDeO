@@ -197,7 +197,7 @@ void GEKModel::train(void){
 	}
 
 	KrigingModel auxModelForTraining(label);
-	auxModelForTraining.setGradientsOn();
+	auxModelForTraining.ifHasGradientData = true;
 
 	auxModelForTraining.initializeSurrogateModel();
 	auxModelForTraining.max_number_of_kriging_iterations = maxNumberOfTrainingIterations;

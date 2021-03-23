@@ -448,13 +448,11 @@ void SurrogateModel::calculateOutSampleError(void){
 
 		rowvec x  = XTestraw.row(i);
 
-#if 1
-		std::cout<<"\n"<<i+1<<") Data point at x = \n";
+		if(ifPrintOutSampleError){
+			std::cout<<"\n"<<i+1<<") Data point at x = \n";
 
-		x.print();
-//		printf("xnorm:\n");
-//		xp.print();
-#endif
+			x.print();
+		}
 		double functionValueSurrogate = interpolate(xp);
 
 		double functionValueExact = yTest(i);
@@ -462,9 +460,10 @@ void SurrogateModel::calculateOutSampleError(void){
 		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
 
 
-#if 1
-		printf("True value = %15.10f, Estimated value = %15.10f, Squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
-#endif
+		if(ifPrintOutSampleError){
+
+			printf("True value = %15.10f, Estimated value = %15.10f, Squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
+		}
 
 
 		rowvec sample(numberOfEntries);

@@ -137,7 +137,7 @@ void AggregationModel::initializeSurrogateModel(void){
 
 	numberOfTrainingIterations = 10000;
 
-	krigingModel.setGradientsOn();
+	krigingModel.ifHasGradientData = true;
 
 	krigingModel.readData();
 	krigingModel.setParameterBounds(xmin,xmax);

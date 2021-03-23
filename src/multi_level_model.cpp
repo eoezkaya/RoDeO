@@ -67,14 +67,13 @@ void MultiLevelModel::initializeSurrogateModel(void){
 	errorModel->initializeSurrogateModel();
 
 
-
 }
 
 
 void MultiLevelModel::printSurrogateModel(void) const{
 
-
-
+	lowFidelityModel->printSurrogateModel();
+	errorModel->printSurrogateModel();
 
 
 }
@@ -124,16 +123,23 @@ double MultiLevelModel::interpolate(rowvec x) const{
 
 	double lowFidelityEstimate = lowFidelityModel->interpolate(x);
 	double errorEstimate = errorModel->interpolate(x);
+#if 0
+	std::cout<<"lowFidelityEstimate ="<<lowFidelityEstimate<<"\n";
+	std::cout<<"errorEstimate ="<<errorEstimate<<"\n";
+#endif
 
 	result = lowFidelityEstimate + errorEstimate;
 
 	return result;
 
 }
-void MultiLevelModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
+void MultiLevelModel::interpolateWithVariance(rowvec xp,double *estimatedValue,double *sigmaSquared) const{
 
+	double lowFidelityEstimate;
+	lowFidelityModel->interpolateWithVariance(xp,&lowFidelityEstimate,sigmaSquared);
+	double errorEstimate = errorModel->interpolate(xp);
 
-
+	*estimatedValue = lowFidelityEstimate + errorEstimate;
 
 
 }

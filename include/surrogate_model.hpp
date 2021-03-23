@@ -114,8 +114,9 @@ public:
 	mat testResults;
 
 	SURROGATE_MODEL modelID;
-	bool ifprintToScreen = false;
 
+	bool ifprintToScreen = false;
+	bool ifPrintOutSampleError = false;
 
 	SurrogateModel();
 	SurrogateModel(std::string name);
@@ -127,19 +128,6 @@ public:
 	void checkRawData(void) const;
 	void setParameterBounds(vec xmin, vec xmax);
 	void setParameterBounds(double xmin, double xmax);
-
-
-	void setGradientsOn(void){
-
-		ifHasGradientData = true;
-
-	}
-
-	void setGradientsOff(void){
-
-		ifHasGradientData = false;
-
-	}
 
 
 
