@@ -109,6 +109,8 @@ public:
 	mat getRawDataLowFidelity(void) const;
 	mat getRawDataError(void) const;
 
+	double evaluateBrigdeFunction(rowvec x);
+
 };
 
 

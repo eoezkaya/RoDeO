@@ -117,6 +117,16 @@ void MultiLevelModel::train(void){
 
 
 }
+
+double evaluateBrigdeFunction(rowvec x){
+
+	double brigdgeFunctionValue = 1.0;
+
+	return brigdgeFunctionValue;
+
+
+}
+
 double MultiLevelModel::interpolate(rowvec x) const{
 
 	double result = 0.0;

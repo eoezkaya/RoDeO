@@ -80,14 +80,18 @@ int main(int argc, char* argv[]){
 	/* initialize random seed*/
 	srand (time(NULL));
 
+
+	changeDirectoryToRodeoHome();
+
+
 	settings.read();
 
 
 
 #ifdef UNIT_TESTS
 
+	changeDirectoryToUnitTests();
 
-	chdir ("../UnitTests");
 	testing::InitGoogleTest(&argc, argv);
 	int runTestsResult = RUN_ALL_TESTS();
 

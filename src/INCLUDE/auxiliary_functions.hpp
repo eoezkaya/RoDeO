@@ -46,6 +46,10 @@ using namespace arma;
 void executePythonScript(std::string command);
 
 
+void changeDirectoryToRodeoHome(void);
+void changeDirectoryToUnitTests(void);
+
+
 void perturbVectorUniform(frowvec &xp,float sigmaPert);
 
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut);

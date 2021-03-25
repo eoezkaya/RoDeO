@@ -45,6 +45,38 @@ void executePythonScript(std::string command){
 }
 
 
+void changeDirectoryToRodeoHome(void){
+
+	const char* env_p;
+	if(env_p = std::getenv("RODEO_HOME")){
+		std::cout << "RODEO_HOME: " << env_p << '\n';
+	}
+	else{
+		std::cout<<"The environmental variable RODEO_HOME is undefined!\n";
+		abort();
+
+	}
+
+	int ret = chdir (env_p);
+	if(ret!=0){
+
+		std::cout<<"ERROR: Cannot change directory to $RODEO_HOME\n";
+		abort();
+	}
+
+}
+
+void changeDirectoryToUnitTests(void){
+
+	int ret =chdir ("./UnitTests");
+	if(ret!=0){
+
+		std::cout<<"ERROR: Cannot change directory to $RODEO_HOME/UnitTests\n";
+		abort();
+	}
+
+}
+
 bool checkValue(double value, double expected, double tolerance){
 
 	assert(tolerance > 0.0);
@@ -361,9 +393,9 @@ int is_in_the_list(unsigned int entry, uvec &list){
 bool ifIsInTheList(const std::vector<std::string> &vec, std::string item){
 
 	if ( std::find(vec.begin(), vec.end(), item) != vec.end() )
-	   return true;
+		return true;
 	else
-	   return false;
+		return false;
 
 
 
