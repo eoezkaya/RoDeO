@@ -52,7 +52,9 @@
 #include "gek_test.hpp"
 #include "lhs.hpp"
 #include "drivers.hpp"
+#ifdef UNIT_TESTS
 #include<gtest/gtest.h>
+#endif
 Rodeo_settings settings;
 
 
@@ -82,8 +84,6 @@ int main(int argc, char* argv[]){
 
 
 	changeDirectoryToRodeoHome();
-
-
 	settings.read();
 
 
@@ -101,16 +101,7 @@ int main(int argc, char* argv[]){
 #endif
 
 
-	int ret = chdir (settings.cwd.c_str());
-
-	if (ret != 0){
-
-		cout<<"Error: Cannot change directory! Are you sure that the directory: "<<settings.cwd<<" exists?\n";
-		abort();
-	}
-
-
-
+	changeDirectoryToWork(settings.cwd);
 
 
 	RoDeODriver driverToRun;

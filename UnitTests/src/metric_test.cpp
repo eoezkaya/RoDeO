@@ -29,15 +29,35 @@
  *
  */
 
-#ifndef METRIC
-#define METRIC
-#include <armadillo>
-using namespace arma;
+#include "metric.hpp"
+#include<gtest/gtest.h>
 
-double calculateL1norm(const rowvec &x);
-double calculateWeightedL1norm(const rowvec &x, vec w);
-double calculateMetric(rowvec &xi,rowvec &xj, mat M);
-double calculateMetricAdjoint(rowvec xi, rowvec xj, mat M, mat &Mb, double calculateMetricb);
-unsigned int findNearestNeighborL1(const rowvec &xp, const mat &X);
+TEST(testMetric, testfindNearestNeighborL1){
 
-#endif
+	mat X(100,5, fill::randu);
+
+	rowvec xp(5,fill::randu);
+	xp+=0.000001;
+
+	X.row(11) = xp;
+	unsigned int indx = findNearestNeighborL1(xp, X);
+
+	ASSERT_EQ(indx, 11);
+
+}
+
+TEST(testMetric, testcalculateL1norm){
+
+	rowvec xp(4); xp(0) = -1; xp(1) = 1; xp(2) = -2; xp(3) = 2;
+
+	double normL1 = calculateL1norm(xp);
+	double error = fabs(normL1-6.0);
+	EXPECT_LT(error, 10E-10);
+
+
+
+}
+
+
+
+

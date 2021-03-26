@@ -48,7 +48,7 @@ void executePythonScript(std::string command);
 
 void changeDirectoryToRodeoHome(void);
 void changeDirectoryToUnitTests(void);
-
+void changeDirectoryToWork(std::string cwd);
 
 void perturbVectorUniform(frowvec &xp,float sigmaPert);
 

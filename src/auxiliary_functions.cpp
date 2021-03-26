@@ -77,6 +77,18 @@ void changeDirectoryToUnitTests(void){
 
 }
 
+void changeDirectoryToWork(std::string cwd){
+
+	int ret = chdir (cwd.c_str());
+
+	if (ret != 0){
+
+		cout<<"Error: Cannot change directory! Are you sure that the directory: "<<cwd<<" exists?\n";
+		abort();
+	}
+
+}
+
 bool checkValue(double value, double expected, double tolerance){
 
 	assert(tolerance > 0.0);

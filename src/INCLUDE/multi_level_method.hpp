@@ -62,6 +62,8 @@ private:
 	unsigned int dimHiFi = 0;
 	unsigned int dimLoFi = 0;
 
+	double gamma = 1.0;
+
 
 
 public:

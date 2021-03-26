@@ -3,7 +3,7 @@ TARGET_EXEC := rodeo
 BUILD_DIR := ./build
 SRC_DIRS := ./src ./UnitTests/src
 
-SRCS := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c)
+SRCS := $(shell find $(SRC_DIRS) -name *.cpp)
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 

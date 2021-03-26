@@ -96,3 +96,36 @@ double calculateMetricAdjoint(rowvec xi, rowvec xj, mat M, mat &Mb, double calcu
 
 	return calculateMetric;
 }
+
+unsigned int findNearestNeighborL1(const rowvec &xp, const mat &X){
+
+	assert(X.n_rows>0);
+
+	unsigned int index = -1;
+	double minL1Distance = LARGE;
+
+
+
+	for(unsigned int i=0; i<X.n_rows; i++){
+
+		rowvec x = X.row(i);
+
+		rowvec xdiff = xp -x;
+
+		double L1distance = calculateL1norm(xdiff);
+		if(L1distance< minL1Distance){
+
+			minL1Distance = L1distance;
+			index = i;
+
+		}
+
+	}
+
+
+	return index;
+
+
+}
+
+

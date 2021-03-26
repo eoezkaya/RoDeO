@@ -122,6 +122,8 @@ double evaluateBrigdeFunction(rowvec x){
 
 	double brigdgeFunctionValue = 1.0;
 
+
+
 	return brigdgeFunctionValue;
 
 
