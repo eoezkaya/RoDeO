@@ -55,6 +55,7 @@ void MultiLevelModel::initializeSurrogateModel(void){
 
 	assert(ifLowFidelityModelIsSet);
 	assert(ifErrorModelIsSet);
+	assert(ifBoundsAreSet);
 
 	readData();
 
@@ -108,11 +109,44 @@ void MultiLevelModel::updateAuxilliaryFields(void){
 
 }
 
+void MultiLevelModel::prepareTrainingDataForGammaOptimization(void){
+
+	assert(this->ifDataIsRead);
+
+	unsigned int Ntest = NHiFi/5;
+
+	rawDataHighFidelityForGammaTest = rawDataHighFidelity.head_rows(Ntest );
+	rawDataHighFidelityForGammaTraining = rawDataHighFidelity.tail_rows(NHiFi-Ntest );
+
+	rawDataErrorForGammaTest = rawDataError.head_rows(Ntest );
+	rawDataErrorForGammaTraining = rawDataError.tail_rows(NHiFi-Ntest );
+
+
+}
+void MultiLevelModel::trainGamma(void){
+
+
+	assert(rawDataHighFidelityForGammaTest.n_rows>0);
+	assert(rawDataHighFidelityForGammaTraining.n_rows>0);
+
+
+
+
+
+
+}
+
+
 void MultiLevelModel::train(void){
 
 
 	lowFidelityModel->train();
 	errorModel->train();
+
+	prepareTrainingDataForGammaOptimization();
+
+	trainGamma();
+
 
 
 
@@ -444,3 +478,17 @@ mat MultiLevelModel::getRawDataError(void) const{
 	return rawDataError;
 }
 
+
+mat MultiLevelModel::getRawDataHighFidelityForGammaTraining(void) const{
+
+	assert(rawDataHighFidelityForGammaTraining.n_rows > 0 );
+	return rawDataHighFidelityForGammaTraining;
+
+
+}
+mat MultiLevelModel::getRawDataHighFidelityForGammaTest(void) const{
+
+	assert(rawDataHighFidelityForGammaTest.n_rows > 0 );
+	return rawDataHighFidelityForGammaTest;
+
+}

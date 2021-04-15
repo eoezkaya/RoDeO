@@ -1345,7 +1345,7 @@ int RoDeODriver::runDriver(void){
 	else if(problemType == "MAXIMIZATION" || problemType == "MINIMIZATION"){
 
 		optimizationStudy.setProblemType(problemType);
-		optimizationStudy.ifVisualize = true;
+
 		optimizationStudy.setMaximumNumberOfIterations(maximumNumberOfSimulations);
 
 		if(!ifWarmStart){
@@ -1370,6 +1370,7 @@ int RoDeODriver::runDriver(void){
 		abort();
 
 	}
+	return 0;
 }
 
 

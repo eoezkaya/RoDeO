@@ -297,3 +297,77 @@ TEST(testMultiLevelModel, testInterpolate){
 	EXPECT_LT(error, 0.1);
 
 }
+
+TEST(testMultiLevelModel, testprapareTrainingDataForGammaOptimization){
+	mat testHifiData(100,9,fill::randu);
+	mat testLofiData(200,9,fill::randu);
+
+	for(unsigned int i=0; i<100; i++){
+
+		testLofiData.row(i+100) = testHifiData.row(i);
+	}
+
+	testHifiData.save("HiFiData.csv", csv_ascii);
+	testLofiData.save("LoFiData.csv", csv_ascii);
+
+	MultiLevelModel testModel("MLtestModel");
+	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
+	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
+
+	testModel.setLowFidelityModel("ORDINARY_KRIGING");
+	testModel.setErrorModel("ORDINARY_KRIGING");
+	testModel.readData();
+	testModel.prepareTrainingDataForGammaOptimization();
+
+	mat testData = testModel.getRawDataHighFidelityForGammaTest();
+	mat trainingData = testModel.getRawDataHighFidelityForGammaTraining();
+
+	rowvec x1 = testHifiData.row(5);
+	rowvec x2 = testData.row(5);
+
+
+	for(int i=0;i<9; i++){
+
+		double error = fabs(x1(i) - x2(i));
+		EXPECT_LT(error,10E-10);
+	}
+
+	x1 = testHifiData.row(25);
+	x2 = trainingData.row(5);
+
+
+	for(int i=0;i<9; i++){
+
+		double error = fabs(x1(i) - x2(i));
+		EXPECT_LT(error,10E-10);
+	}
+
+
+
+}
+
+TEST(testMultiLevelModel, testTrainGamma){
+	mat testHifiData(100,9,fill::randu);
+	mat testLofiData(200,9,fill::randu);
+
+	for(unsigned int i=0; i<100; i++){
+
+		testLofiData.row(i+100) = testHifiData.row(i);
+	}
+
+	testHifiData.save("HiFiData.csv", csv_ascii);
+	testLofiData.save("LoFiData.csv", csv_ascii);
+
+	MultiLevelModel testModel("MLtestModel");
+	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
+	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
+
+	testModel.setLowFidelityModel("ORDINARY_KRIGING");
+	testModel.setErrorModel("ORDINARY_KRIGING");
+	testModel.readData();
+	testModel.prepareTrainingDataForGammaOptimization();
+	testModel.trainGamma();
+
+
+}
+

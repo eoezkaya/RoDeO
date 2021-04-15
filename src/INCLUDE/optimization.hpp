@@ -83,7 +83,7 @@ public:
 
 	unsigned int iterGradientEILoop;
 	std::string optimizationType;
-	bool ifVisualize;
+	bool ifVisualize = false;
 
 	unsigned int iterMaxEILoop;
 

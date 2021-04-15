@@ -387,12 +387,15 @@ void COptimizer::initializeSurrogates(void){
 
 void COptimizer::trainSurrogates(void){
 
+#if 0
 	printf("Training surrogate model for the objective function...\n");
+#endif
 	objFun.trainSurrogate();
 
 	if(constraintFunctions.size() !=0){
-
+#if 0
 		printf("Training surrogate model for the constraints...\n");
+#endif
 	}
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
@@ -877,16 +880,16 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 		CDesignExpectedImprovement optimizedDesignGradientBased = MaximizeEIGradientBased(theMostPromisingDesigns.at(0));
 
-
+#if 0
 		optimizedDesignGradientBased.print();
-
+#endif
 
 
 		rowvec best_dvNorm = optimizedDesignGradientBased.dv;
 		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds, upperBounds);
 		double estimatedBestdv = objFun.interpolate(best_dvNorm);
 
-#if 1
+#if 0
 		printf("The most promising design (not normalized):\n");
 		best_dv.print();
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
@@ -923,18 +926,20 @@ void COptimizer::EfficientGlobalOptimization(void){
 			abort();
 
 		}
-
+#if 0
 		currentBestDesign.print();
-
+#endif
 		addConstraintValuesToData(currentBestDesign);
 		updateOptimizationHistory(currentBestDesign);
 
 
 		Design globalBestDesign = findTheGlobalOptimalDesign();
-		std::cout<<"######## Best Design ############\n\n";
-		globalBestDesign.print();
+#if 1
+		std::cout<<"##########################################\n";
+		std::cout<<"Optimization Iteration = "<<iterOpt<<"\n";
+		currentBestDesign.print();
 		std::cout<<"\n\n";
-
+#endif
 
 		simulationCount ++;
 
@@ -1065,8 +1070,9 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 	for(unsigned int sampleID=0; sampleID<howManySamples; sampleID++){
 
-		std::cout<<"Evaluating sample "<<sampleID<<"\n";
+
 		std::cout<<"##########################################\n";
+		std::cout<<"Evaluating sample "<<sampleID<<"\n";
 
 		rowvec dv = sampleCoordinates.row(sampleID);
 		Design currentDesign(dv);
@@ -1105,12 +1111,16 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		computeConstraintsandPenaltyTerm(currentDesign);
 
 		calculateImprovementValue(currentDesign);
-
+#if 0
 		currentDesign.print();
-
+#endif
 		addConstraintValuesToDoEData(currentDesign);
 
 		updateOptimizationHistory(currentDesign);
+
+#if 1
+		std::cout<<"Objective function value = "<<currentDesign.objectiveFunctionValue<<"\n";
+#endif
 
 
 

@@ -197,9 +197,14 @@ void Design::print(void) const{
 
 	printVector(designParameters,"designParameters");
 	std::cout<<"Value = "<<trueValue<<"\n";
-	printVector(gradient,"gradient vector");
-	printVector(constraintTrueValues,"constraint values");
 
+	printVector(gradient,"gradient vector");
+
+	if(constraintTrueValues.size() >0){
+
+		printVector(constraintTrueValues,"constraint values");
+
+	}
 	if(!constraintGradients.empty()){
 		std::cout<<"Constraint gradients = \n";
 		for (auto it = constraintGradients.begin(); it != constraintGradients.end(); it++){

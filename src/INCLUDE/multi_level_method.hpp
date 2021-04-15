@@ -52,17 +52,22 @@ private:
 	SurrogateModel *errorModel;
 
 	mat rawDataHighFidelity;
+	mat rawDataHighFidelityForGammaTraining;
+	mat rawDataHighFidelityForGammaTest;
 	unsigned int NHiFi = 0;
 
 	mat rawDataLowFidelity;
 	unsigned int NLoFi = 0;
 
 	mat rawDataError;
+	mat rawDataErrorForGammaTraining;
+	mat rawDataErrorForGammaTest;
 
 	unsigned int dimHiFi = 0;
 	unsigned int dimLoFi = 0;
 
 	double gamma = 1.0;
+	unsigned int maxIterationsForGammaTraining = 1000;
 
 
 
@@ -87,6 +92,7 @@ public:
 
 	void updateAuxilliaryFields(void);
 	void train(void);
+	void trainGamma(void);
 
 	double interpolate(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
@@ -97,6 +103,7 @@ public:
 	void setDimensionsHiFiandLowFiModels(void);
 
 	void prepareErrorData(void);
+	void prepareTrainingDataForGammaOptimization(void);
 	unsigned int findIndexHiFiToLowFiData(unsigned int indexHiFiData) const;
 
 
@@ -110,6 +117,8 @@ public:
 	mat getRawDataHighFidelity(void) const;
 	mat getRawDataLowFidelity(void) const;
 	mat getRawDataError(void) const;
+	mat getRawDataHighFidelityForGammaTraining(void) const;
+	mat getRawDataHighFidelityForGammaTest(void) const;
 
 	double evaluateBrigdeFunction(rowvec x);
 
