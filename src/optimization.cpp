@@ -72,7 +72,7 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	upperBounds.zeros(dimension);
 
 	ifBoxConstraintsSet = false;
-	iterMaxEILoop = dimension*10000;
+	iterMaxEILoop = dimension*100000;
 	iterGradientEILoop = 100;
 	optimizationType = problemType;
 	ifVisualize = false;
@@ -615,30 +615,30 @@ void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 	}
 
 
-#pragma omp parallel for
-	for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
-
-
-		CDesignExpectedImprovement designToBeTried(dimension,numberOfConstraints);
-
-		designToBeTried.generateRandomDesignVectorAroundASample(designWithMaxEI.dv);
-
-		objFun.calculateExpectedImprovement(designToBeTried);
-		addPenaltyToExpectedImprovementForConstraints(designToBeTried);
-
-#if 0
-		designToBeTried.print();
-#endif
-		if(designToBeTried.valueExpectedImprovement > designWithMaxEI.valueExpectedImprovement){
-
-			designWithMaxEI = designToBeTried;
-#if 0
-			printf("A design with a better EI value has been found (second loop) \n");
-			designToBeTried.print();
-#endif
-		}
-
-	}
+//#pragma omp parallel for
+//	for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
+//
+//
+//		CDesignExpectedImprovement designToBeTried(dimension,numberOfConstraints);
+//
+//		designToBeTried.generateRandomDesignVectorAroundASample(designWithMaxEI.dv);
+//
+//		objFun.calculateExpectedImprovement(designToBeTried);
+//		addPenaltyToExpectedImprovementForConstraints(designToBeTried);
+//
+//#if 0
+//		designToBeTried.print();
+//#endif
+//		if(designToBeTried.valueExpectedImprovement > designWithMaxEI.valueExpectedImprovement){
+//
+//			designWithMaxEI = designToBeTried;
+//#if 0
+//			printf("A design with a better EI value has been found (second loop) \n");
+//			designToBeTried.print();
+//#endif
+//		}
+//
+//	}
 
 
 	theMostPromisingDesigns.push_back(designWithMaxEI);
@@ -947,7 +947,12 @@ void COptimizer::EfficientGlobalOptimization(void){
 		if(simulationCount >= maxNumberOfSamples){
 
 			printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
-
+#if 1
+		std::cout<<"##########################################\n";
+		std::cout<<"Global best design";
+		globalBestDesign.print();
+		std::cout<<"\n\n";
+#endif
 
 			if(ifVisualize){
 

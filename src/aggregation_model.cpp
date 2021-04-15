@@ -117,8 +117,8 @@ void AggregationModel::determineRhoBasedOnData(void){
 	 */
 
 
-	rho = -log(0.001)/ (max(probe_distances_sample) * avg_norm_grad);
-
+//	rho = -2.0*log(0.0001)/ (max(probe_distances_sample) * avg_norm_grad);
+	rho = -log(0.1)/ (min(probe_distances_sample) * avg_norm_grad);
 
 #if 1
 	printf("rho = %10.7f\n",rho);
