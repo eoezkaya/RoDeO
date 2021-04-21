@@ -82,38 +82,10 @@ public:
 	}
 
 
-	void generateRandomDesignVector(void){
+	void generateRandomDesignVector(void);
+	void generateRandomDesignVector(vec lb, vec ub);
 
-		double lowerBound = 0.0;
-		double upperBound = 1.0/dim;
-		dv = generateRandomRowVector(lowerBound, upperBound , dim);
-
-
-	}
-
-	void generateRandomDesignVectorAroundASample(const rowvec &sample){
-
-
-		vec lowerBounds(dim);
-		vec upperBounds(dim);
-
-		double factor = 1.0/dim;
-		double dx = factor*0.01;
-
-
-		for(unsigned int i=0; i<dim; i++){
-
-			lowerBounds(i) = sample(i) - dx;
-			upperBounds(i) = sample(i) + dx;
-			if(lowerBounds(i) < 0.0)    lowerBounds(i) = 0.0;
-			if(upperBounds(i) > factor) upperBounds(i) = factor;
-
-		}
-
-		dv = generateRandomRowVector(lowerBounds, upperBounds);
-
-
-	}
+	void generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub);
 
 
 

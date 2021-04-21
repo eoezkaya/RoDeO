@@ -117,12 +117,13 @@ void AggregationModel::determineRhoBasedOnData(void){
 	 */
 
 
-//	rho = -2.0*log(0.0001)/ (max(probe_distances_sample) * avg_norm_grad);
-	rho = -log(0.1)/ (min(probe_distances_sample) * avg_norm_grad);
+	rho = -2.0*log(0.0001)/ (max(probe_distances_sample) * avg_norm_grad);
+//	rho = -log(0.05)/ (min(probe_distances_sample) * avg_norm_grad);
 
 #if 1
 	printf("rho = %10.7f\n",rho);
 	printf("dual model weight at the maximum distance = %15.10f\n",exp(-rho*max(probe_distances_sample)* avg_norm_grad));
+	printf("dual model weight at the average distance = %15.10f\n",exp(-rho*mean(probe_distances_sample)* avg_norm_grad));
 	printf("dual model weight at the minimum distance = %15.10f\n",exp(-rho*min(probe_distances_sample)* avg_norm_grad));
 #endif
 

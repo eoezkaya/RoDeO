@@ -71,6 +71,10 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
 
+	lowerBoundsForEIMaximization.zeros(dimension);
+	upperBoundsForEIMaximization.zeros(dimension);
+	upperBoundsForEIMaximization.fill(1.0/dimension);
+
 	ifBoxConstraintsSet = false;
 	iterMaxEILoop = dimension*100000;
 	iterGradientEILoop = 100;
@@ -543,6 +547,65 @@ void COptimizer::checkIfSettingsAreOK(void) const{
 }
 
 
+void COptimizer::zoomInDesignSpace(void){
+
+
+	Design globalOptimalDesign = findTheGlobalOptimalDesign();
+
+	globalOptimalDesign.print();
+
+	vec dx(dimension);
+
+	for(unsigned int i=0; i<dimension; i++){
+
+		dx(i) =  upperBoundsForEIMaximization(i) - lowerBoundsForEIMaximization(i);
+
+	}
+
+#if 1
+	dx.print();
+#endif
+
+	rowvec dvNormalized = normalizeRowVector(globalOptimalDesign.designParameters, lowerBounds, upperBounds);
+
+#if 1
+	printVector(dvNormalized,"dvNormalized");
+#endif
+
+	for(unsigned int i=0; i<dimension; i++){
+
+		double delta = dx(i)*zoomInFactor;
+
+		if(delta < 10E-5){
+
+			delta = 10E-5;
+		}
+
+		lowerBoundsForEIMaximization(i) =  dvNormalized(i) - delta;
+		upperBoundsForEIMaximization(i) =  dvNormalized(i) + delta;
+
+		if(lowerBoundsForEIMaximization(i) < 0.0) {
+
+			lowerBoundsForEIMaximization(i) = 0.0;
+
+		}
+
+		if(upperBoundsForEIMaximization(i) > 1.0/dimension) {
+
+			upperBoundsForEIMaximization(i) = 1.0/dimension;
+
+		}
+
+	}
+#if 1
+	printVector(lowerBoundsForEIMaximization,"lowerBoundsForEIMaximization" );
+	printVector(upperBoundsForEIMaximization,"upperBoundsForEIMaximization");
+#endif
+
+	zoomInFactor = zoomInFactor*0.75;
+}
+
+
 Design COptimizer::findTheGlobalOptimalDesign(void){
 
 
@@ -595,7 +658,7 @@ void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 
 		CDesignExpectedImprovement designToBeTried(dimension,numberOfConstraints);
 
-		designToBeTried.generateRandomDesignVector();
+		designToBeTried.generateRandomDesignVector(lowerBoundsForEIMaximization, upperBoundsForEIMaximization);
 
 		objFun.calculateExpectedImprovement(designToBeTried);
 		addPenaltyToExpectedImprovementForConstraints(designToBeTried);
@@ -615,30 +678,30 @@ void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 	}
 
 
-//#pragma omp parallel for
-//	for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
-//
-//
-//		CDesignExpectedImprovement designToBeTried(dimension,numberOfConstraints);
-//
-//		designToBeTried.generateRandomDesignVectorAroundASample(designWithMaxEI.dv);
-//
-//		objFun.calculateExpectedImprovement(designToBeTried);
-//		addPenaltyToExpectedImprovementForConstraints(designToBeTried);
-//
-//#if 0
-//		designToBeTried.print();
-//#endif
-//		if(designToBeTried.valueExpectedImprovement > designWithMaxEI.valueExpectedImprovement){
-//
-//			designWithMaxEI = designToBeTried;
-//#if 0
-//			printf("A design with a better EI value has been found (second loop) \n");
-//			designToBeTried.print();
-//#endif
-//		}
-//
-//	}
+#pragma omp parallel for
+	for(unsigned int iterEI = 0; iterEI <iterMaxEILoop; iterEI++ ){
+
+
+		CDesignExpectedImprovement designToBeTried(dimension,numberOfConstraints);
+
+		designToBeTried.generateRandomDesignVectorAroundASample(designWithMaxEI.dv, lowerBoundsForEIMaximization, upperBoundsForEIMaximization);
+
+		objFun.calculateExpectedImprovement(designToBeTried);
+		addPenaltyToExpectedImprovementForConstraints(designToBeTried);
+
+#if 0
+		designToBeTried.print();
+#endif
+		if(designToBeTried.valueExpectedImprovement > designWithMaxEI.valueExpectedImprovement){
+
+			designWithMaxEI = designToBeTried;
+#if 0
+			printf("A design with a better EI value has been found (second loop) \n");
+			designToBeTried.print();
+#endif
+		}
+
+	}
 
 
 	theMostPromisingDesigns.push_back(designWithMaxEI);
@@ -875,6 +938,12 @@ void COptimizer::EfficientGlobalOptimization(void){
 			trainSurrogates();
 		}
 
+		if(iterOpt%10 == 0){
+
+			zoomInDesignSpace();
+
+		}
+
 
 		findTheMostPromisingDesign();
 
@@ -948,10 +1017,10 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 			printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
 #if 1
-		std::cout<<"##########################################\n";
-		std::cout<<"Global best design";
-		globalBestDesign.print();
-		std::cout<<"\n\n";
+			std::cout<<"##########################################\n";
+			std::cout<<"Global best design";
+			globalBestDesign.print();
+			std::cout<<"\n\n";
 #endif
 
 			if(ifVisualize){

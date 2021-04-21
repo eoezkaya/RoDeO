@@ -268,4 +268,44 @@ void Design::saveDesignVector(std::string fileName) const{
 }
 
 
+void CDesignExpectedImprovement::generateRandomDesignVector(void){
 
+	double lowerBound = 0.0;
+	double upperBound = 1.0/dim;
+	dv = generateRandomRowVector(lowerBound, upperBound , dim);
+
+
+}
+
+void CDesignExpectedImprovement::generateRandomDesignVector(vec lb, vec ub){
+
+
+	dv = generateRandomRowVector(lb, ub);
+
+
+}
+
+
+void CDesignExpectedImprovement::generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub){
+
+
+	vec lowerBounds(dim);
+	vec upperBounds(dim);
+
+	double factor = 1.0/dim;
+	double dx = factor*0.01;
+
+
+	for(unsigned int i=0; i<dim; i++){
+
+		lowerBounds(i) = sample(i) - dx;
+		upperBounds(i) = sample(i) + dx;
+		if(lowerBounds(i) < lb(i))    lowerBounds(i) = lb(i);
+		if(upperBounds(i) > lb(i)) upperBounds(i) = ub(i);
+
+	}
+
+	dv = generateRandomRowVector(lowerBounds, upperBounds);
+
+
+}

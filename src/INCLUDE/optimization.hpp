@@ -48,6 +48,10 @@ private:
 	vec lowerBounds;
 	vec upperBounds;
 
+	vec lowerBoundsForEIMaximization;
+	vec upperBoundsForEIMaximization;
+
+
 	std::string designVectorFileName;
 	const std::string optimizationHistoryFileName = "optimizationHistory.csv";
 
@@ -68,6 +72,9 @@ private:
 	Design globalOptimalDesign;
 
 	double initialobjectiveFunctionValue = 0.0;
+
+	double zoomInFactor = 0.5;
+
 
 
 public:
@@ -108,6 +115,8 @@ public:
 	void setBoxConstraints(double lb, double ub);
 	void setBoxConstraints(vec lb, vec ub);
 	void setFileNameDesignVector(std::string filename);
+
+	void zoomInDesignSpace(void);
 
 	void setInitialObjectiveFunctionValue(double value);
 	void calculateImprovementValue(Design &d);
