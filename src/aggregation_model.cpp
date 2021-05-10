@@ -475,6 +475,15 @@ void AggregationModel::interpolateWithVariance(rowvec x,double *f_tilde,double *
 	/* find the closest seeding point to the xp in the data set */
 
 	int indx = findNearestNeighbor(x);
+	assert(indx < X.n_rows);
+
+	if(indx > X.n_rows){
+
+		std::cout<<"indx = "<<indx<<"\n";
+
+
+	}
+
 	rowvec xNearestPoint = X.row(indx);
 	rowvec xNearestPointRaw = Xraw.row(indx);
 	rowvec gradNearestPoint = gradientData.row(indx);
@@ -596,7 +605,7 @@ void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &
 unsigned int AggregationModel::findNearestNeighbor(const rowvec &xp) const{
 
 	assert(ifInitialized);
-	unsigned int index = -1;
+	unsigned int index = 0;
 	double minL1Distance = LARGE;
 
 
