@@ -167,3 +167,44 @@ TEST(testAuxiliaryFunctions, testIfIsInTheList){
 	ASSERT_FALSE(ifExists);
 
 }
+
+TEST(testAuxiliaryFunctions, testgetStringValuesFromString){
+
+	std::string testString = "apple";
+
+	std::vector<std::string> values;
+
+	values = getStringValuesFromString(testString, ',');
+
+
+	ASSERT_EQ(values[0],"apple");
+
+	testString = "apple, 1.22, banana";
+	values = getStringValuesFromString(testString, ',');
+	ASSERT_EQ(values[2],"banana");
+
+
+
+}
+
+
+TEST(testAuxiliaryFunctions, testgetDoubleValuesFromString){
+
+	std::string testString = "-1.99";
+
+	vec values;
+
+	values = getDoubleValuesFromString(testString, ',');
+
+
+	ASSERT_EQ(values(0),-1.99);
+
+	testString = "-1,   1.22, 0.001";
+	values = getDoubleValuesFromString(testString, ',');
+	ASSERT_EQ(values(2),0.001);
+
+
+
+}
+
+

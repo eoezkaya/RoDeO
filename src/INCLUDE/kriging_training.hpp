@@ -74,8 +74,6 @@ private:
 
 public:
 
-	unsigned int max_number_of_kriging_iterations;
-
 	KrigingModel();
 	KrigingModel(std::string name);
 
@@ -99,7 +97,7 @@ public:
 	void setEpsilon(double inp);
 	void setLinearRegressionOn(void);
 	void setLinearRegressionOff(void);
-	void setNumberOfTrainingIterations(unsigned int);
+
 
 	vec getTheta(void) const;
 	vec getGamma(void) const;

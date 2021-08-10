@@ -186,9 +186,14 @@ void printVector(rowvec v, std::string name){
 
 void printVector(std::vector<std::string> v){
 
-	for (std::vector<std::string>::const_iterator i = v.begin(); i != v.end(); ++i){
-		std::cout << *i << ' ';
+
+	for(std::size_t i = 0; i < v.size()-1; ++i) {
+	    std::cout << v[i] << ", ";
 	}
+
+	std::cout << v[v.size()-1] << "\n";
+
+
 	std::cout<<"\n";
 
 

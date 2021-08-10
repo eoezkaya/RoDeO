@@ -45,6 +45,7 @@ public:
 	rowvec constraintValues;
 	unsigned int dim;
 
+
 	CDesignExpectedImprovement(unsigned int dimension, unsigned int numberOfConstraints){
 
 		dim = dimension;
@@ -142,14 +143,18 @@ public:
 	double objectiveFunctionValue = 0.0;
 	double improvementValue = 0.0;
 	std::vector<rowvec> constraintGradients;
+	unsigned int ID = 0;
+	std::string tag;
 
 	bool isDesignFeasible = true;
+
 
 	Design();
 	Design(rowvec);
 	Design(unsigned int);
 	void setNumberOfConstraints(unsigned int howManyConstraints);
 	void print(void) const;
+	void saveToAFile(std::string) const;
 	void saveDesignVectorAsCSVFile(std::string fileName) const;
 	void saveDesignVector(std::string fileName) const;
 	void generateRandomDesignVector(vec lb, vec ub);

@@ -207,6 +207,7 @@ PartitionData AggregationModel::getTestData(void) const{
 
 void AggregationModel::printSurrogateModel(void) const{
 
+	std::cout<<"Printing parameters of the aggregation model...\n";
 	krigingModel.printSurrogateModel();
 	printVector(L1NormWeights, "L1NormWeights");
 	std::cout<<"rho = "<<rho<<"\n";

@@ -48,6 +48,74 @@
 
 using namespace arma;
 
+ConstraintDefinition::ConstraintDefinition(void){
+
+	this->value = 0.0;
+
+}
+
+
+ConstraintDefinition::ConstraintDefinition(std::string name, std::string ineqType, double value){
+
+	this->name = name;
+	this->inequalityType = ineqType;
+	this->value = value;
+
+}
+
+ConstraintDefinition::ConstraintDefinition(std::string definition){
+
+	assert(!definition.empty());
+	std::size_t found  = definition.find(">");
+	std::size_t found2 = definition.find("<");
+	std::size_t place;
+	std::string nameBuf,typeBuf, valueBuf;
+
+	if (found!=std::string::npos){
+
+		place = found;
+	}
+	else if (found2!=std::string::npos){
+
+		place = found2;
+	}
+	else{
+
+		std::cout<<"ERROR: Something is wrong with the constraint definition!\n";
+		abort();
+	}
+	nameBuf.assign(definition,0,place);
+	nameBuf = removeSpacesFromString(nameBuf);
+
+	typeBuf.assign(definition,place,1);
+	valueBuf.assign(definition,place+1,definition.length() - nameBuf.length() - typeBuf.length());
+	valueBuf = removeSpacesFromString(valueBuf);
+
+
+	name = nameBuf;
+	inequalityType = typeBuf;
+	value = std::stod(valueBuf);
+
+
+}
+
+void ConstraintDefinition::print(void) const{
+
+	std::cout<<"\nConstraint definition = \n";
+	std::cout<<"ID = "<<ID<<"\n";
+	std::cout<<name<<" "<<inequalityType<<" "<<value<<"\n";
+	std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
+	std::cout<< "Output filename = "<<outputFilename<<"\n";
+	std::cout<< "Executable name = "<<executableName<<"\n";
+
+	if(!path.empty()){
+
+		std::cout<< "Executable path = "<<path<<"\n";
+
+	}
+
+}
+
 
 
 ConstraintFunction::ConstraintFunction(std::string name, unsigned int dimension)
@@ -60,21 +128,31 @@ ConstraintFunction::ConstraintFunction(std::string name, unsigned int dimension)
 
 void ConstraintFunction::readEvaluateOutput(Design &d) {
 
+#if 0
+	std::cout<<"Reading constraint function\n";
+#endif
 
-	assert(ID>0);
 	assert(!fileNameInputRead.empty());
-	assert(int(d.constraintTrueValues.size()) >= ID);
+	assert(d.dimension == dim);
+	assert(objectiveFunPtr == empty);
 
-	unsigned int totalNumberOfEntriesToRead;
-	if(ifGradientAvailable){
+	rowvec constraintGradient(dim);
+	constraintGradient.fill(0.0);
 
-		totalNumberOfEntriesToRead = readOutputStartIndex + dim+1;
+
+	if(ifAdjointMarkerIsSet == true){
+
+
+		if(ifGradientAvailable == false && this->readMarkerAdjoint != "None"){
+
+			std::cout << "ERROR: Adjoint marker is set for the constraint function but gradient is not available!\n";
+			std::cout << "Did you set GRADIENT_AVAILABLE properly?\n";
+			abort();
+
+		}
+
 	}
-	else{
 
-		totalNumberOfEntriesToRead = readOutputStartIndex+1;
-
-	}
 
 	std::ifstream ifile(fileNameInputRead, std::ios::in);
 
@@ -84,61 +162,167 @@ void ConstraintFunction::readEvaluateOutput(Design &d) {
 		abort();
 	}
 
-	vec bufferRead(totalNumberOfEntriesToRead);
-
-	for (unsigned int i = 0; i < totalNumberOfEntriesToRead ; i++) {
-
-		ifile >> bufferRead(i);
-	}
-#if 0
-	printVector(bufferRead);
-#endif
-	d.constraintTrueValues(ID-1) = bufferRead(readOutputStartIndex);
 
 
-	if(ifGradientAvailable){
+	if(ifGradientAvailable && ifMarkerIsSet){
 
-		rowvec constraintGradient(dim);
+		if(ifAdjointMarkerIsSet== false){
 
-		for(unsigned int i=0; i<dim; i++){
-
-			constraintGradient(i) = bufferRead(readOutputStartIndex+i+1);
-
-		}
-
-		if(constraintGradient.has_nan()){
-
-			std::cout<<"ERROR: NaN in constraint gradient evaluation!\n";
+			std::cout << "ERROR: Adjoint marker not is set for a constraint function!\n";
+			std::cout << "Did you set CONSTRAINT_FUNCTION_GRADIENT_READ_MARKER properly?\n";
 			abort();
 
 		}
 
-		d.constraintGradients.push_back(constraintGradient);
+
+
 	}
+
+
+	/* input from file without using markers */
+
+	if(ifMarkerIsSet == false && ifAdjointMarkerIsSet == false ){
+
+		double functionValue;
+		ifile >> functionValue;
+
+
+		d.constraintTrueValues(ID) = functionValue;
+
+
+		if(ifGradientAvailable){
+
+
+			for(unsigned int i=0; i<dim; i++){
+
+				ifile >> constraintGradient(i);
+
+			}
+
+			if(constraintGradient.has_nan()){
+
+				std::cout<<"ERROR: NaN in constraint gradient evaluation!\n";
+				abort();
+
+			}
+		}
+
+
+		d.constraintGradients.push_back(constraintGradient);
+
+
+
+	}
+
+	/* input from file using markers (the values are separated with ',')*/
 	else{
 
-		rowvec constraintGradient(dim);
-		constraintGradient.fill(0.0);
+		std::size_t found1;
+		std::size_t found2;
+		bool markerFound = false;
+		bool markerAdjointFound = false;
+
+		for( std::string line; getline( ifile, line ); ){ /* check each line */
+
+			std::string bufferLine = line;
+
+			/* first search for the constraint value marker */
+
+			std::size_t found1 = bufferLine.find(readMarker+" ");
+
+
+			if (found1!=std::string::npos){
+
+
+				bufferLine = removeSpacesFromString(bufferLine);
+				bufferLine.erase(0,found1+1+readMarker.size());
+
+
+				d.constraintTrueValues(ID) = std::stod(bufferLine);
+
+				markerFound = true;
+
+			}
+
+
+			if(ifGradientAvailable){
+
+				/* check for constraint gradient marker */
+
+				std::size_t found2 = bufferLine.find(readMarkerAdjoint+" ");
+				if (found2!=std::string::npos){
+
+
+					bufferLine = removeSpacesFromString(line);
+					bufferLine.erase(0,found2+1+readMarkerAdjoint.size());
+
+					vec values = getDoubleValuesFromString(bufferLine,',');
+#if 0
+					printVector(values,"values");
+#endif
+					assert(values.size() == dim);
+
+					for(unsigned int i=0; i<dim;i++){
+
+						constraintGradient(i) = values(i);
+
+					}
+
+
+					markerAdjointFound  = true;
+
+				}
+
+			}
+
+
+
+		}
+#if 0
+		printVector(constraintGradient,"constraintGradient");
+#endif
+
 		d.constraintGradients.push_back(constraintGradient);
+
+		if(ifGradientAvailable && !markerAdjointFound){
+
+			std::cout<<"ERROR: No values can be read for the constraint gradient!\n";
+			abort();
+
+
+		}
+		if(!markerFound){
+
+			std::cout<<"ERROR: No values can be read for the constraint function!\n";
+			abort();
+
+
+		}
+
+
 	}
+
+#if 0
+	d.print();
+#endif
 
 }
 
 void ConstraintFunction::print(void) const {
 
-	std::cout << "#####################################################\n";
-	std::cout << std::endl;
-	std::cout << "Constraint Function\n";
-	std::cout << "ID: " << ID << std::endl;
+	std::cout << "\n#####################################################\n";
+	std::cout << "Constraint function ID = "<<ID<<"\n";
 	std::cout << "Name: " << name << std::endl;
 	std::cout << "Dimension: " << dim << std::endl;
-	std::cout << "Type of constraint: " << inequalityType << " " << targetValue<< std::endl;
+	std::cout << "Type of constraint: " << inequalityType << " " <<value<< std::endl;
 	std::cout << "Executable name: " << executableName << "\n";
 	std::cout << "Executable path: " << executablePath << "\n";
 	std::cout << "Input file name: " << fileNameDesignVector << "\n";
 	std::cout << "Output file name: " << fileNameInputRead << "\n";
+	std::cout << "Read marker: " <<readMarker <<"\n";
 	if(ifGradientAvailable){
 		std::cout<<"Uses gradient vector: Yes\n";
+		std::cout << "Read marker for gradient: " <<readMarkerAdjoint <<"\n";
 
 	}
 	else{
@@ -146,46 +330,92 @@ void ConstraintFunction::print(void) const {
 
 	}
 
-	std::cout << "Shares executable with:";
-	for (std::vector<int>::const_iterator i =
-			IDToFunctionsShareOutputExecutable.begin();
-			i != IDToFunctionsShareOutputExecutable.end(); ++i)
-		std::cout << " " << *i << ' ';
-
-	std::cout<<"\n";
-	std::cout<<"readOutputStartIndex = "<<readOutputStartIndex<<"\n";
 
 #if 0
 	surrogateModel.printSurrogateModel();
 #endif
-	std::cout << "#####################################################\n";
+	std::cout << "#####################################################\n\n";
 }
 
 
-void ConstraintFunction::setInequalityConstraint(std::string inequalityStatement){
+//void ConstraintFunction::setInequalityConstraint(ConstraintDefinition inequalityConstraint){
+//
+//	assert(inequalityConstraint.name == this->name);
+//
+//	assert(inequalityConstraint.inequalityType == ">" || inequalityConstraint.inequalityType == "<");
+//	this->constraintDef = inequalityConstraint;
+//
+//	ifInequalityConstraintSpecified  = true;
+//
+//}
 
-		inequalityStatement = removeSpacesFromString(inequalityStatement);
+void ConstraintFunction::setParametersByDefinition(ConstraintDefinition inequalityConstraint){
 
-		char type = inequalityStatement.front();
-		assert(type == '<' || type == '>');
-		inequalityStatement.erase(0,1);
-		inequalityType = type;
-		double value = std::stod(inequalityStatement);
-		this->targetValue = value;
+	assert(!inequalityConstraint.inequalityType.empty());
+	assert(!inequalityConstraint.name.empty());
+	assert(inequalityConstraint.inequalityType == ">" || inequalityConstraint.inequalityType == "<");
 
-		ifInequalityConstraintSpecified  = true;
+
+	this->ID = inequalityConstraint.ID;
+
+	this->executableName = inequalityConstraint.executableName;
+	this->executablePath = inequalityConstraint.path;
+	this->fileNameDesignVector = inequalityConstraint.designVectorFilename;
+	this->fileNameInputRead = inequalityConstraint.outputFilename;
+	this->inequalityType = inequalityConstraint.inequalityType;
+	this->name =  inequalityConstraint.name;
+
+	this->value = inequalityConstraint.value;
+
+
+	if(!inequalityConstraint.marker.empty()){
+		this->readMarker = inequalityConstraint.marker;
+		this->ifMarkerIsSet = true;
 
 	}
 
 
-bool ConstraintFunction::checkFeasibility(double value) const{
+	if(!inequalityConstraint.markerForGradient.empty()){
+
+
+		this->readMarkerAdjoint = inequalityConstraint.markerForGradient;
+		this->ifAdjointMarkerIsSet = true;
+
+	}
+
+
+
+	ifInequalityConstraintSpecified  = true;
+
+
+
+}
+
+
+
+double ConstraintFunction::getValue(void) const{
+
+	return value;
+
+
+}
+
+std::string ConstraintFunction::getInequalityType(void) const{
+
+	return inequalityType;
+
+
+}
+
+
+bool ConstraintFunction::checkFeasibility(double valueIn) const{
 
 	assert(ifInequalityConstraintSpecified);
 
 	bool result = false;
 	if (inequalityType == "<") {
 
-		if (value < targetValue) {
+		if (valueIn < value) {
 
 			result = true;
 
@@ -195,7 +425,7 @@ bool ConstraintFunction::checkFeasibility(double value) const{
 
 	if (inequalityType == ">") {
 
-		if (value > targetValue) {
+		if (valueIn > value) {
 
 			result = true;
 
@@ -204,6 +434,50 @@ bool ConstraintFunction::checkFeasibility(double value) const{
 	}
 
 	return result;
+}
+
+
+void ConstraintFunction::evaluate(Design &d) {
+
+	double functionValue = 0.0;
+
+	rowvec x = d.designParameters;
+	if (ifFunctionPointerIsSet) {
+
+		functionValue = objectiveFunPtr(x.memptr());
+
+
+		d.trueValue = functionValue;
+		d.objectiveFunctionValue = functionValue;
+
+	}
+
+	else if (executableName != "None" && fileNameDesignVector != "None") {
+
+		if (ifRunNecessary) {
+
+			std::string runCommand = getExecutionCommand();
+#if 0
+			std::cout<<"calling a system command\n";
+#endif
+
+			system(runCommand.c_str());
+
+		}
+
+#if 0
+		std::cout<<"No need to call a system command\n";
+#endif
+
+
+
+	} else {
+
+		cout<< "ERROR: Cannot evaluate the constraint function. Check settings!\n";
+		abort();
+	}
+
+
 }
 
 void ConstraintFunction::addDesignToData(Design &d){
@@ -224,4 +498,5 @@ void ConstraintFunction::addDesignToData(Design &d){
 
 
 }
+
 

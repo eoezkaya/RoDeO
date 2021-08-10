@@ -45,6 +45,9 @@ using namespace arma;
 
 void executePythonScript(std::string command);
 
+void compileWithCpp(std::string, std::string);
+
+
 
 void changeDirectoryToRodeoHome(void);
 void changeDirectoryToUnitTests(void);
@@ -101,6 +104,10 @@ bool checkMatrix(mat values, mat expected);
 void abortIfFalse(bool flag, std::string file, int line);
 void abortIfFalse(bool flag);
 
+bool checkIfOn(std::string keyword);
+bool checkIfOff(std::string keyword);
+
+
 
 double calculatePolynomial(double x, const rowvec &coeffs);
 double calculateTensorProduct(const rowvec &x, const mat &coeffs);
@@ -119,7 +126,11 @@ void solveLinearSystemCholesky(mat U, vec &x, vec b);
 bool file_exist(const char *fileName);
 bool file_exist(std::string filename);
 
-void getValuesFromString(std::string sub_str,std::vector<std::string> &values, char delimiter);
+void readFileToaString(std::string, std::string &);
+
+
+std::vector<std::string> getStringValuesFromString(std::string sub_str, char delimiter);
+vec getDoubleValuesFromString(std::string sub_str, char delimiter);
 std::string removeSpacesFromString(std::string );
 
 

@@ -62,6 +62,8 @@ private:
 	unsigned int numberOfTrainingSamples = 0;
 	unsigned int numberOfTestSamples = 0;
 
+	unsigned int numberOfIterationsForSurrogateModelTraining = 10000;
+
 	std::string filenameTrainingData;
 	std::string filenameTestData;
 
@@ -141,8 +143,12 @@ public:
     void setGradientsOff(void);
     void setWarmStartOn(void);
     void setWarmStartOff(void);
+    void setDisplayOn(void);
+    void setDisplayOff(void);
+
     void setNumberOfTrainingSamples(unsigned int);
     void setNumberOfTestSamples(unsigned int);
+    void setNumberOfTrainingIterations(unsigned int);
 
     void setNameFilenameTrainingData(std::string);
     void setNameFilenameTestData(std::string );

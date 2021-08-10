@@ -51,13 +51,13 @@
 using namespace arma;
 
 
-COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams, std::string problemType){
+Optimizer::Optimizer(std::string nameTestcase, int numberOfOptimizationParams, std::string problemType){
 
 	/* RoDeO does not allow problems with too many optimization parameters */
 
 	if(numberOfOptimizationParams > 100){
 
-		std::cout<<"Problem dimension of the optimization is too large!"<<std::endl;
+		std::cout<<"ERROR: Problem dimension of the optimization is too large!"<<std::endl;
 		abort();
 
 	}
@@ -65,9 +65,7 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	name = nameTestcase;
 	dimension = numberOfOptimizationParams;
 	sampleDim = dimension;
-	numberOfConstraints = 0;
 
-	maxNumberOfSamples  = 0;
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
 
@@ -75,18 +73,24 @@ COptimizer::COptimizer(std::string nameTestcase, int numberOfOptimizationParams,
 	upperBoundsForEIMaximization.zeros(dimension);
 	upperBoundsForEIMaximization.fill(1.0/dimension);
 
-	ifBoxConstraintsSet = false;
+
 	iterMaxEILoop = dimension*100000;
-	iterGradientEILoop = 100;
-	optimizationType = problemType;
-	ifVisualize = false;
-	howOftenTrainModels = 10; /* train surrogates in every 10 iteration */
-	ifCleanDoeFiles = false;
-	designVectorFileName = "None";
+
+
+	setProblemType(problemType);
+
+
 
 }
 
-bool COptimizer::checkSettings(void) const{
+bool Optimizer::checkSettings(void) const{
+
+	if(this->ifDisplay){
+
+		std::cout<<"Checking settings...\n";
+
+	}
+
 
 	bool ifAllSettingsOk = true;
 
@@ -100,7 +104,9 @@ bool COptimizer::checkSettings(void) const{
 }
 
 
-void COptimizer::setProblemType(std::string type){
+void Optimizer::setProblemType(std::string type){
+
+	assert(!type.empty());
 
 	if(type == "MAXIMIZATION" || type == "Maximize" || type == "maximization" || type == "maximize" ){
 
@@ -108,9 +114,22 @@ void COptimizer::setProblemType(std::string type){
 
 	}
 
-	if(type == "MINIMIZATION" || type == "Minimize" || type == "minimization" || type == "minimization"){
+	else if(type == "MINIMIZATION" || type == "Minimize" || type == "minimization" || type == "minimize"){
 
 		type = "minimize";
+
+	}
+
+	else if(type == "DOE" || type == "doe" || type == "DoE" || type == "Doe"){
+
+		type = "DoE";
+
+	}
+
+	else{
+
+		std::cout<<"ERROR: Problem type is undefined!\n";
+		abort();
 
 	}
 
@@ -121,29 +140,43 @@ void COptimizer::setProblemType(std::string type){
 
 }
 
-void COptimizer::setInitialObjectiveFunctionValue(double value){
+void Optimizer::setInitialObjectiveFunctionValue(double value){
 
 	initialobjectiveFunctionValue = value;
 	IfinitialValueForObjFunIsSet = true;
 
 }
 
-void COptimizer::setMaximumNumberOfIterations(unsigned int maxIterations){
+void Optimizer::setMaximumNumberOfIterations(unsigned int maxIterations){
 
 	maxNumberOfSamples = maxIterations;
 
 }
 
-void COptimizer::setFileNameDesignVector(std::string filename){
+void Optimizer::setMaximumNumberOfIterationsForEIMaximization(unsigned int maxIterations){
 
+	iterMaxEILoop = maxIterations;
+
+}
+
+
+void Optimizer::setFileNameDesignVector(std::string filename){
+
+	assert(!filename.empty());
 	designVectorFileName = filename;
 
 }
 
 
-void COptimizer::setBoxConstraints(std::string filename){
+void Optimizer::setBoxConstraints(std::string filename){
 
-	std::cout<<"Setting box constraints for "<<name<<std::endl;
+	assert(!filename.empty());
+
+	if(this->ifDisplay){
+
+		std::cout<<"Setting box constraints for "<<name<<std::endl;
+
+	}
 
 	mat boxConstraints;
 
@@ -171,9 +204,14 @@ void COptimizer::setBoxConstraints(std::string filename){
 
 }
 
-void COptimizer::setBoxConstraints(double lowerBound, double upperBound){
+void Optimizer::setBoxConstraints(double lowerBound, double upperBound){
 
-	std::cout<<"Setting box constraints for "<<name<<std::endl;
+	assert(lowerBound < upperBound);
+	if(this->ifDisplay){
+
+		std::cout<<"Setting box constraints for "<<name<<std::endl;
+	}
+
 	assert(lowerBound < upperBound);
 	lowerBounds.fill(lowerBound);
 	upperBounds.fill(upperBound);
@@ -182,9 +220,17 @@ void COptimizer::setBoxConstraints(double lowerBound, double upperBound){
 }
 
 
-void COptimizer::setBoxConstraints(vec lb, vec ub){
+void Optimizer::setBoxConstraints(vec lb, vec ub){
 
-	std::cout<<"Setting box constraints for "<<name<<std::endl;
+	assert(lb.size()>0);
+	assert(lb.size() == ub.size());
+	assert(ifBoxConstraintsSet == false);
+
+	if(this->ifDisplay){
+
+		std::cout<<"Setting box constraints for "<<name<<std::endl;
+
+	}
 	for(unsigned int i=0; i<dimension; i++) assert(lb(i) < ub(i));
 
 	lowerBounds = lb;
@@ -194,7 +240,18 @@ void COptimizer::setBoxConstraints(vec lb, vec ub){
 }
 
 
-void COptimizer::addConstraint(ConstraintFunction &constFunc){
+void Optimizer::setDisplayOn(void){
+
+	ifDisplay = true;
+
+}
+void Optimizer::setDisplayOff(void){
+
+	ifDisplay = false;
+}
+
+
+void Optimizer::addConstraint(ConstraintFunction &constFunc){
 
 	constraintFunctions.push_back(constFunc);
 	numberOfConstraints++;
@@ -203,7 +260,7 @@ void COptimizer::addConstraint(ConstraintFunction &constFunc){
 }
 
 
-void COptimizer::addObjectFunction(ObjectiveFunction &objFunc){
+void Optimizer::addObjectFunction(ObjectiveFunction &objFunc){
 
 	assert(ifObjectFunctionIsSpecied == false);
 	objFun = objFunc;
@@ -216,7 +273,7 @@ void COptimizer::addObjectFunction(ObjectiveFunction &objFunc){
 
 
 
-void COptimizer::evaluateConstraints(Design &d){
+void Optimizer::evaluateConstraints(Design &d){
 
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
@@ -239,31 +296,42 @@ void COptimizer::evaluateConstraints(Design &d){
 
 }
 
-void COptimizer::addConstraintValuesToDoEData(Design &d) const{
+void Optimizer::addConstraintValuesToDoEData(Design &d) const{
 
 	unsigned int countConstraintWithGradient = 0;
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
+		std::string filenameCVS = it->getName()+".csv";
 
-		if(!it->checkIfGradientAvailable()){
+		if(ifDisplay){
 
-			rowvec saveBuffer(dimension+1);
-			copyRowVector(saveBuffer,d.designParameters);
-			saveBuffer(dimension) = d.constraintTrueValues(it->getID()-1);
-			appendRowVectorToCSVData(saveBuffer,it->getName()+".csv");
+			std::cout<<"Appending to data: "<<filenameCVS<<"\n";
 
+		}
 
-		}else{
+		if(it->checkIfGradientAvailable()){
+
 
 			rowvec saveBuffer(2*dimension+1);
 			copyRowVector(saveBuffer,d.designParameters);
-			saveBuffer(dimension) = d.constraintTrueValues(it->getID()-1);
+			saveBuffer(dimension) = d.constraintTrueValues(it->getID());
 
 			rowvec gradient = d.constraintGradients[countConstraintWithGradient];
 			countConstraintWithGradient++;
 			copyRowVector(saveBuffer,gradient,dimension+1);
 
-			appendRowVectorToCSVData(saveBuffer,it->getName()+".csv");
+			appendRowVectorToCSVData(saveBuffer,filenameCVS);
+
+
+
+		}else{
+
+
+			rowvec saveBuffer(dimension+1);
+			copyRowVector(saveBuffer,d.designParameters);
+			saveBuffer(dimension) = d.constraintTrueValues(it->getID());
+			appendRowVectorToCSVData(saveBuffer,filenameCVS);
+
 
 		}
 
@@ -276,7 +344,7 @@ void COptimizer::addConstraintValuesToDoEData(Design &d) const{
 
 
 
-void COptimizer::estimateConstraints(CDesignExpectedImprovement &design) const{
+void Optimizer::estimateConstraints(CDesignExpectedImprovement &design) const{
 
 	rowvec x = design.dv;
 	assert(design.constraintValues.size() == numberOfConstraints);
@@ -294,7 +362,7 @@ void COptimizer::estimateConstraints(CDesignExpectedImprovement &design) const{
 
 
 
-bool COptimizer::checkBoxConstraints(void) const{
+bool Optimizer::checkBoxConstraints(void) const{
 
 	bool flagWithinBounds = true;
 
@@ -308,7 +376,7 @@ bool COptimizer::checkBoxConstraints(void) const{
 
 
 
-bool COptimizer::checkConstraintFeasibility(rowvec constraintValues) const{
+bool Optimizer::checkConstraintFeasibility(rowvec constraintValues) const{
 
 	bool flagFeasibility = true;
 	unsigned int i=0;
@@ -328,16 +396,21 @@ bool COptimizer::checkConstraintFeasibility(rowvec constraintValues) const{
 
 
 
-void COptimizer::print(void) const{
+void Optimizer::print(void) const{
 
-	printf("....... %s optimization using max %d samples .........\n",name.c_str(),maxNumberOfSamples);
-	printf("Problem dimension = %d\n",dimension);
+	std::cout<<"\nOptimizer Settings = \n\n";
+	std::cout<<"Problem name : "<<name<<"\n";
+	std::cout<<"Dimension    : "<<dimension<<"\n";
+	std::cout<<"Type         : "<<optimizationType<<"\n";
+	std::cout<<"Maximum number of function evaluations: " <<maxNumberOfSamples<<"\n";
+	std::cout<<"Maximum number of iterations for EI maximization: " <<iterMaxEILoop<<"\n";
+
 
 	objFun.print();
 
 	printConstraints();
 
-	if (constraintFunctions.begin() == constraintFunctions.end()){
+	if (constraintFunctions.empty()){
 
 		std::cout << "Optimization problem does not have any constraints\n";
 	}
@@ -345,19 +418,26 @@ void COptimizer::print(void) const{
 
 }
 
-void COptimizer::printConstraints(void) const{
+void Optimizer::printConstraints(void) const{
 
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+	if(ifDisplay && !constraintFunctions.empty()){
 
-		it->print();
+		std::cout<< "List of constraints = \n";
+
+
+
+		for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+
+			it->print();
+
+		}
 
 	}
 
 
-
 }
 
-void COptimizer::visualizeOptimizationHistory(void) const{
+void Optimizer::visualizeOptimizationHistory(void) const{
 
 	if(dimension == 2){
 
@@ -375,47 +455,70 @@ void COptimizer::visualizeOptimizationHistory(void) const{
 }
 
 
-void COptimizer::initializeSurrogates(void){
+void Optimizer::initializeSurrogates(void){
+
+	displayMessage("Initializing surrogate model for the objective function...\n");
 
 	objFun.initializeSurrogate();
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+
+		displayMessage("Initializing surrogate models for the constraint...\n");
 
 		it->initializeSurrogate();
 
 	}
 
 	ifSurrogatesAreInitialized = true;
+
+	displayMessage("Initialization is done...");
+
 }
 
 
-void COptimizer::trainSurrogates(void){
+void Optimizer::trainSurrogates(void){
 
-#if 0
-	printf("Training surrogate model for the objective function...\n");
-#endif
+	displayMessage("Training surrogate model for the objective function...\n");
+
 	objFun.trainSurrogate();
 
+	if(ifDisplay) {
+
+		objFun.printSurrogate();
+
+	}
+
+
 	if(constraintFunctions.size() !=0){
-#if 0
-		printf("Training surrogate model for the constraints...\n");
-#endif
+
+		displayMessage("Training surrogate model for the constraints...\n");
+
 	}
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
 		it->trainSurrogate();
 
+		if(ifDisplay) {
+
+			it->printSurrogate();
+
+		}
+
 	}
 
+	if(constraintFunctions.size() !=0){
 
+		displayMessage("Model training for constraints is done...");
+
+	}
 
 
 }
 
 
 
-void COptimizer::updateOptimizationHistory(Design d) {
+void Optimizer::updateOptimizationHistory(Design d) {
 
 	rowvec newSample(sampleDim+1);
 
@@ -450,7 +553,7 @@ void COptimizer::updateOptimizationHistory(Design d) {
 
 
 
-void COptimizer::addPenaltyToExpectedImprovementForConstraints(CDesignExpectedImprovement &designCalculated) const{
+void Optimizer::addPenaltyToExpectedImprovementForConstraints(CDesignExpectedImprovement &designCalculated) const{
 
 	if(numberOfConstraints > 0){
 
@@ -470,21 +573,35 @@ void COptimizer::addPenaltyToExpectedImprovementForConstraints(CDesignExpectedIm
 }
 
 
-void COptimizer::computeConstraintsandPenaltyTerm(Design &d) {
+bool Optimizer::ifConstrained(void) const{
+
+	if(numberOfConstraints > 0) return true;
+	else return false;
+
+}
 
 
-	if(constraintFunctions.size() > 0){
+void Optimizer::computeConstraintsandPenaltyTerm(Design &d) {
 
+
+	if(ifConstrained()){
+
+		displayMessage("Evaluating constraints...\n");
 
 		evaluateConstraints(d);
 
-		bool ifConstraintsSatisfied = checkConstraintFeasibility(d.constraintTrueValues);
-
 		double penaltyTerm = 0.0;
 
+		bool ifConstraintsSatisfied = checkConstraintFeasibility(d.constraintTrueValues);
 		if(!ifConstraintsSatisfied){
 
-			std::cout<<"The new sample does not satisfy all the constraints\n";
+
+			if(ifDisplay){
+
+				std::cout<<"The new sample does not satisfy all the constraints\n";
+
+			}
+
 
 
 			if(optimizationType == "minimize"){
@@ -497,11 +614,6 @@ void COptimizer::computeConstraintsandPenaltyTerm(Design &d) {
 				penaltyTerm = -LARGE;
 				d.isDesignFeasible = false;
 			}
-			else{
-
-				abort();
-			}
-
 
 		}
 
@@ -510,9 +622,11 @@ void COptimizer::computeConstraintsandPenaltyTerm(Design &d) {
 
 	}
 
+	displayMessage("Evaluating constraints is done...\n");
+
 }
 
-void COptimizer::addConstraintValuesToData(Design &d){
+void Optimizer::addConstraintValuesToData(Design &d){
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
@@ -523,7 +637,7 @@ void COptimizer::addConstraintValuesToData(Design &d){
 
 }
 
-void COptimizer::checkIfSettingsAreOK(void) const{
+void Optimizer::checkIfSettingsAreOK(void) const{
 
 	if (maxNumberOfSamples == 0){
 
@@ -547,13 +661,19 @@ void COptimizer::checkIfSettingsAreOK(void) const{
 }
 
 
-void COptimizer::zoomInDesignSpace(void){
 
 
-	Design globalOptimalDesign = findTheGlobalOptimalDesign();
 
+
+void Optimizer::zoomInDesignSpace(void){
+
+	displayMessage("Zooming in design space...\n");
+
+	findTheGlobalOptimalDesign();
+
+#if 0
 	globalOptimalDesign.print();
-
+#endif
 	vec dx(dimension);
 
 	for(unsigned int i=0; i<dimension; i++){
@@ -606,14 +726,16 @@ void COptimizer::zoomInDesignSpace(void){
 }
 
 
-Design COptimizer::findTheGlobalOptimalDesign(void){
 
+void Optimizer::findTheGlobalOptimalDesign(void){
 
-	uword indexMin = index_max(this->optimizationHistory.col(this->sampleDim));
+	displayMessage("Finding the global design...\n");
+
+	/* we take the sample, which has the max improvement value */
+	uword indexMin = index_max(optimizationHistory.col(sampleDim));
 
 	rowvec bestSample = optimizationHistory.row(indexMin);
 
-	Design bestDesign(dimension);
 
 	rowvec dv(dimension);
 	for(unsigned int i=0; i<dimension; i++){
@@ -621,8 +743,12 @@ Design COptimizer::findTheGlobalOptimalDesign(void){
 		dv(i) = bestSample(i);
 	}
 
-	bestDesign.designParameters  = dv;
-	bestDesign.trueValue = bestSample(dimension);
+	globalOptimalDesign.ID = indexMin;
+	globalOptimalDesign.tag = "Global optimum design";
+	globalOptimalDesign.designParameters  = dv;
+	globalOptimalDesign.trueValue = bestSample(dimension);
+	globalOptimalDesign.objectiveFunctionValue = bestSample(dimension);
+	globalOptimalDesign.improvementValue = bestSample(sampleDim);
 
 	rowvec constraintValues(numberOfConstraints);
 	for(unsigned int i=0; i<numberOfConstraints; i++){
@@ -630,11 +756,8 @@ Design COptimizer::findTheGlobalOptimalDesign(void){
 		constraintValues(i) = bestSample(i+dimension+1);
 	}
 
-	bestDesign.constraintTrueValues = constraintValues;
-
-
-	return bestDesign;
-
+	globalOptimalDesign.constraintTrueValues = constraintValues;
+	displayMessage("Finding the global design is done...\n");
 
 }
 
@@ -643,7 +766,7 @@ Design COptimizer::findTheGlobalOptimalDesign(void){
 /* These designs (there can be more than one) are found by maximizing the expected
  *  Improvement function and taking the constraints into account
  */
-void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
+void Optimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 
 	assert(ifSurrogatesAreInitialized);
 
@@ -709,7 +832,7 @@ void COptimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 }
 
 
-CDesignExpectedImprovement COptimizer::getDesignWithMaxExpectedImprovement(void) const{
+CDesignExpectedImprovement Optimizer::getDesignWithMaxExpectedImprovement(void) const{
 
 	return this->theMostPromisingDesigns.front();
 
@@ -718,7 +841,7 @@ CDesignExpectedImprovement COptimizer::getDesignWithMaxExpectedImprovement(void)
 
 /* calculate the gradient of the Expected Improvement function
  * w.r.t design variables by finite difference approximations */
-rowvec COptimizer::calculateEIGradient(CDesignExpectedImprovement &currentDesign) const{
+rowvec Optimizer::calculateEIGradient(CDesignExpectedImprovement &currentDesign) const{
 
 
 	rowvec gradient(dimension);
@@ -770,7 +893,7 @@ rowvec COptimizer::calculateEIGradient(CDesignExpectedImprovement &currentDesign
 
 
 
-CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedImprovement initialDesign) const {
+CDesignExpectedImprovement Optimizer::MaximizeEIGradientBased(CDesignExpectedImprovement initialDesign) const {
 
 	rowvec gradEI(dimension);
 	double stepSize0 = 0.001;
@@ -862,7 +985,7 @@ CDesignExpectedImprovement COptimizer::MaximizeEIGradientBased(CDesignExpectedIm
 
 
 }
-void COptimizer::prepareOptimizationHistoryFile(void) const{
+void Optimizer::prepareOptimizationHistoryFile(void) const{
 
 	std::string header;
 	for(unsigned int i=0; i<dimension; i++){
@@ -896,17 +1019,18 @@ void COptimizer::prepareOptimizationHistoryFile(void) const{
 
 }
 
-void COptimizer::clearOptimizationHistoryFile(void) const{
+void Optimizer::clearOptimizationHistoryFile(void) const{
 
 	remove(optimizationHistoryFileName.c_str());
 
 }
 
 
-void COptimizer::EfficientGlobalOptimization(void){
+void Optimizer::EfficientGlobalOptimization(void){
 
 
 	checkIfSettingsAreOK();
+
 
 	if(!isHistoryFileInitialized){
 
@@ -918,7 +1042,6 @@ void COptimizer::EfficientGlobalOptimization(void){
 	/* main loop for optimization */
 	unsigned int simulationCount = 0;
 	unsigned int iterOpt=0;
-
 
 	initializeSurrogates();
 
@@ -998,30 +1121,42 @@ void COptimizer::EfficientGlobalOptimization(void){
 #if 0
 		currentBestDesign.print();
 #endif
+
+
 		addConstraintValuesToData(currentBestDesign);
 		updateOptimizationHistory(currentBestDesign);
 
+		findTheGlobalOptimalDesign();
+		globalOptimalDesign.saveToAFile(globalOptimumDesignFileName);
 
-		Design globalBestDesign = findTheGlobalOptimalDesign();
-#if 1
-		std::cout<<"##########################################\n";
-		std::cout<<"Optimization Iteration = "<<iterOpt<<"\n";
-		currentBestDesign.print();
-		std::cout<<"\n\n";
-#endif
+		if(ifDisplay){
+
+			std::cout<<"##########################################\n";
+			std::cout<<"Optimization Iteration = "<<iterOpt<<"\n";
+			currentBestDesign.print();
+			std::cout<<"\n\n";
+
+
+		}
+
 
 		simulationCount ++;
 
 		/* terminate optimization */
 		if(simulationCount >= maxNumberOfSamples){
 
-			printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
-#if 1
-			std::cout<<"##########################################\n";
-			std::cout<<"Global best design";
-			globalBestDesign.print();
-			std::cout<<"\n\n";
-#endif
+
+			if(this->ifDisplay){
+
+				printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
+
+				std::cout<<"##########################################\n";
+				std::cout<<"Global best design = \n";
+				globalOptimalDesign.print();
+				std::cout<<"\n\n";
+
+
+			}
 
 			if(ifVisualize){
 
@@ -1040,7 +1175,7 @@ void COptimizer::EfficientGlobalOptimization(void){
 
 
 }
-void COptimizer::cleanDoEFiles(void) const{
+void Optimizer::cleanDoEFiles(void) const{
 
 	std::string fileNameObjectiveFunction = objFun.getName()+".csv";
 	if(file_exist(fileNameObjectiveFunction)){
@@ -1062,7 +1197,8 @@ void COptimizer::cleanDoEFiles(void) const{
 
 }
 
-void COptimizer::calculateImprovementValue(Design &d){
+void Optimizer::calculateImprovementValue(Design &d){
+
 
 	if(d.isDesignFeasible){
 
@@ -1101,7 +1237,14 @@ void COptimizer::calculateImprovementValue(Design &d){
 
 
 
-void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
+void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
+
+	if(ifDisplay){
+
+		std::cout<<"performing DoE...\n";
+	}
+
+
 
 	if(!ifBoxConstraintsSet){
 
@@ -1110,10 +1253,6 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 	}
 
 
-	if(ifCleanDoeFiles){
-
-		cleanDoEFiles();
-	}
 
 	if(!isHistoryFileInitialized){
 
@@ -1136,6 +1275,13 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		DoE.saveSamplesToCSVFile(filename);
 		sampleCoordinates = DoE.getSamples();
 	}
+	else{
+
+		cout<<"ERROR: Cannot run DoE with any option other than LHS!\n";
+		abort();
+
+	}
+
 
 #if 0
 	printMatrix(sampleCoordinates,"sampleCoordinates");
@@ -1144,9 +1290,12 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 	for(unsigned int sampleID=0; sampleID<howManySamples; sampleID++){
 
+		if(ifDisplay){
 
-		std::cout<<"##########################################\n";
-		std::cout<<"Evaluating sample "<<sampleID<<"\n";
+			std::cout<<"\n##########################################\n";
+			std::cout<<"Evaluating sample "<<sampleID<<"\n";
+
+		}
 
 		rowvec dv = sampleCoordinates.row(sampleID);
 		Design currentDesign(dv);
@@ -1154,7 +1303,13 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		currentDesign.saveDesignVector(designVectorFileName);
 
 
+		std::string filenameCVS = objFun.getName()+".csv";
 
+		if(ifDisplay){
+
+			std::cout<<"Appending to data: "<<filenameCVS<<"\n";
+
+		}
 
 		if(!objFun.checkIfGradientAvailable()) {
 
@@ -1163,7 +1318,7 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 			rowvec temp(dimension+1);
 			copyRowVector(temp,dv);
 			temp(dimension) = currentDesign.trueValue;
-			appendRowVectorToCSVData(temp,objFun.getName()+".csv");
+			appendRowVectorToCSVData(temp,filenameCVS);
 
 
 		}
@@ -1177,7 +1332,7 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 			copyRowVector(temp,currentDesign.gradient, dimension+1);
 
 
-			appendRowVectorToCSVData(temp,objFun.getName()+".csv");
+			appendRowVectorToCSVData(temp,filenameCVS);
 
 
 		}
@@ -1185,17 +1340,17 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		computeConstraintsandPenaltyTerm(currentDesign);
 
 		calculateImprovementValue(currentDesign);
-#if 0
-		currentDesign.print();
-#endif
+
 		addConstraintValuesToDoEData(currentDesign);
 
 		updateOptimizationHistory(currentDesign);
 
-#if 1
-		std::cout<<"Objective function value = "<<currentDesign.objectiveFunctionValue<<"\n";
-#endif
 
+		if(ifDisplay){
+
+			currentDesign.print();
+
+		}
 
 
 	} /* end of sample loop */
@@ -1205,6 +1360,18 @@ void COptimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 }
 
+void Optimizer::displayMessage(std::string inputString) const{
+
+
+	if(ifDisplay){
+
+		std::cout<<inputString<<"\n";
+
+
+	}
+
+
+}
 
 
 

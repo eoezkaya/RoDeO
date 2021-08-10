@@ -41,7 +41,7 @@
 
 
 
-class COptimizer {
+class Optimizer {
 
 private:
 
@@ -53,7 +53,9 @@ private:
 
 
 	std::string designVectorFileName;
+
 	const std::string optimizationHistoryFileName = "optimizationHistory.csv";
+	const std::string globalOptimumDesignFileName = "globalOptimumDesign";
 
 	mat optimizationHistory;
 
@@ -75,29 +77,33 @@ private:
 
 	double zoomInFactor = 0.5;
 
+	unsigned int iterMaxEILoop;
+
+
 
 
 public:
 
 	std::string name;
 
-	unsigned int dimension;
-	unsigned int numberOfConstraints;
-	unsigned int maxNumberOfSamples;
-	unsigned int howOftenTrainModels;
+	unsigned int dimension = 0;
+	unsigned int numberOfConstraints = 0;
+	unsigned int maxNumberOfSamples = 0;
+	unsigned int howOftenTrainModels = 10; /* train surrogates in every 10 iteration */
+
 
 	unsigned int sampleDim;
 
-	unsigned int iterGradientEILoop;
-	std::string optimizationType;
+	unsigned int iterGradientEILoop = 100;
+	std::string optimizationType = "minimize";
+
 	bool ifVisualize = false;
+	bool ifDisplay = false;
 
-	unsigned int iterMaxEILoop;
+	bool ifBoxConstraintsSet = false;
 
-	bool ifBoxConstraintsSet;
-	bool ifCleanDoeFiles;
 
-	COptimizer(std::string ,int, std::string = "minimize");
+	Optimizer(std::string ,int, std::string = "minimize");
 	bool checkSettings(void) const;
 	void print(void) const;
 	void printConstraints(void) const;
@@ -111,37 +117,43 @@ public:
 	void cleanDoEFiles(void) const;
 	void setProblemType(std::string);
 	void setMaximumNumberOfIterations(unsigned int );
+	void setMaximumNumberOfIterationsForEIMaximization(unsigned int);
+
 	void setBoxConstraints(std::string filename="BoxConstraints.csv");
 	void setBoxConstraints(double lb, double ub);
 	void setBoxConstraints(vec lb, vec ub);
 	void setFileNameDesignVector(std::string filename);
 
+	void setDisplayOn(void);
+	void setDisplayOff(void);
+
+
 	void zoomInDesignSpace(void);
 
-	void setInitialObjectiveFunctionValue(double value);
-	void calculateImprovementValue(Design &d);
+	void setInitialObjectiveFunctionValue(double);
+	void calculateImprovementValue(Design &);
 
-	void addConstraint(ConstraintFunction &constFunc);
+	void addConstraint(ConstraintFunction &);
 
-	void evaluateConstraints(Design &d);
-	void addConstraintValuesToDoEData(Design &d) const;
+	void evaluateConstraints(Design &);
+	void addConstraintValuesToDoEData(Design &) const;
 
 
-	void estimateConstraints(CDesignExpectedImprovement &design) const;
+	void estimateConstraints(CDesignExpectedImprovement &) const;
 
 	void checkIfSettingsAreOK(void) const;
 	bool checkBoxConstraints(void) const;
-	bool checkConstraintFeasibility(rowvec constraintValues) const;
+	bool checkConstraintFeasibility(rowvec) const;
 
-	void addObjectFunction(ObjectiveFunction &objFunc);
+	void addObjectFunction(ObjectiveFunction &);
 
 
-	void addPenaltyToExpectedImprovementForConstraints(CDesignExpectedImprovement &designCalculated) const;
+	void addPenaltyToExpectedImprovementForConstraints(CDesignExpectedImprovement &) const;
 
 	void computeConstraintsandPenaltyTerm(Design &);
 
 
-	Design findTheGlobalOptimalDesign(void);
+	void findTheGlobalOptimalDesign(void);
 
 
 	void updateOptimizationHistory(Design d);
@@ -152,21 +164,21 @@ public:
 	void addConstraintValuesToData(Design &d);
 
 
-	rowvec calculateEIGradient(CDesignExpectedImprovement &currentDesign) const;
-	CDesignExpectedImprovement MaximizeEIGradientBased(CDesignExpectedImprovement initialDesignVector) const;
+	rowvec calculateEIGradient(CDesignExpectedImprovement &) const;
+	CDesignExpectedImprovement MaximizeEIGradientBased(CDesignExpectedImprovement ) const;
 	void findTheMostPromisingDesign(unsigned int howManyDesigns = 1);
 	CDesignExpectedImprovement getDesignWithMaxExpectedImprovement(void) const;
 
 	rowvec generateRandomRowVectorAroundASample(void);
 
 
+	bool ifConstrained(void) const;
+
+	void displayMessage(std::string) const;
 
 
 };
 
-void testOptimizationHimmelblau(void);
-void testOptimizationHimmelblauExternalExe(void);
-void testOptimizationWingweight(void);
-void testOptimizationEggholder(void);
+
 
 #endif

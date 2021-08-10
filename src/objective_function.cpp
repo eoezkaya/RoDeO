@@ -50,6 +50,44 @@
 using namespace arma;
 
 
+ObjectiveFunctionDefinition::ObjectiveFunctionDefinition(void){
+
+
+}
+
+
+ObjectiveFunctionDefinition::ObjectiveFunctionDefinition(std::string name){
+
+	this->name = name;
+
+}
+
+
+void ObjectiveFunctionDefinition::print(void) const{
+
+	std::cout<<"\nObjective function definition = \n";
+	std::cout<< "Name = "<<name<<"\n";
+	std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
+	std::cout<< "Output filename = "<<outputFilename<<"\n";
+	std::cout<< "Executable name = "<<executableName<<"\n";
+
+	if(!path.empty()){
+
+		std::cout<< "Executable path = "<<path<<"\n";
+
+	}
+
+	if(!marker.empty()){
+
+		std::cout<< "Marker = "<<marker<<"\n";
+
+
+	}
+
+
+}
+
+
 
 ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int dimension)
 : surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName){
@@ -75,7 +113,34 @@ ObjectiveFunction::ObjectiveFunction(){
 }
 
 
+void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition definition){
 
+	this->executableName = definition.executableName;
+	this->executablePath = definition.path;
+	this->fileNameDesignVector = definition.designVectorFilename;
+	this->fileNameInputRead = definition.outputFilename;
+
+	if(!definition.marker.empty()){
+		this->readMarker = definition.marker;
+		this->ifMarkerIsSet = true;
+
+	}
+
+
+	if(!definition.markerForGradient.empty()){
+
+
+		this->readMarkerAdjoint = definition.markerForGradient;
+		this->ifAdjointMarkerIsSet = true;
+
+	}
+
+
+
+
+
+
+}
 
 void ObjectiveFunction::setFunctionPointer(double (*objFun)(double *)){
 
@@ -106,21 +171,36 @@ void ObjectiveFunction::setGradientOff(void){
 }
 
 
+void ObjectiveFunction::setNumberOfTrainingIterationsForSurrogateModel(unsigned int nIter){
+
+	numberOfIterationsForSurrogateTraining = nIter;
+
+}
+
+void ObjectiveFunction::setFileNameReadInput(std::string fileName){
+
+	assert(!fileName.empty());
+	fileNameInputRead = fileName;
+
+}
 
 void ObjectiveFunction::setFileNameDesignVector(std::string fileName){
 
+	assert(!fileName.empty());
 	fileNameDesignVector = fileName;
 
 }
 
 void ObjectiveFunction::setExecutablePath(std::string path){
 
+	assert(!path.empty());
 	executablePath = path;
 
 }
 
 void ObjectiveFunction::setExecutableName(std::string exeName){
 
+	assert(!exeName.empty());
 	executableName = exeName;
 
 }
@@ -149,7 +229,28 @@ AggregationModel ObjectiveFunction::getSurrogateModelGradient(void) const{
 }
 
 
+void ObjectiveFunction::setReadMarker(std::string marker){
 
+	assert(!marker.empty());
+	readMarker = marker;
+	ifMarkerIsSet = true;
+
+}
+std::string ObjectiveFunction::getReadMarker(void) const{
+
+	return readMarker;
+}
+void ObjectiveFunction::setReadMarkerAdjoint(std::string marker){
+
+	assert(!marker.empty());
+	readMarkerAdjoint = marker;
+	ifAdjointMarkerIsSet = true;
+
+}
+std::string ObjectiveFunction::getReadMarkerAdjoint(void) const{
+
+	return readMarkerAdjoint;
+}
 
 void ObjectiveFunction::initializeSurrogate(void){
 
@@ -163,6 +264,8 @@ void ObjectiveFunction::initializeSurrogate(void){
 		surrogateModel.setParameterBounds(lb,ub);
 		surrogateModel.normalizeData();
 		surrogateModel.initializeSurrogateModel();
+		surrogateModel.setNumberOfTrainingIterations(numberOfIterationsForSurrogateTraining);
+
 
 	}
 	else{
@@ -171,6 +274,7 @@ void ObjectiveFunction::initializeSurrogate(void){
 		surrogateModelGradient.setParameterBounds(lb,ub);
 		surrogateModelGradient.normalizeData();
 		surrogateModelGradient.initializeSurrogateModel();
+		surrogateModelGradient.setNumberOfTrainingIterations(numberOfIterationsForSurrogateTraining);
 
 	}
 
@@ -258,12 +362,17 @@ bool ObjectiveFunction::checkIfGradientAvailable(void) const{
 
 std::string ObjectiveFunction::getExecutionCommand(void) const{
 
+
+	assert(!executableName.empty());
+
 	std::string runCommand;
+
 	if(!executablePath.empty()) {
 
 		runCommand = executablePath +"/" + executableName;
 	}
 	else{
+
 		runCommand = "./" + executableName;
 	}
 
@@ -297,19 +406,44 @@ void ObjectiveFunction::addDesignToData(Design &d){
 
 void ObjectiveFunction::readEvaluateOutput(Design &d){
 
+
+
 	assert(!this->fileNameInputRead.empty());
 	assert(d.dimension == dim);
+	assert(objectiveFunPtr == empty);
 
-	if( objectiveFunPtr == empty){
 
+	if(ifMarkerIsSet && ifGradientAvailable){
 
-		std::ifstream ifile(fileNameInputRead, std::ios::in);
+		if(!ifAdjointMarkerIsSet){
 
-		if (!ifile.is_open()) {
-
-			std::cout << "ERROR: There was a problem opening the input file!\n";
+			std::cout << "ERROR: Adjoint marker is not set for: "<< this->name<<"\n";
 			abort();
+
 		}
+
+	}
+
+	if(ifAdjointMarkerIsSet == true && ifGradientAvailable == false){
+
+
+		std::cout << "ERROR: Adjoint marker is set for the objective function but gradient is not available!\n";
+		std::cout << "Did you set GRADIENT_AVAILABLE properly?\n";
+		abort();
+	}
+
+
+	std::ifstream ifile(fileNameInputRead, std::ios::in);
+
+	if (!ifile.is_open()) {
+
+		std::cout << "ERROR: There was a problem opening the input file!\n";
+		abort();
+	}
+
+	if(ifMarkerIsSet == false){
+
+		/* If there is not any marker, just reads the functional value (and gradient) from the input file */
 
 		double functionValue;
 		ifile >> functionValue;
@@ -321,21 +455,73 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 		if(ifGradientAvailable){
 
 			for(unsigned int i=0; i<dim;i++){
+
 				ifile >> d.gradient(i);
 
 			}
 
 		}
-		ifile.close();
 
 	}
+
+
+	else{
+
+		for( std::string line; getline( ifile, line ); ){
+
+			std::size_t found = line.find(readMarker+" ");
+
+
+
+			if (found!=std::string::npos){
+
+				line = removeSpacesFromString(line);
+				line.erase(0,found+1+this->readMarker.size());
+
+				d.trueValue = std::stod(line);
+				d.objectiveFunctionValue = std::stod(line);
+
+			}
+
+			if(this->ifGradientAvailable){
+
+
+				std::size_t found2 = line.find(readMarkerAdjoint+" ");
+
+
+
+				if (found2!=std::string::npos){
+					line = removeSpacesFromString(line);
+					line.erase(0,found2+1+readMarkerAdjoint.size());
+					vec values = getDoubleValuesFromString(line,',');
+					assert(values.size() == dim);
+
+
+					for(unsigned int i=0; i<dim; i++){
+
+						d.gradient(i) = values(i);
+					}
+
+
+				}
+
+
+
+
+			}
+		}
+
+	}
+
+	ifile.close();
+
+
 
 }
 
 
 
 void ObjectiveFunction::evaluate(Design &d){
-
 
 	if(ifFunctionPointerIsSet){
 
@@ -351,6 +537,9 @@ void ObjectiveFunction::evaluate(Design &d){
 
 		std::string runCommand = getExecutionCommand();
 
+#if 0
+		std::cout<<"calling a system command\n";
+#endif
 		system(runCommand.c_str());
 
 	}
@@ -359,8 +548,6 @@ void ObjectiveFunction::evaluate(Design &d){
 		cout<<"ERROR: Cannot evaluate the objective function. Check settings!\n";
 		abort();
 	}
-
-
 
 
 }
@@ -419,8 +606,7 @@ double ObjectiveFunction::interpolate(rowvec x) const{
 }
 
 void ObjectiveFunction::print(void) const{
-	std::cout << "#####################################################\n";
-	std::cout<<std::endl;
+	std::cout << "\n#####################################################\n";
 	std::cout<<"Objective Function"<<std::endl;
 	std::cout<<"Name: "<<name<<std::endl;
 	std::cout<<"Dimension: "<<dim<<std::endl;
@@ -428,8 +614,26 @@ void ObjectiveFunction::print(void) const{
 	std::cout<<"ExecutablePath: "<<executablePath<<"\n";
 	std::cout<<"Output filename: "<<fileNameInputRead<<"\n";
 	std::cout<<"Input filename: "<<fileNameDesignVector<<"\n";
+
+	if(this->ifMarkerIsSet){
+
+		std::cout<<"Read marker: "<<readMarker<<"\n";
+
+	}
+
+
+
 	if(ifGradientAvailable){
 		std::cout<<"Uses gradient vector: Yes\n";
+
+
+		if(this->ifAdjointMarkerIsSet){
+
+			std::cout<<"Read marker for gradient: "<<readMarkerAdjoint<<"\n";
+
+
+		}
+
 
 	}
 	else{
@@ -438,13 +642,26 @@ void ObjectiveFunction::print(void) const{
 	}
 
 
-#if 0
-	surrogateModel.printSurrogateModel();
-	surrogateModelGradient.printSurrogateModel();
-#endif
-	std::cout << "#####################################################\n";
+	std::cout << "#####################################################\n\n";
 
 }
 
 
+void ObjectiveFunction::printSurrogate(void) const{
+
+	if(ifGradientAvailable){
+
+
+		surrogateModelGradient.printSurrogateModel();
+
+	}
+	else{
+
+		surrogateModel.printSurrogateModel();
+
+	}
+
+
+
+}
 

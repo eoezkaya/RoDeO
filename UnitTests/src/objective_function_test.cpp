@@ -95,7 +95,7 @@ TEST(testObjectiveFunction, initializeSurrogateWithAdjoint){
 }
 
 
-TEST(testObjectiveFunction, readEvaluateOutput){
+TEST(testObjectiveFunction, readEvaluateOutputWithoutMarker){
 
 	ObjectiveFunction objFunTest("testObjFun",4);
 
@@ -113,6 +113,108 @@ TEST(testObjectiveFunction, readEvaluateOutput){
 	remove("readOutputTestFile.txt");
 
 }
+
+TEST(testObjectiveFunction, readEvaluateOutputWithoutMarkerWithAdjoint){
+
+	ObjectiveFunction objFunTest("testObjFun",4);
+
+	Design d(4);
+
+	std::ofstream readOutputTestFile;
+	readOutputTestFile.open ("readOutputTestFile.txt");
+	readOutputTestFile << "2.144 1 2 3 4\n";
+	readOutputTestFile.close();
+
+	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
+	objFunTest.setGradientOn();
+	objFunTest.readEvaluateOutput(d);
+	ASSERT_EQ(d.trueValue,2.144);
+	ASSERT_EQ(d.objectiveFunctionValue,2.144);
+	ASSERT_EQ(d.gradient(0),1);
+	ASSERT_EQ(d.gradient(1),2);
+	ASSERT_EQ(d.gradient(2),3);
+	ASSERT_EQ(d.gradient(3),4);
+	remove("readOutputTestFile.txt");
+
+}
+
+
+TEST(testaObjectiveFunction, readEvaluateOutputWithOneMarker){
+
+	ObjectiveFunction objFunTest("testObjFun",4);
+
+	Design d(4);
+
+	std::ofstream readOutputTestFile;
+	readOutputTestFile.open ("readOutputTestFile.txt");
+	readOutputTestFile << "myObjective = 2.144\n";
+	readOutputTestFile.close();
+
+	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
+	objFunTest.setReadMarker("myObjective");
+	objFunTest.readEvaluateOutput(d);
+
+	ASSERT_EQ(d.trueValue,2.144);
+	ASSERT_EQ(d.objectiveFunctionValue,2.144);
+	remove("readOutputTestFile.txt");
+
+}
+
+
+TEST(testaObjectiveFunction, readEvaluateOutputWithOneMarkerWithAdjoint){
+
+	ObjectiveFunction objFunTest("testObjFun",4);
+
+	Design d(4);
+
+	std::ofstream readOutputTestFile;
+	readOutputTestFile.open ("readOutputTestFile.txt");
+	readOutputTestFile << "myObjective = 2.144\ngradient = 1,2,3,4\n";
+	readOutputTestFile.close();
+
+	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
+	objFunTest.setReadMarker("myObjective");
+	objFunTest.setReadMarkerAdjoint("gradient");
+	objFunTest.setGradientOn();
+	objFunTest.readEvaluateOutput(d);
+
+	ASSERT_EQ(d.trueValue,2.144);
+	ASSERT_EQ(d.objectiveFunctionValue,2.144);
+	ASSERT_EQ(d.gradient(0),1);
+	ASSERT_EQ(d.gradient(1),2);
+	ASSERT_EQ(d.gradient(2),3);
+	ASSERT_EQ(d.gradient(3),4);
+	remove("readOutputTestFile.txt");
+
+}
+
+TEST(testaObjectiveFunction, readEvaluateOutputWithTwoMarkers){
+
+	ObjectiveFunction objFunTest("testObjFun",4);
+
+	Design d(4);
+
+	std::ofstream readOutputTestFile;
+	readOutputTestFile.open ("readOutputTestFile.txt");
+	readOutputTestFile << "myObjective = 2.144\ngradient = 1.0, 2.0, 3.0,   4.0";
+	readOutputTestFile.close();
+
+	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
+	objFunTest.setReadMarker("myObjective");
+	objFunTest.setReadMarkerAdjoint("gradient");
+	objFunTest.setGradientOn();
+	objFunTest.readEvaluateOutput(d);
+
+	ASSERT_EQ(d.trueValue,2.144);
+	ASSERT_EQ(d.objectiveFunctionValue,2.144);
+	ASSERT_EQ(d.gradient(0),1);
+	ASSERT_EQ(d.gradient(1),2);
+	ASSERT_EQ(d.gradient(2),3);
+	ASSERT_EQ(d.gradient(3),4);
+	remove("readOutputTestFile.txt");
+
+}
+
 
 
 TEST(testObjectiveFunction, testreadEvaluateOutputAdjoint){

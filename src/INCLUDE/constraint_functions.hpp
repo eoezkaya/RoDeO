@@ -39,78 +39,33 @@
 #include "design.hpp"
 #include <cassert>
 
-//class ConstraintFunction{
-//
-//
-//private:
-//	unsigned int ID = -1;
-//	unsigned int dim = 0;
-//
-//	double (*pConstFun)(double *);
-//	double (*pConstFunAdj)(double *,double *);
-//	double targetValue  = 0.0;
-//	std::string inequalityType;
-//
-//	KrigingModel surrogateModel;
-//	AggregationModel surrogateModelGradient;
-//
-//	std::string executableName;
-//	std::string executablePath;
-//	std::string fileNameConstraintFunctionRead;
-//	std::string fileNameDesignVector;
-//
-//	vec ub;
-//	vec lb;
-//
-//	bool ifGradientAvailable = false;
-//	bool ifFunctionPointerIsSet = false;
-//	bool ifInitialized = false;
-//public:
-//	std::string name;
-//
-//	std::vector<int> IDToFunctionsShareOutputExecutable;
-//
-//	unsigned int readOutputStartIndex;
-//
-//
-//	ConstraintFunction(std::string, std::string, double, double (*constFun)(double *), unsigned int );
-//	ConstraintFunction(std::string, std::string, double, double (*constFun)(double *, double *), unsigned int );
-//
-//	ConstraintFunction(std::string, std::string, double, unsigned int);
-//	ConstraintFunction();
-//	void saveDoEData(std::vector<rowvec> data) const;
-//
-//	void initializeSurrogate(void);
-//	void trainSurrogate(void);
-//
-//
-//	void setGradientOn(void);
-//	void setGradientOff(void);
-//	void setParameterBounds(vec , vec );
-//
-//	void setFileNameReadConstraintFunction(std::string);
-//	void setExecutablePath(std::string);
-//	void setExecutableName(std::string);
-//	void setFileNameDesignVector(std::string);
-//	void setID(unsigned int);
-//	unsigned int getID(void) const;
-//
-//	bool checkFeasibility(double value) const;
-//	bool checkIfGradientAvailable(void) const;
-//
-//	double calculateEI(rowvec x) const;
-//
-//	void readEvaluateOutput(Design &d);
-//	void evaluate(Design &d);
-//	void evaluateAdjoint(Design &d);
-//	bool checkIfRunExecutableNecessary(void);
-//
-//	double ftilde(rowvec x) const;
-//	void print(void) const;
-//
-//	void addDesignToData(Design &d);
-//	std::string getExecutionCommand(void) const;
-//};
+
+
+class ConstraintDefinition{
+
+public:
+	std::string name;
+	std::string inequalityType;
+	std::string executableName;
+	std::string path;
+	std::string designVectorFilename;
+	std::string outputFilename;
+	std::string marker;
+	std::string markerForGradient;
+	int ID = -1;
+	bool ifGradient = false;
+	bool ifDefined = false;
+
+
+
+	double value;
+
+	ConstraintDefinition(std::string, std::string, double);
+	ConstraintDefinition(std::string);
+	ConstraintDefinition();
+	void print(void) const;
+
+};
 
 
 
@@ -119,15 +74,16 @@ class ConstraintFunction: public ObjectiveFunction {
 
 
 private:
-	double targetValue  = 0.0;
+
 	std::string inequalityType;
+	double value;
+	bool ifRunNecessary = true;
+
 	int ID = -1;
 	bool ifInequalityConstraintSpecified  = false;
 
-public:
 
-	unsigned int readOutputStartIndex = 0;
-	std::vector<int> IDToFunctionsShareOutputExecutable;
+public:
 
 	ConstraintFunction(std::string, unsigned int);
 	ConstraintFunction(std::string, double (*objFun)(double *), unsigned int);
@@ -137,11 +93,15 @@ public:
 	void addDesignToData(Design &);
 
 
+	void setInequalityConstraint(ConstraintDefinition inequalityConstraint);
+	void setParametersByDefinition(ConstraintDefinition inequalityConstraint);
 
-	void setInequalityConstraint(std::string inequalityStatement);
+
+	bool checkIfRunExecutableNecessary(void);
+	void evaluate(Design &d);
 
 	void setID(int givenID) {
-		assert(givenID>0);
+		assert(givenID>=0);
 		ID = givenID;
 
 	}
@@ -152,7 +112,23 @@ public:
 
 	}
 
+	void setrunOn(void) {
+
+		ifRunNecessary = true;
+	}
+
+	void setrunOff(void) {
+
+		ifRunNecessary = false;
+
+	}
+
+
+
 	void print(void) const;
+
+	double getValue(void) const;
+	std::string getInequalityType(void) const;
 
 
 };

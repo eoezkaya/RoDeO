@@ -90,7 +90,6 @@ void KrigingModel::initializeSurrogateModel(void){
 
 
 	epsilonKriging = 10E-12;
-	max_number_of_kriging_iterations = 20000;
 
 
 	sigmaSquared = 0.0;
@@ -210,11 +209,7 @@ void KrigingModel::setRegressionWeights(vec weights){
 
 }
 
-void KrigingModel::setNumberOfTrainingIterations(unsigned int iter){
 
-	max_number_of_kriging_iterations = iter;
-
-}
 
 
 void KrigingModel::setEpsilon(double inp){
@@ -274,20 +269,25 @@ void KrigingModel::printSurrogateModel(void) const{
 	cout << "\nKriging Surrogate model:\n";
 	cout<< "Number of samples: "<<N<<endl;
 	cout<< "Number of input parameters: "<<dim<<"\n";
+
+#if 0
 	printMatrix(rawData,"rawData");
 	printMatrix(X,"X");
-
+#endif
 
 	printf("hyperparameters_filename: %s\n",hyperparameters_filename.c_str());
 	printf("input_filename: %s\n",filenameDataInput.c_str());
-	printf("max_number_of_kriging_iterations = %d\n",max_number_of_kriging_iterations);
+	printf("max_number_of_kriging_iterations = %d\n",this->numberOfTrainingIterations);
 	printf("epsilonKriging = %15.10e\n",epsilonKriging);
 	printHyperParameters();
 
+#if 0
 	printVector(R_inv_ys_min_beta,"R_inv_ys_min_beta");
+#endif
 	std::cout<<"beta0 = "<<beta0<<"\n";
+#if 0
 	printMatrix(correlationMatrix,"correlationMatrix");
-
+#endif
 	printf("\n");
 
 
@@ -605,7 +605,7 @@ void KrigingModel::train(void){
 		}
 	}
 
-	int max_number_of_function_calculations = max_number_of_kriging_iterations;
+	int max_number_of_function_calculations =  this->numberOfTrainingIterations;
 
 	/* initialize random seed*/
 	srand (time(NULL));

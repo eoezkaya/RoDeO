@@ -157,7 +157,7 @@ rowvec Design::constructSampleConstraint(unsigned int constraintID) const{
 		sample(i) = designParameters(i);
 	}
 
-	sample(dimension) = constraintTrueValues(constraintID-1);
+	sample(dimension) = constraintTrueValues(constraintID);
 
 
 	return sample;
@@ -172,9 +172,9 @@ rowvec Design::constructSampleConstraintWithGradient(unsigned int constraintID) 
 		sample(i) = designParameters(i);
 	}
 
-	sample(dimension) = constraintTrueValues(constraintID-1);
+	sample(dimension) = constraintTrueValues(constraintID);
 
-	rowvec constraintGradient = constraintGradients.at(constraintID-1);
+	rowvec constraintGradient = constraintGradients.at(constraintID);
 	for(unsigned int i=0; i<dimension; i++){
 
 
@@ -195,21 +195,39 @@ Design::Design(void){
 void Design::print(void) const{
 
 
-	printVector(designParameters,"designParameters");
-	std::cout<<"Value = "<<trueValue<<"\n";
+	std::cout<<"\n\nPrinting Design...\n";
+	std::cout<<"Design parameters = \n";
+	printVector(designParameters);
+	std::cout<<"Function value = "<<trueValue<<"\n";
 
-	printVector(gradient,"gradient vector");
+
+	if(!gradient.is_zero() && gradient.size() > 0){
+
+		printVector(gradient,"gradient vector");
+
+	}
+
+
 
 	if(constraintTrueValues.size() >0){
 
 		printVector(constraintTrueValues,"constraint values");
 
 	}
+
+
+
+
 	if(!constraintGradients.empty()){
-		std::cout<<"Constraint gradients = \n";
+
+		int count = 0;
 		for (auto it = constraintGradients.begin(); it != constraintGradients.end(); it++){
 
-			printVector(*it);
+			if(!it->is_zero()){
+				std::cout<<"Constraint gradient "<<count<<"\n";
+				printVector(*it);
+				count++;
+			}
 
 
 		}
@@ -217,6 +235,34 @@ void Design::print(void) const{
 
 	std::cout<<"Objective function value = "<<objectiveFunctionValue<<"\n";
 	std::cout<<"Improvement = "<<improvementValue<<"\n";
+
+
+}
+
+
+
+void Design::saveToAFile(std::string filename) const{
+
+	assert(!filename.empty());
+	std::ofstream fileOut;
+	fileOut.open (filename);
+	fileOut << "Tag: "<<this->tag<<"\n";
+	fileOut << "ID: "<<this->ID<<"\n";
+	fileOut << "Design parameters vector:\n";
+	fileOut << this->designParameters;
+	fileOut << "Objective function value: "<<this->objectiveFunctionValue<<"\n";
+
+	if(numberOfConstraints>0){
+
+		fileOut << "Constraint values vector:\n";
+		fileOut << this->constraintTrueValues;
+
+	}
+
+
+	fileOut.close();
+
+
 
 
 }

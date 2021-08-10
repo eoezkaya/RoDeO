@@ -35,7 +35,9 @@
 #include <string>
 #include <math.h>
 #include <vector>
-
+#include <iostream>
+#include <string>
+#include <fstream>
 
 void executePythonScript(std::string command){
 
@@ -44,6 +46,24 @@ void executePythonScript(std::string command){
 
 }
 
+void compileWithCpp(std::string fileName, std::string exeName){
+
+	assert(!fileName.empty());
+	assert(!exeName.empty());
+
+	if(!file_exist(fileName)){
+
+		std::cout<<"ERROR: File "<<fileName<<" does not exist\n";
+		abort();
+
+	}
+
+	std::string compileCommand = "g++ "+ fileName + " -o " + exeName + " -lm";
+	system(compileCommand.c_str());
+
+
+
+}
 
 void changeDirectoryToRodeoHome(void){
 
@@ -196,6 +216,42 @@ void abortIfFalse(bool flag){
 	}
 
 }
+
+
+bool checkIfOn(std::string keyword){
+
+	bool flag = false;
+
+	if(keyword == "YES") flag = true;
+	if(keyword == "Yes") flag = true;
+	if(keyword == "yes") flag = true;
+	if(keyword == "ON") flag = true;
+	if(keyword == "On") flag = true;
+	if(keyword == "on") flag = true;
+	if(keyword == "y") flag = true;
+	if(keyword == "Y") flag = true;
+
+	return flag;
+
+}
+
+bool checkIfOff(std::string keyword){
+
+	bool flag = false;
+
+	if(keyword == "NO") flag = true;
+	if(keyword == "No") flag = true;
+	if(keyword == "no") flag = true;
+	if(keyword == "Off") flag = true;
+	if(keyword == "OFF") flag = true;
+	if(keyword == "off") flag = true;
+	if(keyword == "N") flag = true;
+	if(keyword == "n") flag = true;
+
+	return flag;
+
+}
+
 
 
 
@@ -735,6 +791,31 @@ bool file_exist(const char *fileName)
 }
 
 
+
+void readFileToaString(std::string filename, std::string & stringCompleteFile){
+
+	if(!file_exist(filename)){
+
+		std::cout<<"ERROR: File "<< filename <<" does not exist!\n";
+		abort();
+	}
+
+	std::ifstream configfile(filename);
+
+	if(configfile) {
+		std::ostringstream ss;
+		ss << configfile.rdbuf();
+		stringCompleteFile = ss.str();
+	}
+
+#if 0
+	cout<<stringCompleteFile;
+#endif
+
+
+}
+
+
 std::string removeSpacesFromString(std::string inputString){
 
 	inputString.erase(remove_if(inputString.begin(), inputString.end(), isspace), inputString.end());
@@ -742,10 +823,13 @@ std::string removeSpacesFromString(std::string inputString){
 }
 
 
-void getValuesFromString(std::string str, std::vector<std::string> &values,char delimiter){
 
+std::vector<std::string> getStringValuesFromString(std::string str,char delimiter){
 
-	assert(values.size() == 0);
+	str = removeSpacesFromString(str);
+
+	std::vector<std::string> values;
+
 
 	if(str[0] == '{' || str[0] == '['){
 
@@ -766,14 +850,56 @@ void getValuesFromString(std::string str, std::vector<std::string> &values,char 
 		buffer.assign(str,0,found);
 		str.erase(0,found+1);
 
+
 		values.push_back(buffer);
 
 	}
 
 	values.push_back(str);
 
-
+	return values;
 }
+
+
+
+vec getDoubleValuesFromString(std::string str,char delimiter){
+
+	str = removeSpacesFromString(str);
+
+	size_t n = std::count(str.begin(), str.end(), ',');
+
+	vec values(n+1);
+
+
+	if(str[0] == '{' || str[0] == '['){
+
+		str.erase(0,1);
+	}
+
+	if(str[str.length()-1] == '}' || str[str.length()-1] == ']'){
+
+		str.erase(str.length()-1,1);
+	}
+
+	int count = 0;
+	while(1){
+
+		std::size_t found = str.find(delimiter);
+		if (found==std::string::npos) break;
+
+		std::string buffer;
+		buffer.assign(str,0,found);
+		str.erase(0,found+1);
+
+
+		values(count) = std::stod(buffer);
+		count ++;
+	}
+	values(count) = std::stod(str);
+
+	return values;
+}
+
 
 
 

@@ -114,6 +114,21 @@ void TestFunction::setWarmStartOff(void){
 
 }
 
+
+
+void TestFunction::setDisplayOn(void){
+
+	ifDisplayResults = true;
+
+}
+void TestFunction::setDisplayOff(void){
+
+	ifDisplayResults = false;
+}
+
+
+
+
 void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
 
 	assert(lowerBound < upperBound);
@@ -123,6 +138,7 @@ void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
 
 
 }
+
 
 
 void TestFunction::setBoxConstraints(vec lowerBound, vec upperBound){
@@ -222,6 +238,13 @@ void TestFunction::setNumberOfTestSamples(unsigned int nSamples){
 }
 
 
+
+void TestFunction::setNumberOfTrainingIterations(unsigned int nIter){
+
+	numberOfIterationsForSurrogateModelTraining = nIter;
+
+}
+
 void TestFunction::evaluateGlobalExtrema(void) const{
 
 	assert(ifBoxConstraintsSet);
@@ -266,16 +289,20 @@ void TestFunction::evaluateGlobalExtrema(void) const{
 
 void TestFunction::print(void){
 
-	printf("printing function information...\n");
-	printf("function name = %s\n",function_name.c_str());
+	printf("\nPrinting function information...\n");
+	printf("Function name = %s\n",function_name.c_str());
 	printf("Number of independent variables = %d\n",dimension);
 	printf("Parameter bounds:\n");
+
 
 	for(unsigned int i=0; i<dimension; i++){
 
 		printf("x[%d]: %15.10f , %15.10f\n",i,lb(i),ub(i));
 
 	}
+
+	printMatrix(trainingSamples, "trainingSamples");
+	printMatrix(testSamples, "testSamples");
 
 
 }
@@ -394,9 +421,13 @@ void TestFunction::testSurrogateModel(std::string surrogateModelType){
 	GEKModel TestFunModelGEK(function_name);
 
 	if(surrogateModelType == "ORDINARY_KRIGING"){
+
+
 		surrogateModel =  &TestFunModelKriging;
+
 	}
 	if(surrogateModelType == "UNIVERSAL_KRIGING"){
+
 		TestFunModelKriging.setLinearRegressionOn();
 		surrogateModel =  &TestFunModelKriging;
 	}
@@ -412,6 +443,7 @@ void TestFunction::testSurrogateModel(std::string surrogateModelType){
 	}
 
 
+	surrogateModel->setNumberOfTrainingIterations(numberOfIterationsForSurrogateModelTraining);
 
 	surrogateModel->readData();
 	surrogateModel->setParameterBounds(lb,ub);
@@ -447,6 +479,9 @@ void TestFunction::testSurrogateModel(std::string surrogateModelType){
 
 		std::cout<<"\n\nOut of sample error (MSE) = "<<outSampleError<<"\n";
 		std::cout<<"In sample error     (MSE) = "<<inSampleError<<"\n\n";
+
+		std::cout<<"Saving test results to the file:\n";
+
 	}
 
 
@@ -637,7 +672,7 @@ void TestFunction::readFileTrainingData(void){
 	assert(this->ifTrainingDataFileExists);
 	trainingSamples.load(this->filenameTrainingData, csv_ascii);
 
-#if 1
+#if 0
 	trainingSamples.print();
 #endif
 

@@ -200,7 +200,7 @@ void GEKModel::train(void){
 	auxModelForTraining.ifHasGradientData = true;
 
 	auxModelForTraining.initializeSurrogateModel();
-	auxModelForTraining.max_number_of_kriging_iterations = maxNumberOfTrainingIterations;
+	auxModelForTraining.setNumberOfTrainingIterations(maxNumberOfTrainingIterations);
 	auxModelForTraining.printSurrogateModel();
 
 	auxModelForTraining.train();

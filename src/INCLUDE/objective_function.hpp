@@ -38,6 +38,27 @@
 #include "design.hpp"
 
 
+class ObjectiveFunctionDefinition{
+
+public:
+	std::string name;
+	std::string executableName;
+	std::string path;
+	std::string designVectorFilename;
+	std::string outputFilename;
+	std::string marker;
+	std::string markerForGradient;
+
+	bool ifGradient = false;
+	bool ifDefined = false;
+
+	ObjectiveFunctionDefinition(std::string);
+	ObjectiveFunctionDefinition();
+	void print(void) const;
+
+
+};
+
 
 class ObjectiveFunction{
 
@@ -48,19 +69,30 @@ private:
 
 protected:
 
-	std::string name;
+
 	double (*objectiveFunPtr)(double *);
 	double (*objectiveFunAdjPtr)(double *,double *);
+
+	std::string name;
 	std::string executableName;
 	std::string executablePath;
 	std::string fileNameInputRead;
 	std::string fileNameDesignVector;
+
+	std::string readMarker;
+	std::string readMarkerAdjoint;
+
+	bool ifMarkerIsSet = false;
+	bool ifAdjointMarkerIsSet = false;
 
 	vec ub;
 	vec lb;
 
 	KrigingModel surrogateModel;
 	AggregationModel surrogateModelGradient;
+
+	unsigned int numberOfIterationsForSurrogateTraining = 10000;
+
 
 
 	unsigned int dim = 0;
@@ -82,6 +114,8 @@ public:
 
 	void initializeSurrogate(void);
 	void trainSurrogate(void);
+	void printSurrogate(void) const;
+
 	KrigingModel getSurrogateModel(void) const;
 	AggregationModel getSurrogateModelGradient(void) const;
 
@@ -89,6 +123,8 @@ public:
 	void setGradientOn(void);
 	void setGradientOff(void);
 	void setParameterBounds(vec , vec );
+
+	void setNumberOfTrainingIterationsForSurrogateModel(unsigned int);
 
 	unsigned int getDimension(void) const{
 
@@ -107,17 +143,21 @@ public:
 	}
 
 
-	void setFileNameReadInput(std::string fileName){
-
-		fileNameInputRead = fileName;
-
-	}
-
+	void setFileNameReadInput(std::string fileName);
 
 	void saveDoEData(std::vector<rowvec>) const;
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
 	void setFileNameDesignVector(std::string);
+
+	void setReadMarker(std::string marker);
+	std::string getReadMarker(void) const;
+	void setReadMarkerAdjoint(std::string marker);
+	std::string getReadMarkerAdjoint(void) const;
+
+
+	void setParametersByDefinition(ObjectiveFunctionDefinition);
+
 
 	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
 

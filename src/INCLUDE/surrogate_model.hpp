@@ -98,6 +98,7 @@ protected:
 
 
 	unsigned int numberOfHyperParameters  = 0;
+	unsigned int numberOfTrainingIterations  = 10000;
 
 
 
@@ -137,6 +138,7 @@ public:
 	std::string getNameOfHyperParametersFile(void) const;
 	std::string getNameOfInputFile(void) const;
 	void setNameOfInputFile(std::string filename);
+	void setNumberOfTrainingIterations(unsigned int);
 
 	unsigned int getDimension(void) const;
 	unsigned int getNumberOfSamples(void) const;
@@ -153,6 +155,7 @@ public:
 	virtual void train(void) = 0;
 	virtual double interpolate(rowvec x) const = 0;
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
+
 
 	double calculateInSampleError(void) const;
 	void calculateOutSampleError(void);

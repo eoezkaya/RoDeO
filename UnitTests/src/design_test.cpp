@@ -64,25 +64,46 @@ TEST(testDesign, testgradientUpdateDesignVector){
 
 }
 
-TEST(testDesign, testgenerateRandomDesignVectorAroundASample){
+//TEST(testDesign, testgenerateRandomDesignVectorAroundASample){
+//
+//	unsigned int dim =  generateRandomInt(5,10);
+//	unsigned int N =  generateRandomInt(20,30);
+//
+//
+//	mat samples(N,dim,fill::randu);
+//
+//	samples *=(1.0/dim);
+//
+//	unsigned int randomIndex =  generateRandomInt(0,N-1);
+//
+//
+//	rowvec randomSample = samples.row(randomIndex);
+//
+//	CDesignExpectedImprovement testDesign(dim);
+//
+//	testDesign.generateRandomDesignVectorAroundASample(randomSample);
+//
+//
+//}
 
-	unsigned int dim =  generateRandomInt(5,10);
-	unsigned int N =  generateRandomInt(20,30);
+TEST(testDesign, testsaveToAFile){
 
 
-	mat samples(N,dim,fill::randu);
+	rowvec dv(5);
+	dv(0) = 1.0; dv(1) = -1.0; dv(2) = 2.0; dv(3) = -2.0; dv(4) = 2.0;
+	Design testDesign(dv);
+	testDesign.objectiveFunctionValue = 1.22;
+	testDesign.tag = "Global Optimum Design";
+	testDesign.ID = 22;
 
-	samples *=(1.0/dim);
+	testDesign.numberOfConstraints = 2;
+	rowvec constraints(2);
+	constraints(0) = 1.3; constraints(1) = 0.12;
+	testDesign.constraintTrueValues = constraints;
 
-	unsigned int randomIndex =  generateRandomInt(0,N-1);
-
-
-	rowvec randomSample = samples.row(randomIndex);
-
-	CDesignExpectedImprovement testDesign(dim);
-
-	testDesign.generateRandomDesignVectorAroundASample(randomSample);
-
+	testDesign.print();
+	testDesign.saveToAFile("testDesign.dat");
 
 }
+
 

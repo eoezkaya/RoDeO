@@ -211,6 +211,14 @@ std::string SurrogateModel::getNameOfInputFile(void) const{
 
 }
 
+void SurrogateModel::setNumberOfTrainingIterations(unsigned int nIter){
+
+
+	this->numberOfTrainingIterations = nIter;
+
+}
+
+
 unsigned int SurrogateModel::getDimension(void) const{
 
 	return this->dim;
