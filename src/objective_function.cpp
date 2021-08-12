@@ -68,18 +68,35 @@ void ObjectiveFunctionDefinition::print(void) const{
 	std::cout<<"\nObjective function definition = \n";
 	std::cout<< "Name = "<<name<<"\n";
 	std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
-	std::cout<< "Output filename = "<<outputFilename<<"\n";
-	std::cout<< "Executable name = "<<executableName<<"\n";
 
-	if(!path.empty()){
 
-		std::cout<< "Executable path = "<<path<<"\n";
+	if(this->ifMultiLevel == false){
+
+
+		std::cout<< "Output filename = "<<outputFilename<<"\n";
+		std::cout<< "Executable name = "<<executableName<<"\n";
+
+		if(!path.empty()){
+
+			std::cout<< "Executable path = "<<path<<"\n";
+
+		}
+
+		if(!marker.empty()){
+
+			std::cout<< "Marker = "<<marker<<"\n";
+
+
+		}
 
 	}
 
-	if(!marker.empty()){
+	else{
 
-		std::cout<< "Marker = "<<marker<<"\n";
+
+
+
+
 
 
 	}

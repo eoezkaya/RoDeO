@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -37,33 +37,8 @@
 #include "objective_function.hpp"
 #include "constraint_functions.hpp"
 #include "optimization.hpp"
+#include "configkey.hpp"
 using namespace arma;
-
-
-class ConfigKey{
-
-public:
-	std::string name;
-	std::string type;
-
-	double doubleValue = 0.0;
-	int intValue = 0;
-	std::string stringValue;
-	vec vectorDoubleValue;
-	std::vector<std::string> vectorStringValue;
-	bool ifValueSet = false;
-
-	ConfigKey(std::string, std::string);
-	void print(void) const;
-	void abortIfNotSet(void) const;
-
-	void setValue(std::string);
-	void setValue(vec);
-	void setValue(int);
-	void setValue(double);
-
-
-};
 
 
 
@@ -77,10 +52,10 @@ private:
 	std::vector<std::string> availableSurrogateModels;
 
 
+	ConfigKeyList configKeys;
+	ConfigKeyList configKeysObjectiveFunction;
+	ConfigKeyList configKeysConstraintFunction;
 
-	std::vector<ConfigKey> configKeys;
-	std::vector<ConfigKey> configKeysObjectiveFunction;
-	std::vector<ConfigKey> configKeysConstraintFunction;
 
 	std::vector<ConstraintDefinition> constraints;
 	int numberOfConstraints = 0;
@@ -102,35 +77,13 @@ public:
 	void setDisplayOn(void);
 	void setDisplayOff(void);
 
-	void assignKeywordValue(std::pair <std::string,std::string> input, std::vector<ConfigKey> keywordArray);
-	void assignKeywordValue(std::pair <std::string,vec> input, std::vector<ConfigKey> keywordArray);
-	void assignKeywordValue(std::pair <std::string,double> input, std::vector<ConfigKey> keywordArray);
-	void assignKeywordValue(std::pair <std::string,int> input, std::vector<ConfigKey> keywordArray);
 
-
-
-	void assignKeywordValueWithIndex(std::string, int );
-
-	void assignConstraintKeywordValueWithIndex(std::string, int );
-	void assignObjectiveKeywordValueWithIndex(std::string, int);
-
-	void assignKeywordValue(std::string, int );
-	void assignKeywordValue(std::string, double );
-	void assignKeywordValue(std::string, std::string);
-	void assignKeywordValue(std::string, vec);
-
-
-	int searchKeywordInString(std::string s, const std::vector<ConfigKey> &) const;
-	int searchConfigKeywordInString(std::string ) const;
-	int searchObjectiveConfigKeywordInString(std::string) const;
-	int searchConstraintConfigKeywordInString(std::string s) const;
 
 	std::string removeKeywordFromString(std::string, std::string) const;
 
 
 	void checkIfProblemDimensionIsSet(void) const;
 	void checkIfNumberOfTrainingAndTestSamplesAreProper(void) const;
-	void checkIfObjectiveFunctionIsSetProperly(void) const;
 	void checkIfSurrogateModelTypeIsOK(void) const;
 
 	void checkSettingsForSurrogateModelTest(void) const;
@@ -152,53 +105,8 @@ public:
 
 	bool ifIsAGradientBasedMethod(std::string) const;
 
-	bool ifFeatureIsOn(std::string) const;
-	bool ifFeatureIsOff(std::string) const;
 
 	void determineProblemDimensionAndBoxConstraintsFromTrainingData(void);
-
-	void printKeywords(void) const;
-	void printKeywordsConstraint(void) const;
-	void printKeywordsObjective(void) const;
-
-
-
-
-	ConfigKey getConfigKey(int) const;
-	ConfigKey getConfigKeyConstraint(int i) const;
-	ConfigKey getConfigKeyObjective(int i) const;
-
-
-
-	ConfigKey getConfigKey(std::string) const;
-	ConfigKey getConfigKeyConstraint(std::string) const;
-	ConfigKey getConfigKeyObjective(std::string) const;
-
-
-	bool ifConfigKeyIsSet(std::string) const;
-	bool ifConfigKeyIsSetConstraint(std::string) const;
-	bool ifConfigKeyIsSetObjective(std::string) const;
-
-
-
-
-
-	void abortifConfigKeyIsNotSet(std::string) const;
-
-
-	std::string getConfigKeyStringValue(std::string) const;
-	std::string getConfigKeyStringValueConstraint(std::string) const;
-	std::string getConfigKeyStringValueObjective(std::string) const;
-
-
-	std::vector<std::string> getConfigKeyStringVectorValue(std::string) const;
-	std::string getConfigKeyStringVectorValueAtIndex(std::string, unsigned int) const;
-
-	int getConfigKeyIntValue(std::string) const;
-	int getConfigKeyIntValueObjective(std::string key) const;
-
-	double getConfigKeyDoubleValue(std::string) const;
-	vec getConfigKeyDoubleVectorValue(std::string) const;
 
 
 	void checkConsistencyOfConfigParams(void) const;
@@ -218,8 +126,13 @@ public:
 	void parseObjectiveFunctionDefinition(std::string);
 	void printAllConstraintDefinitions(void) const;
 	void printObjectiveFunctionDefinition(void) const;
+
 	ObjectiveFunctionDefinition getObjectiveFunctionDefinition(void) const;
 	ConstraintDefinition getConstraintDefinition(unsigned int) const;
+	unsigned int getDimension(void) const;
+	std::string getProblemType(void) const;
+	std::string getProblemName(void) const;
+
 
 	void setConfigFilename(std::string);
 
@@ -235,6 +148,7 @@ public:
 
 	bool checkIfRunIsNecessary(int idConstraint) const;
 
+	bool ifDisplayIsOn(void) const;
 	void displayMessage(std::string inputString) const;
 
 };

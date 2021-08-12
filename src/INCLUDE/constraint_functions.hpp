@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -46,17 +46,31 @@ class ConstraintDefinition{
 public:
 	std::string name;
 	std::string inequalityType;
+
 	std::string executableName;
 	std::string path;
 	std::string designVectorFilename;
 	std::string outputFilename;
 	std::string marker;
 	std::string markerForGradient;
+
+	/* These are required only for multi-level option */
+	std::string executableNameLowFi;
+	std::string pathLowFi;
+	std::string outputFilenameLowFi;
+	std::string markerLowFi;
+	std::string markerForGradientLowFi;
+
+
+	bool ifMultiLevel = false;
+
+
+
+
 	int ID = -1;
 	bool ifGradient = false;
+	bool ifGradientLowFi = false;
 	bool ifDefined = false;
-
-
 
 	double value;
 

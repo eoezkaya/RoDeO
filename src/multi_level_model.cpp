@@ -45,7 +45,7 @@ MultiLevelModel::MultiLevelModel(std::string label)
 :SurrogateModel(label) {
 
 	inputFileNameError = label+"_Error.csv";
-
+	hyperparameters_filename = label + "_multilevel_model_hyperparameters.csv";
 
 }
 
@@ -128,9 +128,6 @@ void MultiLevelModel::trainGamma(void){
 
 	assert(rawDataHighFidelityForGammaTest.n_rows>0);
 	assert(rawDataHighFidelityForGammaTraining.n_rows>0);
-
-
-
 
 
 

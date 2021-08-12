@@ -64,27 +64,33 @@ TEST(testDesign, testgradientUpdateDesignVector){
 
 }
 
-//TEST(testDesign, testgenerateRandomDesignVectorAroundASample){
-//
-//	unsigned int dim =  generateRandomInt(5,10);
-//	unsigned int N =  generateRandomInt(20,30);
-//
-//
-//	mat samples(N,dim,fill::randu);
-//
-//	samples *=(1.0/dim);
-//
-//	unsigned int randomIndex =  generateRandomInt(0,N-1);
-//
-//
-//	rowvec randomSample = samples.row(randomIndex);
-//
-//	CDesignExpectedImprovement testDesign(dim);
-//
-//	testDesign.generateRandomDesignVectorAroundASample(randomSample);
-//
-//
-//}
+TEST(testDesign, testgenerateRandomDesignVectorAroundASample){
+
+	unsigned int dim =  generateRandomInt(5,10);
+	unsigned int N =  generateRandomInt(20,30);
+
+
+	mat samples(N,dim,fill::randu);
+
+	samples *=(1.0/dim);
+
+	unsigned int randomIndex =  generateRandomInt(0,N-1);
+
+
+	rowvec randomSample = samples.row(randomIndex);
+
+	vec lb(dim);
+	vec ub(dim);
+
+	lb.fill(0.0);
+	ub.fill(1.0/dim);
+
+	CDesignExpectedImprovement testDesign(dim);
+
+	testDesign.generateRandomDesignVectorAroundASample(randomSample,lb,ub);
+
+
+}
 
 TEST(testDesign, testsaveToAFile){
 

@@ -30,61 +30,9 @@
 #include "auxiliary_functions.hpp"
 #include<gtest/gtest.h>
 
+#define TESTDRIVERON
 
-TEST(testDriver, testifFeatureIsOn){
-
-	RoDeODriver testDriver;
-	std::string s1 = "WARM_START";
-	std::string s2 = "yes";
-	testDriver.assignKeywordValue(s1,s2);
-	bool ifWarmStart = testDriver.ifFeatureIsOn("WARM_START");
-	EXPECT_EQ(ifWarmStart, true);
-
-	s2 = "Yes";
-	testDriver.assignKeywordValue(s1,s2);
-	ifWarmStart = testDriver.ifFeatureIsOn("WARM_START");
-	EXPECT_EQ(ifWarmStart, true);
-
-	s2 = "YES";
-	testDriver.assignKeywordValue(s1,s2);
-	ifWarmStart = testDriver.ifFeatureIsOn("WARM_START");
-	EXPECT_EQ(ifWarmStart, true);
-
-	s2 = "Yeah";
-	testDriver.assignKeywordValue(s1,s2);
-	ifWarmStart = testDriver.ifFeatureIsOn("WARM_START");
-	EXPECT_EQ(ifWarmStart, false);
-
-
-}
-
-
-TEST(testDriver, testifFeatureIsOff){
-
-	RoDeODriver testDriver;
-	std::string s1 = "WARM_START";
-	std::string s2 = "N";
-	testDriver.assignKeywordValue(s1,s2);
-	bool ifWarmStart = testDriver.ifFeatureIsOff("WARM_START");
-	EXPECT_EQ(ifWarmStart, true);
-
-	s2 = "Yes";
-	testDriver.assignKeywordValue(s1,s2);
-	ifWarmStart = testDriver.ifFeatureIsOff("WARM_START");
-	EXPECT_EQ(ifWarmStart, false);
-
-	s2 = "NO";
-	testDriver.assignKeywordValue(s1,s2);
-	ifWarmStart = testDriver.ifFeatureIsOff("WARM_START");
-	EXPECT_EQ(ifWarmStart, true);
-
-	s2 = "no";
-	testDriver.assignKeywordValue(s1,s2);
-	ifWarmStart = testDriver.ifFeatureIsOff("WARM_START");
-	EXPECT_EQ(ifWarmStart, true);
-
-
-}
+#ifdef TESTDRIVERON
 
 
 TEST(testDriver, testparseConstraintDefinition){
@@ -157,11 +105,11 @@ TEST(testDriver, testextractConfigDefinitionFromString){
 #endif
 
 
-	int dimension = testDriver.getConfigKeyIntValue("DIMENSION");
+	unsigned int dimension = testDriver.getDimension();
 
 	EXPECT_EQ(dimension, 2);
 
-	std::string type = testDriver.getConfigKeyStringValue("PROBLEM_TYPE");
+	std::string type = testDriver.getProblemType();
 
 	EXPECT_EQ(type, "minimization");
 
@@ -238,45 +186,6 @@ TEST(testDriver, testextractObjectiveFunctionDefinitionFromString){
 
 
 
-TEST(testDriver, testConfigKeysetValue){
-
-	ConfigKey testKey("TESTKEY","double");
-	std::string number("5.2");
-	testKey.setValue(number);
-
-	EXPECT_EQ(testKey.doubleValue, 5.2);
-
-
-	ConfigKey testKey2("TESTKEY2","int");
-	number = "14";
-	testKey2.setValue(number);
-	EXPECT_EQ(testKey2.intValue, 14);
-
-
-
-}
-
-
-TEST(testDriver, testsearchConfigKeywordInString){
-
-	RoDeODriver testDriver;
-	std::string str = "DIMENSION=2";
-
-	int foundIndex = testDriver.searchConfigKeywordInString(str);
-	EXPECT_EQ(foundIndex, 2);
-
-	str = "blablaDIMENSION=2";
-	foundIndex = testDriver.searchConfigKeywordInString(str);
-	EXPECT_EQ(foundIndex, -1);
-
-	str = "NOTEXISTINGKEYWORD";
-
-	foundIndex = testDriver.searchConfigKeywordInString(str);
-	EXPECT_EQ(foundIndex, -1);
-
-
-}
-
 TEST(testDriver, testremoveKeywordFromString){
 
 	RoDeODriver testDriver;
@@ -297,39 +206,7 @@ TEST(testDriver, testremoveKeywordFromString){
 
 }
 
-TEST(testDriver, testassignKeywordValueWithIndex){
 
-	RoDeODriver testDriver;
-	std::string type = "MINIMIZATION";
-	testDriver.assignKeywordValueWithIndex(type,0);
-
-	ConfigKey testKey = testDriver.getConfigKey(0);
-	int ifEqual = testKey.stringValue.compare("MINIMIZATION");
-	ASSERT_EQ(ifEqual,0);
-
-	testDriver.assignKeywordValueWithIndex("5",2);
-	testKey = testDriver.getConfigKey("DIMENSION");
-
-	ASSERT_EQ(testKey.intValue,5);
-
-
-}
-
-
-
-TEST(testDriver, testsetConfigKey){
-
-	RoDeODriver testDriver;
-	std::string type = "MINIMIZATION";
-	testDriver.assignKeywordValue("PROBLEM_TYPE", type);
-
-	ConfigKey testKey = testDriver.getConfigKey("PROBLEM_TYPE");
-
-	int ifEqual = testKey.stringValue.compare("MINIMIZATION");
-	ASSERT_EQ(ifEqual,0);
-
-
-}
 
 
 
@@ -341,20 +218,16 @@ TEST(testDriver, testreadConfigFileForConstraintFunction){
 	testDriver.readConfigFile();
 
 
-	std::string name = testDriver.getConfigKeyStringValue("PROBLEM_NAME");
+	std::string name = testDriver.getProblemName();
 
 	ASSERT_EQ(name, "HIMMELBLAU");
 
-	std::string type = testDriver.getConfigKeyStringValue("PROBLEM_TYPE");
+	std::string type = testDriver.getProblemType();
 
 	ASSERT_EQ(type, "MINIMIZATION");
 
-	int dim = testDriver.getConfigKeyIntValue("DIMENSION");
+	int dim = testDriver.getDimension();
 	ASSERT_EQ(dim, 2);
-
-	vec lb = testDriver.getConfigKeyDoubleVectorValue("UPPER_BOUNDS");
-	ASSERT_EQ(lb(0), 6.0);
-	ASSERT_EQ(lb(1), 6.0);
 
 
 }
@@ -365,20 +238,17 @@ TEST(testDriver, testreadConfigFile){
 	testDriver.readConfigFile();
 
 
-	std::string name = testDriver.getConfigKeyStringValue("PROBLEM_NAME");
+	std::string name = testDriver.getProblemName();
 
 	ASSERT_EQ(name, "HIMMELBLAU");
 
-	std::string type = testDriver.getConfigKeyStringValue("PROBLEM_TYPE");
+	std::string type = testDriver.getProblemType();
 
 	ASSERT_EQ(type, "MINIMIZATION");
 
-	int dim = testDriver.getConfigKeyIntValue("DIMENSION");
+	int dim = testDriver.getDimension();
 	ASSERT_EQ(dim, 2);
 
-	vec lb = testDriver.getConfigKeyDoubleVectorValue("UPPER_BOUNDS");
-	ASSERT_EQ(lb(0), 6.0);
-	ASSERT_EQ(lb(1), 6.0);
 
 	ObjectiveFunctionDefinition objFun= testDriver.getObjectiveFunctionDefinition();
 
@@ -401,7 +271,7 @@ TEST(testDriver, testreadConfigFile2){
 	testDriver.readConfigFile();
 
 
-	int dimension = testDriver.getConfigKeyIntValue("DIMENSION");
+	int dimension = testDriver.getDimension();
 	EXPECT_EQ(dimension, 2);
 
 	ObjectiveFunctionDefinition objFun= testDriver.getObjectiveFunctionDefinition();
@@ -945,4 +815,4 @@ TEST(testDriver, testrunOptimization4){
 
 }
 
-
+#endif

@@ -42,14 +42,28 @@ class ObjectiveFunctionDefinition{
 
 public:
 	std::string name;
+	std::string designVectorFilename;
+
 	std::string executableName;
 	std::string path;
-	std::string designVectorFilename;
 	std::string outputFilename;
 	std::string marker;
 	std::string markerForGradient;
 
+	/* These are required only for multi-level option */
+	std::string executableNameLowFi;
+	std::string pathLowFi;
+	std::string outputFilenameLowFi;
+	std::string markerLowFi;
+	std::string markerForGradientLowFi;
+
+
+	bool ifMultiLevel = false;
+
 	bool ifGradient = false;
+	bool ifGradientLowFi = false;
+
+
 	bool ifDefined = false;
 
 	ObjectiveFunctionDefinition(std::string);
