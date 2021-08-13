@@ -265,16 +265,23 @@ void SurrogateModel::checkRawData(void) const{
 
 void SurrogateModel::readData(void){
 
-#if 0
-	std::cout<<"Loading data from the file "<<input_filename<<"...\n";
-#endif
+
+	if(ifDisplay){
+
+		std::cout<<"Loading data from the file "<<filenameDataInput<<"...\n";
+
+	}
+
 	bool status = rawData.load(filenameDataInput.c_str(), csv_ascii);
 
 	if(status == true)
 	{
-#if 0
-		printf("Data input is done\n");
-#endif
+		if(ifDisplay){
+
+			std::cout<<"Data input is done\n";
+
+		}
+
 	}
 	else
 	{

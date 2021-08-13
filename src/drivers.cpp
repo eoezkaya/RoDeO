@@ -531,15 +531,11 @@ ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 
 	}
 
-
-
 	std::string objFunName = configKeysObjectiveFunction.getConfigKeyStringValue("NAME");
 	int dim = configKeys.getConfigKeyIntValue("DIMENSION");
 	ObjectiveFunction objFunc(objFunName, dim);
 
-
 	objFunc.setParametersByDefinition(objectiveFunction);
-
 
 	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
 	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
@@ -567,6 +563,7 @@ ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 
 
 	objFunc.setNumberOfTrainingIterationsForSurrogateModel(nIterForSurrogateTraining);
+
 
 	if(ifDisplayIsOn()){
 
@@ -637,6 +634,12 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 			configKeysConstraintFunction.assignKeywordValueWithIndex(cleanString,indxKeyword);
 
 
+		}
+		else if(!singleLine.empty()){
+
+			std::cout<<"ERROR: Cannot parse constraint definition, something wrong with the CONSTRAINT_FUNCTION!\n";
+			std::cout<<singleLine<<"\n";
+			abort();
 		}
 
 
@@ -767,6 +770,12 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 
 		}
+		else if(!singleLine.empty()){
+
+			std::cout<<"\nERROR: Cannot parse objective function definition, something is wrong with the OBJECTIVE_FUNCTION!\n";
+			std::cout<<singleLine<<"\n";
+			abort();
+		}
 
 
 	}
@@ -788,7 +797,7 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	markerGradient = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("MARKER_FOR_GRADIENT",0);
 	gradient = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",0);
 
-	multilevel = configKeysObjectiveFunction.getConfigKeyStringValue("MULTILEVEL_SURROGATE");
+
 
 
 	objectiveFunction.name = name;
@@ -808,8 +817,16 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 	}
 
+	multilevel = configKeysObjectiveFunction.getConfigKeyStringValue("MULTILEVEL_SURROGATE");
 
+	if(checkIfOn(multilevel)){
+
+		objectiveFunction.ifMultiLevel = true;
+
+	}
 	objectiveFunction.ifDefined = true;
+
+
 
 }
 
@@ -995,7 +1012,6 @@ ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDef
 
 
 	constraintFunc.setNumberOfTrainingIterationsForSurrogateModel(nIterForSurrogateTraining);
-
 
 
 	if(ifDisplayIsOn()){
@@ -1470,9 +1486,7 @@ int RoDeODriver::runDriver(void){
 	}
 
 
-
-	if(problemType == "Minimization" || problemType == "Maximization"){
-
+	if(isProblemTypeOptimization(problemType)){
 
 		std::cout<<"\n################################## STARTING Optimization ##################################\n";
 		runOptimization();
@@ -1492,6 +1506,47 @@ int RoDeODriver::runDriver(void){
 
 
 }
+
+bool RoDeODriver::isProblemTypeOptimization(std::string type) const{
+
+	if(isProblemTypeMinimization(type)) return true;
+	if(isProblemTypeMaximization(type)) return true;
+
+	return false;
+}
+
+bool RoDeODriver::isProblemTypeMinimization(std::string type) const{
+
+	if(type == "minimize") return true;
+	if(type == "minimise") return true;
+	if(type == "MINIMIZE") return true;
+	if(type == "MINIMISE") return true;
+	if(type == "Minimize") return true;
+	if(type == "Minimise") return true;
+	if(type == "MINIMIZATION") return true;
+	if(type == "MINIMISATION") return true;
+	if(type == "Minimization") return true;
+	if(type == "Minimisation") return true;
+	return false;
+
+}
+
+bool RoDeODriver::isProblemTypeMaximization(std::string type) const{
+
+	if(type == "maximize") return true;
+	if(type == "maximise") return true;
+	if(type == "MAXIMIZE") return true;
+	if(type == "MAXIMISE") return true;
+	if(type == "Maximize") return true;
+	if(type == "Maximise") return true;
+	if(type == "MAXIMIZATION") return true;
+	if(type == "MAXIMISATION") return true;
+	if(type == "Maximization") return true;
+	if(type == "Maximisation") return true;
+	return false;
+
+}
+
 
 void RoDeODriver::displayMessage(std::string inputString) const{
 
@@ -1519,7 +1574,7 @@ bool RoDeODriver::ifDisplayIsOn(void) const{
 		return false;
 
 
-}
+	}
 }
 
 

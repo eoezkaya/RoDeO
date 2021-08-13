@@ -33,6 +33,7 @@
 #include<gtest/gtest.h>
 
 
+
 TEST(testAuxiliaryFunctions, testcalculatePolynomial){
 
 	double x = 1.2;

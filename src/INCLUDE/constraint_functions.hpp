@@ -65,8 +65,6 @@ public:
 	bool ifMultiLevel = false;
 
 
-
-
 	int ID = -1;
 	bool ifGradient = false;
 	bool ifGradientLowFi = false;

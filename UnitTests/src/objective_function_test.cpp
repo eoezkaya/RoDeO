@@ -33,7 +33,7 @@
 #include "objective_function.hpp"
 #include "optimization.hpp"
 #include "matrix_vector_operations.hpp"
-TEST(testObjectiveFunction, initializeSurrogate){
+TEST(testObjectiveFunction, testinitializeSurrogate){
 
 	mat samples(100,5,fill::randu);
 	saveMatToCVSFile(samples,"testObjectiveFunction.csv");
@@ -43,10 +43,14 @@ TEST(testObjectiveFunction, initializeSurrogate){
 	ObjectiveFunction objFunTest("testObjectiveFunction",4);
 	objFunTest.setParameterBounds(lb,ub);
 
+
 	objFunTest.initializeSurrogate();
 
+
 	KrigingModel testModel = objFunTest.getSurrogateModel();
+
 	mat rawData = testModel.getRawData();
+
 
 	bool ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
 	ASSERT_TRUE(ifrawDataIsConsistent);
@@ -60,10 +64,15 @@ TEST(testObjectiveFunction, initializeSurrogate){
 	ASSERT_TRUE(testModel.ifDataIsRead);
 	ASSERT_TRUE(testModel.ifBoundsAreSet);
 
+
+
 	remove("ObjectiveFunctionTest.csv");
+
+
+
 }
 
-TEST(testObjectiveFunction, initializeSurrogateWithAdjoint){
+TEST(testObjectiveFunction, testinitializeSurrogateWithAdjoint){
 
 	mat samples(100,5,fill::randu);
 	saveMatToCVSFile(samples,"testObjectiveFunction.csv");
@@ -93,6 +102,16 @@ TEST(testObjectiveFunction, initializeSurrogateWithAdjoint){
 
 	remove("ObjectiveFunctionTest.csv");
 }
+
+
+TEST(testObjectiveFunction, testinitializeSurrogateWithML){
+
+
+
+//	abort();
+
+}
+
 
 
 TEST(testObjectiveFunction, readEvaluateOutputWithoutMarker){
@@ -268,6 +287,8 @@ TEST(testObjectiveFunction, calculateExpectedImprovement){
 
 	ObjectiveFunction objFunTest("EITest",2);
 	objFunTest.setParameterBounds(lb,ub);
+	objFunTest.bindSurrogateModel();
+
 	objFunTest.initializeSurrogate();
 
 	objFunTest.calculateExpectedImprovement(testDesign);

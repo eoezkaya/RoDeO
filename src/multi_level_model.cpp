@@ -489,3 +489,20 @@ mat MultiLevelModel::getRawDataHighFidelityForGammaTest(void) const{
 	return rawDataHighFidelityForGammaTest;
 
 }
+
+void MultiLevelModel::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
+
+	std::cout<<"ERROR: MultiLevelModel::calculateExpectedImprovement is not implemented yet!\n";
+	abort();
+
+
+}
+
+void MultiLevelModel::addNewSampleToData(rowvec newsample){
+
+
+
+
+}
+
+

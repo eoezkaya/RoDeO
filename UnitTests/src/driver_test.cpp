@@ -397,8 +397,27 @@ TEST(testDriver, testsetObjectiveFunction){
 	ASSERT_EQ(dim,2);
 
 
-
 }
+
+
+//TEST(testDriver, testsetObjectiveFunctionWithMultiLevel){
+//
+//	RoDeODriver testDriver;
+//	testDriver.setConfigFilename("testConfigFilesetObjectiveFunctionML.cfg");
+//	testDriver.readConfigFile();
+//
+//	ObjectiveFunction testObjFun = testDriver.setObjectiveFunction();
+//
+//	std::string command = testObjFun.getExecutionCommand();
+//	int dim = testObjFun.getDimension();
+//
+//	ASSERT_EQ(command,"./himmelblauHF");
+//	ASSERT_EQ(dim,2);
+//
+//	abort();
+//
+//}
+
 
 
 TEST(testDriver, testcheckIfRunIsNecessary){

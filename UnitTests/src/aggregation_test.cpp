@@ -40,6 +40,9 @@
 
 #include<gtest/gtest.h>
 
+#define TESTAGGREGATION
+#ifdef TESTAGGREGATION
+
 
 TEST(testAggrregationModel, testfindNearestNeighbor){
 
@@ -195,7 +198,7 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 }
 
 
-
+#endif
 
 
 

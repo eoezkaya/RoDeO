@@ -35,6 +35,7 @@
 #include <armadillo>
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
+#include "surrogate_model.hpp"
 #include "design.hpp"
 
 
@@ -88,13 +89,23 @@ protected:
 	double (*objectiveFunAdjPtr)(double *,double *);
 
 	std::string name;
+	std::string fileNameDesignVector;
+
+
 	std::string executableName;
 	std::string executablePath;
 	std::string fileNameInputRead;
-	std::string fileNameDesignVector;
-
 	std::string readMarker;
 	std::string readMarkerAdjoint;
+
+	std::string executableNameLowFi;
+	std::string executablePathLowFi;
+	std::string fileNameInputReadLowFi;
+	std::string readMarkerLowFi;
+	std::string readMarkerAdjointLowFi;
+
+
+
 
 	bool ifMarkerIsSet = false;
 	bool ifAdjointMarkerIsSet = false;
@@ -102,8 +113,11 @@ protected:
 	vec ub;
 	vec lb;
 
+
 	KrigingModel surrogateModel;
 	AggregationModel surrogateModelGradient;
+
+	SurrogateModel *surrogate;
 
 	unsigned int numberOfIterationsForSurrogateTraining = 10000;
 
@@ -116,11 +130,14 @@ protected:
 	bool ifFunctionPointerIsSet = false;
 	bool ifInitialized = false;
 	bool ifParameterBoundsAreSet = false;
+	bool ifMultilevel = false;
 
 public:
 
 	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
+
+	void bindSurrogateModel(void);
 
 
 	void setFunctionPointer(double (*objFun)(double *));

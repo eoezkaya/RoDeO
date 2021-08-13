@@ -93,6 +93,8 @@ void ObjectiveFunctionDefinition::print(void) const{
 
 	else{
 
+		std::cout<<"Multilevel option is active...\n";
+
 
 
 
@@ -100,6 +102,8 @@ void ObjectiveFunctionDefinition::print(void) const{
 
 
 	}
+
+
 
 
 }
@@ -117,6 +121,9 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int 
 	assert(dim < 1000);
 
 
+
+
+
 }
 
 
@@ -126,6 +133,27 @@ ObjectiveFunction::ObjectiveFunction(){
 	objectiveFunAdjPtr = emptyAdj;
 
 
+
+}
+
+
+void ObjectiveFunction::bindSurrogateModel(void){
+
+
+	if(this->ifGradientAvailable == false){
+
+		surrogate = &surrogateModel;
+
+
+	}
+	else{
+
+		surrogate = &surrogateModelGradient;
+	}
+
+#if 0
+	surrogate->printSurrogateModel();
+#endif
 
 }
 
@@ -233,6 +261,7 @@ void ObjectiveFunction::setParameterBounds(vec lb, vec ub){
 }
 
 
+
 KrigingModel ObjectiveFunction::getSurrogateModel(void) const{
 
 	return this->surrogateModel;
@@ -273,27 +302,19 @@ void ObjectiveFunction::initializeSurrogate(void){
 
 	assert(ifParameterBoundsAreSet);
 
+	bindSurrogateModel();
 
 
-	if(!ifGradientAvailable){
+	surrogate->readData();
+	surrogate->setParameterBounds(lb,ub);
+	surrogate->normalizeData();
+	surrogate->initializeSurrogateModel();
+	surrogate->setNumberOfTrainingIterations(numberOfIterationsForSurrogateTraining);
 
-		surrogateModel.readData();
-		surrogateModel.setParameterBounds(lb,ub);
-		surrogateModel.normalizeData();
-		surrogateModel.initializeSurrogateModel();
-		surrogateModel.setNumberOfTrainingIterations(numberOfIterationsForSurrogateTraining);
+#if 0
+	surrogate->printHyperParameters();
+#endif
 
-
-	}
-	else{
-
-		surrogateModelGradient.readData();
-		surrogateModelGradient.setParameterBounds(lb,ub);
-		surrogateModelGradient.normalizeData();
-		surrogateModelGradient.initializeSurrogateModel();
-		surrogateModelGradient.setNumberOfTrainingIterations(numberOfIterationsForSurrogateTraining);
-
-	}
 
 	ifInitialized = true;
 
@@ -304,18 +325,7 @@ void ObjectiveFunction::trainSurrogate(void){
 	assert(ifInitialized);
 
 
-	if(!ifGradientAvailable){
-
-
-		surrogateModel.train();
-
-	}
-	else{
-
-
-		surrogateModelGradient.train();
-
-	}
+	surrogate->train();
 
 
 }
@@ -324,7 +334,7 @@ void ObjectiveFunction::trainSurrogate(void){
 
 void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 
-	std::string fileName = surrogateModel.getNameOfInputFile();
+	std::string fileName = surrogate->getNameOfInputFile();
 
 	std::ofstream myFile(fileName);
 
@@ -355,15 +365,7 @@ void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 void ObjectiveFunction::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
 
 
-	if(!ifGradientAvailable){
-
-		surrogateModel.calculateExpectedImprovement(designCalculated);
-
-	}else{
-
-		surrogateModelGradient.calculateExpectedImprovement(designCalculated);
-	}
-
+	surrogate->calculateExpectedImprovement(designCalculated);
 
 }
 
@@ -403,20 +405,22 @@ std::string ObjectiveFunction::getExecutionCommand(void) const{
 
 void ObjectiveFunction::addDesignToData(Design &d){
 
+	rowvec newsample;
+
 	if(ifGradientAvailable){
 
-		rowvec newsample = d.constructSampleObjectiveFunctionWithGradient();
+		newsample = d.constructSampleObjectiveFunctionWithGradient();
 
-		surrogateModelGradient.addNewSampleToData(newsample);
 
 	}
 	else{
 
-		rowvec newsample = d.constructSampleObjectiveFunction();
+		newsample = d.constructSampleObjectiveFunction();
 
-		surrogateModel.addNewSampleToData(newsample);
 	}
 
+
+	surrogate->addNewSampleToData(newsample);
 
 }
 
@@ -523,8 +527,6 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 				}
 
 
-
-
 			}
 		}
 
@@ -535,8 +537,6 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 
 
 }
-
-
 
 void ObjectiveFunction::evaluate(Design &d){
 
@@ -568,8 +568,6 @@ void ObjectiveFunction::evaluate(Design &d){
 
 
 }
-
-
 
 
 void ObjectiveFunction::evaluateAdjoint(Design &d){
@@ -609,17 +607,8 @@ void ObjectiveFunction::evaluateAdjoint(Design &d){
 
 double ObjectiveFunction::interpolate(rowvec x) const{
 
-	double result;
-	if(!ifGradientAvailable){
+	return this->surrogate->interpolate(x);
 
-		result = surrogateModel.interpolate(x);
-	}else{
-
-		result = surrogateModelGradient.interpolate(x);
-	}
-
-
-	return result;
 }
 
 void ObjectiveFunction::print(void) const{
@@ -638,26 +627,20 @@ void ObjectiveFunction::print(void) const{
 
 	}
 
-
-
 	if(ifGradientAvailable){
 		std::cout<<"Uses gradient vector: Yes\n";
-
 
 		if(this->ifAdjointMarkerIsSet){
 
 			std::cout<<"Read marker for gradient: "<<readMarkerAdjoint<<"\n";
 
-
 		}
-
 
 	}
 	else{
 		std::cout<<"Uses gradient vector: No\n";
 
 	}
-
 
 	std::cout << "#####################################################\n\n";
 
@@ -666,19 +649,7 @@ void ObjectiveFunction::print(void) const{
 
 void ObjectiveFunction::printSurrogate(void) const{
 
-	if(ifGradientAvailable){
-
-
-		surrogateModelGradient.printSurrogateModel();
-
-	}
-	else{
-
-		surrogateModel.printSurrogateModel();
-
-	}
-
-
+	surrogate->printSurrogateModel();
 
 }
 

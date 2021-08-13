@@ -110,6 +110,7 @@ public:
 	bool ifNormalized = false;
 	bool ifHasGradientData = false;
 	bool ifHasTestData = false;
+	bool ifDisplay = false;
 
 
 	mat testResults;
@@ -155,6 +156,8 @@ public:
 	virtual void train(void) = 0;
 	virtual double interpolate(rowvec x) const = 0;
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
+	virtual void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const = 0;
+	virtual void addNewSampleToData(rowvec newsample) = 0;
 
 
 	double calculateInSampleError(void) const;

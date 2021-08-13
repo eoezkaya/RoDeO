@@ -36,8 +36,9 @@
 #include<gtest/gtest.h>
 
 
+#define TESTOPTIMIZATION
 
-
+#ifdef TESTOPTIMIZATION
 
 //TEST(testOptimizer, testaddPenaltyToExpectedImprovementForConstraints){
 //
@@ -287,5 +288,5 @@ TEST(testOptimizer, testMaximizeEIGradientBased){
 
 
 }
-
+#endif
 

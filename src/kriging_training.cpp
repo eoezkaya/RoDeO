@@ -130,6 +130,7 @@ void KrigingModel::initializeSurrogateModel(void){
 
 void KrigingModel::printHyperParameters(void) const{
 
+	std::cout<<"Hyperparameters of the Kriging model...\n";
 
 	printVector(theta,"theta");
 	printVector(gamma,"gamma");
@@ -240,7 +241,7 @@ void KrigingModel::setLinearRegressionOff(void){
  *
  */
 
-int KrigingModel::addNewSampleToData(rowvec newsample){
+void KrigingModel::addNewSampleToData(rowvec newsample){
 
 
 	/* avoid points that are too close to each other */
@@ -254,12 +255,12 @@ int KrigingModel::addNewSampleToData(rowvec newsample){
 		appendRowVectorToCSVData(newsample, filenameDataInput);
 
 		updateModelWithNewData();
-		return 0;
+
 	}
 	else{
 
 		std::cout<<"WARNING: The new sample is too close to a sample in the training data, it is discarded!\n";
-		return -1;
+
 	}
 
 }

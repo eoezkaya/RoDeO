@@ -269,9 +269,20 @@ void LinearModel::printSurrogateModel(void) const{
 
 }
 
+void LinearModel::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
+
+	std::cout<<"ERROR: Cannot calculate expected improvement for linear model!\n";
+	abort();
+
+
+}
+
+void LinearModel::addNewSampleToData(rowvec newsample){
 
 
 
+
+}
 
 
 

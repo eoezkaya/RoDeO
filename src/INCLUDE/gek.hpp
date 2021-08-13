@@ -88,6 +88,8 @@ public:
 	double interpolateWithGradients(rowvec x) const ;
 	double interpolate(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
+	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
+	void addNewSampleToData(rowvec newsample);
 
 
 	double calculateExpectedImprovement(rowvec xp);
@@ -103,7 +105,6 @@ public:
 
 	void resetDataObjects(void);
 	void resizeDataObjects(void);
-	int addNewSampleToData(rowvec newsample);
 	void updateModelWithNewData(mat newData);
 	void updateModelWithNewData(void);
 	void updateAuxilliaryFields(void);

@@ -89,6 +89,7 @@ public:
 
 
 	void calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const;
+	void addNewSampleToData(rowvec newsample);
 
 	double getyMin(void) const;
 
@@ -106,7 +107,7 @@ public:
 
 	void resetDataObjects(void);
 	void resizeDataObjects(void);
-	int addNewSampleToData(rowvec newsample);
+
 
 	void updateModelWithNewData(void);
 	void updateAuxilliaryFields(void);

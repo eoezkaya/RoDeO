@@ -65,8 +65,9 @@ private:
 	bool checkifProblemTypeIsValid(std::string) const;
 	void checkIfProblemTypeIsSetProperly(void) const;
 
-
-
+	bool isProblemTypeOptimization(std::string type) const;
+	bool isProblemTypeMinimization(std::string type) const;
+	bool isProblemTypeMaximization(std::string type) const;
 
 
 

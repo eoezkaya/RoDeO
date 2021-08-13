@@ -547,3 +547,21 @@ void GEKModel::updateAuxilliaryFields(void){
 
 }
 
+
+void GEKModel::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
+
+	std::cout<<"ERROR: GEKModel::calculateExpectedImprovement is not implemented yet!\n";
+	abort();
+
+
+}
+
+
+void GEKModel::addNewSampleToData(rowvec newsample){
+
+
+	std::cout<<"ERROR: GEKModel::addNewSampleToData is not implemented yet!\n";
+	abort();
+
+
+}
