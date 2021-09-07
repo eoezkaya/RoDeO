@@ -338,17 +338,6 @@ void ConstraintFunction::print(void) const {
 }
 
 
-//void ConstraintFunction::setInequalityConstraint(ConstraintDefinition inequalityConstraint){
-//
-//	assert(inequalityConstraint.name == this->name);
-//
-//	assert(inequalityConstraint.inequalityType == ">" || inequalityConstraint.inequalityType == "<");
-//	this->constraintDef = inequalityConstraint;
-//
-//	ifInequalityConstraintSpecified  = true;
-//
-//}
-
 void ConstraintFunction::setParametersByDefinition(ConstraintDefinition inequalityConstraint){
 
 	assert(!inequalityConstraint.inequalityType.empty());
@@ -484,14 +473,14 @@ void ConstraintFunction::addDesignToData(Design &d){
 
 	if(ifGradientAvailable){
 
-		rowvec newsample = d.constructSampleConstraintWithGradient(this->ID);
+		rowvec newsample = d.constructSampleConstraintWithGradient(ID);
 
 		surrogateModelGradient.addNewSampleToData(newsample);
 
 	}
 	else{
 
-		rowvec newsample = d.constructSampleConstraint(this->ID);
+		rowvec newsample = d.constructSampleConstraint(ID);
 
 		surrogateModel.addNewSampleToData(newsample);
 	}

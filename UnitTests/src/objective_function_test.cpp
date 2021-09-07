@@ -107,8 +107,18 @@ TEST(testObjectiveFunction, testinitializeSurrogateWithAdjoint){
 TEST(testObjectiveFunction, testinitializeSurrogateWithML){
 
 
+	mat samples(100,5,fill::randu);
+	saveMatToCVSFile(samples,"testObjectiveFunction.csv");
+	vec lb(4); lb.fill(0.0);
+	vec ub(4); ub.fill(1.0);
 
-//	abort();
+	ObjectiveFunction objFunTest("testObjectiveFunction",4);
+	objFunTest.setParameterBounds(lb,ub);
+	objFunTest.setMultiLevelOn();
+
+	objFunTest.initializeSurrogate();
+
+	abort();
 
 }
 

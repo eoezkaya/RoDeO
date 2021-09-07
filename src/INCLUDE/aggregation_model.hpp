@@ -34,6 +34,7 @@
 #include "Rodeo_macros.hpp"
 #include "kriging_training.hpp"
 #include "design.hpp"
+#include "metric.hpp"
 
 
 class AggregationModel : public SurrogateModel {
@@ -44,7 +45,7 @@ private:
 
 	vec L1NormWeights;
 
-	double rho;
+	double rho = 1.0;
 
 
 	PartitionData trainingDataForHyperParameterOptimization;
@@ -52,12 +53,21 @@ private:
 
 	unsigned int numberOfTrainingIterations;
 
+	WeightedL1Norm weightedL1norm;
+
+
+
 
 public:
 
 
 	AggregationModel();
-	AggregationModel(std::string name);
+	AggregationModel(std::string);
+
+	void setNameOfInputFile(std::string);
+	void setNameOfHyperParametersFile(std::string);
+	void setNumberOfTrainingIterations(unsigned int);
+
 
 	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;
@@ -70,28 +80,28 @@ public:
 	void determineRhoBasedOnData(void);
 	void determineOptimalL1NormWeights(void);
 	void setRho(double);
-	void setNumberOfTrainingIterations(unsigned int numberOfIterations){
 
-		this->numberOfTrainingIterations = numberOfIterations;
-	}
 
 	vec getL1NormWeights(void) const;
 	PartitionData getTrainingData(void) const;
 	PartitionData getTestData(void) const;
 
-	void generateRandomHyperParams(void);
-	double interpolate(rowvec x) const ;
-	double interpolateWithGradients(rowvec x) const ;
-	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
+	double calculateMinimumDistanceToNearestPoint(const rowvec &, int) const;
+	double calculateDualModelEstimate(const rowvec &, int) const;
+	double calculateDualModelWeight(const rowvec &, int) const;
 
-//	double calculateExpectedImprovement(rowvec xp) const;
-	void calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const;
+	void generateRandomHyperParams(void);
+	double interpolate(rowvec) const ;
+	double interpolateWithGradients(rowvec) const ;
+	void interpolateWithVariance(rowvec,double *,double *) const;
+
+	void calculateExpectedImprovement(CDesignExpectedImprovement &) const;
 
 
 	unsigned int findNearestNeighbor(const rowvec &) const;
-	void addNewSampleToData(rowvec newsample);
+	void addNewSampleToData(rowvec);
 	void updateModelWithNewData(void);
-	void modifyRawDataAndAssociatedVariables(mat dataMatrix);
+	void modifyRawDataAndAssociatedVariables(mat);
 
 
 };

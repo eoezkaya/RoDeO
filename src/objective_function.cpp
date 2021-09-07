@@ -111,7 +111,7 @@ void ObjectiveFunctionDefinition::print(void) const{
 
 
 ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int dimension)
-: surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName){
+: surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName),surrogateModelML(objectiveFunName){
 
 
 	dim = dimension;
@@ -140,7 +140,7 @@ ObjectiveFunction::ObjectiveFunction(){
 void ObjectiveFunction::bindSurrogateModel(void){
 
 
-	if(this->ifGradientAvailable == false){
+	if(ifGradientAvailable == false){
 
 		surrogate = &surrogateModel;
 
@@ -150,6 +150,15 @@ void ObjectiveFunction::bindSurrogateModel(void){
 
 		surrogate = &surrogateModelGradient;
 	}
+
+
+	if(ifMultilevel){
+
+		surrogate = &surrogateModelML;
+
+	}
+
+
 
 #if 0
 	surrogate->printSurrogateModel();
@@ -171,7 +180,6 @@ void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition de
 
 	}
 
-
 	if(!definition.markerForGradient.empty()){
 
 
@@ -180,6 +188,18 @@ void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition de
 
 	}
 
+
+	if(definition.ifMultiLevel){
+
+		this->ifMultilevel = definition.ifMultiLevel;
+		this->executableNameLowFi = definition.executableNameLowFi;
+		this->fileNameInputReadLowFi = definition.outputFilenameLowFi;
+		this->executablePathLowFi = definition.pathLowFi;
+		this->readMarkerLowFi = definition.markerLowFi;
+		this->readMarkerAdjointLowFi = definition.markerForGradientLowFi;
+
+
+	}
 
 
 
@@ -212,6 +232,17 @@ void ObjectiveFunction::setGradientOn(void){
 void ObjectiveFunction::setGradientOff(void){
 
 	ifGradientAvailable = false;
+
+}
+
+void ObjectiveFunction::setMultiLevelOn(void){
+
+	ifMultilevel = true;
+
+}
+void ObjectiveFunction::setMultiLevelOff(void){
+
+	ifMultilevel = false;
 
 }
 
@@ -399,6 +430,28 @@ std::string ObjectiveFunction::getExecutionCommand(void) const{
 
 
 }
+
+std::string ObjectiveFunction::getExecutionCommandLowFi(void) const{
+
+	assert(ifMultilevel);
+	assert(!executableNameLowFi.empty());
+
+	std::string runCommand;
+
+	if(!executablePathLowFi.empty()) {
+
+		runCommand = executablePathLowFi +"/" + executableNameLowFi;
+	}
+	else{
+
+		runCommand = "./" + executableNameLowFi;
+	}
+
+	return runCommand;
+
+
+}
+
 
 
 

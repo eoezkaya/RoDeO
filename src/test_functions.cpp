@@ -1147,6 +1147,69 @@ double LinearTF1Adj(double *x, double *xb) {
 
 
 
+void generateEggholderData(std::string filename, unsigned int nSamples){
+
+
+	mat samples(nSamples,3);
+
+	for (unsigned int i=0; i<samples.n_rows; i++){
+		rowvec x(3);
+		double xInp[2];
+		x(0) = generateRandomDouble(0.0,512.0);
+		x(1) = generateRandomDouble(0.0,512.0);
+		xInp[0] = x(0);
+		xInp[1] = x(1);
+
+		x(2) = Eggholder(xInp);
+		samples.row(i) = x;
+
+	}
+
+
+	saveMatToCVSFile(samples,filename);
+
+}
+
+void generateEggholderDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
+
+	assert(nSamplesHiFi < nSamplesLowFi);
+	assert(filenameHiFi != filenameLowFi);
+	mat samplesLowFi(nSamplesLowFi,3);
+
+	for (unsigned int i=0; i<nSamplesLowFi; i++){
+		rowvec x(3);
+		double xInp[2];
+		x(0) = generateRandomDouble(0.0,512.0);
+		x(1) = generateRandomDouble(0.0,512.0);
+		xInp[0] = x(0);
+		xInp[1] = x(1);
+
+		x(2) = Eggholder(xInp) + generateRandomDouble(-10.0,10.0);
+		samplesLowFi.row(i) = x;
+
+	}
+
+
+	saveMatToCVSFile(samplesLowFi, filenameLowFi);
+
+	mat samplesHiFi(nSamplesHiFi,3);
+	for (unsigned int i=0; i<nSamplesHiFi; i++){
+
+		double xInp[2];
+		xInp[0] = samplesLowFi(i,0);
+		xInp[1] = samplesLowFi(i,1);
+		samplesHiFi(i,0) = samplesLowFi(i,0);
+		samplesHiFi(i,1) = samplesLowFi(i,1);
+		samplesHiFi(i,2) = Eggholder(xInp);
+
+	}
+
+	saveMatToCVSFile(samplesHiFi, filenameHiFi);
+}
+
+
+
+
 /* Eggholder test function -512<= (x_1,x_2) <= 512
  *
  * global min f(512, 404.2319) = -959.6407
@@ -1556,6 +1619,100 @@ double HimmelblauAdj(double *x, double *xb) {
 	return pow( (x[0]*x[0]+x[1]-11.0), 2.0 ) + pow( (x[0]+x[1]*x[1]-7.0), 2.0 );
 
 }
+
+void generateHimmelblauDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
+
+	assert(nSamplesHiFi < nSamplesLowFi);
+	assert(filenameHiFi != filenameLowFi);
+	mat samplesLowFi(nSamplesLowFi,3);
+
+	for (unsigned int i=0; i<nSamplesLowFi; i++){
+		rowvec x(3);
+		double xInp[2];
+		x(0) = generateRandomDouble(-6.0,6.0);
+		x(1) = generateRandomDouble(-6.0,6.0);
+		xInp[0] = x(0);
+		xInp[1] = x(1);
+		double fVal = Himmelblau(xInp);
+		double errorTerm = Waves2D(xInp)*10.0;
+#if 0
+		std::cout<<"fVal = "<<fVal<<"\n";
+		std::cout<<"errorTerm = "<<errorTerm<<"\n\n";
+
+#endif
+		x(2) = fVal + errorTerm;
+		samplesLowFi.row(i) = x;
+
+	}
+
+	saveMatToCVSFile(samplesLowFi, filenameLowFi);
+
+	mat samplesHiFi(nSamplesHiFi,3);
+	for (unsigned int i=0; i<nSamplesHiFi; i++){
+
+		double xInp[2];
+		xInp[0] = samplesLowFi(i,0);
+		xInp[1] = samplesLowFi(i,1);
+		samplesHiFi(i,0) = samplesLowFi(i,0);
+		samplesHiFi(i,1) = samplesLowFi(i,1);
+		samplesHiFi(i,2) = Himmelblau(xInp);
+
+	}
+
+	saveMatToCVSFile(samplesHiFi, filenameHiFi);
+
+}
+
+
+void generateHimmelblauDataMultiFidelityWithGradients(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
+
+	assert(nSamplesHiFi < nSamplesLowFi);
+	assert(filenameHiFi != filenameLowFi);
+	mat samplesLowFi(nSamplesLowFi,5);
+
+	for (unsigned int i=0; i<nSamplesLowFi; i++){
+		rowvec x(5);
+		double xInp[2];
+		double xInpb[2];
+		x(0) = generateRandomDouble(-6.0,6.0);
+		x(1) = generateRandomDouble(-6.0,6.0);
+		xInp[0] = x(0);
+		xInp[1] = x(1);
+		double fVal = HimmelblauAdj(xInp,xInpb);
+		double xInpbErr[2];
+		double errorTerm = Waves2DAdj(xInp,xInpbErr)*10.0;
+
+		x(2) = fVal + errorTerm;
+		x(3) = xInpb[0] + 10.0*xInpbErr[0];
+		x(4) = xInpb[1] + 10.0*xInpbErr[1];
+		samplesLowFi.row(i) = x;
+
+	}
+
+
+	saveMatToCVSFile(samplesLowFi, filenameLowFi);
+
+	mat samplesHiFi(nSamplesHiFi,5);
+	for (unsigned int i=0; i<nSamplesHiFi; i++){
+
+		double xInp[2];
+
+		xInp[0] = samplesLowFi(i,0);
+		xInp[1] = samplesLowFi(i,1);
+		double fVal = Himmelblau(xInp);
+		samplesHiFi(i,0) = samplesLowFi(i,0);
+		samplesHiFi(i,1) = samplesLowFi(i,1);
+		samplesHiFi(i,2) = fVal;
+		samplesHiFi(i,3) = samplesLowFi(i,3);
+		samplesHiFi(i,4) = samplesLowFi(i,4);
+
+	}
+
+	saveMatToCVSFile(samplesHiFi, filenameHiFi);
+}
+
+
+
 
 
 /*

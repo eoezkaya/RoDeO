@@ -79,6 +79,11 @@ public:
 	GEKModel();
 	GEKModel(std::string name);
 
+	void setNameOfInputFile(std::string);
+	void setNameOfHyperParametersFile(std::string);
+	void setNumberOfTrainingIterations(unsigned int);
+
+
 	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;
 	void printHyperParameters(void) const;
@@ -101,7 +106,6 @@ public:
 	void setEpsilon(double inp);
 	void setLinearRegressionOn(void);
 	void setLinearRegressionOff(void);
-	void setNumberOfTrainingIterations(unsigned int);
 
 	void resetDataObjects(void);
 	void resizeDataObjects(void);
@@ -114,10 +118,10 @@ public:
 	friend void testGEKcalculateRDot(void);
 	friend void testGEKcalculateRDotValidateWithWingweight(void);
 	friend void testGEKcalculateCorrelationVectorDotWithWingweight(void);
-    friend void testGEKWithWingweight(void);
-    friend void testGEKValueOfMuWithWingweight(void);
-    friend void testGEKPredictionWithWingweight(void);
-    friend void testGEKPredictionWithWaves(void);
+	friend void testGEKWithWingweight(void);
+	friend void testGEKValueOfMuWithWingweight(void);
+	friend void testGEKPredictionWithWingweight(void);
+	friend void testGEKPredictionWithWaves(void);
 
 };
 

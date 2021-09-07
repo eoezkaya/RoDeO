@@ -114,6 +114,7 @@ public:
 	bool ifFeatureIsOn(std::string feature) const;
 	bool ifFeatureIsOff(std::string feature) const;
 
+	void parseString(std::string);
 
 };
 

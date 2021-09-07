@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -146,40 +146,6 @@ void RoDeODriver::setDisplayOff(void){
 
 
 
-
-
-
-
-std::string RoDeODriver::removeKeywordFromString(std::string inputStr,  std::string keyword) const{
-
-	assert(!keyword.empty());
-	assert(!inputStr.empty());
-
-	std::size_t found = inputStr.find(keyword);
-
-	if(found != std::string::npos){
-
-		inputStr.erase(std::remove_if(inputStr.begin(), inputStr.end(), isspace), inputStr.end());
-		std::string sub_str = inputStr.substr(found+keyword.length() + 1);
-
-
-		return sub_str;
-
-
-	}
-	else{
-
-		return inputStr;
-	}
-
-
-
-}
-
-
-
-
-
 void RoDeODriver::readConfigFile(void){
 
 
@@ -257,16 +223,6 @@ void RoDeODriver::checkIfProblemDimensionIsSetProperly(void) const{
 
 
 }
-
-
-//void RoDeODriver::checkIfObjectiveFunctionIsSetProperly(void) const{
-//
-//	ConfigKey configKeyName = getConfigKeyObjective("NAME");
-//	configKeyName.abortIfNotSet();
-//
-//
-//}
-
 
 
 
@@ -614,36 +570,8 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	std::string ifGradient;
 
 
-	while(iss.good())
-	{
-		std::string singleLine;
-		getline(iss,singleLine,'\n');
+	configKeysConstraintFunction.parseString(inputString);
 
-		singleLine = removeSpacesFromString(singleLine);
-		int indxKeyword = configKeysConstraintFunction.searchKeywordInString(singleLine);
-
-
-		if(indxKeyword != -1){
-
-			ConfigKey temp = configKeysConstraintFunction.getConfigKey(indxKeyword);
-
-			std::string keyword = temp.name;
-			std::string cleanString;
-			cleanString = removeKeywordFromString(singleLine, keyword);
-
-			configKeysConstraintFunction.assignKeywordValueWithIndex(cleanString,indxKeyword);
-
-
-		}
-		else if(!singleLine.empty()){
-
-			std::cout<<"ERROR: Cannot parse constraint definition, something wrong with the CONSTRAINT_FUNCTION!\n";
-			std::cout<<singleLine<<"\n";
-			abort();
-		}
-
-
-	}
 
 #if 0
 	printKeywordsConstraint();
@@ -662,8 +590,6 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	marker = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("MARKER",0);
 	markerGradient = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("MARKER_FOR_GRADIENT",0);
 	ifGradient = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",0);
-
-
 
 
 	ConstraintDefinition result(definitionBuffer);
@@ -745,40 +671,9 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 	std::string multilevel;
 
-	while(iss.good())
-	{
-		std::string singleLine;
-		getline(iss,singleLine,'\n');
-
-		singleLine = removeSpacesFromString(singleLine);
+	configKeysObjectiveFunction.parseString(inputString);
 
 
-		int indxKeyword = configKeysObjectiveFunction.searchKeywordInString(singleLine);
-
-
-		if(indxKeyword != -1){
-
-			ConfigKey temp = configKeysObjectiveFunction.getConfigKey(indxKeyword);
-
-			std::string keyword = temp.name;
-
-
-			std::string cleanString;
-			cleanString = removeKeywordFromString(singleLine, keyword);
-
-			configKeysObjectiveFunction.assignKeywordValueWithIndex(cleanString,indxKeyword);
-
-
-		}
-		else if(!singleLine.empty()){
-
-			std::cout<<"\nERROR: Cannot parse objective function definition, something is wrong with the OBJECTIVE_FUNCTION!\n";
-			std::cout<<singleLine<<"\n";
-			abort();
-		}
-
-
-	}
 
 #if 0
 	printKeywordsObjective();
@@ -821,7 +716,75 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 	if(checkIfOn(multilevel)){
 
+		std::cout<<"Here\n";
 		objectiveFunction.ifMultiLevel = true;
+
+		std::string executableNameLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",1);
+		std::cout<<"executableNameLowFi = "<<executableNameLowFi<<"\n";
+
+		if(executableNameLowFi.empty()){
+
+			std::cout<<"ERROR: EXECUTABLE for the low fidelity model is not defined!\n";
+			abort();
+
+		}
+
+
+		std::string outputFilenameLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",1);
+
+		if(outputFilenameLowFi.empty()){
+
+			outputFilenameLowFi = outputFilename;
+
+		}
+
+		std::string exePathLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("PATH",1);
+
+		if(exePathLowFi.empty()){
+
+			exePathLowFi = exePath;
+
+		}
+
+		std::string	markerLowFi =  configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("MARKER",1);
+
+		if(markerLowFi.empty()){
+
+			markerLowFi = marker;
+
+		}
+
+
+		std::string	markerGradientLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("MARKER_FOR_GRADIENT",1);
+
+		if(markerGradientLowFi.empty()){
+
+			markerGradientLowFi = markerGradient;
+
+		}
+
+
+		std::string	gradientLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",1);
+
+		if(gradientLowFi.empty()){
+
+			gradientLowFi = gradient;
+
+		}
+
+
+		objectiveFunction.executableNameLowFi = executableNameLowFi;
+		objectiveFunction.outputFilenameLowFi = outputFilenameLowFi;
+		objectiveFunction.pathLowFi = exePathLowFi;
+		objectiveFunction.markerLowFi = markerLowFi;
+		objectiveFunction.markerForGradientLowFi = markerGradientLowFi;
+
+		if(checkIfOn(gradientLowFi)){
+
+			objectiveFunction.ifGradientLowFi = true;
+
+		}
+
 
 	}
 	objectiveFunction.ifDefined = true;
@@ -966,7 +929,6 @@ void RoDeODriver::extractConfigDefinitionsFromString(std::string inputString){
 
 
 		}
-
 
 	}
 

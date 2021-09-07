@@ -55,11 +55,11 @@ private:
 	mat correlationMatrix;
 	mat upperDiagonalMatrix;
 
-	double beta0;
-	double sigmaSquared;
+	double beta0 = 0.0;
+	double sigmaSquared = 0.0;
 
 	bool ifUsesLinearRegression = false;
-	double epsilonKriging;
+	double epsilonKriging = 10E-12;
 
 	double genErrorKriging;
 
@@ -76,6 +76,12 @@ public:
 
 	KrigingModel();
 	KrigingModel(std::string name);
+
+	void setNameOfInputFile(std::string filename);
+	void setNameOfHyperParametersFile(std::string filename);
+	void setNumberOfTrainingIterations(unsigned int);
+
+
 
 	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;

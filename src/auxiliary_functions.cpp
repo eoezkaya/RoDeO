@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -822,6 +822,32 @@ std::string removeSpacesFromString(std::string inputString){
 	return inputString;
 }
 
+
+std::string removeKeywordFromString(std::string inputStr,  std::string keyword){
+
+	assert(!keyword.empty());
+	assert(!inputStr.empty());
+
+	std::size_t found = inputStr.find(keyword);
+
+	if(found != std::string::npos){
+
+		inputStr.erase(std::remove_if(inputStr.begin(), inputStr.end(), isspace), inputStr.end());
+		std::string sub_str = inputStr.substr(found+keyword.length() + 1);
+
+
+		return sub_str;
+
+
+	}
+	else{
+
+		return inputStr;
+	}
+
+
+
+}
 
 
 std::vector<std::string> getStringValuesFromString(std::string str,char delimiter){

@@ -34,10 +34,46 @@
 #include <armadillo>
 using namespace arma;
 
+class WeightedL1Norm{
+
+private:
+	unsigned int dim = 0;
+	vec weights;
+	mat trainingData;
+	mat validationData;
+
+	unsigned int nTrainingIterations = 1000;
+
+
+public:
+
+	bool ifDisplay = false;
+
+
+	WeightedL1Norm();
+	WeightedL1Norm(unsigned int);
+	WeightedL1Norm(vec);
+
+	void setTrainingData(mat);
+	void setValidationData(mat);
+	void setNumberOfTrainingIterations(unsigned int);
+
+	double calculateNorm(const rowvec &) const;
+	void findOptimalWeights();
+	double interpolateByNearestNeighbour(rowvec) const;
+	double calculateMeanSquaredErrorOnData(void) const;
+	void generateRandomWeights(void);
+
+
+};
+
+
+
 double calculateL1norm(const rowvec &x);
 double calculateWeightedL1norm(const rowvec &x, vec w);
 double calculateMetric(rowvec &xi,rowvec &xj, mat M);
 double calculateMetricAdjoint(rowvec xi, rowvec xj, mat M, mat &Mb, double calculateMetricb);
 unsigned int findNearestNeighborL1(const rowvec &xp, const mat &X);
+
 
 #endif

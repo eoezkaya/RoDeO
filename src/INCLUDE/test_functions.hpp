@@ -195,7 +195,8 @@ public:
 double LinearTF1(double *x);
 double LinearTF1Adj(double *x, double *xb);
 
-
+void generateEggholderData(std::string filename, unsigned int nSamples);
+void generateEggholderDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi);
 double Eggholder(double *x);
 double EggholderAdj(double *x, double *xb);
 
@@ -242,7 +243,8 @@ double ShubertAdj(double *x, double *xb);
 
 double Himmelblau(double *x);
 double HimmelblauAdj(double *x, double *xb);
-
+void generateHimmelblauDataMultiFidelity(std::string, std::string, unsigned int, unsigned int);
+void generateHimmelblauDataMultiFidelityWithGradients(std::string, std::string, unsigned int, unsigned int);
 
 
 double Borehole(double *x);

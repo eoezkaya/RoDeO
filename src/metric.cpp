@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -31,6 +31,185 @@
 
 #include "metric.hpp"
 #include "auxiliary_functions.hpp"
+
+
+WeightedL1Norm:: WeightedL1Norm(){
+
+
+}
+
+WeightedL1Norm::WeightedL1Norm(unsigned int d){
+
+	dim = d;
+	weights = zeros<vec>(dim);
+
+}
+
+WeightedL1Norm::WeightedL1Norm(vec w){
+
+	assert(w.size()>0);
+	dim = w.size();
+	weights = w;
+
+
+}
+
+void WeightedL1Norm::setTrainingData(mat inputMatrix){
+
+	assert(inputMatrix.n_rows>0);
+	trainingData = inputMatrix;
+
+}
+void WeightedL1Norm:: setValidationData(mat inputMatrix){
+
+	assert(inputMatrix.n_rows>0);
+	validationData = inputMatrix;
+
+}
+
+
+void WeightedL1Norm::setNumberOfTrainingIterations(unsigned int value){
+
+	nTrainingIterations = value;
+
+}
+
+
+double WeightedL1Norm::calculateNorm(const rowvec &x) const{
+
+	double sum = 0.0;
+	for(unsigned int i=0; i<x.size(); i++){
+
+		sum += weights(i)*fabs(x(i));
+
+	}
+
+	return sum;
+}
+
+void WeightedL1Norm::generateRandomWeights(void){
+
+
+	double sumWeights=0.0;
+	for(unsigned int i=0; i<dim; i++){
+
+		weights(i) = generateRandomDouble(0.0, 1.0);
+		sumWeights+= weights(i);
+
+	}
+
+	for(unsigned int i=0; i<dim; i++){
+
+		weights(i) = (weights(i))/sumWeights;
+
+	}
+
+
+}
+
+
+double WeightedL1Norm::interpolateByNearestNeighbour(rowvec x) const{
+
+
+	unsigned int N = trainingData.n_rows;
+	mat X = trainingData.submat(0,0,N-1,dim-1);
+
+
+	double minDist = LARGE;
+	int indx = -1;
+
+	for(unsigned int i=0; i<N; i++){
+
+		rowvec xp = X.row(i);
+		rowvec diff = x-xp;
+
+		double dist = calculateNorm(diff);
+
+		if(dist<minDist){
+
+			indx = i;
+			minDist = dist;
+		}
+
+	}
+
+	return trainingData(indx,dim);
+
+
+}
+
+
+double WeightedL1Norm::calculateMeanSquaredErrorOnData(void) const{
+
+	unsigned int NumberOfValidationSamples = validationData.n_rows;
+
+	mat X = validationData.submat(0,0,NumberOfValidationSamples-1,dim-1);
+	vec y = validationData.col(dim);
+
+	double squaredError = 0.0;
+
+	for(unsigned int i=0; i<NumberOfValidationSamples; i++){
+
+		rowvec xp = X.row(i);
+		double fTilde = interpolateByNearestNeighbour(xp);
+		squaredError += (fTilde - y(i))*(fTilde - y(i));
+
+#if 0
+		std::cout<<"fTilde = "<<fTilde<<" fExact = "<<y(i)<<" SE = "<<squaredError<<"\n";
+#endif
+	}
+
+
+	return squaredError/NumberOfValidationSamples ;
+
+}
+
+
+void WeightedL1Norm::findOptimalWeights(void){
+
+	assert(trainingData.n_rows>0);
+	assert(validationData.n_rows>0);
+	assert(validationData.n_cols == trainingData.n_cols);
+
+	vec optimalWeights;
+	double minError = LARGE;
+
+
+	for(unsigned int i=0; i<nTrainingIterations; i++){
+
+		generateRandomWeights();
+		double error = calculateMeanSquaredErrorOnData();
+
+
+		if(error< minError){
+
+			if(ifDisplay){
+
+				printVector(weights,"Found better weights for the L1 norm");
+				std::cout<<"minError = "<<minError<<"\n";
+
+			}
+
+			optimalWeights = weights;
+			minError = error;
+
+		}
+
+
+	}
+
+
+
+	weights = optimalWeights;
+
+	if(ifDisplay){
+
+		printVector(weights,"Optimal weights for the L1 norm");
+
+	}
+
+}
+
 
 double calculateL1norm(const rowvec &x){
 
@@ -127,5 +306,7 @@ unsigned int findNearestNeighborL1(const rowvec &xp, const mat &X){
 
 
 }
+
+
 
 

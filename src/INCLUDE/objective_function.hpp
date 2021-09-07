@@ -36,6 +36,7 @@
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
 #include "surrogate_model.hpp"
+#include "multi_level_method.hpp"
 #include "design.hpp"
 
 
@@ -116,6 +117,7 @@ protected:
 
 	KrigingModel surrogateModel;
 	AggregationModel surrogateModelGradient;
+	MultiLevelModel surrogateModelML;
 
 	SurrogateModel *surrogate;
 
@@ -153,6 +155,11 @@ public:
 
 	void setGradientOn(void);
 	void setGradientOff(void);
+	void setMultiLevelOn(void);
+	void setMultiLevelOff(void);
+
+
+
 	void setParameterBounds(vec , vec );
 
 	void setNumberOfTrainingIterationsForSurrogateModel(unsigned int);
@@ -173,7 +180,6 @@ public:
 
 	}
 
-
 	void setFileNameReadInput(std::string fileName);
 
 	void saveDoEData(std::vector<rowvec>) const;
@@ -181,8 +187,11 @@ public:
 	void setExecutableName(std::string);
 	void setFileNameDesignVector(std::string);
 
+
 	void setReadMarker(std::string marker);
 	std::string getReadMarker(void) const;
+
+
 	void setReadMarkerAdjoint(std::string marker);
 	std::string getReadMarkerAdjoint(void) const;
 
@@ -202,6 +211,7 @@ public:
 	double interpolate(rowvec x) const;
 	void print(void) const;
 	std::string getExecutionCommand(void) const;
+	std::string getExecutionCommandLowFi(void) const;
 
 
 };

@@ -132,6 +132,7 @@ void readFileToaString(std::string, std::string &);
 std::vector<std::string> getStringValuesFromString(std::string sub_str, char delimiter);
 vec getDoubleValuesFromString(std::string sub_str, char delimiter);
 std::string removeSpacesFromString(std::string );
+std::string removeKeywordFromString(std::string inputStr,  std::string keyword);
 
 
 int check_if_lists_are_equal(int *list1, int *list2, int dim);

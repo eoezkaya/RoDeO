@@ -80,9 +80,6 @@ public:
 
 
 
-	std::string removeKeywordFromString(std::string, std::string) const;
-
-
 	void checkIfProblemDimensionIsSet(void) const;
 	void checkIfNumberOfTrainingAndTestSamplesAreProper(void) const;
 	void checkIfSurrogateModelTypeIsOK(void) const;

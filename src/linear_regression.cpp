@@ -285,12 +285,23 @@ void LinearModel::addNewSampleToData(rowvec newsample){
 }
 
 
+void LinearModel::setNameOfInputFile(std::string filename){
+
+	assert(!filename.empty());
+	filenameDataInput = filename;
+	ifInputFilenameIsSet = true;
+
+}
 
 
 
+void LinearModel::setNumberOfTrainingIterations(unsigned int nIters){}
 
+void LinearModel::setNameOfHyperParametersFile(std::string filename){
 
+	assert(!filename.empty());
+	hyperparameters_filename = filename;
 
-
+}
 
 

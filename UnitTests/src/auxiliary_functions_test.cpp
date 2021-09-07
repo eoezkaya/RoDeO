@@ -208,4 +208,21 @@ TEST(testAuxiliaryFunctions, testgetDoubleValuesFromString){
 
 }
 
+TEST(testAuxiliaryFunctions, testremoveKeywordFromString){
 
+	std::string key = "DIMENSION";
+	std::string s = "DIMENSION = blabla , blabla";
+
+	std::string  s1 = removeKeywordFromString(s, key);
+
+	int ifEqual = s1.compare("blabla,blabla");
+	ASSERT_EQ(ifEqual,0);
+
+	key = "NOTAKEYWORD";
+
+	std::string  s2 = removeKeywordFromString(s, key);
+	ifEqual = s2.compare(s);
+	ASSERT_EQ(ifEqual,0);
+
+
+}

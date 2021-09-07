@@ -57,6 +57,8 @@ TEST(testKriging, testReadDataAndNormalize){
 	testFunctionEggholder.setBoxConstraints(0,200.0);
 	mat samples = testFunctionEggholder.generateRandomSamples(10);
 	saveMatToCVSFile(samples,"Eggholder.csv");
+
+
 	KrigingModel testModel("Eggholder");
 
 	testModel.readData();

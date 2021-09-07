@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -43,30 +43,63 @@ using namespace arma;
 #include "auxiliary_functions.hpp"
 #include "linear_regression.hpp"
 
-AggregationModel::AggregationModel():SurrogateModel(){}
+AggregationModel::AggregationModel():SurrogateModel(){
+
+	modelID = AGGREGATION;
+	ifHasGradientData = true;
+
+}
 
 
 AggregationModel::AggregationModel(std::string name):SurrogateModel(name),krigingModel(name) {
 
 	modelID = AGGREGATION;
 	hyperparameters_filename = label + "_aggregation_model_hyperparameters.csv";
-	this->ifHasGradientData = true;
+	ifHasGradientData = true;
 
 
 }
 
+void AggregationModel::setNameOfInputFile(std::string filename){
+
+	assert(!filename.empty());
+	filenameDataInput  = filename;
+	krigingModel.setNameOfInputFile(filename);
+	ifInputFilenameIsSet = true;
+
+
+}
+
+void AggregationModel::setNumberOfTrainingIterations(unsigned int nIters){
+
+	numberOfTrainingIterations = nIters;
+	krigingModel.setNumberOfTrainingIterations(nIters);
+
+}
+
+void AggregationModel::setNameOfHyperParametersFile(std::string filename){
+
+	assert(!filename.empty());
+	hyperparameters_filename = filename;
+
+
+}
+
+
 void AggregationModel::determineRhoBasedOnData(void){
 
 
-	unsigned int numberOfProbles = 1000;
-	vec probe_distances_sample(numberOfProbles);
+	unsigned int numberOfProbes = 1000;
+	vec probeDistances(numberOfProbes);
 
-	for(unsigned int i=0; i<numberOfProbles; i++){
+	for(unsigned int i=0; i<numberOfProbes; i++){
 
 		rowvec xp = generateRandomRowVector(0.0, 1.0/dim, dim);
 
-		int indxNearestNeighbor= findNearestNeighbor(xp);
-		double distance = calculateL1norm(xp - X.row(indxNearestNeighbor));
+		int indexNearestNeighbor = findNearestNeighbor(xp);
+
+		rowvec xdiff = xp - X.row(indexNearestNeighbor);
+		double distance = calculateWeightedL1norm(xdiff, L1NormWeights);
 
 #if 0
 		printf("point:\n");
@@ -77,35 +110,40 @@ void AggregationModel::determineRhoBasedOnData(void){
 
 #endif
 
-		probe_distances_sample(i)= distance;
+		probeDistances(i)= distance;
 
 	}
 
-	double average_distance_sample = mean(probe_distances_sample);
-#if 1
-	printf("Maximum distance (L1 norm) = %10.7f\n", max(probe_distances_sample));
-	printf("Minimum distance (L1 norm) = %10.7f\n", min(probe_distances_sample));
-	printf("Average distance (L1 norm)= %10.7f\n", average_distance_sample);
-#endif
+	double averageDistance = mean(probeDistances);
+
+	if(ifDisplay){
+
+		printf("Maximum distance (L1 norm) = %10.7f\n", max(probeDistances));
+		printf("Minimum distance (L1 norm) = %10.7f\n", min(probeDistances));
+		printf("Average distance (L1 norm)= %10.7f\n", averageDistance);
+
+	}
 
 
 	/* obtain gradient statistics */
-	double sumnormgrad = 0.0;
+	double sumNormGrad = 0.0;
 	for(unsigned int i=0; i<N; i++){
 
 		rowvec gradVec= gradientData.row(i);
 
 
-		double normgrad= calculateL1norm(gradVec);
-		sumnormgrad+= normgrad;
+		double normGrad= calculateL1norm(gradVec);
+		sumNormGrad += normGrad;
 
 	}
 
-	double avg_norm_grad= sumnormgrad/N;
-#if 1
-	printf("average norm grad = %10.7e\n", avg_norm_grad);
-#endif
-	/* define the search range for the hyperparameter r */
+	double averageNormGrad = sumNormGrad/N;
+
+	if(ifDisplay){
+
+		printf("average norm grad = %10.7e\n", averageNormGrad);
+
+	}
 
 
 
@@ -117,33 +155,30 @@ void AggregationModel::determineRhoBasedOnData(void){
 	 */
 
 
-	rho = -2.0*log(0.0001)/ (max(probe_distances_sample) * avg_norm_grad);
-//	rho = -log(0.05)/ (min(probe_distances_sample) * avg_norm_grad);
+	rho = -2.0*log(0.0001)/ (max(probeDistances) * averageNormGrad);
 
-#if 1
-	printf("rho = %10.7f\n",rho);
-	printf("dual model weight at the maximum distance = %15.10f\n",exp(-rho*max(probe_distances_sample)* avg_norm_grad));
-	printf("dual model weight at the average distance = %15.10f\n",exp(-rho*mean(probe_distances_sample)* avg_norm_grad));
-	printf("dual model weight at the minimum distance = %15.10f\n",exp(-rho*min(probe_distances_sample)* avg_norm_grad));
-#endif
+	if(ifDisplay){
 
+		printf("rho = %10.7f\n",rho);
+		printf("dual model weight at the maximum distance = %15.10f\n",exp(-rho*max(probeDistances) * averageNormGrad));
+		printf("dual model weight at the average distance = %15.10f\n",exp(-rho*mean(probeDistances)* averageNormGrad));
+		printf("dual model weight at the minimum distance = %15.10f\n",exp(-rho*min(probeDistances)* averageNormGrad));
 
-
-
+	}
 
 
 }
 
 void AggregationModel::initializeSurrogateModel(void){
 
-	numberOfTrainingIterations = 10000;
+	assert(ifBoundsAreSet);
 
 	krigingModel.ifHasGradientData = true;
-
 	krigingModel.readData();
 	krigingModel.setParameterBounds(xmin,xmax);
 	krigingModel.normalizeData();
 	krigingModel.initializeSurrogateModel();
+
 
 	readData();
 	normalizeData();
@@ -152,8 +187,6 @@ void AggregationModel::initializeSurrogateModel(void){
 
 	L1NormWeights = zeros<vec>(dim);
 	L1NormWeights.fill(1.0);
-
-
 
 	ifInitialized = true;
 
@@ -280,7 +313,7 @@ void AggregationModel::updateAuxilliaryFields(void){
 
 vec AggregationModel::getL1NormWeights(void) const{
 
-	return this->L1NormWeights;
+	return L1NormWeights;
 
 
 }
@@ -350,13 +383,17 @@ void AggregationModel::determineOptimalL1NormWeights(void){
 
 
 
+
+
+
+
+
 void AggregationModel::train(void){
 
 	if(!ifInitialized){
 
-		this->initializeSurrogateModel();
+		initializeSurrogateModel();
 	}
-
 
 	loadHyperParameters();
 #if 0
@@ -389,20 +426,21 @@ void AggregationModel::generateRandomHyperParams(void){
 
 	}
 
+	double oneOverSumWeights = 1.0/sumWeights;
+
 	for(unsigned int i=0; i<dim; i++){
 
-		L1NormWeights(i) = (dim*L1NormWeights(i))/sumWeights;
+		L1NormWeights(i) = dim*L1NormWeights(i)*oneOverSumWeights;
 
 	}
 
 
 
-
 }
 
-void AggregationModel::setRho(double rho){
-	this->rho = rho;
+void AggregationModel::setRho(double value){
 
+	rho = value;
 
 }
 
@@ -411,10 +449,11 @@ void AggregationModel::setRho(double rho){
 void AggregationModel::modifyRawDataAndAssociatedVariables(mat dataMatrix){
 
 	assert(dataMatrix.n_cols == rawData.n_cols);
-	this->rawData = dataMatrix;
+	rawData = dataMatrix;
 	N = rawData.n_rows;
 	Xraw = rawData.submat(0, 0, N - 1, dim - 1);
 	y = rawData.col(dim);
+
 	if(ifHasGradientData){
 
 		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
@@ -425,134 +464,77 @@ void AggregationModel::modifyRawDataAndAssociatedVariables(mat dataMatrix){
 	X = (1.0/dim)*X;
 }
 
+double AggregationModel::calculateMinimumDistanceToNearestPoint(const rowvec &x, int index) const{
+
+	rowvec xNearestPoint    = X.row(index);
+	rowvec xDiff = x - xNearestPoint;
+
+	return calculateWeightedL1norm(xDiff, L1NormWeights);
+
+
+}
+
+
+double AggregationModel::calculateDualModelEstimate(const rowvec &x, int index) const{
+
+	double yNearestPoint = y(index);
+	rowvec gradNearestPoint = gradientData.row(index);
+	rowvec xNearestPointRaw = Xraw.row(index);
+
+	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
+	rowvec xDiffRaw = xp - xNearestPointRaw;
+
+	return yNearestPoint+ dot(xDiffRaw,gradNearestPoint);
+
+}
+
 double AggregationModel::interpolate(rowvec x) const{
 
-	/* find the closest seeding point to the xp in the data set */
+	int indexNearestPoint = findNearestNeighbor(x);
 
+	double estimateKrigingModel = krigingModel.interpolate(x);
+	double estimateDualModel = calculateDualModelEstimate(x,indexNearestPoint);
 
-	int indx = findNearestNeighbor(x);
-	rowvec xNearestPoint = X.row(indx);
-	rowvec xNearestPointRaw = Xraw.row(indx);
-	rowvec gradNearestPoint = gradientData.row(indx);
-	double yNearestPoint = y(indx);
-
-	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
-
-
-
-	rowvec xDiff = x - xNearestPoint;
-	rowvec xDiffRaw = xp - xNearestPointRaw;
-
-	double min_dist = calculateWeightedL1norm(xDiff, L1NormWeights);
-
-
-	double fSurrogateKriging = krigingModel.interpolate(x);
-
-
-	rowvec gradientVector = gradientData.row(indx);
-
-
-	double normgrad = calculateL1norm(gradientVector);
-
-
-	double fSurrogateDual = yNearestPoint+ dot(xDiffRaw,gradientVector);
-
-
-	double w2 = exp(-rho*min_dist*normgrad);
+	double w2 = calculateDualModelWeight(x,indexNearestPoint);
 	double w1 = 1.0 - w2;
 
-
-	return w1*fSurrogateKriging+ w2* fSurrogateDual;
-
+	return w1*estimateKrigingModel + w2 * estimateDualModel;
 
 }
 
 
 
-void AggregationModel::interpolateWithVariance(rowvec x,double *f_tilde,double *ssqr) const{
+void AggregationModel::interpolateWithVariance(rowvec x, double *estimateAggregationModel,double *ssqr) const{
 
 
+	int indexNearestPoint = findNearestNeighbor(x);
 
-	/* find the closest seeding point to the xp in the data set */
+	double estimateKrigingModel = 0.0;
 
-	int indx = findNearestNeighbor(x);
-	assert(indx < X.n_rows);
+	/* model uncertainty is computed using the Kriging model only */
+	krigingModel.interpolateWithVariance(x,&estimateKrigingModel,ssqr);
+	double estimateDualModel = calculateDualModelEstimate(x,indexNearestPoint);
 
-	if(indx > X.n_rows){
-
-		std::cout<<"indx = "<<indx<<"\n";
-
-
-	}
-
-	rowvec xNearestPoint = X.row(indx);
-	rowvec xNearestPointRaw = Xraw.row(indx);
-	rowvec gradNearestPoint = gradientData.row(indx);
-	double yNearestPoint = y(indx);
-
-	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
-
-#if 0
-	printVector(x,"x");
-	printVector(xp,"xp");
-	cout <<"The closest point to x has an index = "<<indx<<":\n";
-	printVector(xNearestPoint,"xNearestPoint");
-	printVector(xNearestPointRaw,"xNearestPointRaw");
-	std::cout<<"y = "<<yNearestPoint<<"\n";
-#endif
-
-	rowvec xDiff = x - xNearestPoint;
-	rowvec xDiffRaw = xp - xNearestPointRaw;
-
-
-#if 0
-	printVector(xDiff,"xDiff");
-	printVector(xDiffRaw,"xDiffRaw");
-#endif
-	double min_dist = calculateWeightedL1norm(xDiff, L1NormWeights);
-#if 0
-	cout<<"min_dist = "<<min_dist<<"\n";
-#endif
-
-
-	double fSurrogateKriging;
-
-	krigingModel.interpolateWithVariance(x,&fSurrogateKriging,ssqr);
-#if 0
-	cout<<"fSurrogateKriging = "<<fSurrogateKriging<<"\n";
-#endif
-
-
-	rowvec gradientVector = gradientData.row(indx);
-#if 0
-	printVector(gradientVector,"gradientVector");
-#endif
-
-	double normgrad = calculateL1norm(gradientVector);
-#if 0
-	cout<<"normgrad = "<<normgrad<<"\n";
-#endif
-
-	double fSurrogateDual = yNearestPoint+ dot(xDiffRaw,gradientVector);
-#if 0
-	cout<<"fSurrogateDual = "<<fSurrogateDual<<"\n";
-
-#endif
-
-	double w2 = exp(-rho*min_dist*normgrad);
+	double w2 = calculateDualModelWeight(x,indexNearestPoint);
 	double w1 = 1.0 - w2;
-#if 0
-	cout<<"w2 = "<<w2<<"\n";
-	cout<<"w1 = "<<w1<<"\n";
-	cout<<"result  = "<<w1*fSurrogateKriging+ w2* fSurrogateDual<<"\n";
-
-#endif
 
 
-	*f_tilde =  w1*fSurrogateKriging+ w2* fSurrogateDual;
+	*estimateAggregationModel = w1*estimateKrigingModel + w2 * estimateDualModel;
+
 
 
 }
+
+double AggregationModel::calculateDualModelWeight(const rowvec &x, int index) const{
+
+	double minimumDistance = calculateMinimumDistanceToNearestPoint(x,index);
+	rowvec gradNearestPoint = gradientData.row(index);
+	double normGradient = calculateL1norm(gradNearestPoint);
+
+	return  exp(-rho*minimumDistance*normGradient);
+
+}
+
 
 void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const{
 
@@ -566,7 +548,7 @@ void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &
 	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
 #endif
 
-	double	sigma = sqrt(ssqr)	;
+	double	sigma = sqrt(ssqr);
 
 #if 0
 	printf("standart_ERROR = %15.10f\n",sigma);
@@ -575,8 +557,7 @@ void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &
 	double expectedImprovementValue = 0.0;
 
 
-	if(sigma!=0.0){
-
+	if(fabs(sigma) > EPSILON){
 
 		double	Z = (ymin - ftilde)/sigma;
 #if 0
@@ -584,9 +565,7 @@ void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &
 		printf("ymin = %15.10f\n",ymin);
 #endif
 
-
-		/* calculate the Expected Improvement value */
-		expectedImprovementValue = (ymin - ftilde)*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
+		expectedImprovementValue = (ymin - ftilde)* cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
 	}
 	else{
 
@@ -605,20 +584,16 @@ void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &
 
 unsigned int AggregationModel::findNearestNeighbor(const rowvec &xp) const{
 
-	assert(ifInitialized);
 	unsigned int index = 0;
 	double minL1Distance = LARGE;
 
-
-
 	for(unsigned int i=0; i<X.n_rows; i++){
 
-		rowvec x = X.row(i);
-
-		rowvec xdiff = xp -x;
+		rowvec xdiff = xp - X.row(i);;
 
 		double L1distance = calculateWeightedL1norm(xdiff, L1NormWeights);
-		if(L1distance< minL1Distance){
+
+		if(L1distance < minL1Distance){
 
 			minL1Distance = L1distance;
 			index = i;
@@ -627,9 +602,7 @@ unsigned int AggregationModel::findNearestNeighbor(const rowvec &xp) const{
 
 	}
 
-
 	return index;
-
 
 }
 

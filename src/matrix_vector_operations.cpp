@@ -194,7 +194,6 @@ void printVector(std::vector<std::string> v){
 	std::cout << v[v.size()-1] << "\n";
 
 
-	std::cout<<"\n";
 
 
 }

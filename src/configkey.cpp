@@ -595,4 +595,47 @@ bool ConfigKeyList::ifFeatureIsOff(std::string feature) const{
 
 }
 
+void ConfigKeyList::parseString(std::string inputString){
+
+	assert(inputString.empty()== false);
+
+	std::stringstream iss(inputString);
+
+	while(iss.good())
+	{
+		std::string singleLine;
+		getline(iss,singleLine,'\n');
+
+		singleLine = removeSpacesFromString(singleLine);
+		int indxKeyword = searchKeywordInString(singleLine);
+
+
+		if(indxKeyword != -1){
+
+			ConfigKey temp = getConfigKey(indxKeyword);
+
+			std::string keyword = temp.name;
+			std::string cleanString;
+			cleanString = removeKeywordFromString(singleLine, keyword);
+
+			assignKeywordValueWithIndex(cleanString,indxKeyword);
+
+
+		}
+		else if(!singleLine.empty()){
+
+			std::cout<<"ERROR: Cannot parse definition, something wrong with the input:\n";
+			std::cout<<singleLine<<"\n";
+			abort();
+		}
+
+
+	}
+#if 0
+	this->printKeywords();
+#endif
+
+}
+
+
 

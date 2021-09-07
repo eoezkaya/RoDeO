@@ -149,6 +149,8 @@ SurrogateModel::SurrogateModel(std::string name){
 	label = name;
 	filenameDataInput = name +".csv";
 	filenameTestResults = name + "_TestResults.csv";
+
+	ifInputFilenameIsSet = true;
 }
 
 void SurrogateModel::checkIfParameterBoundsAreOk(void) const{
@@ -198,23 +200,12 @@ std::string SurrogateModel::getNameOfHyperParametersFile(void) const{
 
 }
 
-void SurrogateModel::setNameOfInputFile(std::string filename) {
 
-	assert(!filename.empty());
-	filenameDataInput = filename;
 
-}
 
 std::string SurrogateModel::getNameOfInputFile(void) const{
 
 	return this->filenameDataInput;
-
-}
-
-void SurrogateModel::setNumberOfTrainingIterations(unsigned int nIter){
-
-
-	this->numberOfTrainingIterations = nIter;
 
 }
 
@@ -265,6 +256,7 @@ void SurrogateModel::checkRawData(void) const{
 
 void SurrogateModel::readData(void){
 
+	assert(ifInputFilenameIsSet);
 
 	if(ifDisplay){
 
@@ -607,4 +599,18 @@ bool SurrogateModel::ifModelIsValid(std::string modelType) const{
 	return false;
 
 }
+
+void SurrogateModel::printMsg(std::string msg) const{
+
+	assert(!msg.empty());
+
+	if(ifDisplay){
+
+		std::cout<<msg<<"\n";
+
+	}
+
+
+}
+
 

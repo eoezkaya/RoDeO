@@ -46,6 +46,10 @@ public:
 	LinearModel();
 	LinearModel(std::string name);
 
+	void setNameOfInputFile(std::string);
+	void setNameOfHyperParametersFile(std::string);
+	void setNumberOfTrainingIterations(unsigned int);
+
 	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;
 	void printHyperParameters(void) const;

@@ -70,6 +70,30 @@ GEKModel::GEKModel(std::string name):SurrogateModel(name){
 
 }
 
+
+void GEKModel::setNameOfInputFile(std::string filename){
+
+	assert(!filename.empty());
+	filenameDataInput = filename;
+	ifInputFilenameIsSet = true;
+
+}
+
+void GEKModel::setNumberOfTrainingIterations(unsigned int nIters){
+
+	numberOfTrainingIterations = nIters;
+
+}
+
+void GEKModel::setNameOfHyperParametersFile(std::string filename){
+
+	assert(!filename.empty());
+	hyperparameters_filename = filename;
+
+}
+
+
+
 void GEKModel::initializeSurrogateModel(void){
 
 	if(label != "None"){

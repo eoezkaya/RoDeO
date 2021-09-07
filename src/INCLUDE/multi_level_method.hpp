@@ -34,7 +34,8 @@
 
 #include<string>
 #include "surrogate_model.hpp"
-
+#include "kriging_training.hpp"
+#include "aggregation_model.hpp"
 
 class MultiLevelModel : public SurrogateModel {
 
@@ -51,17 +52,25 @@ private:
 	SurrogateModel *lowFidelityModel;
 	SurrogateModel *errorModel;
 
+	KrigingModel surrogateModelKrigingLowFi;
+	AggregationModel surrogateModelAggregationLowFi;
+
+	KrigingModel surrogateModelKrigingError;
+	AggregationModel surrogateModelAggregationError;
+
+
 	mat rawDataHighFidelity;
-	mat rawDataHighFidelityForGammaTraining;
-	mat rawDataHighFidelityForGammaTest;
-	unsigned int NHiFi = 0;
+	mat XHighFidelity;
+
 
 	mat rawDataLowFidelity;
+	mat XLowFidelity;
+
 	unsigned int NLoFi = 0;
+	unsigned int NHiFi = 0;
 
 	mat rawDataError;
-	mat rawDataErrorForGammaTraining;
-	mat rawDataErrorForGammaTest;
+
 
 	unsigned int dimHiFi = 0;
 	unsigned int dimLoFi = 0;
@@ -73,13 +82,27 @@ private:
 
 public:
 
+	bool ifInputFileNameForHiFiModelIsSet = false;
+	bool ifInputFileNameForLowFiModelIsSet = false;
+
 	bool ifLowFidelityModelIsSet = false;
 	bool ifErrorModelIsSet = false;
 	bool ifErrorDataIsSet = false;
+
+
 	bool ifHighFidelityDataHasGradients = false;
 	bool ifLowFidelityDataHasGradients = false;
 
+
+	MultiLevelModel();
 	MultiLevelModel(std::string);
+
+	void setNameOfInputFile(std::string filename);
+	void setNameOfHyperParametersFile(std::string filename);
+	void setNumberOfTrainingIterations(unsigned int);
+
+	void setinputFileNameHighFidelityData(std::string);
+	void setinputFileNameLowFidelityData(std::string);
 
 	void readData(void);
 
@@ -91,10 +114,25 @@ public:
 	void loadHyperParameters(void);
 
 	void updateAuxilliaryFields(void);
+
+
+	void setGradientsOnLowFi(void);
+	void setGradientsOnHiFi(void);
+	void setGradientsOffLowFi(void);
+	void setGradientsOffHiFi(void);
+
+
 	void train(void);
-	void trainGamma(void);
+	void trainLowFidelityModel(void);
+	void trainErrorModel(void);
+
+
+	void determineGammaBasedOnData(void);
 
 	double interpolate(rowvec x) const ;
+	double interpolateLowFi(rowvec x) const;
+	double interpolateError(rowvec x) const;
+
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
 	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
@@ -106,24 +144,29 @@ public:
 	void setDimensionsHiFiandLowFiModels(void);
 
 	void prepareErrorData(void);
-	void prepareTrainingDataForGammaOptimization(void);
+
 	unsigned int findIndexHiFiToLowFiData(unsigned int indexHiFiData) const;
 
 
-	void setinputFileNameHighFidelityData(std::string);
-	void setinputFileNameLowFidelityData(std::string);
 
 	void setParameterBounds(vec, vec);
-	void setLowFidelityModel(std::string);
-	void setErrorModel(std::string);
+
+	void bindLowFidelityModel(void);
+	void bindErrorModel(void);
 
 	mat getRawDataHighFidelity(void) const;
 	mat getRawDataLowFidelity(void) const;
 	mat getRawDataError(void) const;
-	mat getRawDataHighFidelityForGammaTraining(void) const;
-	mat getRawDataHighFidelityForGammaTest(void) const;
 
-	double evaluateBrigdeFunction(rowvec x);
+
+	unsigned int findNearestNeighbourLowFidelity(rowvec x) const;
+	unsigned int findNearestNeighbourHighFidelity(rowvec x) const;
+
+	double findNearestL1DistanceToALowFidelitySample(rowvec x) const;
+	double findNearestL1DistanceToAHighFidelitySample(rowvec x) const;
+
+
+//	double evaluateBrigdeFunction(rowvec x);
 
 };
 

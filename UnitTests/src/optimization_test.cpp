@@ -36,7 +36,7 @@
 #include<gtest/gtest.h>
 
 
-#define TESTOPTIMIZATION
+//#define TESTOPTIMIZATION
 
 #ifdef TESTOPTIMIZATION
 

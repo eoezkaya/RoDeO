@@ -30,7 +30,7 @@
 #include "auxiliary_functions.hpp"
 #include<gtest/gtest.h>
 
-#define TESTDRIVERON
+//#define TESTDRIVERON
 
 #ifdef TESTDRIVERON
 
@@ -182,31 +182,6 @@ TEST(testDriver, testextractObjectiveFunctionDefinitionFromString){
 
 
 }
-
-
-
-
-TEST(testDriver, testremoveKeywordFromString){
-
-	RoDeODriver testDriver;
-	std::string key = "DIMENSION";
-	std::string s = "DIMENSION = blabla , blabla";
-
-	std::string  s1 = testDriver.removeKeywordFromString(s, key);
-
-	int ifEqual = s1.compare("blabla,blabla");
-	ASSERT_EQ(ifEqual,0);
-
-	key = "NOTAKEYWORD";
-
-	std::string  s2 = testDriver.removeKeywordFromString(s, key);
-	ifEqual = s2.compare(s);
-	ASSERT_EQ(ifEqual,0);
-
-
-}
-
-
 
 
 
@@ -400,23 +375,25 @@ TEST(testDriver, testsetObjectiveFunction){
 }
 
 
-//TEST(testDriver, testsetObjectiveFunctionWithMultiLevel){
-//
-//	RoDeODriver testDriver;
-//	testDriver.setConfigFilename("testConfigFilesetObjectiveFunctionML.cfg");
-//	testDriver.readConfigFile();
-//
-//	ObjectiveFunction testObjFun = testDriver.setObjectiveFunction();
-//
-//	std::string command = testObjFun.getExecutionCommand();
-//	int dim = testObjFun.getDimension();
-//
-//	ASSERT_EQ(command,"./himmelblauHF");
-//	ASSERT_EQ(dim,2);
-//
-//	abort();
-//
-//}
+TEST(testDriver, testsetObjectiveFunctionWithMultiLevel){
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFilesetObjectiveFunctionML.cfg");
+	testDriver.readConfigFile();
+
+	ObjectiveFunction testObjFun = testDriver.setObjectiveFunction();
+
+	std::string command = testObjFun.getExecutionCommand();
+	int dim = testObjFun.getDimension();
+
+	ASSERT_EQ(command,"./himmelblauHF");
+	ASSERT_EQ(dim,2);
+
+	std::string commandLowFi = testObjFun.getExecutionCommandLowFi();
+	ASSERT_EQ(commandLowFi,"./himmelblauLF");
+
+
+}
 
 
 

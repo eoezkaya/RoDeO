@@ -111,6 +111,7 @@ public:
 	bool ifHasGradientData = false;
 	bool ifHasTestData = false;
 	bool ifDisplay = false;
+	bool ifInputFilenameIsSet = false;
 
 
 	mat testResults;
@@ -138,8 +139,14 @@ public:
 
 	std::string getNameOfHyperParametersFile(void) const;
 	std::string getNameOfInputFile(void) const;
-	void setNameOfInputFile(std::string filename);
-	void setNumberOfTrainingIterations(unsigned int);
+
+
+	virtual void setNameOfInputFile(std::string filename) = 0;
+	virtual void setNameOfHyperParametersFile(std::string filename) = 0;
+	virtual void setNumberOfTrainingIterations(unsigned int) = 0;
+
+
+
 
 	unsigned int getDimension(void) const;
 	unsigned int getNumberOfSamples(void) const;
@@ -174,6 +181,7 @@ public:
 
 	bool ifModelIsValid(std::string) const;
 
+	void printMsg(std::string msg) const;
 
 
 };
