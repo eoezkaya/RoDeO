@@ -113,9 +113,9 @@ void LinearModel::train(void){
 		abort();
 	}
 
-	mat augmented_X(N, dim + 1);
+	mat augmented_X(numberOfSamples, dim + 1);
 
-	for (unsigned int i = 0; i < N; i++) {
+	for (unsigned int i = 0; i < numberOfSamples; i++) {
 
 		for (unsigned int j = 0; j <= dim; j++) {
 
@@ -221,12 +221,12 @@ double LinearModel::interpolateWithGradients(rowvec xp) const{
 
 vec LinearModel::interpolateAll(mat X) const{
 
-	unsigned int numberOfSamples = X.n_rows;
+	unsigned int N = X.n_rows;
 
-	vec result(numberOfSamples);
+	vec result(N);
 
 
-	for(unsigned int i=0; i<numberOfSamples; i++){
+	for(unsigned int i=0; i<N; i++){
 
 		rowvec x = X.row(i);
 
@@ -253,14 +253,14 @@ vec LinearModel::interpolateAll(mat X) const{
 void LinearModel::printSurrogateModel(void) const{
 
 	cout << "Surrogate model:"<< endl;
-	cout<< "Number of samples: "<<N<<endl;
+	cout<< "Number of samples: "<<numberOfSamples<<endl;
 	cout<<"Number of input parameters: "<<dim<<endl;
 	cout<<"Raw Data:\n";
 	rawData.print();
-	cout<<"xmin =";
-	trans(xmin).print();
-	cout<<"xmax =";
-	trans(xmax).print();
+
+	boxConstraints.print();
+
+
 	cout<<"ymin = "<<ymin<<endl;
 	cout<<"ymax = "<<ymax<<endl;
 	cout<<"ymean = "<<yave<<endl;
@@ -287,9 +287,9 @@ void LinearModel::addNewSampleToData(rowvec newsample){
 
 void LinearModel::setNameOfInputFile(std::string filename){
 
-	assert(!filename.empty());
+	assert(isNotEmpty(filename));
 	filenameDataInput = filename;
-	ifInputFilenameIsSet = true;
+
 
 }
 

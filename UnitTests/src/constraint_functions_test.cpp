@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -36,6 +36,8 @@
 #include "design.hpp"
 
 
+#define TEST_CONSTRAIN_FUNCTION
+#ifdef TEST_CONSTRAIN_FUNCTION
 TEST(testDriver, testConstraintDefinition){
 
 	std::string testDefinition = "constraint1 < 3.2";
@@ -83,19 +85,19 @@ TEST(testConstraintFunctions, testConstructorWithFunctionPointer){
 }
 
 
-//TEST(testConstraintFunctions, checkFeasibility){
-//
-//	ConstraintFunction constraintFunTest("testConstraintFunction",4);
-//
-//	ConstraintDefinition def("testConstraintFunction > 18.2");
-//
-//	constraintFunTest.setInequalityConstraint(def);
-//	bool ifFeasible = constraintFunTest.checkFeasibility(18.4);
-//	ASSERT_TRUE(ifFeasible);
-//	ifFeasible = constraintFunTest.checkFeasibility(18.1);
-//	ASSERT_FALSE(ifFeasible);
-//
-//}
+TEST(testConstraintFunctions, checkFeasibility){
+
+	ConstraintFunction constraintFunTest("testConstraintFunction",4);
+
+	ConstraintDefinition def("testConstraintFunction > 18.2");
+
+	constraintFunTest.setParametersByDefinition(def);
+	bool ifFeasible = constraintFunTest.checkFeasibility(18.4);
+	ASSERT_TRUE(ifFeasible);
+	ifFeasible = constraintFunTest.checkFeasibility(18.1);
+	ASSERT_FALSE(ifFeasible);
+
+}
 
 
 TEST(testConstraintFunctions, testEvaluateExternal){
@@ -376,4 +378,4 @@ TEST(testConstraintFunctions, testreadEvaluateObjectiveFunctionAndConstraintInTh
 
 }
 
-
+#endif

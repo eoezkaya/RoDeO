@@ -46,6 +46,7 @@
 #include "random_functions.hpp"
 #include "gek.hpp"
 #include "lhs.hpp"
+#include "bounds.hpp"
 
 
 
@@ -63,8 +64,7 @@ TestFunction::TestFunction(std::string name,int dim){
 
 	dimension = dim;
 	function_name = name;
-	func_ptr = empty;
-	adj_ptr  = emptyAdj;
+
 
 	lb.zeros(dimension);
 	ub.zeros(dimension);
@@ -446,7 +446,13 @@ void TestFunction::testSurrogateModel(std::string surrogateModelType){
 	surrogateModel->setNumberOfTrainingIterations(numberOfIterationsForSurrogateModelTraining);
 
 	surrogateModel->readData();
-	surrogateModel->setParameterBounds(lb,ub);
+
+	Bounds boxConstraints(lb,ub);
+
+	surrogateModel->setParameterBounds(boxConstraints);
+
+
+
 	surrogateModel->normalizeData();
 	surrogateModel->initializeSurrogateModel();
 
@@ -849,11 +855,11 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 		}
 
 		double functionValue = 0.0;
-		if(func_ptr != empty){
+		if(func_ptr != NULL){
 
 			functionValue = func_ptr(x);
 		}
-		else if(adj_ptr != emptyAdj){
+		else if(adj_ptr != NULL){
 
 			double *xb  = new double[dimension];
 
@@ -962,7 +968,7 @@ void TestFunction::validateAdjoints(void){
 
 	cout<<"\nValidating adjoints...\n";
 
-	if(func_ptr == empty || adj_ptr == emptyAdj){
+	if(func_ptr == NULL || adj_ptr == NULL){
 		cout<<"\nERROR: cannot validate adjoints with empty primal and/or adjoint function pointer: set func_ptr and adj_ptr first\n";
 		abort();
 	}
@@ -1030,22 +1036,6 @@ void TestFunction::validateAdjoints(void){
 
 
 }
-
-
-double empty(double *x){
-	printf("\nERROR: calling empty primal function! Did you set the primal function properly?\n");
-	abort();
-
-}
-
-double emptyAdj(double *x, double *xb){
-	printf("\nERROR: calling empty dual function! Did you set the dual function properly?\n");
-	abort();
-
-	return 0;
-
-}
-
 
 
 

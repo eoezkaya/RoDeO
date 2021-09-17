@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -31,13 +31,15 @@
 #ifndef OBJECTIVE_FUNCTION_HPP
 #define OBJECTIVE_FUNCTION_HPP
 
-
+#include <fstream>
 #include <armadillo>
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
 #include "surrogate_model.hpp"
 #include "multi_level_method.hpp"
 #include "design.hpp"
+
+
 
 
 class ObjectiveFunctionDefinition{
@@ -61,11 +63,8 @@ public:
 
 
 	bool ifMultiLevel = false;
-
 	bool ifGradient = false;
 	bool ifGradientLowFi = false;
-
-
 	bool ifDefined = false;
 
 	ObjectiveFunctionDefinition(std::string);
@@ -111,8 +110,9 @@ protected:
 	bool ifMarkerIsSet = false;
 	bool ifAdjointMarkerIsSet = false;
 
-	vec ub;
-	vec lb;
+
+	vec upperBounds;
+	vec lowerBounds;
 
 
 	KrigingModel surrogateModel;
@@ -124,7 +124,6 @@ protected:
 	unsigned int numberOfIterationsForSurrogateTraining = 10000;
 
 
-
 	unsigned int dim = 0;
 	bool ifDoErequired = true;
 	bool ifWarmStart = false;
@@ -133,8 +132,20 @@ protected:
 	bool ifInitialized = false;
 	bool ifParameterBoundsAreSet = false;
 	bool ifMultilevel = false;
+	bool ifDefinitionIsSet = false;
+
+	void readOutputWithoutMarkers(Design &outputDesignBuffer) const;
+
+	bool checkIfMarkersAreNotSet(void) const;
+
+
+
+
+
+
 
 public:
+
 
 	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
@@ -149,15 +160,13 @@ public:
 	void trainSurrogate(void);
 	void printSurrogate(void) const;
 
-	KrigingModel getSurrogateModel(void) const;
+	KrigingModel     getSurrogateModel(void) const;
 	AggregationModel getSurrogateModelGradient(void) const;
+	MultiLevelModel  getSurrogateModelML(void) const;
 
 
 	void setGradientOn(void);
 	void setGradientOff(void);
-	void setMultiLevelOn(void);
-	void setMultiLevelOff(void);
-
 
 
 	void setParameterBounds(vec , vec );
@@ -191,6 +200,10 @@ public:
 	void setReadMarker(std::string marker);
 	std::string getReadMarker(void) const;
 
+	size_t isMarkerFound(const std::string &marker, const std::string &inputStr) const;
+
+	double getMarkerValue(const std::string &inputStr, size_t foundMarker) const;
+	rowvec getMarkerAdjointValues(const std::string &inputStr, size_t foundMarkerPosition) const;
 
 	void setReadMarkerAdjoint(std::string marker);
 	std::string getReadMarkerAdjoint(void) const;

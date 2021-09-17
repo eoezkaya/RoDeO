@@ -39,6 +39,9 @@
 #include <string>
 #include <fstream>
 
+
+using std::string;
+
 void executePythonScript(std::string command){
 
 	FILE* in = popen(command.c_str(), "r");
@@ -196,23 +199,41 @@ bool checkMatrix(mat values, mat expected){
 }
 
 
-void abortIfFalse(bool flag, std::string file, int line){
+void abortIfDoesNotMatch(int firstNumber, int secondNumber, string message ){
 
-	if(flag == false){
+	if(firstNumber != secondNumber){
 
-		printf("Test failed at: at %s, line %d.\n",file.c_str(),line);
+		std::cout<<"ERROR: "<<message<<"\n";
 		abort();
+	}
+
+
+}
+
+
+bool isEmpty(std::string inputStr){
+
+	if(inputStr.empty()){
+
+		return true;
+	}
+	else{
+
+		return false;
 	}
 
 }
 
 
-void abortIfFalse(bool flag){
+bool isNotEmpty(std::string inputStr){
 
-	if(flag == false){
+	if(inputStr.empty()){
 
-		printf("Test failed at\n");
-		abort();
+		return false;
+	}
+	else{
+
+		return true;
 	}
 
 }

@@ -38,7 +38,17 @@
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
+void abortIfHasNan(rowvec &v){
 
+	if(v.has_nan()){
+
+		std::cout<<"ERROR: NaN in a rowvector!\n";
+		abort();
+
+	}
+
+
+}
 
 void copyRowVector(rowvec &a,rowvec b){
 
@@ -188,7 +198,7 @@ void printVector(std::vector<std::string> v){
 
 
 	for(std::size_t i = 0; i < v.size()-1; ++i) {
-	    std::cout << v[i] << ", ";
+		std::cout << v[i] << ", ";
 	}
 
 	std::cout << v[v.size()-1] << "\n";
@@ -294,10 +304,17 @@ mat normalizeMatrix(mat matrixIn){
 
 mat normalizeMatrix(mat matrixIn, vec xmin, vec xmax){
 
-	unsigned int dim = matrixIn.n_cols;
+	unsigned int dim = xmin.size();
+
+	assert(dim == xmax.size());
+	assert(matrixIn.n_cols >= dim);
+
+
 	unsigned int N=matrixIn.n_rows;
 
-	mat matrixOut(N,dim,fill::zeros);
+	mat matrixOut(N,matrixIn.n_cols,fill::zeros);
+
+	matrixOut.col(matrixIn.n_cols-1) = matrixIn.col(matrixIn.n_cols-1);
 
 	vec deltax = xmax-xmin;
 
@@ -317,6 +334,47 @@ mat normalizeMatrix(mat matrixIn, vec xmin, vec xmax){
 
 }
 
+
+mat normalizeMatrix(mat matrixIn, Bounds &boxConstraints){
+
+	assert(boxConstraints.areBoundsSet());
+
+	unsigned int dimBoxConstraints = boxConstraints.getDimension();
+	unsigned int nColsDataMatrix = matrixIn.n_cols;
+	unsigned int nRowsDataMatrix = matrixIn.n_rows;
+
+	vec lowerBounds = boxConstraints.getLowerBounds();
+	vec upperBounds = boxConstraints.getUpperBounds();
+	vec deltaX = upperBounds - lowerBounds;
+
+	mat matrixOut = matrixIn;
+
+
+	bool normalizeAlsoLastColumn = true;
+
+	if(nColsDataMatrix == dimBoxConstraints) normalizeAlsoLastColumn = true;
+	if(nColsDataMatrix == dimBoxConstraints+1) normalizeAlsoLastColumn = false;
+
+	for(unsigned int i=0; i<nRowsDataMatrix;i++){
+
+		for(unsigned int j=0; j<nColsDataMatrix-1;j++){
+
+			matrixOut(i,j)  = ((matrixIn(i,j)-lowerBounds(j)))/(deltaX(j));
+
+		}
+
+		if(normalizeAlsoLastColumn){
+
+			matrixOut(i,nColsDataMatrix-1)  = ((matrixIn(i,nColsDataMatrix-1)-lowerBounds(nColsDataMatrix-1)))/(deltaX(nColsDataMatrix-1));
+		}
+
+	}
+
+
+
+	return matrixOut;
+
+}
 
 
 

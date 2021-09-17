@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -38,8 +38,10 @@
 #include "matrix_vector_operations.hpp"
 #include "Rodeo_globals.hpp"
 #include "metric.hpp"
+#include "auxiliary_functions.hpp"
 using namespace arma;
 
+using std::cout;
 
 MultiLevelModel::MultiLevelModel(){
 
@@ -47,8 +49,10 @@ MultiLevelModel::MultiLevelModel(){
 }
 
 
-MultiLevelModel::MultiLevelModel(std::string label){
+MultiLevelModel::MultiLevelModel(string name):SurrogateModel(name){
 
+
+	modelName = "MULTI_LEVEL";
 	inputFileNameError = label+"_Error.csv";
 	hyperparameters_filename = label + "_multilevel_model_hyperparameters.csv";
 
@@ -56,15 +60,23 @@ MultiLevelModel::MultiLevelModel(std::string label){
 }
 
 
-void MultiLevelModel::setNameOfInputFile(std::string filename){
 
-	assert(!filename.empty());
+void MultiLevelModel::setNameOfInputFile(string filename){
+
+	assert(isNotEmpty(filename));
+
+	filenameDataInput = filename;
+
+	setinputFileNameHighFidelityData(filename);
 
 
 }
-void MultiLevelModel::setNameOfHyperParametersFile(std::string filename){
+void MultiLevelModel::setNameOfHyperParametersFile(string filename){
 
-	assert(!filename.empty());
+	assert(isNotEmpty(filename));
+
+	hyperparameters_filename = filename;
+
 
 }
 void MultiLevelModel::setNumberOfTrainingIterations(unsigned int nIter){
@@ -72,26 +84,24 @@ void MultiLevelModel::setNumberOfTrainingIterations(unsigned int nIter){
 	lowFidelityModel->setNumberOfTrainingIterations(nIter);
 	errorModel->setNumberOfTrainingIterations(nIter);
 
-	if(ifDisplay){
-
-		std::cout<<"numberOfTrainingIterations is set as "<<numberOfTrainingIterations<<" for the multi-level model\n";
-
-	}
+	printMsg("Number of training iterations is set as", numberOfTrainingIterations);
 
 }
 
-void MultiLevelModel::setinputFileNameHighFidelityData(std::string filename){
+void MultiLevelModel::setinputFileNameHighFidelityData(string filename){
 
-	assert(!filename.empty());
+	assert(isNotEmpty(filename));
+
 	inputFileNameHighFidelityData = filename;
 	ifInputFileNameForHiFiModelIsSet = true;
 
 
 }
 
-void MultiLevelModel::setinputFileNameLowFidelityData(std::string filename){
+void MultiLevelModel::setinputFileNameLowFidelityData(string filename){
 
-	assert(!filename.empty());
+	assert(isNotEmpty(filename));
+
 	inputFileNameLowFidelityData = filename;
 	ifInputFileNameForLowFiModelIsSet = true;
 
@@ -101,7 +111,8 @@ void MultiLevelModel::setinputFileNameLowFidelityData(std::string filename){
 
 void MultiLevelModel::initializeSurrogateModel(void){
 
-	assert(ifBoundsAreSet);
+	printMsg("Initializing the multi-level model...");
+
 
 
 	bindErrorModel();
@@ -110,10 +121,12 @@ void MultiLevelModel::initializeSurrogateModel(void){
 	readData();
 
 
+
 	lowFidelityModel->setNameOfInputFile(inputFileNameLowFidelityData);
 
 	lowFidelityModel->readData();
-	lowFidelityModel->setParameterBounds(xmin,xmax);
+	lowFidelityModel->setParameterBounds(boxConstraints);
+
 	lowFidelityModel->normalizeData();
 	lowFidelityModel->initializeSurrogateModel();
 
@@ -122,7 +135,8 @@ void MultiLevelModel::initializeSurrogateModel(void){
 	errorModel->setNameOfInputFile(inputFileNameError);
 
 	errorModel->readData();
-	errorModel->setParameterBounds(xmin,xmax);
+	errorModel->setParameterBounds(boxConstraints);
+
 	errorModel->normalizeData();
 	errorModel->initializeSurrogateModel();
 
@@ -140,6 +154,8 @@ void MultiLevelModel::initializeSurrogateModel(void){
 
 
 void MultiLevelModel::printSurrogateModel(void) const{
+
+	assert(ifInitialized);
 
 	lowFidelityModel->printSurrogateModel();
 	errorModel->printSurrogateModel();
@@ -182,15 +198,17 @@ void MultiLevelModel::determineGammaBasedOnData(void){
 
 	printMsg("Determining the variable gamma...");
 
-	vec dist(100);
-	for(int i=0; i<100; i++){
+	vec xmin = boxConstraints.getLowerBounds();
+	vec xmax = boxConstraints.getUpperBounds();
+
+	unsigned int numberOfProbes = 100;
+
+	vec dist(numberOfProbes);
+	for(int i=0; i<numberOfProbes; i++){
 
 		rowvec x(dim);
 		x = generateRandomRowVector(xmin,xmax);
 		x = normalizeRowVector(x, xmin, xmax);
-
-		x.print();
-
 		dist(i) = findNearestL1DistanceToAHighFidelitySample(x);
 
 	}
@@ -199,7 +217,7 @@ void MultiLevelModel::determineGammaBasedOnData(void){
 
 	if(ifDisplay){
 
-		std::cout<<"distMax = "<<distMax<<"\n";
+		cout<<"distMax = "<<distMax<<"\n";
 
 	}
 
@@ -212,9 +230,10 @@ void MultiLevelModel::determineGammaBasedOnData(void){
 	 * */
 
 	if(ifDisplay){
-		std::cout<<"gamma = "<<gamma<<"\n";
-		std::cout<<"exp(-distMax) = "<<exp(-distMax)<<"\n";
-		std::cout<<"alpha at distMax = "<<gamma* exp(-distMax)<<"\n";
+
+		cout<<"gamma = "<<gamma<<"\n";
+		cout<<"exp(-distMax) = "<<exp(-distMax)<<"\n";
+		cout<<"alpha at distMax = "<<gamma* exp(-distMax)<<"\n";
 
 	}
 
@@ -275,27 +294,27 @@ double MultiLevelModel::interpolate(rowvec x) const{
 
 	double lowFidelityEstimate = lowFidelityModel->interpolate(x);
 	double errorEstimate = errorModel->interpolate(x);
-#if 1
-	std::cout<<"lowFidelityEstimate ="<<lowFidelityEstimate<<"\n";
-	std::cout<<"errorEstimate ="<<errorEstimate<<"\n";
+#if 0
+	cout<<"lowFidelityEstimate ="<<lowFidelityEstimate<<"\n";
+	cout<<"errorEstimate ="<<errorEstimate<<"\n";
 #endif
 
 
-	double distToHF = findNearestL1DistanceToAHighFidelitySample(x);
-	double distToLF = findNearestL1DistanceToALowFidelitySample(x);
+	double distanceToHF = findNearestL1DistanceToAHighFidelitySample(x);
+	double distanceToLF = findNearestL1DistanceToALowFidelitySample(x);
 
-#if 1
-	std::cout<<"distToHF ="<<distToHF<<"\n";
-	std::cout<<"distToLF ="<<distToLF<<"\n";
+#if 0
+	cout<<"distToHF ="<<distToHF<<"\n";
+	cout<<"distToLF ="<<distToLF<<"\n";
 
 #endif
 
 
-	if(distToLF < distToHF){
+	if(distanceToLF < distanceToHF){
 
-		alpha = gamma*exp(-distToHF);
-#if 1
-		std::cout<<"alpha = "<<alpha<<"\n";
+		alpha = gamma*exp(-distanceToHF);
+#if 0
+		cout<<"alpha = "<<alpha<<"\n";
 #endif
 
 
@@ -391,7 +410,7 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 
 	if(minNorm > 10E-10){
 
-		std::cout<<"ERROR (Multilevel model): A high fidelity data point does not exist in the low fidelity data!\n";
+		cout<<"ERROR (Multilevel model): A high fidelity data point does not exist in the low fidelity data!\n";
 		abort();
 	}
 
@@ -511,9 +530,9 @@ void MultiLevelModel::setDimensionsHiFiandLowFiModels(void){
 
 	if(dimHiFi != dimLoFi){
 
-		std::cout<<"ERROR: dimHiFi != dimLoFi!\n";
-		std::cout<<"dimHiFi = "<<dimHiFi<<"\n";
-		std::cout<<"dimLoFi = "<<dimLoFi<<"\n";
+		cout<<"ERROR: dimHiFi != dimLoFi!\n";
+		cout<<"dimHiFi = "<<dimHiFi<<"\n";
+		cout<<"dimLoFi = "<<dimLoFi<<"\n";
 		abort();
 
 	}
@@ -525,8 +544,6 @@ void MultiLevelModel::setDimensionsHiFiandLowFiModels(void){
 
 void MultiLevelModel::readData(void){
 
-	assert(ifBoundsAreSet);
-
 	printMsg("Reading data for the multilevel model...");
 	readHighFidelityData();
 	readLowFidelityData();
@@ -536,9 +553,12 @@ void MultiLevelModel::readData(void){
 	XLowFidelity =  rawDataLowFidelity.submat(0,0,NLoFi -1, dimLoFi -1);
 	XHighFidelity = rawDataHighFidelity.submat(0,0,NHiFi -1, dimHiFi -1);
 
-	XLowFidelity  = normalizeMatrix(XLowFidelity, xmin, xmax);
+	XLowFidelity  = normalizeMatrix(XLowFidelity, boxConstraints);
+
+
 	XLowFidelity = (1.0/dim)*XLowFidelity;
-	XHighFidelity = normalizeMatrix(XHighFidelity, xmin, xmax);
+	XHighFidelity  = normalizeMatrix(XHighFidelity, boxConstraints);
+
 	XHighFidelity = (1.0/dim)*XHighFidelity;
 
 	prepareErrorData();
@@ -600,17 +620,15 @@ void MultiLevelModel::bindErrorModel(void){
 }
 
 
-void MultiLevelModel::setParameterBounds(vec lb, vec ub){
-
-
-
-	xmin = lb;
-	xmax = ub;
-	checkIfParameterBoundsAreOk();
-	ifBoundsAreSet = true;
-
-
-}
+//void MultiLevelModel::setParameterBounds(vec lb, vec ub){
+//
+//	xmin = lb;
+//	xmax = ub;
+//	checkIfParameterBoundsAreOk();
+//	ifBoundsAreSet = true;
+//
+//
+//}
 
 
 
@@ -636,7 +654,7 @@ mat MultiLevelModel::getRawDataError(void) const{
 
 void MultiLevelModel::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
 
-	std::cout<<"ERROR: MultiLevelModel::calculateExpectedImprovement is not implemented yet!\n";
+	cout<<"ERROR: MultiLevelModel::calculateExpectedImprovement is not implemented yet!\n";
 	abort();
 
 

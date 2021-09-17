@@ -33,10 +33,12 @@
 #define SURROAGE_MODEL_HPP
 #include <armadillo>
 #include "Rodeo_macros.hpp"
+#include "bounds.hpp"
 #include "design.hpp"
 
 
 using namespace arma;
+using std::string;
 
 
 class PartitionData{
@@ -56,7 +58,7 @@ public:
 	bool ifNormalized  = false;
 
 	PartitionData();
-	PartitionData(std::string name);
+	PartitionData(string name);
 	void fillWithData(mat);
 
 	unsigned int numberOfSamples = 0;
@@ -64,7 +66,7 @@ public:
 	void normalizeAndScaleData(vec xmin, vec xmax);
 	double calculateMeanSquaredError(void) const;
 	rowvec getRow(unsigned int indx) const;
-	void saveAsCSVFile(std::string fileName);
+	void saveAsCSVFile(string fileName);
 	void print(void) const;
 
 };
@@ -73,7 +75,7 @@ class SurrogateModel{
 
 protected:
 	unsigned int dim = 0;
-	unsigned int N = 0;
+	unsigned int numberOfSamples = 0;
 	unsigned int NTest = 0;
 
 	mat rawData;
@@ -92,26 +94,24 @@ protected:
 
 
 	double ymin,ymax,yave;
-	vec xmin;
-	vec xmax;
 
-
+	Bounds boxConstraints;
 
 	unsigned int numberOfHyperParameters  = 0;
 	unsigned int numberOfTrainingIterations  = 10000;
 
 
-
 public:
 
 	bool ifInitialized = false;
-	bool ifBoundsAreSet = false;
 	bool ifDataIsRead = false;
 	bool ifNormalized = false;
 	bool ifHasGradientData = false;
 	bool ifHasTestData = false;
 	bool ifDisplay = false;
-	bool ifInputFilenameIsSet = false;
+
+
+	std::string modelName;
 
 
 	mat testResults;
@@ -129,30 +129,28 @@ public:
 
 	void checkIfParameterBoundsAreOk(void) const;
 	void checkRawData(void) const;
+
 	void setParameterBounds(vec xmin, vec xmax);
 	void setParameterBounds(double xmin, double xmax);
-
+	void setParameterBounds(Bounds boxConstraintsInput);
 
 
 
 	void setTestData(mat testData);
 
-	std::string getNameOfHyperParametersFile(void) const;
-	std::string getNameOfInputFile(void) const;
-
-
-	virtual void setNameOfInputFile(std::string filename) = 0;
-	virtual void setNameOfHyperParametersFile(std::string filename) = 0;
-	virtual void setNumberOfTrainingIterations(unsigned int) = 0;
-
-
-
+	string getNameOfHyperParametersFile(void) const;
+	string getNameOfInputFile(void) const;
 
 	unsigned int getDimension(void) const;
 	unsigned int getNumberOfSamples(void) const;
 	mat getRawData(void) const;
 	vec getxmin(void) const;
 	vec getxmax(void) const;
+
+
+	virtual void setNameOfInputFile(string filename) = 0;
+	virtual void setNameOfHyperParametersFile(string filename) = 0;
+	virtual void setNumberOfTrainingIterations(unsigned int) = 0;
 
 	virtual void initializeSurrogateModel(void) = 0;
 	virtual void printSurrogateModel(void) const = 0;
@@ -179,9 +177,11 @@ public:
 	void tryModelOnTestSet(PartitionData &testSet) const;
 	void visualizeTestResults(void) const;
 
-	bool ifModelIsValid(std::string) const;
 
-	void printMsg(std::string msg) const;
+	void printMsg(string msg) const;
+	template <class T>
+	void printMsg(string msg, T) const;
+
 
 
 };

@@ -65,7 +65,7 @@ void AggregationModel::setNameOfInputFile(std::string filename){
 	assert(!filename.empty());
 	filenameDataInput  = filename;
 	krigingModel.setNameOfInputFile(filename);
-	ifInputFilenameIsSet = true;
+
 
 
 }
@@ -99,7 +99,9 @@ void AggregationModel::determineRhoBasedOnData(void){
 		int indexNearestNeighbor = findNearestNeighbor(xp);
 
 		rowvec xdiff = xp - X.row(indexNearestNeighbor);
-		double distance = calculateWeightedL1norm(xdiff, L1NormWeights);
+
+		double distance = weightedL1norm.calculateNorm(xdiff);
+
 
 #if 0
 		printf("point:\n");
@@ -127,7 +129,7 @@ void AggregationModel::determineRhoBasedOnData(void){
 
 	/* obtain gradient statistics */
 	double sumNormGrad = 0.0;
-	for(unsigned int i=0; i<N; i++){
+	for(unsigned int i=0; i<numberOfSamples; i++){
 
 		rowvec gradVec= gradientData.row(i);
 
@@ -137,7 +139,7 @@ void AggregationModel::determineRhoBasedOnData(void){
 
 	}
 
-	double averageNormGrad = sumNormGrad/N;
+	double averageNormGrad = sumNormGrad/numberOfSamples;
 
 	if(ifDisplay){
 
@@ -171,11 +173,11 @@ void AggregationModel::determineRhoBasedOnData(void){
 
 void AggregationModel::initializeSurrogateModel(void){
 
-	assert(ifBoundsAreSet);
 
 	krigingModel.ifHasGradientData = true;
 	krigingModel.readData();
-	krigingModel.setParameterBounds(xmin,xmax);
+	krigingModel.setParameterBounds(boxConstraints);
+
 	krigingModel.normalizeData();
 	krigingModel.initializeSurrogateModel();
 
@@ -185,8 +187,7 @@ void AggregationModel::initializeSurrogateModel(void){
 
 	numberOfHyperParameters = dim + 1;
 
-	L1NormWeights = zeros<vec>(dim);
-	L1NormWeights.fill(1.0);
+	weightedL1norm.initialize(dim);
 
 	ifInitialized = true;
 
@@ -200,40 +201,38 @@ void AggregationModel::initializeSurrogateModel(void){
 
 void AggregationModel::prepareTrainingAndTestData(void){
 
-	int NTestSet = 2*(N/5);
+	assert(ifDataIsRead);
+
+	unsigned int numberOfSamplesInTestSet = 2*(numberOfSamples/5);
+	unsigned int numberOfSamplesInTrainingSet = numberOfSamples - numberOfSamplesInTestSet;
 
 
-	int NTrainingSet = N - NTestSet;
-#if 0
-	cout << "NTestSet  = "<<NTestSet<<"\n";
-	cout << "NTrainingSet = "<<NTrainingSet<<"\n";
-#endif
+	if(ifDisplay){
+
+		cout << "Number of samples in the test set  = "<<numberOfSamplesInTestSet<<"\n";
+		cout << "Number of samples in the training set  = "<<numberOfSamplesInTrainingSet<<"\n";
+		cout << "Problem dimension = "<<dim<<"\n";
+
+	}
+
 	mat shuffledrawData = shuffle(rawData);
 
-	mat trainingRawData = shuffledrawData.submat( 0, 0, NTrainingSet-1, 2*dim );
-	mat testRawData = shuffledrawData.submat( NTrainingSet, 0, N-1, 2*dim );
+	mat trainingRawData = shuffledrawData.submat( 0, 0, numberOfSamplesInTrainingSet-1, dim );
+	mat testRawData = shuffledrawData.submat( numberOfSamplesInTrainingSet, 0, numberOfSamples-1, dim );
+
+	mat trainingData = normalizeMatrix(trainingRawData,boxConstraints);
+
+	mat testData     = normalizeMatrix(testRawData,boxConstraints);
+
+
+	weightedL1norm.setTrainingData(trainingData);
+	weightedL1norm.setValidationData(testData);
+
+
+	printMsg("Training and test data for the L1 norm training are ready...");
 
 
 
-	trainingDataForHyperParameterOptimization.ifHasGradientData = true;
-	trainingDataForHyperParameterOptimization.fillWithData(trainingRawData);
-	trainingDataForHyperParameterOptimization.normalizeAndScaleData(xmin,xmax);
-
-	testDataForHyperParameterOptimization.ifHasGradientData = true;
-	testDataForHyperParameterOptimization.fillWithData(testRawData);
-	testDataForHyperParameterOptimization.normalizeAndScaleData(xmin,xmax);
-
-
-}
-
-PartitionData  AggregationModel::getTrainingData(void) const{
-
-	return trainingDataForHyperParameterOptimization;
-}
-
-PartitionData AggregationModel::getTestData(void) const{
-
-	return testDataForHyperParameterOptimization;
 }
 
 
@@ -242,7 +241,7 @@ void AggregationModel::printSurrogateModel(void) const{
 
 	std::cout<<"Printing parameters of the aggregation model...\n";
 	krigingModel.printSurrogateModel();
-	printVector(L1NormWeights, "L1NormWeights");
+	printVector(weightedL1norm.getWeights(), "L1NormWeights");
 	std::cout<<"rho = "<<rho<<"\n";
 
 }
@@ -258,6 +257,8 @@ void AggregationModel::printHyperParameters(void) const{
 void AggregationModel::saveHyperParameters(void) const{
 
 	assert(numberOfHyperParameters == dim+1);
+
+	vec  L1NormWeights = weightedL1norm.getWeights();
 
 	vec saveBuffer(numberOfHyperParameters);
 	saveBuffer(0) = rho;
@@ -279,6 +280,8 @@ void AggregationModel::loadHyperParameters(void){
 
 	assert(numberOfHyperParameters == dim+1);
 
+	vec  L1NormWeights(dim);
+
 	vec loadBuffer(numberOfHyperParameters);
 	loadBuffer.load(hyperparameters_filename,csv_ascii);
 
@@ -290,6 +293,9 @@ void AggregationModel::loadHyperParameters(void){
 			L1NormWeights(i-1) = loadBuffer(i);
 
 		}
+
+
+		weightedL1norm.setWeights(L1NormWeights);
 
 	}
 	else{
@@ -313,7 +319,7 @@ void AggregationModel::updateAuxilliaryFields(void){
 
 vec AggregationModel::getL1NormWeights(void) const{
 
-	return L1NormWeights;
+	return weightedL1norm.getWeights();
 
 
 }
@@ -321,70 +327,13 @@ vec AggregationModel::getL1NormWeights(void) const{
 
 void AggregationModel::determineOptimalL1NormWeights(void){
 
+	printMsg("Determining optimal weights for the L1 norm...");
+
 	prepareTrainingAndTestData();
 
-	mat rawDataSave = rawData;
-
-	modifyRawDataAndAssociatedVariables(trainingDataForHyperParameterOptimization.rawData);
-
-
-
-	/* we set rho to zero because we want to use only dual model in the training */
-	rho = 0.0;
-
-
-	double minimumValidationError = LARGE;
-	vec weightsBest(dim);
-
-	for(unsigned int trainingIter=0; trainingIter<numberOfTrainingIterations; trainingIter++){
-
-		if(trainingIter>0){
-
-			generateRandomHyperParams();
-
-		}
-
-
-
-		tryModelOnTestSet(testDataForHyperParameterOptimization);
-		double validationError = testDataForHyperParameterOptimization.calculateMeanSquaredError();
-#if 0
-		printf("validationError = %10.7f, minimumValidationError = %10.7f\n",validationError,minimumValidationError);
-#endif
-
-		if(validationError + 10E-06 < minimumValidationError ){
-#if 0
-			cout<<"A better set of hyper-parameters is found\n";
-			cout<<"Error = "<<validationError<<"\n";
-			printVector(L1NormWeights);
-#endif
-			minimumValidationError = validationError;
-			weightsBest = L1NormWeights;
-
-		}
-
-	}
-
-
-
-#if 0
-	std::cout<<"Optimal values found:\n";
-	printVector(weightsBest,"L1NormWeights");
-#endif
-
-
-	L1NormWeights = weightsBest;
-
-	modifyRawDataAndAssociatedVariables(rawDataSave);
-
-
+	weightedL1norm.findOptimalWeights();
 
 }
-
-
-
-
-
 
 
 
@@ -415,29 +364,6 @@ void AggregationModel::train(void){
 }
 
 
-void AggregationModel::generateRandomHyperParams(void){
-
-
-	double sumWeights=0.0;
-	for(unsigned int i=0; i<dim; i++){
-
-		L1NormWeights(i) = generateRandomDouble(0.0, 1.0);
-		sumWeights+= L1NormWeights(i);
-
-	}
-
-	double oneOverSumWeights = 1.0/sumWeights;
-
-	for(unsigned int i=0; i<dim; i++){
-
-		L1NormWeights(i) = dim*L1NormWeights(i)*oneOverSumWeights;
-
-	}
-
-
-
-}
-
 void AggregationModel::setRho(double value){
 
 	rho = value;
@@ -450,17 +376,20 @@ void AggregationModel::modifyRawDataAndAssociatedVariables(mat dataMatrix){
 
 	assert(dataMatrix.n_cols == rawData.n_cols);
 	rawData = dataMatrix;
-	N = rawData.n_rows;
-	Xraw = rawData.submat(0, 0, N - 1, dim - 1);
+	numberOfSamples = rawData.n_rows;
+	Xraw = rawData.submat(0, 0, numberOfSamples - 1, dim - 1);
 	y = rawData.col(dim);
 
 	if(ifHasGradientData){
 
-		gradientData = rawData.submat(0, dim+1, N - 1, 2*dim);
+		gradientData = rawData.submat(0, dim+1, numberOfSamples - 1, 2*dim);
 
 	}
 
-	X = normalizeMatrix(Xraw, xmin, xmax);
+
+	X = normalizeMatrix(Xraw, boxConstraints);
+
+
 	X = (1.0/dim)*X;
 }
 
@@ -469,8 +398,7 @@ double AggregationModel::calculateMinimumDistanceToNearestPoint(const rowvec &x,
 	rowvec xNearestPoint    = X.row(index);
 	rowvec xDiff = x - xNearestPoint;
 
-	return calculateWeightedL1norm(xDiff, L1NormWeights);
-
+	return weightedL1norm.calculateNorm(xDiff);
 
 }
 
@@ -481,7 +409,11 @@ double AggregationModel::calculateDualModelEstimate(const rowvec &x, int index) 
 	rowvec gradNearestPoint = gradientData.row(index);
 	rowvec xNearestPointRaw = Xraw.row(index);
 
+
+	vec xmin = this->boxConstraints.getLowerBounds();
+	vec xmax = this->boxConstraints.getUpperBounds();
 	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
+
 	rowvec xDiffRaw = xp - xNearestPointRaw;
 
 	return yNearestPoint+ dot(xDiffRaw,gradNearestPoint);
@@ -529,7 +461,7 @@ double AggregationModel::calculateDualModelWeight(const rowvec &x, int index) co
 
 	double minimumDistance = calculateMinimumDistanceToNearestPoint(x,index);
 	rowvec gradNearestPoint = gradientData.row(index);
-	double normGradient = calculateL1norm(gradNearestPoint);
+	double normGradient = weightedL1norm.calculateNorm(gradNearestPoint);
 
 	return  exp(-rho*minimumDistance*normGradient);
 
@@ -591,7 +523,7 @@ unsigned int AggregationModel::findNearestNeighbor(const rowvec &xp) const{
 
 		rowvec xdiff = xp - X.row(i);;
 
-		double L1distance = calculateWeightedL1norm(xdiff, L1NormWeights);
+		double L1distance = weightedL1norm.calculateNorm(xdiff);
 
 		if(L1distance < minL1Distance){
 
@@ -616,7 +548,7 @@ void AggregationModel::addNewSampleToData(rowvec newSample){
 	/* avoid points that are too close to each other */
 
 	bool flagTooClose=false;
-	for(unsigned int i=0; i<N; i++){
+	for(unsigned int i=0; i<numberOfSamples; i++){
 
 		rowvec sample = rawData.row(i);
 

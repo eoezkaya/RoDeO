@@ -255,12 +255,6 @@ double Wingweight(double *x);
 double WingweightAdj(double *xin, double *xb);
 
 
-double empty(double *x);
-double emptyAdj(double *x, double *xb);
-
-
-
-
 
 
 #endif

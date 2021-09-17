@@ -80,6 +80,34 @@ TEST(testKriging, testReadDataAndNormalize){
 }
 
 
+
+TEST(testKriging, testsetParameterBounds){
+
+
+	TestFunction testFunctionEggholder("Eggholder",2);
+
+	testFunctionEggholder.setFunctionPointer(Eggholder);
+
+	testFunctionEggholder.setBoxConstraints(0,200.0);
+	mat samples = testFunctionEggholder.generateRandomSamples(10);
+	saveMatToCVSFile(samples,"Eggholder.csv");
+
+
+	KrigingModel testModel("Eggholder");
+
+	testModel.readData();
+
+	Bounds boxConstraints(2);
+	boxConstraints.setBounds(0.0,2.0);
+
+	testModel.setParameterBounds(boxConstraints);
+
+
+}
+
+
+
+
 TEST(testKriging, testInSampleErrorCloseToZeroWithoutTraining){
 
 

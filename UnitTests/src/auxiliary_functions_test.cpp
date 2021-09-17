@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -144,12 +144,12 @@ TEST(testAuxiliaryFunctions, testcheckifTooCLoseVectorMatrixVersion){
 
 TEST(testAuxiliaryFunctions, testremoveSpacesFromString){
 
-std::string testString = " this is a test string ";
+	std::string testString = " this is a test string ";
 
-testString = removeSpacesFromString(testString);
+	testString = removeSpacesFromString(testString);
 
-int ifEqual = testString.compare("thisisateststring");
-ASSERT_EQ(ifEqual,0);
+	int ifEqual = testString.compare("thisisateststring");
+	ASSERT_EQ(ifEqual,0);
 
 
 }
@@ -226,3 +226,26 @@ TEST(testAuxiliaryFunctions, testremoveKeywordFromString){
 
 
 }
+
+TEST(testAuxiliaryFunctions, testisEmpty){
+
+	std::string testStr;
+
+	bool ifEmpty = isEmpty(testStr);
+
+	ASSERT_EQ(ifEmpty , true);
+
+}
+
+
+TEST(testAuxiliaryFunctions, testisNotEmpty){
+
+	std::string testStr = "test";
+
+	bool ifNotEmpty = isNotEmpty(testStr);
+
+	ASSERT_EQ(ifNotEmpty , true);
+
+
+}
+

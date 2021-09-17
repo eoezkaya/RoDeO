@@ -39,10 +39,7 @@ TEST(testMultiLevelModel, testConstructor){
 
 	MultiLevelModel testModel("MLtestModel");
 	ASSERT_FALSE(testModel.ifDataIsRead);
-	ASSERT_FALSE(testModel.ifBoundsAreSet);
 	ASSERT_FALSE(testModel.ifInitialized);
-
-
 
 }
 
@@ -487,12 +484,15 @@ TEST(testMultiLevelModel, testtrainLowFidelityModelWithGradient){
 
 TEST(testMultiLevelModel, testtrainErroModel){
 
+	unsigned int numberOfHiFiSamples = 50;
+	unsigned int numberOfLowFiSamples = 200;
 
-	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",50,200);
+
+	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",numberOfHiFiSamples,numberOfLowFiSamples);
 
 
 	MultiLevelModel testModel("MLtestModel");
-	testModel.ifDisplay = true;
+	testModel.ifDisplay = false;
 	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
 	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
 
@@ -503,7 +503,6 @@ TEST(testMultiLevelModel, testtrainErroModel){
 	testModel.setParameterBounds(lb,ub);
 	testModel.initializeSurrogateModel();
 
-	//	testModel.ifDisplay = true;
 
 	testModel.setNumberOfTrainingIterations(1000);
 	testModel.trainErrorModel();
@@ -512,8 +511,8 @@ TEST(testMultiLevelModel, testtrainErroModel){
 	samplesError.load("MLtestModel_Error.csv",csv_ascii);
 
 
-	double SE = 0.0;
-	for(int i=0; i<50; i++){
+	double squaredError = 0.0;
+	for(int i=0; i<numberOfHiFiSamples; i++){
 
 		rowvec x = samplesError.row(i);
 		double xp[2]; xp[0] = x(0)+0.1; xp[1] = x(1)+0.1;
@@ -524,7 +523,7 @@ TEST(testMultiLevelModel, testtrainErroModel){
 		xIn = normalizeRowVector(xIn, lb, ub);
 		double ftilde = testModel.interpolateError(xIn);
 		double f = -Waves2D(xp)*10.0;
-		SE+= (f-ftilde)*(f-ftilde);
+		squaredError+= (f-ftilde)*(f-ftilde);
 
 #if 0
 		std::cout<<"ftilde = "<<ftilde<<"\n";
@@ -535,7 +534,7 @@ TEST(testMultiLevelModel, testtrainErroModel){
 	}
 
 
-	double MSE = SE/50;
+	double MSE = squaredError/numberOfHiFiSamples;
 
 #if 0
 	std::cout<<"MSE = "<<MSE<<"\n";
@@ -561,7 +560,7 @@ TEST(testMultiLevelModel, testdetermineGammaBasedOnData){
 
 	testModel.setParameterBounds(lb,ub);
 	testModel.initializeSurrogateModel();
-	testModel.ifDisplay = true;
+	testModel.ifDisplay = false;
 	testModel.determineGammaBasedOnData();
 
 
@@ -586,7 +585,7 @@ TEST(testMultiLevelModel, testInterpolate){
 
 	testModel.setParameterBounds(lb,ub);
 	testModel.initializeSurrogateModel();
-	testModel.ifDisplay = true;
+	testModel.ifDisplay = false;
 	testModel.setNumberOfTrainingIterations(1000);
 
 	testModel.train();
@@ -608,7 +607,7 @@ TEST(testMultiLevelModel, testInterpolate){
 
 		SE+= (f-ftilde)*(f-ftilde);
 
-#if 1
+#if 0
 		std::cout<<"\nftilde = "<<ftilde<<"\n";
 		std::cout<<"f      = "<<f<<"\n";
 		std::cout<<"SE = "<<(f-ftilde)*(f-ftilde)<<"\n\n";
@@ -618,7 +617,7 @@ TEST(testMultiLevelModel, testInterpolate){
 
 	double MSE = SE/100;
 
-#if 1
+#if 0
 	std::cout<<"MSE = "<<MSE<<"\n";
 #endif
 	EXPECT_LT(MSE, 1000.0);

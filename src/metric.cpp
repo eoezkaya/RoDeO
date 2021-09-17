@@ -54,6 +54,17 @@ WeightedL1Norm::WeightedL1Norm(vec w){
 
 }
 
+void WeightedL1Norm::initialize(unsigned int dimension){
+
+	assert(dimension > 0);
+	dim = dimension;
+	weights = zeros<vec>(dim);
+	weights.fill(1.0/dim);
+
+
+}
+
+
 void WeightedL1Norm::setTrainingData(mat inputMatrix){
 
 	assert(inputMatrix.n_rows>0);
@@ -74,6 +85,22 @@ void WeightedL1Norm::setNumberOfTrainingIterations(unsigned int value){
 
 }
 
+
+unsigned int  WeightedL1Norm::getDimension(void) const{
+
+	return dim;
+}
+
+vec WeightedL1Norm::getWeights(void) const{
+
+	return weights;
+}
+
+void WeightedL1Norm::setWeights(vec wIn){
+
+	assert(wIn.size() == dim);
+	weights = wIn;
+}
 
 double WeightedL1Norm::calculateNorm(const rowvec &x) const{
 
@@ -141,14 +168,16 @@ double WeightedL1Norm::interpolateByNearestNeighbour(rowvec x) const{
 
 double WeightedL1Norm::calculateMeanSquaredErrorOnData(void) const{
 
-	unsigned int NumberOfValidationSamples = validationData.n_rows;
+	assert(dim == validationData.n_cols-1);
 
-	mat X = validationData.submat(0,0,NumberOfValidationSamples-1,dim-1);
+	unsigned int numberOfValidationSamples = validationData.n_rows;
+
+	mat X = validationData.submat(0,0,numberOfValidationSamples-1,dim-1);
 	vec y = validationData.col(dim);
 
 	double squaredError = 0.0;
 
-	for(unsigned int i=0; i<NumberOfValidationSamples; i++){
+	for(unsigned int i=0; i<numberOfValidationSamples; i++){
 
 		rowvec xp = X.row(i);
 		double fTilde = interpolateByNearestNeighbour(xp);
@@ -160,7 +189,7 @@ double WeightedL1Norm::calculateMeanSquaredErrorOnData(void) const{
 	}
 
 
-	return squaredError/NumberOfValidationSamples ;
+	return squaredError/numberOfValidationSamples ;
 
 }
 
@@ -181,11 +210,11 @@ void WeightedL1Norm::findOptimalWeights(void){
 		double error = calculateMeanSquaredErrorOnData();
 
 
-		if(error< minError){
+		if(error < minError){
 
 			if(ifDisplay){
 
-				printVector(weights,"Found better weights for the L1 norm");
+				printVector(weights,"weights");
 				std::cout<<"minError = "<<minError<<"\n";
 
 			}
@@ -204,7 +233,7 @@ void WeightedL1Norm::findOptimalWeights(void){
 
 	if(ifDisplay){
 
-		printVector(weights,"Optimal weights for the L1 norm");
+		printVector(weights,"optimal weights");
 
 	}
 

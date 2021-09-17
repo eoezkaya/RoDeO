@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -42,6 +42,7 @@
 #include <math.h>
 #include <cassert>
 using namespace arma;
+using std::string;
 
 void executePythonScript(std::string command);
 
@@ -58,51 +59,16 @@ void perturbVectorUniform(frowvec &xp,float sigmaPert);
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
 
 
-//template<class T>
-//void find_max_with_index(T vec, int size, double *max_val, int *indx){
-//
-//	*max_val = -LARGE;
-//
-//	for(int i=0; i<size; i++){
-//
-//		if(vec[i] > *max_val){
-//
-//			*max_val = vec[i];
-//			*indx = i;
-//		}
-//
-//	}
-//
-//
-//}
-//
-//
-//
-//template<class T>
-//void find_min_with_index(T vec, int size, double *min_val, int *indx){
-//
-//	*min_val = LARGE;
-//
-//	for(int i=0; i<size; i++){
-//
-//		if(vec[i] < *min_val){
-//
-//			*min_val = vec[i];
-//			*indx = i;
-//		}
-//
-//	}
-//
-//
-//}
 
 bool checkValue(double value, double expected, double tolerance);
 bool checkValue(double value, double expected);
 bool checkMatrix(mat values, mat expected, double tolerance);
 bool checkMatrix(mat values, mat expected);
 
-void abortIfFalse(bool flag, std::string file, int line);
-void abortIfFalse(bool flag);
+void abortIfDoesNotMatch(int firstNumber, int secondNumber, string message = "None");
+
+bool isEmpty(std::string);
+bool isNotEmpty(std::string);
 
 bool checkIfOn(std::string keyword);
 bool checkIfOff(std::string keyword);

@@ -37,17 +37,20 @@
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
 
+using std::string;
+
+
 class MultiLevelModel : public SurrogateModel {
 
 private:
 
-	std::string label;
-	std::string labelErrorModel;
-	std::string labelLowFidelityModel;
+	string label;
+	string labelErrorModel;
+	string labelLowFidelityModel;
 
-	std::string inputFileNameLowFidelityData;
-	std::string inputFileNameHighFidelityData;
-	std::string inputFileNameError;
+	string inputFileNameLowFidelityData;
+	string inputFileNameHighFidelityData;
+	string inputFileNameError;
 
 	SurrogateModel *lowFidelityModel;
 	SurrogateModel *errorModel;
@@ -95,14 +98,14 @@ public:
 
 
 	MultiLevelModel();
-	MultiLevelModel(std::string);
+	MultiLevelModel(string);
 
-	void setNameOfInputFile(std::string filename);
-	void setNameOfHyperParametersFile(std::string filename);
+	void setNameOfInputFile(string filename);
+	void setNameOfHyperParametersFile(string filename);
 	void setNumberOfTrainingIterations(unsigned int);
 
-	void setinputFileNameHighFidelityData(std::string);
-	void setinputFileNameLowFidelityData(std::string);
+	void setinputFileNameHighFidelityData(string);
+	void setinputFileNameLowFidelityData(string);
 
 	void readData(void);
 
@@ -149,7 +152,7 @@ public:
 
 
 
-	void setParameterBounds(vec, vec);
+//	void setParameterBounds(vec, vec);
 
 	void bindLowFidelityModel(void);
 	void bindErrorModel(void);

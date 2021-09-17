@@ -94,6 +94,11 @@ private:
 	int ID = -1;
 	bool ifInequalityConstraintSpecified  = false;
 
+	void readOutputWithoutMarkers(Design &d) const;
+	void readOutputWithMarkers(Design &d) const;
+
+	bool isInequalityTypeValid(const std::string &);
+
 
 public:
 

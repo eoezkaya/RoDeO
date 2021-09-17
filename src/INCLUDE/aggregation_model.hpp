@@ -43,13 +43,7 @@ private:
 
 	KrigingModel krigingModel;
 
-	vec L1NormWeights;
-
 	double rho = 1.0;
-
-
-	PartitionData trainingDataForHyperParameterOptimization;
-	PartitionData testDataForHyperParameterOptimization;
 
 	unsigned int numberOfTrainingIterations;
 
@@ -83,14 +77,12 @@ public:
 
 
 	vec getL1NormWeights(void) const;
-	PartitionData getTrainingData(void) const;
-	PartitionData getTestData(void) const;
+
 
 	double calculateMinimumDistanceToNearestPoint(const rowvec &, int) const;
 	double calculateDualModelEstimate(const rowvec &, int) const;
 	double calculateDualModelWeight(const rowvec &, int) const;
 
-	void generateRandomHyperParams(void);
 	double interpolate(rowvec) const ;
 	double interpolateWithGradients(rowvec) const ;
 	void interpolateWithVariance(rowvec,double *,double *) const;

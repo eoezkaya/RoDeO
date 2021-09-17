@@ -30,6 +30,9 @@
  */
 #ifndef MATRIX_OPERATIONS_HPP
 #define MATRIX_OPERATIONS_HPP
+
+#include "bounds.hpp"
+
 #include <armadillo>
 #include <cassert>
 #include <cmath>
@@ -39,7 +42,7 @@
 #include <quadmath.h>
 using namespace arma;
 
-
+void abortIfHasNan(rowvec &);
 
 bool isEqual(const mat &A, const mat&B, double tolerance);
 
@@ -65,5 +68,6 @@ void saveMatToCVSFile(mat M, std::string fileName);
 
 mat normalizeMatrix(mat matrixIn);
 mat normalizeMatrix(mat matrixIn, vec xmin, vec xmax);
+mat normalizeMatrix(mat matrixIn, Bounds &boxConstraints);
 
 #endif

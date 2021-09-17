@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -33,6 +33,11 @@
 #include "objective_function.hpp"
 #include "optimization.hpp"
 #include "matrix_vector_operations.hpp"
+#include "test_functions.hpp"
+
+#define TEST_OBJECTIVE_FUNCTION
+#ifdef TEST_OBJECTIVE_FUNCTION
+
 TEST(testObjectiveFunction, testinitializeSurrogate){
 
 	mat samples(100,5,fill::randu);
@@ -43,6 +48,10 @@ TEST(testObjectiveFunction, testinitializeSurrogate){
 	ObjectiveFunction objFunTest("testObjectiveFunction",4);
 	objFunTest.setParameterBounds(lb,ub);
 
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+	testObjectiveFunctionDef.outputFilename = "testObjectiveFunction.csv";
+
+	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
 
 	objFunTest.initializeSurrogate();
 
@@ -62,8 +71,6 @@ TEST(testObjectiveFunction, testinitializeSurrogate){
 	ASSERT_EQ(testModel.getDimension(), 4);
 	ASSERT_FALSE(testModel.ifHasGradientData);
 	ASSERT_TRUE(testModel.ifDataIsRead);
-	ASSERT_TRUE(testModel.ifBoundsAreSet);
-
 
 
 	remove("ObjectiveFunctionTest.csv");
@@ -74,14 +81,22 @@ TEST(testObjectiveFunction, testinitializeSurrogate){
 
 TEST(testObjectiveFunction, testinitializeSurrogateWithAdjoint){
 
-	mat samples(100,5,fill::randu);
+	unsigned int N = 100;
+	unsigned dim = 2;
+
+	mat samples(N,2*dim+1,fill::randu);
 	saveMatToCVSFile(samples,"testObjectiveFunction.csv");
-	vec lb(2); lb.fill(0.0);
-	vec ub(2); ub.fill(1.0);
+	vec lowerBounds(dim); lowerBounds.fill(0.0);
+	vec upperBounds(dim); upperBounds.fill(1.0);
 
 	ObjectiveFunction objFunTest("testObjectiveFunction",2);
-	objFunTest.setParameterBounds(lb,ub);
-	objFunTest.setGradientOn();
+	objFunTest.setParameterBounds(lowerBounds,upperBounds);
+
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+	testObjectiveFunctionDef.outputFilename = "testObjectiveFunction.csv";
+	testObjectiveFunctionDef.ifGradient = true;
+	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
+
 
 	objFunTest.initializeSurrogate();
 	AggregationModel testModel = objFunTest.getSurrogateModelGradient();
@@ -93,11 +108,10 @@ TEST(testObjectiveFunction, testinitializeSurrogateWithAdjoint){
 	ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
 	ASSERT_FALSE(ifrawDataIsConsistent);
 
-	/* check dimension */
-	ASSERT_EQ(testModel.getDimension(), 2);
+
+	ASSERT_EQ(testModel.getDimension(), dim);
 	ASSERT_TRUE(testModel.ifHasGradientData);
 	ASSERT_TRUE(testModel.ifDataIsRead);
-	ASSERT_TRUE(testModel.ifBoundsAreSet);
 
 
 	remove("ObjectiveFunctionTest.csv");
@@ -106,19 +120,88 @@ TEST(testObjectiveFunction, testinitializeSurrogateWithAdjoint){
 
 TEST(testObjectiveFunction, testinitializeSurrogateWithML){
 
+	unsigned int nSamplesLowFi = 200;
+	unsigned int nSamplesHiFi  = 50;
+	unsigned int dim = 2;
 
-	mat samples(100,5,fill::randu);
-	saveMatToCVSFile(samples,"testObjectiveFunction.csv");
-	vec lb(4); lb.fill(0.0);
-	vec ub(4); ub.fill(1.0);
+	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
 
-	ObjectiveFunction objFunTest("testObjectiveFunction",4);
-	objFunTest.setParameterBounds(lb,ub);
-	objFunTest.setMultiLevelOn();
+
+	MultiLevelModel testModel("MLtestModel");
+
+	vec lowerBounds(dim); lowerBounds.fill(-6.0);
+	vec upperBounds(dim); upperBounds.fill(6.0);
+
+
+	ObjectiveFunction objFunTest("testObjectiveFunction",2);
+	objFunTest.setParameterBounds(lowerBounds,upperBounds);
+
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+	testObjectiveFunctionDef.outputFilename      = "highFidelityTestData.csv";
+	testObjectiveFunctionDef.outputFilenameLowFi = "lowFidelityTestData.csv";
+	testObjectiveFunctionDef.ifMultiLevel = true;
+
+
+	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
+	objFunTest.print();
+
 
 	objFunTest.initializeSurrogate();
 
-	abort();
+	MultiLevelModel getTestModel = objFunTest.getSurrogateModelML();
+
+	ASSERT_EQ(getTestModel.getDimension(), dim);
+
+
+}
+
+
+TEST(testObjectiveFunction, isMarkerFound){
+
+	unsigned dim = 2;
+	std::string marker = "Objective_function";
+	ObjectiveFunction objFunTest("testObjectiveFunction",2);
+
+	size_t found = objFunTest.isMarkerFound(marker,"Objective_function = 3.1");
+
+	ASSERT_TRUE(found != std::string::npos);
+
+	found = objFunTest.isMarkerFound(marker,"some irrelevant string");
+
+	ASSERT_TRUE(found == std::string::npos);
+
+	found = objFunTest.isMarkerFound(marker,"SomeObjective_function = 3.1");
+
+	ASSERT_TRUE(found == std::string::npos);
+
+
+
+}
+
+
+TEST(testObjectiveFunction, getMarkerValue){
+
+	unsigned dim = 2;
+	ObjectiveFunction objFunTest("testObjectiveFunction",2);
+
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+	testObjectiveFunctionDef.marker = "Objective_function";
+	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
+	double value = objFunTest.getMarkerValue("Objective_function = 3.1", 0);
+	EXPECT_EQ(value,3.1);
+
+}
+
+TEST(testObjectiveFunction, getMarkerAdjointValues){
+
+	unsigned dim = 2;
+	ObjectiveFunction objFunTest("testObjectiveFunction",2);
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+	testObjectiveFunctionDef.markerForGradient = "gradient";
+	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
+	rowvec gradient = objFunTest.getMarkerAdjointValues("gradient = 3.1, 2.7", 0);
+	EXPECT_EQ(gradient(0),3.1);
+	EXPECT_EQ(gradient(1),2.7);
 
 }
 
@@ -292,20 +375,25 @@ TEST(testObjectiveFunction, calculateExpectedImprovement){
 	vec ub(2); ub.fill(1.0);
 	saveMatToCVSFile(samples,"EITest.csv");
 
-	CDesignExpectedImprovement testDesign(2,1);
-	testDesign.generateRandomDesignVector();
-
 	ObjectiveFunction objFunTest("EITest",2);
 	objFunTest.setParameterBounds(lb,ub);
-	objFunTest.bindSurrogateModel();
 
+
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+	testObjectiveFunctionDef.outputFilename = "EITest.csv";
+	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
+
+	objFunTest.bindSurrogateModel();
 	objFunTest.initializeSurrogate();
+
+	CDesignExpectedImprovement testDesign(2,1);
+	testDesign.generateRandomDesignVector();
 
 	objFunTest.calculateExpectedImprovement(testDesign);
 	EXPECT_GE(testDesign.valueExpectedImprovement, 0.0);
 
 }
 
-
+#endif
 
 

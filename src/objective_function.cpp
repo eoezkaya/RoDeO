@@ -43,6 +43,8 @@
 #include "optimization.hpp"
 #include "objective_function.hpp"
 #include "lhs.hpp"
+#include "bounds.hpp"
+
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -58,7 +60,7 @@ ObjectiveFunctionDefinition::ObjectiveFunctionDefinition(void){
 
 ObjectiveFunctionDefinition::ObjectiveFunctionDefinition(std::string name){
 
-	this->name = name;
+	name = name;
 
 }
 
@@ -70,13 +72,13 @@ void ObjectiveFunctionDefinition::print(void) const{
 	std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
 
 
-	if(this->ifMultiLevel == false){
+	if(ifMultiLevel == false){
 
 
 		std::cout<< "Output filename = "<<outputFilename<<"\n";
 		std::cout<< "Executable name = "<<executableName<<"\n";
 
-		if(!path.empty()){
+		if(isNotEmpty(path)){
 
 			std::cout<< "Executable path = "<<path<<"\n";
 
@@ -96,11 +98,6 @@ void ObjectiveFunctionDefinition::print(void) const{
 		std::cout<<"Multilevel option is active...\n";
 
 
-
-
-
-
-
 	}
 
 
@@ -116,12 +113,6 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int 
 
 	dim = dimension;
 	name = objectiveFunName;
-	objectiveFunPtr = empty;
-	objectiveFunAdjPtr = emptyAdj;
-	assert(dim < 1000);
-
-
-
 
 
 }
@@ -129,21 +120,17 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int 
 
 ObjectiveFunction::ObjectiveFunction(){
 
-	objectiveFunPtr = empty;
-	objectiveFunAdjPtr = emptyAdj;
-
-
 
 }
 
 
 void ObjectiveFunction::bindSurrogateModel(void){
 
+	assert(ifDefinitionIsSet);
 
 	if(ifGradientAvailable == false){
 
 		surrogate = &surrogateModel;
-
 
 	}
 	else{
@@ -154,54 +141,58 @@ void ObjectiveFunction::bindSurrogateModel(void){
 
 	if(ifMultilevel){
 
+		surrogateModelML.setinputFileNameHighFidelityData(fileNameInputRead);
+		surrogateModelML.setinputFileNameLowFidelityData(fileNameInputReadLowFi);
 		surrogate = &surrogateModelML;
 
 	}
 
+	surrogate->setNameOfInputFile(fileNameInputRead);
 
-
-#if 0
-	surrogate->printSurrogateModel();
-#endif
 
 }
 
 
 void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition definition){
 
-	this->executableName = definition.executableName;
-	this->executablePath = definition.path;
-	this->fileNameDesignVector = definition.designVectorFilename;
-	this->fileNameInputRead = definition.outputFilename;
+	executableName = definition.executableName;
+	executablePath = definition.path;
+	fileNameDesignVector = definition.designVectorFilename;
+	fileNameInputRead = definition.outputFilename;
+	ifGradientAvailable = definition.ifGradient;
 
-	if(!definition.marker.empty()){
-		this->readMarker = definition.marker;
-		this->ifMarkerIsSet = true;
+
+	if(isNotEmpty(definition.marker)){
+
+		readMarker = definition.marker;
+		ifMarkerIsSet = true;
 
 	}
 
-	if(!definition.markerForGradient.empty()){
+
+	if(isNotEmpty(definition.markerForGradient)){
 
 
-		this->readMarkerAdjoint = definition.markerForGradient;
-		this->ifAdjointMarkerIsSet = true;
+		readMarkerAdjoint = definition.markerForGradient;
+		ifAdjointMarkerIsSet = true;
 
 	}
 
 
 	if(definition.ifMultiLevel){
 
-		this->ifMultilevel = definition.ifMultiLevel;
-		this->executableNameLowFi = definition.executableNameLowFi;
-		this->fileNameInputReadLowFi = definition.outputFilenameLowFi;
-		this->executablePathLowFi = definition.pathLowFi;
-		this->readMarkerLowFi = definition.markerLowFi;
-		this->readMarkerAdjointLowFi = definition.markerForGradientLowFi;
+		ifMultilevel = definition.ifMultiLevel;
+		executableNameLowFi = definition.executableNameLowFi;
+		fileNameInputReadLowFi = definition.outputFilenameLowFi;
+		executablePathLowFi = definition.pathLowFi;
+		readMarkerLowFi = definition.markerLowFi;
+		readMarkerAdjointLowFi = definition.markerForGradientLowFi;
 
 
 	}
 
 
+	ifDefinitionIsSet = true;
 
 
 
@@ -209,15 +200,15 @@ void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition de
 
 void ObjectiveFunction::setFunctionPointer(double (*objFun)(double *)){
 
-	this->objectiveFunPtr = objFun;
-	this->ifFunctionPointerIsSet = true;
+	objectiveFunPtr = objFun;
+	ifFunctionPointerIsSet = true;
 
 }
 
 void ObjectiveFunction::setFunctionPointer(double (*objFun)(double *, double *)){
 
-	this->objectiveFunAdjPtr = objFun;
-	this->ifFunctionPointerIsSet = true;
+	objectiveFunAdjPtr = objFun;
+	ifFunctionPointerIsSet = true;
 
 }
 
@@ -235,16 +226,7 @@ void ObjectiveFunction::setGradientOff(void){
 
 }
 
-void ObjectiveFunction::setMultiLevelOn(void){
 
-	ifMultilevel = true;
-
-}
-void ObjectiveFunction::setMultiLevelOff(void){
-
-	ifMultilevel = false;
-
-}
 
 
 void ObjectiveFunction::setNumberOfTrainingIterationsForSurrogateModel(unsigned int nIter){
@@ -285,8 +267,8 @@ void ObjectiveFunction::setParameterBounds(vec lb, vec ub){
 
 	assert(dim == lb.size());
 	assert(dim == ub.size());
-	this->lb = lb;
-	this->ub = ub;
+	lowerBounds = lb;
+	upperBounds = ub;
 
 	ifParameterBoundsAreSet = true;
 }
@@ -295,20 +277,27 @@ void ObjectiveFunction::setParameterBounds(vec lb, vec ub){
 
 KrigingModel ObjectiveFunction::getSurrogateModel(void) const{
 
-	return this->surrogateModel;
+	return surrogateModel;
 
 }
 
 AggregationModel ObjectiveFunction::getSurrogateModelGradient(void) const{
 
-	return this->surrogateModelGradient;
+	return surrogateModelGradient;
+
+}
+
+MultiLevelModel ObjectiveFunction::getSurrogateModelML(void) const{
+
+	return surrogateModelML;
 
 }
 
 
 void ObjectiveFunction::setReadMarker(std::string marker){
 
-	assert(!marker.empty());
+	assert(isNotEmpty(marker));
+
 	readMarker = marker;
 	ifMarkerIsSet = true;
 
@@ -319,11 +308,13 @@ std::string ObjectiveFunction::getReadMarker(void) const{
 }
 void ObjectiveFunction::setReadMarkerAdjoint(std::string marker){
 
-	assert(!marker.empty());
+	assert(isNotEmpty(marker));
+
 	readMarkerAdjoint = marker;
 	ifAdjointMarkerIsSet = true;
 
 }
+
 std::string ObjectiveFunction::getReadMarkerAdjoint(void) const{
 
 	return readMarkerAdjoint;
@@ -332,18 +323,23 @@ std::string ObjectiveFunction::getReadMarkerAdjoint(void) const{
 void ObjectiveFunction::initializeSurrogate(void){
 
 	assert(ifParameterBoundsAreSet);
+	assert(ifDefinitionIsSet);
 
 	bindSurrogateModel();
 
+	surrogate->ifDisplay = true;
 
 	surrogate->readData();
-	surrogate->setParameterBounds(lb,ub);
+
+	Bounds boxConstraints(lowerBounds,upperBounds);
+
+	surrogate->setParameterBounds(boxConstraints);
 	surrogate->normalizeData();
 	surrogate->initializeSurrogateModel();
 	surrogate->setNumberOfTrainingIterations(numberOfIterationsForSurrogateTraining);
 
 #if 0
-	surrogate->printHyperParameters();
+	surrogate->printSurrogateModel();
 #endif
 
 
@@ -412,12 +408,11 @@ bool ObjectiveFunction::checkIfGradientAvailable(void) const{
 
 std::string ObjectiveFunction::getExecutionCommand(void) const{
 
-
-	assert(!executableName.empty());
+	assert(isNotEmpty(executableName));
 
 	std::string runCommand;
 
-	if(!executablePath.empty()) {
+	if(isNotEmpty(executablePath)) {
 
 		runCommand = executablePath +"/" + executableName;
 	}
@@ -434,11 +429,11 @@ std::string ObjectiveFunction::getExecutionCommand(void) const{
 std::string ObjectiveFunction::getExecutionCommandLowFi(void) const{
 
 	assert(ifMultilevel);
-	assert(!executableNameLowFi.empty());
+	assert(isNotEmpty(executableNameLowFi));
 
 	std::string runCommand;
 
-	if(!executablePathLowFi.empty()) {
+	if(isNotEmpty(executablePathLowFi)) {
 
 		runCommand = executablePathLowFi +"/" + executableNameLowFi;
 	}
@@ -448,7 +443,6 @@ std::string ObjectiveFunction::getExecutionCommandLowFi(void) const{
 	}
 
 	return runCommand;
-
 
 }
 
@@ -478,20 +472,49 @@ void ObjectiveFunction::addDesignToData(Design &d){
 }
 
 
+void ObjectiveFunction::readOutputWithoutMarkers(Design &outputDesignBuffer) const{
+
+	std::ifstream inputFileStream(fileNameInputRead, ios::in);
+
+	if (!inputFileStream.is_open()) {
+
+		cout << "ERROR: There was a problem opening the input file!\n";
+		abort();
+	}
+
+	double functionValue;
+	inputFileStream >> functionValue;
+
+
+	outputDesignBuffer.trueValue = functionValue;
+	outputDesignBuffer.objectiveFunctionValue = functionValue;
+
+	if(ifGradientAvailable){
+
+		for(unsigned int i=0; i<dim;i++){
+
+			inputFileStream >> outputDesignBuffer.gradient(i);
+
+		}
+
+	}
+
+	inputFileStream.close();
+
+}
+
 void ObjectiveFunction::readEvaluateOutput(Design &d){
 
 
 
 	assert(!this->fileNameInputRead.empty());
 	assert(d.dimension == dim);
-	assert(objectiveFunPtr == empty);
-
 
 	if(ifMarkerIsSet && ifGradientAvailable){
 
 		if(!ifAdjointMarkerIsSet){
 
-			std::cout << "ERROR: Adjoint marker is not set for: "<< this->name<<"\n";
+			cout << "ERROR: Adjoint marker is not set for: "<< this->name<<"\n";
 			abort();
 
 		}
@@ -501,17 +524,17 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 	if(ifAdjointMarkerIsSet == true && ifGradientAvailable == false){
 
 
-		std::cout << "ERROR: Adjoint marker is set for the objective function but gradient is not available!\n";
-		std::cout << "Did you set GRADIENT_AVAILABLE properly?\n";
+		cout << "ERROR: Adjoint marker is set for the objective function but gradient is not available!\n";
+		cout << "Did you set GRADIENT_AVAILABLE properly?\n";
 		abort();
 	}
 
 
-	std::ifstream ifile(fileNameInputRead, std::ios::in);
+	std::ifstream ifile(fileNameInputRead, ios::in);
 
 	if (!ifile.is_open()) {
 
-		std::cout << "ERROR: There was a problem opening the input file!\n";
+		cout << "ERROR: There was a problem opening the input file!\n";
 		abort();
 	}
 
@@ -519,22 +542,8 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 
 		/* If there is not any marker, just reads the functional value (and gradient) from the input file */
 
-		double functionValue;
-		ifile >> functionValue;
+		readOutputWithoutMarkers(d);
 
-
-		d.trueValue = functionValue;
-		d.objectiveFunctionValue = functionValue;
-
-		if(ifGradientAvailable){
-
-			for(unsigned int i=0; i<dim;i++){
-
-				ifile >> d.gradient(i);
-
-			}
-
-		}
 
 	}
 
@@ -543,24 +552,24 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 
 		for( std::string line; getline( ifile, line ); ){
 
-			std::size_t found = line.find(readMarker+" ");
+			size_t found = line.find(readMarker+" ");
 
 
 
-			if (found!=std::string::npos){
+			if (found != std::string::npos){
 
 				line = removeSpacesFromString(line);
 				line.erase(0,found+1+this->readMarker.size());
 
-				d.trueValue = std::stod(line);
-				d.objectiveFunctionValue = std::stod(line);
+				d.trueValue = stod(line);
+				d.objectiveFunctionValue = stod(line);
 
 			}
 
 			if(this->ifGradientAvailable){
 
 
-				std::size_t found2 = line.find(readMarkerAdjoint+" ");
+				size_t found2 = line.find(readMarkerAdjoint+" ");
 
 
 
@@ -608,7 +617,7 @@ void ObjectiveFunction::evaluate(Design &d){
 		std::string runCommand = getExecutionCommand();
 
 #if 0
-		std::cout<<"calling a system command\n";
+		cout<<"calling a system command\n";
 #endif
 		system(runCommand.c_str());
 
@@ -660,19 +669,20 @@ void ObjectiveFunction::evaluateAdjoint(Design &d){
 
 double ObjectiveFunction::interpolate(rowvec x) const{
 
-	return this->surrogate->interpolate(x);
+	return surrogate->interpolate(x);
 
 }
 
 void ObjectiveFunction::print(void) const{
+
 	std::cout << "\n#####################################################\n";
-	std::cout<<"Objective Function"<<std::endl;
-	std::cout<<"Name: "<<name<<std::endl;
-	std::cout<<"Dimension: "<<dim<<std::endl;
+	std::cout<<"Objective Function"<<endl;
+	std::cout<<"Name: "<<name<<endl;
+	std::cout<<"Dimension: "<<dim<<endl;
 	std::cout<<"ExecutableName: "<<executableName<<"\n";
 	std::cout<<"ExecutablePath: "<<executablePath<<"\n";
 	std::cout<<"Output filename: "<<fileNameInputRead<<"\n";
-	std::cout<<"Input filename: "<<fileNameDesignVector<<"\n";
+	std::cout<<"Design vector filename: "<<fileNameDesignVector<<"\n";
 
 	if(this->ifMarkerIsSet){
 
@@ -705,4 +715,90 @@ void ObjectiveFunction::printSurrogate(void) const{
 	surrogate->printSurrogateModel();
 
 }
+
+bool ObjectiveFunction::checkIfMarkersAreNotSet(void) const{
+
+	if(ifMarkerIsSet == false && ifAdjointMarkerIsSet == false ){
+
+		return true;
+	}
+
+	else return false;
+
+}
+
+
+size_t ObjectiveFunction::isMarkerFound(const std::string &marker, const std::string &inputStr) const{
+
+	assert(isNotEmpty(marker));
+
+	std::string bufferStr(inputStr);
+	bufferStr = removeSpacesFromString(bufferStr);
+	size_t foundMarkerWithEqualitySign = bufferStr.find(marker+"=");
+	size_t foundMarkerWithColonSign    = bufferStr.find(marker+":");
+
+
+
+	if(foundMarkerWithEqualitySign != std::string::npos){
+
+		if(foundMarkerWithEqualitySign == 0) return foundMarkerWithEqualitySign;
+
+		else return std::string::npos;
+	}
+
+	if(foundMarkerWithColonSign != std::string::npos){
+
+		if(foundMarkerWithColonSign == 0) return foundMarkerWithColonSign;
+
+		else return std::string::npos;
+	}
+
+
+	return std::string::npos;
+
+
+}
+
+
+
+double ObjectiveFunction::getMarkerValue(const std::string &inputStr, size_t foundMarkerPosition) const{
+
+
+	double result = 0.0;
+	std::string bufferStr(inputStr);
+
+	bufferStr = removeSpacesFromString(bufferStr);
+	bufferStr.erase(0,foundMarkerPosition+1+readMarker.size());
+
+	return stod(bufferStr);
+
+}
+
+rowvec ObjectiveFunction::getMarkerAdjointValues(const std::string &inputStr, size_t foundMarkerPosition) const{
+
+	rowvec result(dim);
+	std::string bufferStr(inputStr);
+	bufferStr = removeSpacesFromString(bufferStr);
+	bufferStr.erase(0,foundMarkerPosition+1+readMarkerAdjoint.size());
+	vec values = getDoubleValuesFromString(bufferStr,',');
+
+	if(values.size() != dim){
+
+		std::cout<<"ERROR: Array size while reading the gradient does not match with the dimension!\n";
+		abort();
+
+	}
+
+	for(unsigned int i=0; i<dim;i++){
+
+		result(i) = values(i);
+
+	}
+
+	return result;
+
+
+}
+
+
 

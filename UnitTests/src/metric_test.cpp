@@ -33,6 +33,19 @@
 #include "test_functions.hpp"
 #include<gtest/gtest.h>
 
+TEST(testMetric, testinitalize){
+
+	WeightedL1Norm normTest;
+
+	normTest.initialize(5);
+
+	unsigned int dim = normTest.getDimension();
+
+	ASSERT_EQ(dim, 5);
+
+}
+
+
 TEST(testMetric, testfindNearestNeighborL1){
 
 	mat X(100,5, fill::randu);
@@ -148,16 +161,19 @@ TEST(testMetric, testfindOptimalWeights){
 	}
 
 
-
 	WeightedL1Norm normTest(dim);
 	normTest.setTrainingData(trainingData);
 	normTest.setValidationData(validationData);
 
-	normTest.ifDisplay = true;
-	normTest.setNumberOfTrainingIterations(1000*dim);
+	normTest.ifDisplay = false;
+	normTest.setNumberOfTrainingIterations(5000);
 	normTest.findOptimalWeights();
 
-	abort();
+	vec w = normTest.getWeights();
+
+	EXPECT_GT(w(0), 1.0/dim);
+	EXPECT_GT(w(1), 1.0/dim);
+
 
 }
 

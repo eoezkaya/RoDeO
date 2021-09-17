@@ -1,4 +1,10 @@
 /*
+ * RoDeO, a Robust Design Optimization Package
+ *
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Homepage: http://www.scicomp.uni-kl.de
+ * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
+ *
  * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
  *
  * This file is part of RoDeO
@@ -107,7 +113,6 @@ TEST(testDesign, testsaveToAFile){
 	constraints(0) = 1.3; constraints(1) = 0.12;
 	testDesign.constraintTrueValues = constraints;
 
-	testDesign.print();
 	testDesign.saveToAFile("testDesign.dat");
 
 }

@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -75,7 +75,7 @@ void GEKModel::setNameOfInputFile(std::string filename){
 
 	assert(!filename.empty());
 	filenameDataInput = filename;
-	ifInputFilenameIsSet = true;
+//	ifInputFilenameIsSet = true;
 
 }
 
@@ -115,11 +115,11 @@ void GEKModel::initializeSurrogateModel(void){
 		epsilonGEK = 0.0;
 
 		/* check if two sample are too close to each other */
-		for(unsigned int i=0; i<N; i++){
+		for(unsigned int i=0; i<numberOfSamples; i++){
 
 			rowvec sample1 = X.row(i);
 
-			for(unsigned int j=i+1; j<N; j++){
+			for(unsigned int j=i+1; j<numberOfSamples; j++){
 
 				rowvec sample2 = X.row(j);
 
@@ -135,24 +135,24 @@ void GEKModel::initializeSurrogateModel(void){
 		beta0 = 0.0;
 
 
-		correlationMatrixDot = zeros(N*(dim+1),N*(dim+1));
-		upperDiagonalMatrixDot= zeros<mat>(N*(dim+1),N*(dim+1));
+		correlationMatrixDot = zeros(numberOfSamples*(dim+1),numberOfSamples*(dim+1));
+		upperDiagonalMatrixDot= zeros<mat>(numberOfSamples*(dim+1),numberOfSamples*(dim+1));
 
-		R_inv_ys_min_beta = zeros<vec>(N*(dim+1));
-		R_inv_F= zeros<vec>(N*(dim+1));
-		vectorOfF= zeros<vec>(N*(dim+1));
+		R_inv_ys_min_beta = zeros<vec>(numberOfSamples*(dim+1));
+		R_inv_F= zeros<vec>(numberOfSamples*(dim+1));
+		vectorOfF= zeros<vec>(numberOfSamples*(dim+1));
 
-		for(unsigned int i=0; i<N; i++) {
+		for(unsigned int i=0; i<numberOfSamples; i++) {
 
 			vectorOfF(i)=1.0;
 		}
 
 
-		yGEK = zeros<vec>(N*(dim+1));
+		yGEK = zeros<vec>(numberOfSamples*(dim+1));
 
 		/* first N entries are the functional values */
 
-		for(unsigned int i=0; i<N; i++){
+		for(unsigned int i=0; i<numberOfSamples; i++){
 
 			yGEK(i) =y(i);
 
@@ -164,9 +164,14 @@ void GEKModel::initializeSurrogateModel(void){
 
 			vec gradx = gradientData.col(i);
 
-			for(unsigned int j=0; j<N; j++){
+			for(unsigned int j=0; j<numberOfSamples; j++){
 
-				yGEK(N+i*N+j) = gradx(j)*(xmax(i)-xmin(i))*dim;
+				double xmin = boxConstraints.getLowerBound(i);
+				double xmax = boxConstraints.getUpperBound(i);
+
+				yGEK(numberOfSamples+i*numberOfSamples+j) = gradx(j)*( xmax - xmin )*dim;
+
+
 
 			}
 		}
@@ -189,8 +194,10 @@ void GEKModel::printSurrogateModel(void) const{
 	printMatrix(rawData,"rawData");
 	printMatrix(gradientData,"gradientData");
 	printMatrix(X,"X");
-	printVector(xmin,"xmin");
-	printVector(xmax,"xmax");
+
+	boxConstraints.print();
+
+
 	printVector(y,"y");
 	printVector(GEK_weights,"GEK_weights");
 
@@ -258,7 +265,7 @@ void GEKModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sS
 
 	*ftildeOutput =  interpolate(xp);
 
-	vec R_inv_r(N*(dim+1));
+	vec R_inv_r(numberOfSamples*(dim+1));
 
 	vec r = computeCorrelationVectorDot(xp);
 
@@ -359,8 +366,8 @@ void GEKModel::computeCorrelationMatrixDot(void) {
 	vec theta = GEK_weights;
 	int k = X.n_cols;
 
-	mat Psi=zeros(N,N);
-	mat PsiDot=zeros(N,N);
+	mat Psi=zeros(numberOfSamples,numberOfSamples);
+	mat PsiDot=zeros(numberOfSamples,numberOfSamples);
 
 
 	mat Rfull;
@@ -369,25 +376,25 @@ void GEKModel::computeCorrelationMatrixDot(void) {
 
 		if(row == -1){ /* first row */
 
-			for(unsigned int i=0; i<N;i++){
-				for(unsigned int j=i+1;j<N;j++){
+			for(unsigned int i=0; i<numberOfSamples;i++){
+				for(unsigned int j=i+1;j<numberOfSamples;j++){
 
 					Psi(i,j)= computeCorrelation(X.row(i), X.row(j), theta);
 
 				}
 			}
 
-			Psi = Psi+ trans(Psi)+ eye(N,N);
+			Psi = Psi+ trans(Psi)+ eye(numberOfSamples,numberOfSamples);
 
 			Rfull=Psi;
 
 
-			PsiDot=zeros(N,N);
+			PsiDot=zeros(numberOfSamples,numberOfSamples);
 			for(int l=0;l<k; l++){
 
 
-				for(unsigned int i=0; i<N;i++){
-					for(unsigned int j=0;j<N;j++){
+				for(unsigned int i=0; i<numberOfSamples;i++){
+					for(unsigned int j=0;j<numberOfSamples;j++){
 						PsiDot(i,j)=2.0*theta(l)* (X(i,l)-X(j,l))*Psi(i,j);
 
 					}
@@ -402,10 +409,10 @@ void GEKModel::computeCorrelationMatrixDot(void) {
 
 			mat Rrow;
 
-			PsiDot=zeros(N,N);
+			PsiDot=zeros(numberOfSamples,numberOfSamples);
 
-			for(unsigned int i=0; i<N;i++){
-				for(unsigned int j=0;j<N;j++){
+			for(unsigned int i=0; i<numberOfSamples;i++){
+				for(unsigned int j=0;j<numberOfSamples;j++){
 
 					PsiDot(i,j)=-2.0*theta(row)* (X(i,row)-X(j,row))*Psi(i,j);
 
@@ -415,11 +422,11 @@ void GEKModel::computeCorrelationMatrixDot(void) {
 			Rrow = PsiDot;
 
 			for(int l=0; l<k;l++){
-				mat PsiDot2=zeros(N,N);
+				mat PsiDot2=zeros(numberOfSamples,numberOfSamples);
 
 				if(l == row){
-					for(unsigned int i=0; i<N;i++){
-						for(unsigned int j=0;j<N;j++){
+					for(unsigned int i=0; i<numberOfSamples;i++){
+						for(unsigned int j=0;j<numberOfSamples;j++){
 							PsiDot2(i,j)=
 									(2.0*theta(l)-4.0*theta(l)*theta(l)* pow((X(i,l)-X(j,l)),2.0))*Psi(i,j);
 
@@ -431,8 +438,8 @@ void GEKModel::computeCorrelationMatrixDot(void) {
 				else{
 
 
-					for(unsigned int i=0; i<N;i++){
-						for(unsigned int j=0;j<N;j++){
+					for(unsigned int i=0; i<numberOfSamples;i++){
+						for(unsigned int j=0;j<numberOfSamples;j++){
 
 							PsiDot2(i,j)=
 									(-4.0*theta(row)*theta(l)*(X(i,row)-X(j,row))*(X(i,l)-X(j,l)))*Psi(i,j);
@@ -451,7 +458,7 @@ void GEKModel::computeCorrelationMatrixDot(void) {
 
 
 
-	correlationMatrixDot  = Rfull + epsilonGEK * eye(N*(k+1),N*(k+1));
+	correlationMatrixDot  = Rfull + epsilonGEK * eye(numberOfSamples*(k+1),numberOfSamples*(k+1));
 
 
 
@@ -460,20 +467,20 @@ void GEKModel::computeCorrelationMatrixDot(void) {
 vec GEKModel::computeCorrelationVectorDot(rowvec x) const{
 
 
-	vec r(N*(dim+1));
+	vec r(numberOfSamples*(dim+1));
 
 	vec theta = GEK_weights;
 
 
 	int count = 0;
-	for(unsigned int i=0;i<N;i++){
+	for(unsigned int i=0;i<numberOfSamples;i++){
 
 		r(count) = computeCorrelation(x, X.row(i), theta);
 		count++;
 	}
 
 	for(unsigned int i=0;i<dim;i++){
-		for(unsigned int j=0;j<N;j++){
+		for(unsigned int j=0;j<numberOfSamples;j++){
 
 			r(count) = computedR_dxj(x, X.row(j),i);
 			count++;
@@ -536,7 +543,7 @@ void GEKModel::updateAuxilliaryFields(void){
 	printMatrix(upperDiagonalMatrixDot,"upperDiagonalMatrixDot");
 #endif
 
-	vec R_inv_ys(N*(dim+1)); R_inv_ys.fill(0.0);
+	vec R_inv_ys(numberOfSamples*(dim+1)); R_inv_ys.fill(0.0);
 
 
 	solveLinearSystemCholesky(upperDiagonalMatrixDot, R_inv_ys, ys);    /* solve R x = ys */
@@ -545,7 +552,7 @@ void GEKModel::updateAuxilliaryFields(void){
 
 
 
-	R_inv_F = zeros(N*(dim+1));
+	R_inv_F = zeros(numberOfSamples*(dim+1));
 
 
 	solveLinearSystemCholesky(upperDiagonalMatrixDot, R_inv_F, vectorOfF);      /* solve R x = F */
@@ -566,7 +573,7 @@ void GEKModel::updateAuxilliaryFields(void){
 
 
 
-	sigmaSquared = (1.0 / (N*(dim+1))) * dot(ys_min_betaF, R_inv_ys_min_beta);
+	sigmaSquared = (1.0 / (numberOfSamples*(dim+1))) * dot(ys_min_betaF, R_inv_ys_min_beta);
 
 
 }

@@ -64,6 +64,7 @@ KrigingModel::KrigingModel():SurrogateModel(){}
 KrigingModel::KrigingModel(std::string name):SurrogateModel(name),linearModel(name){
 
 
+	modelName = "UNIVERSAL_KRIGING";
 	modelID = ORDINARY_KRIGING;
 	hyperparameters_filename = label + "_kriging_hyperparameters.csv";
 
@@ -76,7 +77,6 @@ void KrigingModel::setNameOfInputFile(std::string filename){
 	assert(!filename.empty());
 	filenameDataInput = filename;
 	linearModel.setNameOfInputFile(filename);
-	ifInputFilenameIsSet = true;
 
 }
 
@@ -100,7 +100,7 @@ void KrigingModel::setNameOfHyperParametersFile(std::string filename){
 void KrigingModel::initializeSurrogateModel(void){
 
 	assert(ifDataIsRead);
-	assert(ifBoundsAreSet);
+	assert(boxConstraints.areBoundsSet());
 	assert(ifNormalized);
 
 
@@ -116,11 +116,11 @@ void KrigingModel::initializeSurrogateModel(void){
 	gamma.fill(2.0);
 
 
-	correlationMatrix = zeros<mat>(N,N);
-	upperDiagonalMatrix= zeros<mat>(N,N);
-	R_inv_ys_min_beta = zeros<vec>(N);
-	R_inv_I= zeros<vec>(N);
-	vectorOfOnes= ones<vec>(N);
+	correlationMatrix = zeros<mat>(numberOfSamples,numberOfSamples);
+	upperDiagonalMatrix= zeros<mat>(numberOfSamples,numberOfSamples);
+	R_inv_ys_min_beta = zeros<vec>(numberOfSamples);
+	R_inv_I= zeros<vec>(numberOfSamples);
+	vectorOfOnes= ones<vec>(numberOfSamples);
 
 
 	if(ifUsesLinearRegression){
@@ -131,7 +131,10 @@ void KrigingModel::initializeSurrogateModel(void){
 
 		}
 		linearModel.readData();
-		linearModel.setParameterBounds(xmin,xmax);
+//		linearModel.setParameterBounds(xmin,xmax);
+		linearModel.setParameterBounds(boxConstraints);
+
+
 		linearModel.normalizeData();
 		linearModel.initializeSurrogateModel();
 		linearModel.train();
@@ -296,7 +299,7 @@ void KrigingModel::addNewSampleToData(rowvec newsample){
 
 void KrigingModel::printSurrogateModel(void) const{
 	cout << "\nKriging Surrogate model:\n";
-	cout<< "Number of samples: "<<N<<endl;
+	cout<< "Number of samples: "<<numberOfSamples<<endl;
 	cout<< "Number of input parameters: "<<dim<<"\n";
 
 #if 0
@@ -345,15 +348,15 @@ void KrigingModel::resetDataObjects(void){
 
 void KrigingModel::resizeDataObjects(void){
 
-	correlationMatrix.set_size(N,N);
+	correlationMatrix.set_size(numberOfSamples,numberOfSamples);
 	correlationMatrix.fill(0.0);
-	upperDiagonalMatrix.set_size(N,N);
+	upperDiagonalMatrix.set_size(numberOfSamples,numberOfSamples);
 	upperDiagonalMatrix.fill(0.0);
-	R_inv_ys_min_beta.set_size(N);
+	R_inv_ys_min_beta.set_size(numberOfSamples);
 	R_inv_ys_min_beta.fill(0.0);
-	R_inv_I.set_size(N);
+	R_inv_I.set_size(numberOfSamples);
 	R_inv_I.fill(0.0);
-	vectorOfOnes.set_size(N);
+	vectorOfOnes.set_size(numberOfSamples);
 	vectorOfOnes.fill(1.0);
 
 
@@ -389,13 +392,13 @@ void KrigingModel::updateAuxilliaryFields(void){
 	}
 
 
-	vec R_inv_ys(N);
+	vec R_inv_ys(numberOfSamples);
 	R_inv_ys.fill(0.0);
 
 
 	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_ys, ys);    /* solve R x = ys */
 
-	R_inv_I = zeros(N);
+	R_inv_I = zeros(numberOfSamples);
 
 	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_I, vectorOfOnes);      /* solve R x = I */
 
@@ -410,7 +413,7 @@ void KrigingModel::updateAuxilliaryFields(void){
 	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_ys_min_beta , ys_min_betaI);
 
 
-	sigmaSquared = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
+	sigmaSquared = (1.0 / numberOfSamples) * dot(ys_min_betaI, R_inv_ys_min_beta);
 
 
 }
@@ -423,15 +426,15 @@ void KrigingModel::updateModelWithNewData(void){
 	readData();
 	normalizeData();
 
-	correlationMatrix.set_size(N,N);
+	correlationMatrix.set_size(numberOfSamples,numberOfSamples);
 	correlationMatrix.fill(0.0);
-	upperDiagonalMatrix.set_size(N,N);
+	upperDiagonalMatrix.set_size(numberOfSamples,numberOfSamples);
 	upperDiagonalMatrix.fill(0.0);
-	R_inv_ys_min_beta.set_size(N);
+	R_inv_ys_min_beta.set_size(numberOfSamples);
 	R_inv_ys_min_beta.fill(0.0);
-	R_inv_I.set_size(N);
+	R_inv_I.set_size(numberOfSamples);
 	R_inv_I.fill(0.0);
-	vectorOfOnes.set_size(N);
+	vectorOfOnes.set_size(numberOfSamples);
 	vectorOfOnes.fill(1.0);
 
 	ymin = min(rawData.col(dim));
@@ -448,9 +451,9 @@ void KrigingModel::updateModelWithNewData(void){
 vec KrigingModel::computeCorrelationVector(rowvec x) const{
 
 
-	vec r(N);
+	vec r(numberOfSamples);
 
-	for(unsigned int i=0;i<N;i++){
+	for(unsigned int i=0;i<numberOfSamples;i++){
 
 		r(i) = computeCorrelation(x, X.row(i));
 
@@ -541,7 +544,7 @@ void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double
 
 	*ftildeOutput =  interpolate(xp);
 
-	vec R_inv_r(N);
+	vec R_inv_r(numberOfSamples);
 
 	vec r = computeCorrelationVector(xp);
 
@@ -571,10 +574,11 @@ double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j) const {
 
 void KrigingModel::computeCorrelationMatrix(void)  {
 
+	mat identityMatrix = eye(numberOfSamples,numberOfSamples);
 	correlationMatrix.fill(0.0);
 
-	for (unsigned int i = 0; i < N; i++) {
-		for (unsigned int j = i + 1; j < N; j++) {
+	for (unsigned int i = 0; i < numberOfSamples; i++) {
+		for (unsigned int j = i + 1; j < numberOfSamples; j++) {
 
 			double R = computeCorrelation(X.row(i), X.row(j));
 			correlationMatrix(i, j) = R;
@@ -583,7 +587,7 @@ void KrigingModel::computeCorrelationMatrix(void)  {
 
 	}
 
-	correlationMatrix = correlationMatrix + eye(N,N) + eye(N,N)*epsilonKriging;
+	correlationMatrix = correlationMatrix + identityMatrix + identityMatrix*epsilonKriging;
 
 }
 

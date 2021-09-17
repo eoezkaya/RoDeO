@@ -28,9 +28,24 @@
  *
  *
  */
-
+#include<math.h>
 #include "matrix_vector_operations.hpp"
+#include "bounds.hpp"
+#include "random_functions.hpp"
 #include<gtest/gtest.h>
+
+
+TEST(testMatrixVectorOperations, testabortIfHasNan){
+
+	unsigned int dim = 5;
+	rowvec testVector = zeros<rowvec>(dim);
+
+//	testVector(0) = sqrt(-1);
+
+	abortIfHasNan(testVector);
+
+
+}
 
 
 TEST(testMatrixVectorOperations, testcopyRowVector){
@@ -69,6 +84,31 @@ TEST(testMatrixVectorOperations, testnormalizeRowVector){
 
 }
 
+
+TEST(testMatrixVectorOperations, testnormalizeMatrix){
+
+
+	unsigned int dim1 = 10;
+	unsigned int dim2 = 57;
+
+	mat testData(dim2,dim1, fill::randu);
+
+	vec lb(dim1-1, fill::randu);
+	vec ub(dim1-1, fill::randu);
+
+	ub = ub + 1.0;
+
+	Bounds boxConstraints(lb,ub);
+
+	mat testDataNormalized = normalizeMatrix(testData, boxConstraints);
+
+	double expectedValue = (testData(0,0) - lb(0))/(ub(0) - lb(0));
+
+	EXPECT_EQ(expectedValue,testDataNormalized(0,0));
+	EXPECT_EQ(testData(0,dim1-1),testDataNormalized(0,dim1-1));
+
+
+}
 
 
 

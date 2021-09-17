@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -46,13 +46,20 @@
 
 TEST(testAggrregationModel, testfindNearestNeighbor){
 
-
-	mat samples(100,5,fill::randu);
+	unsigned int dim = 2;
+	unsigned int N = 100;
+	mat samples(N,2*dim+1,fill::randu);
 	saveMatToCVSFile(samples,"AggregationTest.csv");
+
+
 	AggregationModel testModel("AggregationTest");
 
 	testModel.readData();
-	testModel.setParameterBounds(0.0, 1.0);
+	Bounds boxConstraints(dim);
+	boxConstraints.setBounds(0.0, 1.0);
+
+
+	testModel.setParameterBounds(boxConstraints);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 
@@ -72,11 +79,14 @@ TEST(testAggrregationModel, testfindNearestNeighbor){
 
 TEST(testAggrregationModel, testinterpolateWithLinearFunction){
 
-	mat samples(100,5);
+	unsigned int N = 100;
+	unsigned int dim = 2;
+
+	mat samples(N,2*dim+1);
 
 	/* we construct first test data using a linear function 2*x1 + x2, including gradients */
-	for (unsigned int i=0; i<samples.n_rows; i++){
-		rowvec x(5);
+	for (unsigned int i=0; i<N; i++){
+		rowvec x(2*dim+1);
 		x(0) = generateRandomDouble(0.0,1.0);
 		x(1) = generateRandomDouble(0.0,1.0);
 
@@ -92,7 +102,8 @@ TEST(testAggrregationModel, testinterpolateWithLinearFunction){
 	AggregationModel testModel("AggregationTest");
 
 	testModel.readData();
-	testModel.setParameterBounds(0.0, 1.0);
+
+	testModel.setParameterBounds(0.0,1.0);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 	testModel.setRho(0.0);
@@ -113,63 +124,20 @@ TEST(testAggrregationModel, testinterpolateWithLinearFunction){
 }
 
 
-TEST(testAggrregationModel, prepareTrainingAndTestData){
-
-	mat samples(10,7);
-
-	/* we construct first test data using a linear function 2*x1 + x2 + 0 x3, including gradients */
-	for (unsigned int i=0; i<samples.n_rows; i++){
-		rowvec x(7);
-		x(0) = generateRandomDouble(0.0,1.0);
-		x(1) = generateRandomDouble(0.0,1.0);
-		x(2) = generateRandomDouble(0.0,1.0);
-
-		x(3) = 2*x(0) + x(1);
-		x(4) = 2.0;
-		x(5) = 1.0;
-		x(6) = 0.0;
-		samples.row(i) = x;
-
-	}
-
-
-	saveMatToCVSFile(samples,"AggregationTest.csv");
-
-
-	AggregationModel testModel("AggregationTest");
-
-	testModel.readData();
-	testModel.setParameterBounds(0.0, 1.0);
-	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
-	testModel.prepareTrainingAndTestData();
-	testModel.setRho(0.0);
-
-	PartitionData testData= testModel.getTestData();
-	PartitionData trainingData= testModel.getTrainingData();
-
-	testModel.modifyRawDataAndAssociatedVariables(trainingData.rawData);
-
-    testModel.tryModelOnTestSet(testData);
-    double validationError = testData.calculateMeanSquaredError();
-    EXPECT_LT(validationError, 10E-010);
-
-	remove("AggregationTest.csv");
-
-}
-
 TEST(testAggrregationModel, determineOptimalL1NormWeights){
 
-	mat samples(200,7);
+	unsigned int N = 200;
+	mat samples(N,7);
 
-	for (unsigned int i=0; i<samples.n_rows; i++){
+	/* y = f(x1,x2,x3) = x1^2 */
+	for (unsigned int i=0; i<N; i++){
 		rowvec x(7);
 		x(0) = generateRandomDouble(0.0,1.0);
 		x(1) = generateRandomDouble(0.0,1.0);
 		x(2) = generateRandomDouble(0.0,1.0);
 
 		x(3) = 2*x(0)*x(0);
-		x(4) = 2.0;
+		x(4) = 2.0*x(0);
 		x(5) = 0.0;
 		x(6) = 0.0;
 		samples.row(i) = x;
@@ -182,7 +150,10 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 
 	AggregationModel testModel("AggregationTest");
 
+	testModel.ifDisplay = false;
+
 	testModel.readData();
+
 	testModel.setParameterBounds(0.0, 1.0);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
@@ -191,8 +162,8 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 	testModel.determineOptimalL1NormWeights();
 
 	vec optimalWeights = testModel.getL1NormWeights();
-	EXPECT_LT(optimalWeights(1), 0.5);
-	EXPECT_LT(optimalWeights(2), 0.5);
+	EXPECT_LT(optimalWeights(1), 0.2);
+	EXPECT_LT(optimalWeights(2), 0.2);
 	remove("AggregationTest.csv");
 
 }
