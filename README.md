@@ -3,8 +3,8 @@ RoDeo (Robust Design Optimization Package) is a package for simulation based glo
 for scientific/engineering applications, in which the objective function and/or constraints are evaluated by a computationally expensive simulations. 
 
 Features of RoDeO Package:
-- Surrogate-based global optimization strategy
-- Full data driven approach
-- Easy and efficient treatement of inequality constraints
+- Surrogate model based Efficient Global Optimization (EGO) strategy
+- Data driven approach
+- Easy and efficient treatment of inequality constraints
 - Surrogate models can be trained also using sensitivity data
  
