@@ -60,7 +60,7 @@ ObjectiveFunctionDefinition::ObjectiveFunctionDefinition(void){
 
 ObjectiveFunctionDefinition::ObjectiveFunctionDefinition(std::string name){
 
-	name = name;
+	this->name = name;
 
 }
 
@@ -114,6 +114,8 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int 
 	dim = dimension;
 	name = objectiveFunName;
 
+	fileNameTrainingDataForSurrogate = name + ".csv";
+
 
 }
 
@@ -128,26 +130,30 @@ void ObjectiveFunction::bindSurrogateModel(void){
 
 	assert(ifDefinitionIsSet);
 
-	if(ifGradientAvailable == false){
-
-		surrogate = &surrogateModel;
-
-	}
-	else{
-
-		surrogate = &surrogateModelGradient;
-	}
-
-
 	if(ifMultilevel){
 
+		output.printMessage("Binding the surrogate model with the Multi-Level modeĺ...");
 		surrogateModelML.setinputFileNameHighFidelityData(fileNameInputRead);
 		surrogateModelML.setinputFileNameLowFidelityData(fileNameInputReadLowFi);
 		surrogate = &surrogateModelML;
 
 	}
 
-	surrogate->setNameOfInputFile(fileNameInputRead);
+	else if(ifGradientAvailable == false){
+
+		surrogateModel.setNameOfInputFile(fileNameTrainingDataForSurrogate);
+		output.printMessage("Binding the surrogate model with the Kriging modeĺ...");
+		surrogate = &surrogateModel;
+
+	}
+	else{
+
+		surrogateModel.setNameOfInputFile(fileNameTrainingDataForSurrogate);
+		output.printMessage("Binding the surrogate model with the Agrregation modeĺ...");
+		surrogate = &surrogateModelGradient;
+	}
+
+
 
 
 }
@@ -226,6 +232,16 @@ void ObjectiveFunction::setGradientOff(void){
 
 }
 
+
+void ObjectiveFunction::setDisplayOn(void){
+
+	output.ifScreenDisplay = true;
+}
+void ObjectiveFunction::setDisplayOff(void){
+
+	output.ifScreenDisplay = false;
+
+}
 
 
 
@@ -327,13 +343,15 @@ void ObjectiveFunction::initializeSurrogate(void){
 
 	bindSurrogateModel();
 
-	surrogate->ifDisplay = true;
-
-	surrogate->readData();
 
 	Bounds boxConstraints(lowerBounds,upperBounds);
 
 	surrogate->setParameterBounds(boxConstraints);
+
+
+	surrogate->readData();
+
+
 	surrogate->normalizeData();
 	surrogate->initializeSurrogateModel();
 	surrogate->setNumberOfTrainingIterations(numberOfIterationsForSurrogateTraining);

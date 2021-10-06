@@ -65,10 +65,11 @@ private:
 	bool checkifProblemTypeIsValid(std::string) const;
 	void checkIfProblemTypeIsSetProperly(void) const;
 
-	bool isProblemTypeOptimization(std::string type) const;
-	bool isProblemTypeMinimization(std::string type) const;
-	bool isProblemTypeMaximization(std::string type) const;
+	bool isProblemTypeOptimization(std::string) const;
+	bool isProblemTypeMinimization(std::string) const;
+	bool isProblemTypeMaximization(std::string) const;
 
+	SURROGATE_MODEL getSurrogateModelID(string) const;
 
 
 

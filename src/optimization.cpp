@@ -1045,6 +1045,8 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 	initializeSurrogates();
 
+
+
 	while(1){
 
 
@@ -1103,8 +1105,12 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 			objFun.evaluateAdjoint(currentBestDesign);
 		}
+
+
 		objFun.readEvaluateOutput(currentBestDesign);
+
 		objFun.addDesignToData(currentBestDesign);
+
 
 
 		computeConstraintsandPenaltyTerm(currentBestDesign);

@@ -37,11 +37,12 @@
 using namespace arma;
 
 
-LinearModel::LinearModel(std::string name):SurrogateModel(name){
+LinearModel::LinearModel(std::string nameInput):SurrogateModel(nameInput){
 
 	modelID = LINEAR_REGRESSION;
-	regularizationParam = 10E-6;
-	hyperparameters_filename = label + "_linear_regression_hyperparameters.csv";
+
+
+	setNameOfHyperParametersFile(nameInput);
 
 
 }
@@ -54,8 +55,13 @@ LinearModel::LinearModel():SurrogateModel(){
 
 void LinearModel::initializeSurrogateModel(void){
 
-	numberOfHyperParameters = dim+1;
+	assert(ifDataIsRead);
+
+	output.printMessage("Initializing the linear model...");
+
+	numberOfHyperParameters = data.getDimension()+1;
 	weights = zeros<vec>(numberOfHyperParameters);
+	regularizationParam = 10E-6;
 
 	ifInitialized = true;
 
@@ -107,12 +113,19 @@ void LinearModel::setWeights(vec w){
 
 void LinearModel::train(void){
 
+	output.printMessage("Finding the weights of the linear model...");
+
 	if(ifInitialized == false){
 
 		printf("ERROR: Linear regression model must be initialized before training!\n");
 		abort();
 	}
 
+	unsigned int dim = data.getDimension();
+	unsigned int numberOfSamples = data.getNumberOfSamples();
+	mat X = data.getInputMatrix();
+
+	vec y = data.getOutputVector();
 	mat augmented_X(numberOfSamples, dim + 1);
 
 	for (unsigned int i = 0; i < numberOfSamples; i++) {
@@ -174,12 +187,8 @@ void LinearModel::train(void){
 
 	}
 
-	if(ifprintToScreen){
+	output.printMessage("Linear regression weights", weights);
 
-		printf("Linear regression weights:\n");
-		trans(weights).print();
-
-	}
 
 }
 
@@ -188,6 +197,7 @@ void LinearModel::train(void){
 
 double LinearModel::interpolate(rowvec x ) const{
 
+	unsigned int dim = data.getDimension();
 	double fRegression = 0.0;
 	for(unsigned int i=0; i<dim; i++){
 
@@ -221,14 +231,16 @@ double LinearModel::interpolateWithGradients(rowvec xp) const{
 
 vec LinearModel::interpolateAll(mat X) const{
 
-	unsigned int N = X.n_rows;
+	unsigned int dim = data.getDimension();
+	unsigned int N = data.getNumberOfSamples();
 
 	vec result(N);
 
 
 	for(unsigned int i=0; i<N; i++){
 
-		rowvec x = X.row(i);
+		rowvec x = data.getRowX(i);
+
 
 		double fRegression = 0.0;
 		for(unsigned int j=0; j<dim; j++){
@@ -252,18 +264,10 @@ vec LinearModel::interpolateAll(mat X) const{
 
 void LinearModel::printSurrogateModel(void) const{
 
-	cout << "Surrogate model:"<< endl;
-	cout<< "Number of samples: "<<numberOfSamples<<endl;
-	cout<<"Number of input parameters: "<<dim<<endl;
-	cout<<"Raw Data:\n";
-	rawData.print();
 
 	boxConstraints.print();
 
 
-	cout<<"ymin = "<<ymin<<endl;
-	cout<<"ymax = "<<ymax<<endl;
-	cout<<"ymean = "<<yave<<endl;
 	cout<<"Regression weights:\n";
 	trans(weights).print();
 
@@ -297,9 +301,12 @@ void LinearModel::setNameOfInputFile(std::string filename){
 
 void LinearModel::setNumberOfTrainingIterations(unsigned int nIters){}
 
-void LinearModel::setNameOfHyperParametersFile(std::string filename){
 
-	assert(!filename.empty());
+void LinearModel::setNameOfHyperParametersFile(std::string label){
+
+	assert(isNotEmpty(label));
+
+	string filename = label + "_linear_regression_hyperparameters.csv";
 	hyperparameters_filename = filename;
 
 }

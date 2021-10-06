@@ -62,6 +62,7 @@ public:
 	void setNameOfHyperParametersFile(std::string);
 	void setNumberOfTrainingIterations(unsigned int);
 
+	void setDisplayOn(void);
 
 	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;
@@ -93,7 +94,6 @@ public:
 	unsigned int findNearestNeighbor(const rowvec &) const;
 	void addNewSampleToData(rowvec);
 	void updateModelWithNewData(void);
-	void modifyRawDataAndAssociatedVariables(mat);
 
 
 };

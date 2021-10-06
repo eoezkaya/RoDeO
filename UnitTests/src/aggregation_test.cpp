@@ -150,7 +150,7 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 
 	AggregationModel testModel("AggregationTest");
 
-	testModel.ifDisplay = false;
+
 
 	testModel.readData();
 

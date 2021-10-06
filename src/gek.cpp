@@ -61,10 +61,12 @@ int population_overall_max_tread_id_GEK = -1;
 GEKModel::GEKModel():SurrogateModel(){}
 
 
-GEKModel::GEKModel(std::string name):SurrogateModel(name){
+GEKModel::GEKModel(std::string nameInput):SurrogateModel(nameInput){
 
 	modelID = GRADIENT_ENHANCED_KRIGING;
-	hyperparameters_filename = label + "_gek_hyperparameters.csv";
+	setName(nameInput);
+	setNameOfHyperParametersFile(nameInput);
+
 	maxNumberOfTrainingIterations = 10000;
 
 
@@ -75,7 +77,7 @@ void GEKModel::setNameOfInputFile(std::string filename){
 
 	assert(!filename.empty());
 	filenameDataInput = filename;
-//	ifInputFilenameIsSet = true;
+
 
 }
 
@@ -96,109 +98,112 @@ void GEKModel::setNameOfHyperParametersFile(std::string filename){
 
 void GEKModel::initializeSurrogateModel(void){
 
-	if(label != "None"){
-
-		printf("Initializing settings for the GEK model...\n");
-
-		modelID = GRADIENT_ENHANCED_KRIGING;
-		ifHasGradientData = true;
-
-		readData();
-		normalizeData();
-
-		numberOfHyperParameters = dim;
-
-		GEK_weights =zeros<vec>(numberOfHyperParameters);
+	unsigned int dim = data.getDimension();
+	unsigned int numberOfSamples = data.getNumberOfSamples();
 
 
-		/* regularization term */
-		epsilonGEK = 0.0;
 
-		/* check if two sample are too close to each other */
-		for(unsigned int i=0; i<numberOfSamples; i++){
+	printf("Initializing settings for the GEK model...\n");
 
-			rowvec sample1 = X.row(i);
+	modelID = GRADIENT_ENHANCED_KRIGING;
+	ifHasGradientData = true;
 
-			for(unsigned int j=i+1; j<numberOfSamples; j++){
+	readData();
+	normalizeData();
 
-				rowvec sample2 = X.row(j);
+	numberOfHyperParameters = dim;
 
-				if(checkifTooCLose(sample1, sample2)) {
+	GEK_weights =zeros<vec>(numberOfHyperParameters);
 
-					printf("ERROR: Two samples in the training data are too close to each other!\n");
-					abort();
-				}
+
+	/* regularization term */
+	epsilonGEK = 0.0;
+
+	/* check if two sample are too close to each other */
+	for(unsigned int i=0; i<numberOfSamples; i++){
+
+		rowvec sample1 = data.getRowX(i);
+
+
+		for(unsigned int j=i+1; j<numberOfSamples; j++){
+
+			rowvec sample2 = data.getRowX(j);
+
+			if(checkifTooCLose(sample1, sample2)) {
+
+				printf("ERROR: Two samples in the training data are too close to each other!\n");
+				abort();
 			}
 		}
+	}
 
-		sigmaSquared = 0.0;
-		beta0 = 0.0;
-
-
-		correlationMatrixDot = zeros(numberOfSamples*(dim+1),numberOfSamples*(dim+1));
-		upperDiagonalMatrixDot= zeros<mat>(numberOfSamples*(dim+1),numberOfSamples*(dim+1));
-
-		R_inv_ys_min_beta = zeros<vec>(numberOfSamples*(dim+1));
-		R_inv_F= zeros<vec>(numberOfSamples*(dim+1));
-		vectorOfF= zeros<vec>(numberOfSamples*(dim+1));
-
-		for(unsigned int i=0; i<numberOfSamples; i++) {
-
-			vectorOfF(i)=1.0;
-		}
+	sigmaSquared = 0.0;
+	beta0 = 0.0;
 
 
-		yGEK = zeros<vec>(numberOfSamples*(dim+1));
+	correlationMatrixDot = zeros(numberOfSamples*(dim+1),numberOfSamples*(dim+1));
+	upperDiagonalMatrixDot= zeros<mat>(numberOfSamples*(dim+1),numberOfSamples*(dim+1));
 
-		/* first N entries are the functional values */
+	R_inv_ys_min_beta = zeros<vec>(numberOfSamples*(dim+1));
+	R_inv_F= zeros<vec>(numberOfSamples*(dim+1));
+	vectorOfF= zeros<vec>(numberOfSamples*(dim+1));
 
-		for(unsigned int i=0; i<numberOfSamples; i++){
+	for(unsigned int i=0; i<numberOfSamples; i++) {
 
-			yGEK(i) =y(i);
-
-		}
-
-		/* rest entries are the gradients (scaled to the feature space) */
-
-		for(unsigned int i=0; i<dim; i++){
-
-			vec gradx = gradientData.col(i);
-
-			for(unsigned int j=0; j<numberOfSamples; j++){
-
-				double xmin = boxConstraints.getLowerBound(i);
-				double xmax = boxConstraints.getUpperBound(i);
-
-				yGEK(numberOfSamples+i*numberOfSamples+j) = gradx(j)*( xmax - xmin )*dim;
+		vectorOfF(i)=1.0;
+	}
 
 
+	yGEK = zeros<vec>(numberOfSamples*(dim+1));
 
-			}
-		}
+	/* first N entries are the functional values */
 
-#if 0
-		printVector(y,"y");
-		printMatrix(gradientData,"gradientData");
-		printVector(yGEK,"yGEK");
-#endif
+	vec y = data.getOutputVector();
 
-		ifInitialized = true;
+	for(unsigned int i=0; i<numberOfSamples; i++){
 
-		std::cout << "GEK model initialization is done...\n";
+		yGEK(i) =y(i);
 
 	}
+
+	/* rest entries are the gradients (scaled to the feature space) */
+
+	mat gradientData = data.getGradientMatrix();
+
+	for(unsigned int i=0; i<dim; i++){
+
+		vec gradx = gradientData.col(i);
+
+		for(unsigned int j=0; j<numberOfSamples; j++){
+
+			double xmin = boxConstraints.getLowerBound(i);
+			double xmax = boxConstraints.getUpperBound(i);
+
+			yGEK(numberOfSamples+i*numberOfSamples+j) = gradx(j)*( xmax - xmin )*dim;
+
+
+
+		}
+	}
+
+#if 0
+	printVector(y,"y");
+	printMatrix(gradientData,"gradientData");
+	printVector(yGEK,"yGEK");
+#endif
+
+	ifInitialized = true;
+
+	std::cout << "GEK model initialization is done...\n";
+
+
 }
 
 void GEKModel::printSurrogateModel(void) const{
 
-	printMatrix(rawData,"rawData");
-	printMatrix(gradientData,"gradientData");
-	printMatrix(X,"X");
-
+	data.print();
 	boxConstraints.print();
 
-
-	printVector(y,"y");
 	printVector(GEK_weights,"GEK_weights");
 
 }
@@ -227,8 +232,8 @@ void GEKModel::train(void){
 
 	}
 
-	KrigingModel auxModelForTraining(label);
-	auxModelForTraining.ifHasGradientData = true;
+	KrigingModel auxModelForTraining(name);
+	auxModelForTraining.setGradientsOn();
 
 	auxModelForTraining.initializeSurrogateModel();
 	auxModelForTraining.setNumberOfTrainingIterations(maxNumberOfTrainingIterations);
@@ -262,6 +267,9 @@ double GEKModel::interpolate(rowvec x ) const {
 
 }
 void GEKModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const {
+
+	unsigned int dim = data.getDimension();
+	unsigned int numberOfSamples = data.getNumberOfSamples();
 
 	*ftildeOutput =  interpolate(xp);
 
@@ -348,7 +356,7 @@ double GEKModel::computedR_dxi_dxj(rowvec x_i, rowvec x_j, int l,int k) const{
 
 double GEKModel::computeCorrelation(rowvec x_i, rowvec x_j, vec theta) const {
 
-
+	unsigned int dim = data.getDimension();
 	double sum = 0.0;
 	for (unsigned int k = 0; k < dim; k++) {
 
@@ -362,6 +370,9 @@ double GEKModel::computeCorrelation(rowvec x_i, rowvec x_j, vec theta) const {
 
 /* implementation according to the Forrester book */
 void GEKModel::computeCorrelationMatrixDot(void) {
+
+	unsigned int numberOfSamples = data.getNumberOfSamples();
+	mat X = data.getInputMatrix();
 
 	vec theta = GEK_weights;
 	int k = X.n_cols;
@@ -467,6 +478,10 @@ void GEKModel::computeCorrelationMatrixDot(void) {
 vec GEKModel::computeCorrelationVectorDot(rowvec x) const{
 
 
+	unsigned int dim = data.getDimension();
+	unsigned int numberOfSamples = data.getNumberOfSamples();
+	mat X = data.getInputMatrix();
+
 	vec r(numberOfSamples*(dim+1));
 
 	vec theta = GEK_weights;
@@ -494,6 +509,10 @@ vec GEKModel::computeCorrelationVectorDot(rowvec x) const{
 
 
 void GEKModel::updateAuxilliaryFields(void){
+
+	unsigned int dim = data.getDimension();
+	unsigned int N = data.getNumberOfSamples();
+
 #if 0
 	cout<<"Updating auxiliary variables of the GEK model\n";
 #endif
@@ -543,7 +562,7 @@ void GEKModel::updateAuxilliaryFields(void){
 	printMatrix(upperDiagonalMatrixDot,"upperDiagonalMatrixDot");
 #endif
 
-	vec R_inv_ys(numberOfSamples*(dim+1)); R_inv_ys.fill(0.0);
+	vec R_inv_ys(N*(dim+1)); R_inv_ys.fill(0.0);
 
 
 	solveLinearSystemCholesky(upperDiagonalMatrixDot, R_inv_ys, ys);    /* solve R x = ys */
@@ -552,7 +571,7 @@ void GEKModel::updateAuxilliaryFields(void){
 
 
 
-	R_inv_F = zeros(numberOfSamples*(dim+1));
+	R_inv_F = zeros(N*(dim+1));
 
 
 	solveLinearSystemCholesky(upperDiagonalMatrixDot, R_inv_F, vectorOfF);      /* solve R x = F */
@@ -573,7 +592,7 @@ void GEKModel::updateAuxilliaryFields(void){
 
 
 
-	sigmaSquared = (1.0 / (numberOfSamples*(dim+1))) * dot(ys_min_betaF, R_inv_ys_min_beta);
+	sigmaSquared = (1.0 / (N*(dim+1))) * dot(ys_min_betaF, R_inv_ys_min_beta);
 
 
 }

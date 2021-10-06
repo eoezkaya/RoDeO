@@ -609,8 +609,6 @@ void TestFunction::generateSamplesInputTrainingData(void){
 	trainingSamplesInput = samplesTraining.getSamples();
 
 
-
-
 }
 
 void TestFunction::generateSamplesInputTestData(void){
@@ -715,7 +713,7 @@ void TestFunction::generateTrainingSamples(void){
 
 	unsigned int nColsSampleMatrix;
 
-	if(this->ifGradientsAvailable){
+	if(ifGradientsAvailable){
 
 		nColsSampleMatrix = 2*dimension +1;
 
@@ -766,23 +764,45 @@ void TestFunction::generateTestSamples(void){
 
 	testSamples.set_size(numberOfTestSamples,dimension+1);
 
+	if(ifGradientsAvailable){
 
-	/* test samples are evaluated without gradients in any case */
-	for(unsigned int i=0; i<numberOfTestSamples; i++){
+		for(unsigned int i=0; i<numberOfTestSamples; i++){
 
-		rowvec dv = testSamplesInput.row(i);
-		Design d(dv);
+			rowvec dv = testSamplesInput.row(i);
+			Design d(dv);
 
-		evaluate(d);
-		rowvec sample(dimension +1);
-		copyRowVector(sample,dv);
-		sample(dimension) = d.trueValue;
-		testSamples.row(i) = sample;
+			evaluateAdjoint(d);
+			rowvec sample(dimension +1);
+			copyRowVector(sample,dv);
+			sample(dimension) = d.trueValue;
+			testSamples.row(i) = sample;
+
+
+		}
 
 
 	}
 
+	else{
+		for(unsigned int i=0; i<numberOfTestSamples; i++){
+
+			rowvec dv = testSamplesInput.row(i);
+			Design d(dv);
+
+			evaluate(d);
+			rowvec sample(dimension +1);
+			copyRowVector(sample,dv);
+			sample(dimension) = d.trueValue;
+			testSamples.row(i) = sample;
+
+
+		}
+
+	}
+
 }
+
+
 
 
 
@@ -815,83 +835,83 @@ mat TestFunction::getTestSamples(void) const{
 
 mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 #if 0
-	printf("Generating %d random samples for the function: %s\n",howManySamples,function_name.c_str());
+printf("Generating %d random samples for the function: %s\n",howManySamples,function_name.c_str());
 #endif
-	if(!ifBoxConstraintsSet){
+if(!ifBoxConstraintsSet){
 
-		cout<<"\nERROR: Box constraints are not set!\n";
+	cout<<"\nERROR: Box constraints are not set!\n";
+	abort();
+
+}
+
+for(unsigned int j=0; j<dimension;j++) {
+
+	if (lb(j) >= ub(j)){
+
+		printf("\nERROR: lb(%d) >= ub(%d) (%10.7f >= %10.7f)!\n",j,j,lb(j),ub(j));
+		printf("Did you set box constraints properly?\n");
 		abort();
 
 	}
+}
+
+
+mat sampleMatrix = zeros(howManySamples,dimension+1 );
+
+double *x  = new double[dimension];
+
+for(unsigned int i=0; i<howManySamples; i++ ){
 
 	for(unsigned int j=0; j<dimension;j++) {
 
-		if (lb(j) >= ub(j)){
+		x[j] = generateRandomDouble(lb(j), ub(j));
 
-			printf("\nERROR: lb(%d) >= ub(%d) (%10.7f >= %10.7f)!\n",j,j,lb(j),ub(j));
-			printf("Did you set box constraints properly?\n");
-			abort();
+		if(ifFunctionIsNoisy){
+
+			double noiseAdded = noiseLevel*generateRandomDoubleFromNormalDist(-1.0, 1.0, 1.0);
+			x[j] += noiseAdded;
 
 		}
 	}
 
+	double functionValue = 0.0;
+	if(func_ptr != NULL){
 
-	mat sampleMatrix = zeros(howManySamples,dimension+1 );
+		functionValue = func_ptr(x);
+	}
+	else if(adj_ptr != NULL){
 
-	double *x  = new double[dimension];
+		double *xb  = new double[dimension];
 
-	for(unsigned int i=0; i<howManySamples; i++ ){
+		functionValue = adj_ptr(x,xb);
 
-		for(unsigned int j=0; j<dimension;j++) {
+		delete[] xb;
+	}
 
-			x[j] = generateRandomDouble(lb(j), ub(j));
+	else{
 
-			if(ifFunctionIsNoisy){
+		abort();
+	}
 
-				double noiseAdded = noiseLevel*generateRandomDoubleFromNormalDist(-1.0, 1.0, 1.0);
-				x[j] += noiseAdded;
+	for(unsigned int j=0;j<dimension;j++){
 
-			}
-		}
-
-		double functionValue = 0.0;
-		if(func_ptr != NULL){
-
-			functionValue = func_ptr(x);
-		}
-		else if(adj_ptr != NULL){
-
-			double *xb  = new double[dimension];
-
-			functionValue = adj_ptr(x,xb);
-
-			delete[] xb;
-		}
-
-		else{
-
-			abort();
-		}
-
-		for(unsigned int j=0;j<dimension;j++){
-
-			sampleMatrix(i,j) = x[j];
-
-		}
-
-		sampleMatrix(i,dimension) = functionValue;
-
+		sampleMatrix(i,j) = x[j];
 
 	}
 
-	delete[] x;
+	sampleMatrix(i,dimension) = functionValue;
 
-	if(dimension == 1){
 
-		sampleMatrix = sort(sampleMatrix);
-	}
+}
 
-	return sampleMatrix;
+delete[] x;
+
+if(dimension == 1){
+
+	sampleMatrix = sort(sampleMatrix);
+}
+
+return sampleMatrix;
 
 
 }

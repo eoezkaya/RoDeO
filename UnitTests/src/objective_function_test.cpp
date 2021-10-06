@@ -69,7 +69,7 @@ TEST(testObjectiveFunction, testinitializeSurrogate){
 
 	/* check dimension */
 	ASSERT_EQ(testModel.getDimension(), 4);
-	ASSERT_FALSE(testModel.ifHasGradientData);
+	ASSERT_FALSE(testModel.areGradientsOn());
 	ASSERT_TRUE(testModel.ifDataIsRead);
 
 
@@ -110,7 +110,7 @@ TEST(testObjectiveFunction, testinitializeSurrogateWithAdjoint){
 
 
 	ASSERT_EQ(testModel.getDimension(), dim);
-	ASSERT_TRUE(testModel.ifHasGradientData);
+	ASSERT_TRUE(testModel.areGradientsOn());
 	ASSERT_TRUE(testModel.ifDataIsRead);
 
 
@@ -127,16 +127,16 @@ TEST(testObjectiveFunction, testinitializeSurrogateWithML){
 	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
 
 
-	MultiLevelModel testModel("MLtestModel");
-
 	vec lowerBounds(dim); lowerBounds.fill(-6.0);
 	vec upperBounds(dim); upperBounds.fill(6.0);
 
 
-	ObjectiveFunction objFunTest("testObjectiveFunction",2);
+	ObjectiveFunction objFunTest("testObjectiveFunctionMLSurrogate",2);
+
+	objFunTest.setDisplayOn();
 	objFunTest.setParameterBounds(lowerBounds,upperBounds);
 
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("testObjectiveFunctionMLSurrogate");
 	testObjectiveFunctionDef.outputFilename      = "highFidelityTestData.csv";
 	testObjectiveFunctionDef.outputFilenameLowFi = "lowFidelityTestData.csv";
 	testObjectiveFunctionDef.ifMultiLevel = true;

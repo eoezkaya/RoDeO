@@ -36,7 +36,7 @@
 #include<gtest/gtest.h>
 
 
-//#define TESTOPTIMIZATION
+#define TESTOPTIMIZATION
 
 #ifdef TESTOPTIMIZATION
 
@@ -229,6 +229,10 @@ TEST(testOptimizer, testfindTheMostPromisingDesign){
 	ObjectiveFunction objFunc("ObjFuncTest", 2);
 	objFunc.setParameterBounds(lb,ub);
 
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+	objFunc.setParametersByDefinition(testObjectiveFunctionDef);
+
+
 	std::string studyName = "testOptimizer";
 	Optimizer testStudy(studyName, 2);
 	testStudy.addObjectFunction(objFunc);
@@ -269,6 +273,10 @@ TEST(testOptimizer, testMaximizeEIGradientBased){
 
 	ObjectiveFunction objFunc("ObjFuncTest", 2);
 	objFunc.setParameterBounds(lb,ub);
+
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+	objFunc.setParametersByDefinition(testObjectiveFunctionDef);
+
 	objFunc.initializeSurrogate();
 
 

@@ -39,11 +39,9 @@
 TEST(testKriging, testKrigingConstructor){
 
 	KrigingModel testModel("testKrigingModel");
-	std::string filenameHyperParams = testModel.getNameOfHyperParametersFile();
 	std::string filenameDataInput = testModel.getNameOfInputFile();
-	ASSERT_TRUE(filenameHyperParams == "testKrigingModel_kriging_hyperparameters.csv");
 	ASSERT_TRUE(filenameDataInput == "testKrigingModel.csv");
-	ASSERT_FALSE(testModel.ifHasGradientData);
+	ASSERT_FALSE(testModel.areGradientsOn());
 
 
 }
@@ -61,8 +59,11 @@ TEST(testKriging, testReadDataAndNormalize){
 
 	KrigingModel testModel("Eggholder");
 
+
 	testModel.readData();
 	testModel.setParameterBounds(0.0, 200.0);
+
+
 	testModel.normalizeData();
 
 
@@ -94,6 +95,7 @@ TEST(testKriging, testsetParameterBounds){
 
 
 	KrigingModel testModel("Eggholder");
+
 
 	testModel.readData();
 

@@ -381,6 +381,7 @@ void ConstraintFunction::setParametersByDefinition(ConstraintDefinition inequali
 
 	ifInequalityConstraintSpecified  = true;
 
+	ifDefinitionIsSet = true;
 
 
 }

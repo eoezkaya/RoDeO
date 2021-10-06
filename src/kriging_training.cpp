@@ -61,12 +61,12 @@ int population_overall_max_tread_id = -1;
 KrigingModel::KrigingModel():SurrogateModel(){}
 
 
-KrigingModel::KrigingModel(std::string name):SurrogateModel(name),linearModel(name){
+KrigingModel::KrigingModel(std::string nameInput):SurrogateModel(nameInput),linearModel(nameInput){
 
-
-	modelName = "UNIVERSAL_KRIGING";
 	modelID = ORDINARY_KRIGING;
-	hyperparameters_filename = label + "_kriging_hyperparameters.csv";
+
+	setNameOfHyperParametersFile(name);
+
 
 
 }
@@ -86,9 +86,14 @@ void KrigingModel::setNumberOfTrainingIterations(unsigned int nIters){
 
 }
 
-void KrigingModel::setNameOfHyperParametersFile(std::string filename){
+void KrigingModel::setNameOfHyperParametersFile(std::string label){
 
-	assert(!filename.empty());
+	assert(isNotEmpty(label));
+
+	string filename = label + "_kriging_hyperparemeters.csv";
+
+	output.printMessage("Name of the hyperparameter file is set as: ", filename);
+
 	hyperparameters_filename = filename;
 
 }
@@ -100,14 +105,14 @@ void KrigingModel::setNameOfHyperParametersFile(std::string filename){
 void KrigingModel::initializeSurrogateModel(void){
 
 	assert(ifDataIsRead);
-	assert(boxConstraints.areBoundsSet());
 	assert(ifNormalized);
 
 
-#if 0
-	printf("Initializing settings for the Kriging model...\n");
-#endif
+	output.printMessage("Initializing the Kriging model...");
 
+
+	unsigned int dim = data.getDimension();
+	unsigned int numberOfSamples = data.getNumberOfSamples();
 
 	numberOfHyperParameters = 2*dim;
 	theta = ones<vec>(dim);
@@ -125,13 +130,15 @@ void KrigingModel::initializeSurrogateModel(void){
 
 	if(ifUsesLinearRegression){
 
-		if(ifHasGradientData) {
+		output.printMessage("Linear model is active for the Kriging model...");
 
-			linearModel.ifHasGradientData = true;
+		if(areGradientsOn()) {
+
+			linearModel.setGradientsOn();
+
 
 		}
 		linearModel.readData();
-//		linearModel.setParameterBounds(xmin,xmax);
 		linearModel.setParameterBounds(boxConstraints);
 
 
@@ -154,16 +161,19 @@ void KrigingModel::initializeSurrogateModel(void){
 
 void KrigingModel::printHyperParameters(void) const{
 
-	std::cout<<"Hyperparameters of the Kriging model...\n";
-
-	printVector(theta,"theta");
-	printVector(gamma,"gamma");
+	output.printMessage("Hyperparameters of the Kriging model = ");
+	output.printMessage("theta",theta);
+	output.printMessage("gamma",gamma);
 
 }
 void KrigingModel::saveHyperParameters(void) const{
 
 
 	if(!hyperparameters_filename.empty()){
+
+		output.printMessage("Saving hyperparameters into the file: ", hyperparameters_filename);
+
+		unsigned int dim = data.getDimension();
 
 		rowvec saveBuffer(numberOfHyperParameters);
 		for(unsigned int i=0; i<dim; i++) saveBuffer(i) = theta(i);
@@ -188,8 +198,11 @@ void KrigingModel::loadHyperParameters(void){
 
 	if(ifLoadIsOK && numberOfEntriesInTheBuffer == numberOfHyperParameters) {
 
+		unsigned int dim = data.getDimension();
+
 		for(unsigned int i=0; i<dim; i++) theta(i) = loadBuffer(i);
 		for(unsigned int i=0; i<dim; i++) gamma(i) = loadBuffer(i+dim);
+
 
 	}
 
@@ -197,7 +210,7 @@ void KrigingModel::loadHyperParameters(void){
 
 double KrigingModel::getyMin(void) const{
 
-	return ymin;
+	return min(data.getOutputVector());
 
 }
 
@@ -277,11 +290,12 @@ void KrigingModel::addNewSampleToData(rowvec newsample){
 
 	/* avoid points that are too close to each other */
 
+	mat rawData = data.getRawData();
+
 	bool flagTooClose= checkifTooCLose(newsample, rawData);
 
 
 	if(!flagTooClose){
-
 
 		appendRowVectorToCSVData(newsample, filenameDataInput);
 
@@ -299,8 +313,8 @@ void KrigingModel::addNewSampleToData(rowvec newsample){
 
 void KrigingModel::printSurrogateModel(void) const{
 	cout << "\nKriging Surrogate model:\n";
-	cout<< "Number of samples: "<<numberOfSamples<<endl;
-	cout<< "Number of input parameters: "<<dim<<"\n";
+	cout<< "Number of samples: "<<data.getNumberOfSamples()<<endl;
+	cout<< "Number of input parameters: "<<data.getDimension() <<"\n";
 
 #if 0
 	printMatrix(rawData,"rawData");
@@ -334,8 +348,6 @@ void KrigingModel::resetDataObjects(void){
 	upperDiagonalMatrix.reset();
 	R_inv_I.reset();
 	R_inv_ys_min_beta.reset();
-	X.reset();
-	rawData.reset();
 	vectorOfOnes.reset();
 
 
@@ -347,6 +359,8 @@ void KrigingModel::resetDataObjects(void){
 }
 
 void KrigingModel::resizeDataObjects(void){
+
+	unsigned int numberOfSamples = data.getNumberOfSamples();
 
 	correlationMatrix.set_size(numberOfSamples,numberOfSamples);
 	correlationMatrix.fill(0.0);
@@ -365,10 +379,15 @@ void KrigingModel::resizeDataObjects(void){
 
 
 void KrigingModel::updateAuxilliaryFields(void){
+
+	unsigned int numberOfSamples = data.getNumberOfSamples();
+
 #if 0
 	cout<<"Updating auxiliary variables of the Kriging model\n";
 #endif
-	vec ys = y;
+	vec ys = data.getOutputVector();
+
+	mat X = data.getInputMatrix();
 
 	if(ifUsesLinearRegression){
 
@@ -421,9 +440,10 @@ void KrigingModel::updateAuxilliaryFields(void){
 void KrigingModel::updateModelWithNewData(void){
 
 	resetDataObjects();
-
-
 	readData();
+
+	unsigned int numberOfSamples = data.getNumberOfSamples();
+
 	normalizeData();
 
 	correlationMatrix.set_size(numberOfSamples,numberOfSamples);
@@ -437,25 +457,20 @@ void KrigingModel::updateModelWithNewData(void){
 	vectorOfOnes.set_size(numberOfSamples);
 	vectorOfOnes.fill(1.0);
 
-	ymin = min(rawData.col(dim));
-	ymax = max(rawData.col(dim));
-	yave = mean(rawData.col(dim));
 
-#if 0
-	printf("ymin = %15.10f, ymax = %15.10f, yave = %15.10f\n",ymin,ymax,yave);
-#endif
 	updateAuxilliaryFields();
 
 }
 
 vec KrigingModel::computeCorrelationVector(rowvec x) const{
 
+	unsigned int numberOfSamples = data.getNumberOfSamples();
 
 	vec r(numberOfSamples);
 
 	for(unsigned int i=0;i<numberOfSamples;i++){
 
-		r(i) = computeCorrelation(x, X.row(i));
+		r(i) = computeCorrelation(x, data.getRowX(i) );
 
 	}
 
@@ -507,7 +522,7 @@ void KrigingModel::calculateExpectedImprovement(CDesignExpectedImprovement &curr
 
 	if(fabs(sigma) > EPSILON){
 
-
+		double ymin = data.getMinimumOutputVector();
 		double	Z = (ymin - ftilde)/sigma;
 #if 0
 		printf("Z = %15.10f\n",Z);
@@ -541,10 +556,11 @@ void KrigingModel::calculateExpectedImprovement(CDesignExpectedImprovement &curr
 void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const{
 
 	assert(this->ifInitialized);
+	unsigned int N = data.getNumberOfSamples();
 
 	*ftildeOutput =  interpolate(xp);
 
-	vec R_inv_r(numberOfSamples);
+	vec R_inv_r(N);
 
 	vec r = computeCorrelationVector(xp);
 
@@ -560,7 +576,7 @@ void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double
 
 double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j) const {
 
-
+	unsigned int dim = data.getDimension();
 	double sum = 0.0;
 	for (unsigned int k = 0; k < dim; k++) {
 
@@ -574,13 +590,16 @@ double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j) const {
 
 void KrigingModel::computeCorrelationMatrix(void)  {
 
-	mat identityMatrix = eye(numberOfSamples,numberOfSamples);
+	unsigned int N = data.getNumberOfSamples();
+
+	mat identityMatrix = eye(N,N);
 	correlationMatrix.fill(0.0);
 
-	for (unsigned int i = 0; i < numberOfSamples; i++) {
-		for (unsigned int j = i + 1; j < numberOfSamples; j++) {
+	for (unsigned int i = 0; i < N; i++) {
+		for (unsigned int j = i + 1; j < N; j++) {
 
-			double R = computeCorrelation(X.row(i), X.row(j));
+
+			double R = computeCorrelation(data.getRowX(i), data.getRowX(j));
 			correlationMatrix(i, j) = R;
 			correlationMatrix(j, i) = R;
 		}
@@ -599,36 +618,29 @@ void KrigingModel::train(void){
 
 	assert(ifInitialized);
 
-	if(ifDisplay){
+	unsigned int dim = data.getDimension();
 
-		printf("\nTraining Kriging response surface for the data : %s\n",filenameDataInput.c_str());
+	output.printMessage("Training Kriging response surface for the data: " + filenameDataInput);
 
-	}
-
+	vec y = data.getOutputVector();
 	vec ysKriging = y;
 
 
 	if(ifUsesLinearRegression ){
 
-		if(ifDisplay){
-
-			std::cout<<"Linear regression is active...\n";
-
-
-		}
+		output.printMessage("Linear regression is active...");
 
 		linearModel.train();
 
+		mat X = data.getInputMatrix();
 		vec ysLinearModel = linearModel.interpolateAll(X);
 
 		ysKriging = ysKriging - ysLinearModel;
 	}
 	else{
-		if(ifDisplay){
 
-			printf("Linear regression is not active...\n");
+		output.printMessage("Linear regression is not active...");
 
-		}
 	}
 
 	int max_number_of_function_calculations =  this->numberOfTrainingIterations;
@@ -649,12 +661,9 @@ void KrigingModel::train(void){
 
 			max_number_of_function_calculations = max_number_of_function_calculations/number_of_treads;
 
-			if(ifDisplay){
+			output.printMessage("number of threads used :",number_of_treads);
+			output.printMessage("number of function evaluations per thread :",max_number_of_function_calculations);
 
-				printf("number of threads used : %d\n", number_of_treads);
-				printf("number of function evaluations per thread : %d\n", max_number_of_function_calculations);
-
-			}
 		}
 
 	}
@@ -681,7 +690,7 @@ void KrigingModel::train(void){
 		int population_max_index = -1;
 
 
-		mat Xmatrix = X;
+		mat Xmatrix = data.getInputMatrix();
 
 
 		vec Ivector = vectorOfOnes;
@@ -703,9 +712,8 @@ void KrigingModel::train(void){
 		if(file_exist(hyperparameters_filename.c_str())){
 #pragma omp master
 			{
-				if(ifDisplay){
-					printf("Hyperparameter file: %s exists...\n",hyperparameters_filename.c_str() );
-				}
+				output.printMessage("Found hyperparameter file: " + hyperparameters_filename);
+
 			}
 
 
@@ -733,12 +741,7 @@ void KrigingModel::train(void){
 #if 1
 #pragma omp master
 		{
-			if(ifDisplay){
-				printf("Initial design:\n");
-				printVector(initial_design.theta,"theta");
-				printVector(initial_design.gamma,"gamma");
 
-			}
 		}
 #endif
 
@@ -764,20 +767,20 @@ void KrigingModel::train(void){
 			}
 
 
-			if(this->ifDisplay){
-
-				if (total_number_of_function_evals % 100 == 0){
-
-					printf("\r# of function calculations =  %d\n",
-							total_number_of_function_evals);
-					fflush(stdout);
-
-				}
-
-
-
-
-			}
+			//			if(this->ifDisplay){
+			//
+			//				if (total_number_of_function_evals % 100 == 0){
+			//
+			//					printf("\r# of function calculations =  %d\n",
+			//							total_number_of_function_evals);
+			//					fflush(stdout);
+			//
+			//				}
+			//
+			//
+			//
+			//
+			//			}
 
 
 			EAdesign new_born(d);
@@ -806,6 +809,7 @@ void KrigingModel::train(void){
 			new_born.gamma.print();
 #endif
 
+			mat X = data.getInputMatrix();
 			new_born.calculate_fitness(epsilon,X,ys);
 
 
@@ -907,11 +911,11 @@ void KrigingModel::train(void){
 
 	} /* end of parallel section */
 
-	if(ifDisplay){
-		printf("Kring training is done\n");
-		printHyperParameters();
 
-	}
+	output.printMessage("Kring training is done...");
+
+	printHyperParameters();
+
 
 	updateAuxilliaryFields();
 

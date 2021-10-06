@@ -44,10 +44,6 @@ class MultiLevelModel : public SurrogateModel {
 
 private:
 
-	string label;
-	string labelErrorModel;
-	string labelLowFidelityModel;
-
 	string inputFileNameLowFidelityData;
 	string inputFileNameHighFidelityData;
 	string inputFileNameError;
@@ -101,6 +97,8 @@ public:
 	MultiLevelModel(string);
 
 	void setNameOfInputFile(string filename);
+	void setNameOfInputFileError(void);
+
 	void setNameOfHyperParametersFile(string filename);
 	void setNumberOfTrainingIterations(unsigned int);
 
@@ -108,6 +106,7 @@ public:
 	void setinputFileNameLowFidelityData(string);
 
 	void readData(void);
+	void normalizeData(void);
 
 	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;
@@ -123,6 +122,10 @@ public:
 	void setGradientsOnHiFi(void);
 	void setGradientsOffLowFi(void);
 	void setGradientsOffHiFi(void);
+
+	void setDisplayOn(void);
+	void setDisplayOff(void);
+
 
 
 	void train(void);
@@ -151,9 +154,6 @@ public:
 	unsigned int findIndexHiFiToLowFiData(unsigned int indexHiFiData) const;
 
 
-
-//	void setParameterBounds(vec, vec);
-
 	void bindLowFidelityModel(void);
 	void bindErrorModel(void);
 
@@ -168,8 +168,6 @@ public:
 	double findNearestL1DistanceToALowFidelitySample(rowvec x) const;
 	double findNearestL1DistanceToAHighFidelitySample(rowvec x) const;
 
-
-//	double evaluateBrigdeFunction(rowvec x);
 
 };
 

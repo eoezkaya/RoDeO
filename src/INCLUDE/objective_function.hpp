@@ -38,6 +38,7 @@
 #include "surrogate_model.hpp"
 #include "multi_level_method.hpp"
 #include "design.hpp"
+#include "output.hpp"
 
 
 
@@ -60,6 +61,7 @@ public:
 	std::string outputFilenameLowFi;
 	std::string markerLowFi;
 	std::string markerForGradientLowFi;
+
 
 
 	bool ifMultiLevel = false;
@@ -104,7 +106,7 @@ protected:
 	std::string readMarkerLowFi;
 	std::string readMarkerAdjointLowFi;
 
-
+	std::string fileNameTrainingDataForSurrogate;
 
 
 	bool ifMarkerIsSet = false;
@@ -120,6 +122,8 @@ protected:
 	MultiLevelModel surrogateModelML;
 
 	SurrogateModel *surrogate;
+
+	OutputDevice output;
 
 	unsigned int numberOfIterationsForSurrogateTraining = 10000;
 
@@ -167,6 +171,9 @@ public:
 
 	void setGradientOn(void);
 	void setGradientOff(void);
+
+	void setDisplayOn(void);
+	void setDisplayOff(void);
 
 
 	void setParameterBounds(vec , vec );

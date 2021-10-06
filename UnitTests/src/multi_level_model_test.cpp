@@ -104,6 +104,8 @@ TEST(testMultiLevelModel, prepareErrorData){
 	testLofiData.save("LoFiData.csv", csv_ascii);
 
 	MultiLevelModel testModel("MLtestModel");
+//	testModel.setDisplayOn();
+
 	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
 	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
 
@@ -250,12 +252,14 @@ TEST(testMultiLevelModel, testSetParameterBounds){
 
 TEST(testMultiLevelModel, testfindNearestNeighbourLowFidelity){
 
-	int nSamplesLowFi = 200;
-	int nSamplesHiFi  = 50;
+	unsigned int nSamplesLowFi = 200;
+	unsigned int nSamplesHiFi  = 50;
 	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
 
 
 	MultiLevelModel testModel("MLtestModel2");
+//	testModel.setDisplayOn();
+
 	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
 	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
 
@@ -269,14 +273,15 @@ TEST(testMultiLevelModel, testfindNearestNeighbourLowFidelity){
 	mat samplesLowFi;
 	samplesLowFi.load("lowFidelityTestData.csv",csv_ascii);
 
-	rowvec x = samplesLowFi.row(14);
+	unsigned int someIndex = 14;
+	rowvec x = samplesLowFi.row(someIndex);
 	rowvec xp(2); xp(0) = x(0) + 0.001;  xp(1) = x(1)-0.001;
 
 	xp = normalizeRowVector(xp, lb, ub);
 
 	unsigned int indx = testModel.findNearestNeighbourLowFidelity(xp);
 
-	EXPECT_EQ(indx, 14);
+	EXPECT_EQ(indx, someIndex);
 
 
 }
@@ -352,6 +357,7 @@ TEST(testMultiLevelModel, testfindNearestNeighbourHighFidelity){
 
 	EXPECT_EQ(indx, 14);
 
+
 }
 
 
@@ -372,7 +378,7 @@ TEST(testMultiLevelModel, testtrainLowFidelityModel){
 
 	testModel.setParameterBounds(lb,ub);
 	testModel.initializeSurrogateModel();
-	//	testModel.ifDisplay = true;
+
 
 	testModel.setNumberOfTrainingIterations(1000);
 	testModel.trainLowFidelityModel();
@@ -413,6 +419,8 @@ TEST(testMultiLevelModel, testtrainLowFidelityModel){
 	EXPECT_LT(MSE, 200.0);
 
 
+
+
 }
 
 
@@ -426,11 +434,16 @@ TEST(testMultiLevelModel, testtrainLowFidelityModelWithGradient){
 
 
 	MultiLevelModel testModel("MLtestModelWithGradients");
+//	testModel.setDisplayOn();
+
 	testModel.setinputFileNameHighFidelityData("highFidelityTestDataWithGradient.csv");
 	testModel.setinputFileNameLowFidelityData("lowFidelityTestDataWithGradient.csv");
 
+
+	testModel.setGradientsOn();
 	testModel.setGradientsOnLowFi();
 	testModel.setGradientsOnHiFi();
+
 
 
 	vec lb(2); lb.fill(-6.0);
@@ -439,13 +452,10 @@ TEST(testMultiLevelModel, testtrainLowFidelityModelWithGradient){
 	testModel.setParameterBounds(lb,ub);
 	testModel.initializeSurrogateModel();
 
-	//	testModel.ifDisplay = true;
 
 	testModel.setNumberOfTrainingIterations(1000);
 	testModel.trainLowFidelityModel();
 
-	mat samplesLowFi;
-	samplesLowFi.load("lowFidelityTestDataWithGradient.csv",csv_ascii);
 
 	double SE = 0.0;
 	for(int i=0; i<100; i++){
@@ -482,7 +492,7 @@ TEST(testMultiLevelModel, testtrainLowFidelityModelWithGradient){
 
 }
 
-TEST(testMultiLevelModel, testtrainErroModel){
+TEST(testMultiLevelModel, testtrainErrorModel){
 
 	unsigned int numberOfHiFiSamples = 50;
 	unsigned int numberOfLowFiSamples = 200;
@@ -492,7 +502,7 @@ TEST(testMultiLevelModel, testtrainErroModel){
 
 
 	MultiLevelModel testModel("MLtestModel");
-	testModel.ifDisplay = false;
+
 	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
 	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
 
@@ -560,7 +570,7 @@ TEST(testMultiLevelModel, testdetermineGammaBasedOnData){
 
 	testModel.setParameterBounds(lb,ub);
 	testModel.initializeSurrogateModel();
-	testModel.ifDisplay = false;
+
 	testModel.determineGammaBasedOnData();
 
 
@@ -585,7 +595,7 @@ TEST(testMultiLevelModel, testInterpolate){
 
 	testModel.setParameterBounds(lb,ub);
 	testModel.initializeSurrogateModel();
-	testModel.ifDisplay = false;
+
 	testModel.setNumberOfTrainingIterations(1000);
 
 	testModel.train();

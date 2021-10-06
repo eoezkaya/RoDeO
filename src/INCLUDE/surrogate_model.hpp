@@ -35,70 +35,46 @@
 #include "Rodeo_macros.hpp"
 #include "bounds.hpp"
 #include "design.hpp"
-
+#include "surrogate_model_data.hpp"
 
 using namespace arma;
 using std::string;
 
 
-class PartitionData{
-
-public:
-
-	std::string label;
-	mat rawData;
-	mat X;
-	mat gradientData;
-
-	vec yExact;
-	vec ySurrogate;
-	vec squaredError;
-
-	bool ifHasGradientData = false;
-	bool ifNormalized  = false;
-
-	PartitionData();
-	PartitionData(string name);
-	void fillWithData(mat);
-
-	unsigned int numberOfSamples = 0;
-	unsigned int dim = 0;
-	void normalizeAndScaleData(vec xmin, vec xmax);
-	double calculateMeanSquaredError(void) const;
-	rowvec getRow(unsigned int indx) const;
-	void saveAsCSVFile(string fileName);
-	void print(void) const;
-
-};
-
 class SurrogateModel{
 
 protected:
-	unsigned int dim = 0;
-	unsigned int numberOfSamples = 0;
+
+
 	unsigned int NTest = 0;
 
-	mat rawData;
-	mat X;
-	mat Xraw;
-	mat gradientData;
-	vec y;
+
 	vec yTest;
 	mat XTestraw;
 	mat XTest;
 
-	std::string label;
+	std::string name;
+
+
 	std::string hyperparameters_filename;
+
 	std::string filenameDataInput;
+	std::string filenameDataInputTest;
+
+
 	std::string filenameTestResults;
 
 
-	double ymin,ymax,yave;
 
 	Bounds boxConstraints;
 
 	unsigned int numberOfHyperParameters  = 0;
 	unsigned int numberOfTrainingIterations  = 10000;
+
+	SurrogateModelData data;
+	OutputDevice output;
+
+	bool ifHasGradientData = false;
 
 
 public:
@@ -106,26 +82,26 @@ public:
 	bool ifInitialized = false;
 	bool ifDataIsRead = false;
 	bool ifNormalized = false;
-	bool ifHasGradientData = false;
+
+
 	bool ifHasTestData = false;
-	bool ifDisplay = false;
-
-
-	std::string modelName;
 
 
 	mat testResults;
 
 	SURROGATE_MODEL modelID;
 
-	bool ifprintToScreen = false;
-	bool ifPrintOutSampleError = false;
 
 	SurrogateModel();
 	SurrogateModel(std::string name);
 
-	void readData(void);
-	void normalizeData(void);
+	void setName(std::string);
+
+	void readDataTest(void);
+	void normalizeDataTest(void);
+
+	virtual void readData(void);
+	virtual void normalizeData(void);
 
 	void checkIfParameterBoundsAreOk(void) const;
 	void checkRawData(void) const;
@@ -133,6 +109,15 @@ public:
 	void setParameterBounds(vec xmin, vec xmax);
 	void setParameterBounds(double xmin, double xmax);
 	void setParameterBounds(Bounds boxConstraintsInput);
+
+	void setBoxConstraintsFromData(void);
+
+	void setGradientsOn(void);
+	void setGradientsOff(void);
+	bool areGradientsOn(void) const;
+
+	virtual void setDisplayOn(void);
+	virtual void setDisplayOff(void);
 
 
 
@@ -147,6 +132,8 @@ public:
 	vec getxmin(void) const;
 	vec getxmax(void) const;
 
+
+	void setNameOfInputFileTest(string filename);
 
 	virtual void setNameOfInputFile(string filename) = 0;
 	virtual void setNameOfHyperParametersFile(string filename) = 0;
@@ -165,6 +152,8 @@ public:
 	virtual void addNewSampleToData(rowvec newsample) = 0;
 
 
+	void tryOnTestData(void) const;
+
 	double calculateInSampleError(void) const;
 	void calculateOutSampleError(void);
 	double getOutSampleErrorMSE(void) const;
@@ -174,13 +163,8 @@ public:
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
 
-	void tryModelOnTestSet(PartitionData &testSet) const;
+
 	void visualizeTestResults(void) const;
-
-
-	void printMsg(string msg) const;
-	template <class T>
-	void printMsg(string msg, T) const;
 
 
 

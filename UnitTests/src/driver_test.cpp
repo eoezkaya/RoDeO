@@ -1,4 +1,10 @@
 /*
+ * RoDeO, a Robust Design Optimization Package
+ *
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Homepage: http://www.scicomp.uni-kl.de
+ * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
+ *
  * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
  *
  * This file is part of RoDeO
@@ -30,7 +36,7 @@
 #include "auxiliary_functions.hpp"
 #include<gtest/gtest.h>
 
-//#define TESTDRIVERON
+#define TESTDRIVERON
 
 #ifdef TESTDRIVERON
 
@@ -266,92 +272,156 @@ TEST(testDriver, testreadConfigFile2){
 
 
 
-TEST(testDriver, testrunSurrogateModelTest){
+TEST(testDriver, testrunSurrogateModelTestOrdinaryKriging){
+
+	/* Here we test the ORDINARY_KRIGING model using the Himmelblau function */
+
+	remove("trainingData.csv");
+	remove("testDataInput.csv");
+
+	unsigned int dim = 2;
+	unsigned int N = 100;
+
+	TestFunction himmelblauFunction("Himmelblau",dim);
+	himmelblauFunction.setFunctionPointer(Himmelblau);
+	himmelblauFunction.setBoxConstraints(-6.0, 6.0);
+
+	himmelblauFunction.setNumberOfTrainingSamples(N);
+	himmelblauFunction.generateSamplesInputTrainingData();
+	himmelblauFunction.generateTrainingSamples();
+	mat trainingData = himmelblauFunction.getTrainingSamples();
+
+
+	himmelblauFunction.setNumberOfTestSamples(N);
+	himmelblauFunction.generateSamplesInputTestData();
+	himmelblauFunction.generateTestSamples();
+	mat testData      = himmelblauFunction.getTestSamples();
+	mat testDataInput = himmelblauFunction.getTestSamplesInput();
+
+	saveMatToCVSFile(trainingData,"trainingData.csv");
+	saveMatToCVSFile(testDataInput,"testDataInput.csv");
+
+
 	RoDeODriver testDriver;
-	testDriver.setConfigFilename("testConfigFileSurrogateTest.cfg");
+	testDriver.setConfigFilename("testConfigFileSurrogateTest1.cfg");
 	testDriver.readConfigFile();
 
-	compileWithCpp("himmelblau.cpp","himmelblau");
 
 	testDriver.runSurrogateModelTest();
 
 	mat results;
-	results.load("ObjectiveFunction_TestResults.csv", csv_ascii);
+	results.load("surrogateTest.csv", csv_ascii);
+
+	ASSERT_EQ(results.n_cols, dim+1);
+	ASSERT_EQ(results.n_rows, N);
 
 
-	vec SE = results.col(4);
-	SE(0) = 0.0;
 
-	double sum = mean(SE);
-	ASSERT_LT(sum,1000);
+	remove("surrogateTest.csv");
+	remove("trainingData.csv");
+	remove("testDataInput.csv");
 
 }
 
 
 
-TEST(testDriver, testrunSurrogateModelTest2){
+TEST(testDriver, testrunSurrogateModelTestAggregation){
+
+
+	/* Here we test the AGGREGATION model using the Himmelblau function */
+
+	remove("trainingData.csv");
+	remove("testDataInput.csv");
+
+	unsigned int dim = 2;
+	unsigned int N = 100;
+
+	TestFunction himmelblauFunction("Himmelblau",dim);
+	himmelblauFunction.setFunctionPointer(HimmelblauAdj);
+	himmelblauFunction.setBoxConstraints(-6.0, 6.0);
+
+	himmelblauFunction.setNumberOfTrainingSamples(N);
+	himmelblauFunction.generateSamplesInputTrainingData();
+	himmelblauFunction.generateTrainingSamples();
+	mat trainingData = himmelblauFunction.getTrainingSamples();
+
+
+	himmelblauFunction.setNumberOfTestSamples(N);
+	himmelblauFunction.generateSamplesInputTestData();
+	himmelblauFunction.generateTestSamples();
+	mat testData      = himmelblauFunction.getTestSamples();
+	mat testDataInput = himmelblauFunction.getTestSamplesInput();
+
+	saveMatToCVSFile(trainingData,"trainingData.csv");
+	saveMatToCVSFile(testDataInput,"testDataInput.csv");
+
+	abort();
+
 	RoDeODriver testDriver;
 	testDriver.setConfigFilename("testConfigFileSurrogateTest2.cfg");
 	testDriver.readConfigFile();
 
-	TestFunction testFunctionEggholder("Himmelblau",2);
-
-	testFunctionEggholder.setFunctionPointer(Himmelblau);
-
-	testFunctionEggholder.setBoxConstraints(-6.0,6.0);
-	mat samples = testFunctionEggholder.generateRandomSamples(100);
-
-	saveMatToCVSFile(samples,"trainingInput.csv");
-
-	samples = testFunctionEggholder.generateRandomSamples(100);
-
-	saveMatToCVSFile(samples,"testInput.csv");
-
 
 	testDriver.runSurrogateModelTest();
 
 	mat results;
-	results.load("ObjectiveFunction_TestResults.csv", csv_ascii);
+	results.load("surrogateTest.csv", csv_ascii);
+
+	ASSERT_EQ(results.n_cols, dim+1);
+	ASSERT_EQ(results.n_rows, N);
 
 
-	vec SE = results.col(4);
-	SE(0) = 0.0;
 
-	double sum = mean(SE);
-	ASSERT_LT(sum,500);
+	remove("surrogateTest.csv");
+	remove("trainingData.csv");
+	remove("testDataInput.csv");
 
 
 
 }
 
-TEST(testDriver, testrunSurrogateModelTest3){
+TEST(testDriver, testrunSurrogateModelTestMultiLevel){
+
+	int nSamplesLowFi = 200;
+	int nSamplesHiFi  = 50;
+
+	unsigned int NTest = 100;
+	unsigned int dim = 2;
+
+	generateHimmelblauDataMultiFidelity("trainingData.csv","trainingDataLowFidelity.csv",nSamplesHiFi ,nSamplesLowFi);
+
+	TestFunction himmelblauFunction("Himmelblau",dim);
+	himmelblauFunction.setFunctionPointer(Himmelblau);
+	himmelblauFunction.setBoxConstraints(-6.0, 6.0);
+
+
+
+	himmelblauFunction.setNumberOfTestSamples(NTest);
+	himmelblauFunction.generateSamplesInputTestData();
+	himmelblauFunction.generateTestSamples();
+	mat testData      = himmelblauFunction.getTestSamples();
+	mat testDataInput = himmelblauFunction.getTestSamplesInput();
+
+	saveMatToCVSFile(testDataInput,"testDataInput.csv");
+
 	RoDeODriver testDriver;
 	testDriver.setConfigFilename("testConfigFileSurrogateTest3.cfg");
 	testDriver.readConfigFile();
-
-	TestFunction testFunctionEggholder("Himmelblau",2);
-
-	testFunctionEggholder.setFunctionPointer(Himmelblau);
-
-	testFunctionEggholder.setBoxConstraints(-6.0,6.0);
-	mat samples = testFunctionEggholder.generateRandomSamples(100);
-
-
-	saveMatToCVSFile(samples,"testInput.csv");
 
 
 	testDriver.runSurrogateModelTest();
 
 	mat results;
-	results.load("ObjectiveFunction_TestResults.csv", csv_ascii);
+	results.load("surrogateTest.csv", csv_ascii);
+
+	ASSERT_EQ(results.n_cols, dim+1);
+	ASSERT_EQ(results.n_rows, NTest);
 
 
-	vec SE = results.col(4);
-	SE(0) = 0.0;
-
-	double sum = mean(SE);
-	ASSERT_LT(sum,500);
-
+	remove("surrogateTest.csv");
+	remove("trainingData.csv");
+	remove("trainingDataLowFidelity.csv");
+	remove("testDataInput.csv");
 
 
 }
@@ -751,6 +821,9 @@ TEST(testDriver, testrunDoE6){
 
 }
 
+
+
+
 TEST(testDriver, testrunOptimization1){
 
 	/* In this test we perform unconstrained minimization of the Himmelblau function with only function values.
@@ -758,8 +831,13 @@ TEST(testDriver, testrunOptimization1){
 	 * */
 
 	RoDeODriver testDriver;
+
+	//	testDriver.setDisplayOn();
+
 	testDriver.setConfigFilename("testConfigFileOptimizationTest1.cfg");
 	testDriver.readConfigFile();
+
+
 	compileWithCpp("himmelblau.cpp","himmelblau");
 	testDriver.runOptimization();
 
@@ -778,6 +856,7 @@ TEST(testDriver, testrunOptimization2){
 	testDriver.readConfigFile();
 	compileWithCpp("himmelblau.cpp","himmelblau");
 	testDriver.runOptimization();
+
 
 
 }

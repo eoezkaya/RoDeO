@@ -46,96 +46,6 @@
 
 using namespace arma;
 
-PartitionData::PartitionData(){
-
-}
-
-PartitionData::PartitionData(std::string name){
-
-	label = name;
-
-}
-
-
-void PartitionData::fillWithData(mat inputData){
-
-	assert(inputData.n_rows > 0);
-
-	rawData = inputData;
-
-	numberOfSamples = rawData.n_rows;
-
-	if(ifHasGradientData){
-
-		dim = (rawData.n_cols-1)/2;
-
-	}
-	else{
-
-		dim = rawData.n_cols-1;
-
-	}
-
-
-
-	X = rawData.submat(0,0,numberOfSamples-1, dim-1);
-
-	if(ifHasGradientData){
-
-		gradientData = rawData.submat(0,dim+1,numberOfSamples-1, 2*dim);
-
-	}
-
-	yExact = rawData.col(dim);
-	ySurrogate = zeros<vec>(numberOfSamples);
-	squaredError = zeros<vec>(numberOfSamples);
-}
-
-
-
-void PartitionData::saveAsCSVFile(std::string fileName){
-
-	mat saveBuffer = rawData;
-	int nCols = rawData.n_cols;
-	saveBuffer.reshape(numberOfSamples,nCols+2);
-	saveBuffer.col(nCols) =  ySurrogate;
-	saveBuffer.col(nCols+1) =  squaredError;
-
-	saveBuffer.save(fileName,csv_ascii);
-
-}
-
-
-
-
-rowvec PartitionData::getRow(unsigned int indx) const{
-
-	return X.row(indx);
-
-}
-
-double PartitionData::calculateMeanSquaredError(void) const{
-
-	return mean(squaredError);
-
-}
-
-void PartitionData::normalizeAndScaleData(vec xmin, vec xmax){
-
-	X =  normalizeMatrix(X, xmin, xmax);
-	X = X*(1.0/dim);
-	ifNormalized = true;
-
-}
-
-void PartitionData::print(void) const{
-
-	cout <<"Data: "<<label <<"\n";
-	printMatrix(rawData,"rawData");
-	printMatrix(X,"X");
-
-
-}
 
 
 SurrogateModel::SurrogateModel(){
@@ -143,15 +53,62 @@ SurrogateModel::SurrogateModel(){
 
 }
 
-SurrogateModel::SurrogateModel(std::string name){
+SurrogateModel::SurrogateModel(std::string nameInput){
 
-	assert(isNotEmpty(name));
 
-	label = name;
+	setName(nameInput);
+
 	filenameDataInput = name +".csv";
 	filenameTestResults = name + "_TestResults.csv";
 
 }
+
+void SurrogateModel::setName(std::string nameInput){
+
+	assert(isNotEmpty(nameInput));
+
+	name = nameInput;
+
+}
+
+
+
+void SurrogateModel::setGradientsOn(void){
+
+	data.setGradientsOn();
+	ifHasGradientData = true;
+
+
+}
+
+void SurrogateModel::setGradientsOff(void){
+
+	data.setGradientsOff();
+	ifHasGradientData = false;
+
+}
+
+bool SurrogateModel::areGradientsOn(void) const{
+
+	return ifHasGradientData;
+
+}
+
+
+void SurrogateModel::setDisplayOn(void){
+
+	data.setDisplayOn();
+	output.ifScreenDisplay = true;
+
+}
+
+void SurrogateModel::setDisplayOff(void){
+
+	data.setDisplayOff();
+	output.ifScreenDisplay = false;
+
+}
+
 
 void SurrogateModel::checkIfParameterBoundsAreOk(void) const{
 
@@ -160,9 +117,13 @@ void SurrogateModel::checkIfParameterBoundsAreOk(void) const{
 
 }
 
+
 void SurrogateModel::setParameterBounds(Bounds boxConstraintsInput){
 
 	assert(boxConstraintsInput.areBoundsSet());
+
+	data.setBoxConstraints(boxConstraintsInput);
+
 	boxConstraints = boxConstraintsInput;
 
 
@@ -179,14 +140,21 @@ void SurrogateModel::setParameterBounds(vec xmin, vec xmax){
 
 void SurrogateModel::setParameterBounds(double xmin, double xmax){
 
-	assert(dim>0);
-
-	Bounds boxConstraints(dim);
+	Bounds boxConstraints(data.getDimension());
 	boxConstraints.setBounds(xmin,xmax);
 
 	setParameterBounds(boxConstraints);
 }
 
+
+void SurrogateModel::setBoxConstraintsFromData(void){
+
+	data.setBoxConstraintsFromData();
+
+	setParameterBounds(data.getBoxConstraints());
+
+
+}
 
 std::string SurrogateModel::getNameOfHyperParametersFile(void) const{
 
@@ -206,163 +174,62 @@ std::string SurrogateModel::getNameOfInputFile(void) const{
 
 unsigned int SurrogateModel::getDimension(void) const{
 
-	return this->dim;
+	return data.getDimension();
 
 
 }
 
 unsigned int SurrogateModel::getNumberOfSamples(void) const{
 
-	return numberOfSamples;
+	return data.getNumberOfSamples();
 
 
 }
 
 mat SurrogateModel::getRawData(void) const{
 
-	return rawData;
+	return data.getRawData();
 
 
 }
 
-void SurrogateModel::checkRawData(void) const{
 
-	for(unsigned int i=0; i<numberOfSamples; i++){
-
-		rowvec sample1 = rawData.row(i);
-
-		for(unsigned int j=i+1; j<numberOfSamples; j++){
-
-			rowvec sample2 = rawData.row(j);
-
-			if(checkifTooCLose(sample1, sample2)) {
-
-				printf("ERROR: Two samples in the training data are too close to each other!\n");
-
-				abort();
-			}
-		}
-	}
-
-
-
-}
 
 void SurrogateModel::readData(void){
 
-	assert(isNotEmpty(filenameDataInput));
 
-	if(ifDisplay){
-
-		std::cout<<"Loading data from the file "<<filenameDataInput<<"...\n";
-
-	}
-
-	bool status = rawData.load(filenameDataInput.c_str(), csv_ascii);
-
-	if(status == true)
-	{
-		printMsg("Data input is done");
-
-	}
-	else
-	{
-		std::cout<<"ERROR: Problem with data the input (cvs ascii format)\n";
-		std::cout<<"Cannot read: "<<filenameDataInput<<"\n";
-		abort();
-	}
-
-
-	if(ifHasGradientData){
-
-		assert((rawData.n_cols - 1)%2 == 0);
-		dim = (rawData.n_cols - 1)/2;
-	}
-	else{
-
-		dim = rawData.n_cols - 1;
-	}
-
-	/* set number of sample points */
-	numberOfSamples = rawData.n_rows;
-
-	printMsg<unsigned int>("Dimension =",dim);
-	printMsg<unsigned int>("Number of samples =", numberOfSamples);
-
-
-	checkRawData();
-
-
-	Xraw = rawData.submat(0, 0, numberOfSamples - 1, dim - 1);
-
-	X = Xraw;
-
-	if(ifHasGradientData){
-
-		gradientData = rawData.submat(0, dim+1, numberOfSamples - 1, 2*dim);
-
-	}
-
-	y = rawData.col(dim);
-
-
-	ymin = min(y);
-	ymax = max(y);
-	yave = mean(y);
+	data.readData(filenameDataInput);
 
 	ifDataIsRead = true;
 
 }
+
+void SurrogateModel::readDataTest(void){
+
+	data.readDataTest(filenameDataInputTest);
+
+}
+
 
 
 void SurrogateModel::normalizeData(void){
 
 	assert(ifDataIsRead);
 
-	X = normalizeMatrix(X,boxConstraints);
+	data.normalizeSampleInputMatrix();
 
-	X = (1.0/dim)*X;
 	ifNormalized = true;
 
 }
 
-void SurrogateModel::tryModelOnTestSet(PartitionData &testSet) const{
-
-	/* testset should be without gradients */
-	assert(testSet.dim == dim);
-
-	unsigned int howManySamples = testSet.numberOfSamples;
+void SurrogateModel::normalizeDataTest(void){
 
 
-	/* normalize data matrix for the Validation */
-
-	if(testSet.ifNormalized == false){
-
-		vec xmin = this->boxConstraints.getLowerBounds();
-		vec xmax = this->boxConstraints.getUpperBounds();
-
-		testSet.normalizeAndScaleData(xmin,xmax);
-
-	}
-
-	for(unsigned int i=0; i<howManySamples; i++){
-
-		rowvec x = testSet.getRow(i);
-
-		testSet.ySurrogate(i) = interpolate(x);
-
-
-		testSet.squaredError(i) = (testSet.ySurrogate(i)-testSet.yExact(i)) * (testSet.ySurrogate(i)-testSet.yExact(i));
-#if 0
-		printf("\nx: ");
-		x.print();
-		printf("fExactValue = %15.10f, fSurrogateValue = %15.10f\n",testSet.yExact(i),testSet.ySurrogate(i));
-#endif
-
-	}
+	data.normalizeSampleInputMatrixTest();
 
 
 }
+
 
 void SurrogateModel::updateAuxilliaryFields(void){
 
@@ -377,18 +244,18 @@ void SurrogateModel::updateAuxilliaryFields(void){
 void SurrogateModel::setTestData(mat testData){
 
 	assert(testData.n_rows > 0);
-	assert(testData.n_cols == dim +1);
+	assert(testData.n_cols == data.getDimension() +1);
 	assert(boxConstraints.areBoundsSet());
 
 	NTest = testData.n_rows;
 
-	XTestraw = testData.submat(0,0,NTest-1, dim-1);
+	XTestraw = testData.submat(0,0,NTest-1, data.getDimension()-1);
 
-	yTest = testData.col(dim);
+	yTest = testData.col(data.getDimension());
 
 	XTest = normalizeMatrix(XTestraw, this->boxConstraints);
 
-	XTest = (1.0/dim)*XTest;
+	XTest = (1.0/data.getDimension())*XTest;
 
 	ifHasTestData = true;
 }
@@ -401,12 +268,13 @@ double SurrogateModel::calculateInSampleError(void) const{
 	assert(ifInitialized);
 
 	double meanSquaredError = 0.0;
+	vec y = data.getOutputVector();
 
-	for(unsigned int i=0;i<numberOfSamples;i++){
+	for(unsigned int i=0;i<data.getNumberOfSamples(); i++){
 
-		rowvec xp = X.row(i);
+		rowvec xp = data.getRowX(i);
 
-		rowvec x  = getRowXRaw(i);
+		rowvec x  = data.getRowXRaw(i);
 
 #if 0
 		printf("\nData point = %d\n", i+1);
@@ -429,7 +297,7 @@ double SurrogateModel::calculateInSampleError(void) const{
 
 	}
 
-	meanSquaredError = meanSquaredError/numberOfSamples;
+	meanSquaredError = meanSquaredError/data.getNumberOfSamples();
 
 
 	return meanSquaredError;
@@ -441,7 +309,7 @@ void SurrogateModel::calculateOutSampleError(void){
 
 	assert(ifInitialized);
 	assert(ifHasTestData);
-	unsigned int numberOfEntries = dim + 3;
+	unsigned int numberOfEntries = data.getDimension() + 3;
 
 	testResults = zeros<mat>(NTest, numberOfEntries);
 
@@ -454,11 +322,7 @@ void SurrogateModel::calculateOutSampleError(void){
 
 		rowvec x  = XTestraw.row(i);
 
-		if(ifPrintOutSampleError){
-			std::cout<<"\n"<<i+1<<") Data point at x = \n";
 
-			x.print();
-		}
 		double functionValueSurrogate = interpolate(xp);
 
 		double functionValueExact = yTest(i);
@@ -466,17 +330,11 @@ void SurrogateModel::calculateOutSampleError(void){
 		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
 
 
-		if(ifPrintOutSampleError){
-
-			printf("True value = %15.10f, Estimated value = %15.10f, Squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
-		}
-
-
 		rowvec sample(numberOfEntries);
 		copyRowVector(sample,x);
-		sample(dim) =   functionValueExact;
-		sample(dim+1) = functionValueSurrogate;
-		sample(dim+2) = squaredError;
+		sample(data.getDimension()) =   functionValueExact;
+		sample(data.getDimension()+1) = functionValueSurrogate;
+		sample(data.getDimension()+2) = squaredError;
 
 		testResults.row(i) = sample;
 	}
@@ -489,7 +347,8 @@ void SurrogateModel::calculateOutSampleError(void){
 double SurrogateModel::getOutSampleErrorMSE(void) const{
 
 	assert(testResults.n_rows > 0);
-	vec squaredError = this->testResults.col(dim+2);
+
+	vec squaredError = testResults.col(data.getDimension()+2);
 
 
 	return mean(squaredError);
@@ -504,16 +363,16 @@ void SurrogateModel::saveTestResults(void) const{
 
 	field<std::string> header(testResults.n_cols);
 
-	for(unsigned int i=0; i<dim; i++){
+	for(unsigned int i=0; i<data.getDimension(); i++){
 
 		header(i) ="x"+std::to_string(i+1);
 
 	}
 
 
-	header(dim)   = "True value";
-	header(dim+1) = "Estimated value";
-	header(dim+2) = "Squared Error";
+	header(data.getDimension())   = "True value";
+	header(data.getDimension()+1) = "Estimated value";
+	header(data.getDimension()+2) = "Squared Error";
 
 	testResults.save( csv_name(filenameTestResults, header) );
 
@@ -522,7 +381,7 @@ void SurrogateModel::saveTestResults(void) const{
 
 void SurrogateModel::visualizeTestResults(void) const{
 
-	std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_Test_Results.py "+ label;
+	std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_Test_Results.py "+ name;
 
 	executePythonScript(python_command);
 
@@ -534,19 +393,10 @@ void SurrogateModel::visualizeTestResults(void) const{
 
 void SurrogateModel::printSurrogateModel(void) const{
 
-	assert(numberOfSamples>0);
-
-	cout << "Surrogate model:"<< endl;
-	cout<< "Number of samples: "<<numberOfSamples<<endl;
-	cout<<"Number of input parameters: "<<dim<<endl;
-	cout<<"Raw Data:\n";
-	rawData.print();
-
+	data.print();
 	boxConstraints.print();
 
-	cout<<"ymin = "<<ymin<<endl;
-	cout<<"ymax = "<<ymax<<endl;
-	cout<<"ymean = "<<yave<<endl;
+
 }
 
 
@@ -568,47 +418,60 @@ vec SurrogateModel::getxmax(void) const{
 
 rowvec SurrogateModel::getRowX(unsigned int index) const{
 
-	assert(index < X.n_rows);
-
-	return X.row(index);
+	return data.getRowX(index);
 
 }
 
 
 rowvec SurrogateModel::getRowXRaw(unsigned int index) const{
 
-	assert(index < X.n_rows);
-
-	return Xraw.row(index);
+	return data.getRowXRaw(index);
 }
 
 
-void SurrogateModel::printMsg(std::string message) const{
 
-	assert(isNotEmpty(message));
 
-	if(ifDisplay){
+void SurrogateModel::setNameOfInputFileTest(string filename){
 
-		std::cout<<message<<"\n";
+	assert(isNotEmpty(filename));
+	filenameDataInputTest = filename;
+
+
+}
+
+void SurrogateModel::tryOnTestData(void) const{
+
+	output.printMessage("Trying surrogate model on test data...");
+
+	unsigned int dim = data.getDimension();
+	unsigned int numberOfEntries = dim + 1;
+	unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
+
+	mat results(numberOfTestSamples,numberOfEntries);
+
+	for(unsigned int i=0; i<numberOfTestSamples; i++){
+
+		rowvec xp = data.getRowXTest(i);
+		rowvec x  = data.getRowXRawTest(i);
+
+		double fTilde = interpolate(xp);
+
+		rowvec sample(numberOfEntries);
+		copyRowVector(sample,x);
+		sample(dim) =  fTilde;
+
+		results.row(i) = sample;
+
 
 	}
 
+	output.printMessage("Saving surrogate test results in the file: surrogateTest.csv");
 
-}
+	saveMatToCVSFile(results,"surrogateTest.csv");
 
-template <class T>
-void SurrogateModel::printMsg(std::string message, T whatToPrint) const{
+	output.printMessage("Surrogate test results", results);
 
-
-
-	if(ifDisplay){
-
-		std::cout<<message<<" ";
-		std::cout<<whatToPrint<<"\n";
-
-	}
 
 
 }
-
 

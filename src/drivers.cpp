@@ -44,6 +44,7 @@
 #include "objective_function.hpp"
 #include "constraint_functions.hpp"
 #include "auxiliary_functions.hpp"
+#include "surrogate_model_tester.hpp"
 #include "drivers.hpp"
 #include "configkey.hpp"
 #include "lhs.hpp"
@@ -86,6 +87,8 @@ RoDeODriver::RoDeODriver(){
 
 
 	/* Other keywords */
+	configKeys.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
+
 	configKeys.add(ConfigKey("PROBLEM_TYPE","string") );
 	configKeys.add(ConfigKey("PROBLEM_NAME","string") );
 	configKeys.add(ConfigKey("DIMENSION","int") );
@@ -97,7 +100,7 @@ RoDeODriver::RoDeODriver(){
 	configKeys.add(ConfigKey("NUMBER_OF_TRAINING_SAMPLES","int") );
 
 
-	configKeys.add(ConfigKey("FILENAME_TRAINING_DATA","string") );
+	configKeys.add(ConfigKey("FILENAME_TRAINING_DATA","stringVector") );
 	configKeys.add(ConfigKey("FILENAME_TEST_DATA","string") );
 
 	configKeys.add(ConfigKey("SURROGATE_MODEL","string") );
@@ -123,6 +126,7 @@ RoDeODriver::RoDeODriver(){
 	availableSurrogateModels.push_back("GRADIENT_ENHANCED_KRIGING");
 	availableSurrogateModels.push_back("LINEAR_REGRESSION");
 	availableSurrogateModels.push_back("AGGREGATION");
+	availableSurrogateModels.push_back("MULTI_LEVEL");
 
 	configFileName = settings.config_file;
 
@@ -282,51 +286,11 @@ void RoDeODriver::checkSettingsForSurrogateModelTest(void) const{
 
 	checkIfSurrogateModelTypeIsOK();
 
-	bool ifTrainingDataIsSet = configKeys.ifConfigKeyIsSet("FILENAME_TRAINING_DATA");
-	bool ifTestDataIsSet = configKeys.ifConfigKeyIsSet("FILENAME_TEST_DATA");
-
-
-	if(ifTrainingDataIsSet == false || ifTestDataIsSet== false ){
-
-		checkIfProblemDimensionIsSetProperly();
-
-		checkIfBoxConstraintsAreSetPropertly();
-
-	}
-
-
-	if(ifTrainingDataIsSet == false) {
-
-		configKeys.abortifConfigKeyIsNotSet("NUMBER_OF_TRAINING_SAMPLES");
-
-	}
-
-	if(ifTestDataIsSet == false) {
-
-		configKeys.abortifConfigKeyIsNotSet("NUMBER_OF_TRAINING_SAMPLES");
-
-	}
-
-
+	configKeys.abortifConfigKeyIsNotSet("FILENAME_TRAINING_DATA");
+	configKeys.abortifConfigKeyIsNotSet("FILENAME_TEST_DATA");
 
 
 }
-
-
-//
-//void RoDeODriver::checkIfNumberOfTrainingSamplesIsDefined(void) const{
-//
-//	configKeys.abortifConfigKeyIsNotSet("NUMBER_OF_TRAINING_SAMPLES");
-//
-//}
-//
-//void RoDeODriver::checkIfNumberOfTestSamplesIsDefined(void) const{
-//
-//	configKeys.abortifConfigKeyIsNotSet("NUMBER_OF_TRAINING_SAMPLES");
-//
-//}
-
-
 
 
 void RoDeODriver::checkIfSurrogateModelTypeIsOK(void) const{
@@ -413,7 +377,6 @@ void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 
 	checkIfProblemTypeIsSetProperly();
 
-	checkIfObjectiveFunctionNameIsDefined();
 
 
 	std::string type = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
@@ -716,11 +679,9 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 	if(checkIfOn(multilevel)){
 
-		std::cout<<"Here\n";
 		objectiveFunction.ifMultiLevel = true;
 
 		std::string executableNameLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",1);
-		std::cout<<"executableNameLowFi = "<<executableNameLowFi<<"\n";
 
 		if(executableNameLowFi.empty()){
 
@@ -826,12 +787,6 @@ void RoDeODriver::extractObjectiveFunctionDefinitionFromString(std::string input
 
 
 
-
-	}
-	else{
-
-		std::cout<<"ERROR: OBJECTIVE_FUNCTION is absent!\n";
-		abort();
 
 	}
 
@@ -1268,139 +1223,110 @@ bool RoDeODriver::checkIfRunIsNecessary(int idConstraint) const{
 }
 
 
+SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
 
+	if(modelName == "Kriging" || modelName == "KRIGING" || modelName == "ORDINARY_KRIGING" ||  modelName == "ordinary_kriging") {
+
+		return ORDINARY_KRIGING;
+
+	}
+
+	if(modelName == "UNIVERSAL_KRIGING" ||  modelName == "universal_kriging") {
+
+		return UNIVERSAL_KRIGING;
+
+	}
+
+	if(modelName == "GEK" ||  modelName == "GRADIENT_ENHANCED_KRIGING" || modelName == "gek") {
+
+		return GRADIENT_ENHANCED_KRIGING;
+
+	}
+
+	if(modelName == "AGGREGATION_MODEL" ||  modelName == "AGGREGATION" || modelName == "aggregation_model") {
+
+		return AGGREGATION;
+
+	}
+
+	if(modelName == "MULTI_LEVEL" ||  modelName == "multi-level" || modelName == "MULTI-LEVEL") {
+
+		return MULTI_LEVEL;
+
+	}
+
+
+
+	return NONE;
+}
 
 void RoDeODriver::runSurrogateModelTest(void){
 
-	if(configKeys.ifConfigKeyIsSet("FILENAME_TRAINING_DATA")){
+	SurrogateModelTester surrogateTest;
 
-		determineProblemDimensionAndBoxConstraintsFromTrainingData();
+	std::string problemName = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
 
-	}
+	surrogateTest.setName(problemName);
 
 	std::string surrogateModelType = configKeys.getConfigKeyStringValue("SURROGATE_MODEL");
 
+	SURROGATE_MODEL modelID = getSurrogateModelID(surrogateModelType);
 
-
-	std::string objectiveFunctionName = configKeysObjectiveFunction.getConfigKeyStringValue("NAME");
 
 	int dimension = configKeys.getConfigKeyIntValue("DIMENSION");
 
-	TestFunction TestFunction(objectiveFunctionName, dimension);
+	surrogateTest.setDimension(dimension);
 
-	if(  ifIsAGradientBasedMethod(surrogateModelType)){
+	std::string filenameTrainingData = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
 
-		TestFunction.setGradientsOn();
-
-	}
-
-	if(configKeysObjectiveFunction.ifConfigKeyIsSet("NUMBER_OF_TRAINING_ITERATIONS")){
-
-		int nIter = configKeysObjectiveFunction.getConfigKeyIntValue("NUMBER_OF_TRAINING_ITERATIONS");
-		assert(nIter>0);
-		assert(nIter<1000000);
-		TestFunction.setNumberOfTrainingIterations(nIter);
-	}
+	surrogateTest.setFileNameTrainingData(filenameTrainingData);
 
 
+	if(modelID == MULTI_LEVEL){
 
-	if(configKeys.ifConfigKeyIsSet("FILENAME_TRAINING_DATA")){
+		std::string filenameTrainingDataLowFidelity = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",1);
 
-		std::string inputFilename = configKeys.getConfigKeyStringValue("FILENAME_TRAINING_DATA");
-		assert(!inputFilename.empty());
-		TestFunction.setNameFilenameTrainingData(inputFilename);
-
-	}
-	else{
-
-		std::string exeName = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",0);
-
-		TestFunction.setNameOfExecutable(exeName);
-
-		std::string designVectorFilename = configKeysObjectiveFunction.getConfigKeyStringValue("DESIGN_VECTOR_FILE");
-
-		TestFunction.setNameOfInputForExecutable(designVectorFilename);
-
-		std::string outputFilename = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",0);
-		TestFunction.setNameOfOutputForExecutable(outputFilename);
-
-		int numberOfTrainingSamples =  configKeys.getConfigKeyIntValue("NUMBER_OF_TRAINING_SAMPLES");
-		assert(numberOfTrainingSamples>0);
-		TestFunction.setNumberOfTrainingSamples(numberOfTrainingSamples);
-
-
-
-	}
-
-	if(configKeys.ifConfigKeyIsSet("FILENAME_TEST_DATA")){
-
-		std::string inputFilename = configKeys.getConfigKeyStringValue("FILENAME_TEST_DATA");
-		assert(!inputFilename.empty());
-		TestFunction.setNameFilenameTestData(inputFilename);
-
-
-	}
-	else{
-
-		int numberOfTestSamples =  configKeys.getConfigKeyIntValue("NUMBER_OF_TEST_SAMPLES");
-		assert(numberOfTestSamples>0);
-		TestFunction.setNumberOfTestSamples(numberOfTestSamples);
+		surrogateTest.setFileNameTrainingDataLowFidelity(filenameTrainingDataLowFidelity);
 
 	}
 
 
+	std::string filenameTestData = configKeys.getConfigKeyStringValue("FILENAME_TEST_DATA");
 
-	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
-	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
-
-	TestFunction.setBoxConstraints(lb, ub);
+	surrogateTest.setFileNameTestData(filenameTestData);
 
 
-	if(configKeys.ifConfigKeyIsSet("FILENAME_TRAINING_DATA")){
 
-		TestFunction.readFileTrainingData();
+	if(configKeys.ifConfigKeyIsSet("LOWER_BOUNDS") && configKeys.ifConfigKeyIsSet("UPPER_BOUNDS")){
 
-	}
-	else{
+		vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
+		vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
 
-		TestFunction.generateSamplesInputTrainingData();
-		TestFunction.generateTrainingSamples();
+		Bounds boxConstraints(lb,ub);
+		surrogateTest.setBoxConstraints(boxConstraints);
+
 
 	}
 
-	if(configKeys.ifConfigKeyIsSet("FILENAME_TEST_DATA")){
+	if(configKeys.ifConfigKeyIsSet("NUMBER_OF_TRAINING_ITERATIONS")){
 
-		TestFunction.readFileTestData();
+		unsigned int numberOfIterationsForSurrogateModelTraining = configKeys.getConfigKeyIntValue("NUMBER_OF_TRAINING_ITERATIONS");
 
-	}
-	else{
-
-		TestFunction.generateSamplesInputTestData();
-		TestFunction.generateTestSamples();
-	}
-
-
-
-	if(configKeys.ifConfigKeyIsSet("VISUALIZATION")) {
-
-		std::string flag = configKeys.getConfigKeyStringValue("VISUALIZATION");
-
-		if(flag == "ON" || flag == "YES"){
-
-			TestFunction.setVisualizationOn();
-		}
+		surrogateTest.setNumberOfTrainingIterations(numberOfIterationsForSurrogateModelTraining);
 
 	}
 
+
+	surrogateTest.setSurrogateModel(modelID);
 
 	if(configKeys.ifConfigKeyIsSet("DISPLAY")) {
 
-		std::string flag = configKeys.getConfigKeyStringValue("DISPLAY");
+		std::string display = configKeys.getConfigKeyStringValue("DISPLAY");
 
-		if(flag == "ON" || flag == "YES"){
+		if(checkIfOn(display)){
 
-			TestFunction.setDisplayOn();
-			TestFunction.print();
+			surrogateTest.setDisplayOn();
+			surrogateTest.print();
 		}
 
 
@@ -1408,12 +1334,9 @@ void RoDeODriver::runSurrogateModelTest(void){
 	}
 
 
-#if 0
-	TestFunction.print();
-#endif
 
 
-	TestFunction.testSurrogateModel(surrogateModelType);
+	surrogateTest.performSurrogateModelTest();
 
 
 }
