@@ -21,7 +21,8 @@ fclose(inp);
 double result = Himmelblau(x);
 double constraintValue = constraint(x);
 FILE *outp = fopen("objFunVal.dat","w");
-fprintf(outp,"%15.10f %15.10f\n",result,constraintValue);
+fprintf(outp,"himmelblau_function = %15.10f\n",result);
+fprintf(outp,"constraint_function = %15.10f\n",constraintValue);
 fclose(outp);
 return 0;
 }

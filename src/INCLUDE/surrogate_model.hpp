@@ -66,8 +66,6 @@ protected:
 
 
 
-	Bounds boxConstraints;
-
 	unsigned int numberOfHyperParameters  = 0;
 	unsigned int numberOfTrainingIterations  = 10000;
 
@@ -103,12 +101,11 @@ public:
 	virtual void readData(void);
 	virtual void normalizeData(void);
 
-	void checkIfParameterBoundsAreOk(void) const;
 	void checkRawData(void) const;
 
-	void setParameterBounds(vec xmin, vec xmax);
-	void setParameterBounds(double xmin, double xmax);
-	void setParameterBounds(Bounds boxConstraintsInput);
+	void setBoxConstraints(vec xmin, vec xmax);
+	void setBoxConstraints(double xmin, double xmax);
+	void setBoxConstraints(Bounds boxConstraintsInput);
 
 	void setBoxConstraintsFromData(void);
 
@@ -119,18 +116,12 @@ public:
 	virtual void setDisplayOn(void);
 	virtual void setDisplayOff(void);
 
-
-
-	void setTestData(mat testData);
-
 	string getNameOfHyperParametersFile(void) const;
 	string getNameOfInputFile(void) const;
 
 	unsigned int getDimension(void) const;
 	unsigned int getNumberOfSamples(void) const;
 	mat getRawData(void) const;
-	vec getxmin(void) const;
-	vec getxmax(void) const;
 
 
 	void setNameOfInputFileTest(string filename);

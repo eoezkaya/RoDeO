@@ -346,7 +346,7 @@ void ObjectiveFunction::initializeSurrogate(void){
 
 	Bounds boxConstraints(lowerBounds,upperBounds);
 
-	surrogate->setParameterBounds(boxConstraints);
+	surrogate->setBoxConstraints(boxConstraints);
 
 
 	surrogate->readData();

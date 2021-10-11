@@ -80,7 +80,7 @@ mat SurrogateModelData::getRawData(void) const{
 void SurrogateModelData::setDisplayOn(void){
 
 	outputToScreen.ifScreenDisplay = true;
-
+	outputToScreen.printMessage("Setting display on for the SurrogateModelData...");
 
 }
 
@@ -349,6 +349,7 @@ void SurrogateModelData::normalizeSampleInputMatrixTest(void){
 
 	assert(boxConstraints.areBoundsSet());
 
+
 	outputToScreen.printMessage("Normalizing and scaling the sample input matrix for test...");
 
 	mat XNormalized = XTest;
@@ -386,6 +387,7 @@ void SurrogateModelData::setBoxConstraints(Bounds boxConstraintsInput){
 
 void SurrogateModelData::setBoxConstraintsFromData(void){
 
+
 	outputToScreen.printMessage("setting box constraints from the training data...");
 
 	vec maxofX(dimension);
@@ -407,6 +409,7 @@ void SurrogateModelData::setBoxConstraintsFromData(void){
 
 	outputToScreen.printMessage("lower bounds", minofX);
 	outputToScreen.printMessage("upper bounds", maxofX);
+
 
 
 }

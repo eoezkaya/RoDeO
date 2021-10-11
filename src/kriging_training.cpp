@@ -138,8 +138,9 @@ void KrigingModel::initializeSurrogateModel(void){
 
 
 		}
+
 		linearModel.readData();
-		linearModel.setParameterBounds(boxConstraints);
+		linearModel.setBoxConstraints(data.getBoxConstraints());
 
 
 		linearModel.normalizeData();

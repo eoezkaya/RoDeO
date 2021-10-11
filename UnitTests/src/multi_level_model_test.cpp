@@ -213,7 +213,7 @@ TEST(testMultiLevelModel, testReadData){
 
 	//	testModel.ifDisplay = true;
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 	testModel.readData();
 	ASSERT_TRUE(testModel.ifDataIsRead);
 
@@ -243,7 +243,7 @@ TEST(testMultiLevelModel, testSetParameterBounds){
 	testModel.bindLowFidelityModel();
 	testModel.bindErrorModel();
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 
 
 
@@ -266,7 +266,7 @@ TEST(testMultiLevelModel, testfindNearestNeighbourLowFidelity){
 	vec lb(2); lb.fill(-6.0);
 	vec ub(2); ub.fill(6.0);
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
@@ -300,7 +300,7 @@ TEST(testMultiLevelModel, testfindNearestL1DistanceToALowFidelitySample){
 	vec lb(2); lb.fill(-6.0);
 	vec ub(2); ub.fill(6.0);
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
@@ -341,7 +341,7 @@ TEST(testMultiLevelModel, testfindNearestNeighbourHighFidelity){
 	vec lb(2); lb.fill(-6.0);
 	vec ub(2); ub.fill(6.0);
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
@@ -376,7 +376,7 @@ TEST(testMultiLevelModel, testtrainLowFidelityModel){
 	vec lb(2); lb.fill(-6.0);
 	vec ub(2); ub.fill(6.0);
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
@@ -449,7 +449,7 @@ TEST(testMultiLevelModel, testtrainLowFidelityModelWithGradient){
 	vec lb(2); lb.fill(-6.0);
 	vec ub(2); ub.fill(6.0);
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
@@ -510,7 +510,7 @@ TEST(testMultiLevelModel, testtrainErrorModel){
 	vec lb(2); lb.fill(-6.0);
 	vec ub(2); ub.fill(6.0);
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
@@ -568,7 +568,7 @@ TEST(testMultiLevelModel, testdetermineGammaBasedOnData){
 	vec lb(2); lb.fill(-6.0);
 	vec ub(2); ub.fill(6.0);
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 	testModel.determineGammaBasedOnData();
@@ -593,7 +593,7 @@ TEST(testMultiLevelModel, testInterpolate){
 	vec lb(2); lb.fill(-6.0);
 	vec ub(2); ub.fill(6.0);
 
-	testModel.setParameterBounds(lb,ub);
+	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 	testModel.setNumberOfTrainingIterations(1000);

@@ -163,14 +163,12 @@ void AggregationModel::determineRhoBasedOnData(void){
 
 void AggregationModel::initializeSurrogateModel(void){
 
-	readData();
-	normalizeData();
 
 	unsigned int dim = data.getDimension();
 
 	krigingModel.setGradientsOn();
 	krigingModel.readData();
-	krigingModel.setParameterBounds(boxConstraints);
+	krigingModel.setBoxConstraints(data.getBoxConstraints());
 
 	krigingModel.normalizeData();
 	krigingModel.initializeSurrogateModel();
@@ -205,12 +203,14 @@ void AggregationModel::prepareTrainingAndTestData(void){
 
 	mat shuffledrawData = shuffle(rawData);
 
+	Bounds boxConstraints = data.getBoxConstraints();
+
 	mat trainingRawData = shuffledrawData.submat( 0, 0, numberOfSamplesInTrainingSet-1, dim );
 	mat testRawData = shuffledrawData.submat( numberOfSamplesInTrainingSet, 0, N-1, dim );
 
-	mat trainingData = normalizeMatrix(trainingRawData,boxConstraints);
+	mat trainingData = normalizeMatrix(trainingRawData, boxConstraints);
 
-	mat testData     = normalizeMatrix(testRawData,boxConstraints);
+	mat testData     = normalizeMatrix(testRawData, boxConstraints);
 
 
 	weightedL1norm.setTrainingData(trainingData);
@@ -329,6 +329,7 @@ void AggregationModel::determineOptimalL1NormWeights(void){
 void AggregationModel::setDisplayOn(void){
 
 	output.ifScreenDisplay = true;
+	data.setDisplayOn();
 	krigingModel.setDisplayOn();
 
 }
@@ -392,10 +393,10 @@ double AggregationModel::calculateDualModelEstimate(const rowvec &x, int index) 
 	rowvec xNearestPointRaw = data.getRowXRaw(index);
 
 
+	Bounds boxConstraints = data.getBoxConstraints();
 
-
-	vec xmin = this->boxConstraints.getLowerBounds();
-	vec xmax = this->boxConstraints.getUpperBounds();
+	vec xmin = boxConstraints.getLowerBounds();
+	vec xmax = boxConstraints.getUpperBounds();
 	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
 
 	rowvec xDiffRaw = xp - xNearestPointRaw;

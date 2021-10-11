@@ -246,16 +246,15 @@ void Design::saveToAFile(std::string filename) const{
 	assert(!filename.empty());
 	std::ofstream fileOut;
 	fileOut.open (filename);
-	fileOut << "Tag: "<<this->tag<<"\n";
-	fileOut << "ID: "<<this->ID<<"\n";
+	fileOut << "Tag: "<<tag<<"\n";
 	fileOut << "Design parameters vector:\n";
-	fileOut << this->designParameters;
-	fileOut << "Objective function value: "<<this->objectiveFunctionValue<<"\n";
+	fileOut << designParameters;
+	fileOut << "Objective function value: "<<objectiveFunctionValue<<"\n";
 
 	if(numberOfConstraints>0){
 
 		fileOut << "Constraint values vector:\n";
-		fileOut << this->constraintTrueValues;
+		fileOut << constraintTrueValues;
 
 	}
 

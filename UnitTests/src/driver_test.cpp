@@ -355,7 +355,6 @@ TEST(testDriver, testrunSurrogateModelTestAggregation){
 	saveMatToCVSFile(trainingData,"trainingData.csv");
 	saveMatToCVSFile(testDataInput,"testDataInput.csv");
 
-	abort();
 
 	RoDeODriver testDriver;
 	testDriver.setConfigFilename("testConfigFileSurrogateTest2.cfg");

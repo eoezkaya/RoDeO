@@ -682,13 +682,13 @@ void Optimizer::zoomInDesignSpace(void){
 
 	}
 
-#if 1
+#if 0
 	dx.print();
 #endif
 
 	rowvec dvNormalized = normalizeRowVector(globalOptimalDesign.designParameters, lowerBounds, upperBounds);
 
-#if 1
+#if 0
 	printVector(dvNormalized,"dvNormalized");
 #endif
 
@@ -717,7 +717,7 @@ void Optimizer::zoomInDesignSpace(void){
 		}
 
 	}
-#if 1
+#if 0
 	printVector(lowerBoundsForEIMaximization,"lowerBoundsForEIMaximization" );
 	printVector(upperBoundsForEIMaximization,"upperBoundsForEIMaximization");
 #endif
@@ -1152,7 +1152,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 		if(simulationCount >= maxNumberOfSamples){
 
 
-			if(this->ifDisplay){
+			if(ifDisplay){
 
 				printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
 

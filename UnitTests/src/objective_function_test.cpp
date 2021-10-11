@@ -133,7 +133,7 @@ TEST(testObjectiveFunction, testinitializeSurrogateWithML){
 
 	ObjectiveFunction objFunTest("testObjectiveFunctionMLSurrogate",2);
 
-	objFunTest.setDisplayOn();
+//	objFunTest.setDisplayOn();
 	objFunTest.setParameterBounds(lowerBounds,upperBounds);
 
 	ObjectiveFunctionDefinition testObjectiveFunctionDef("testObjectiveFunctionMLSurrogate");
@@ -143,8 +143,6 @@ TEST(testObjectiveFunction, testinitializeSurrogateWithML){
 
 
 	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
-	objFunTest.print();
-
 
 	objFunTest.initializeSurrogate();
 

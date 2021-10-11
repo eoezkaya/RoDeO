@@ -265,9 +265,6 @@ vec LinearModel::interpolateAll(mat X) const{
 void LinearModel::printSurrogateModel(void) const{
 
 
-	boxConstraints.print();
-
-
 	cout<<"Regression weights:\n";
 	trans(weights).print();
 

@@ -169,7 +169,7 @@ void MultiLevelModel::initializeSurrogateModel(void){
 	lowFidelityModel->setNameOfInputFile(inputFileNameLowFidelityData);
 
 	lowFidelityModel->readData();
-	lowFidelityModel->setParameterBounds(boxConstraints);
+	lowFidelityModel->setBoxConstraints(data.getBoxConstraints());
 
 	lowFidelityModel->normalizeData();
 	lowFidelityModel->initializeSurrogateModel();
@@ -183,7 +183,7 @@ void MultiLevelModel::initializeSurrogateModel(void){
 	errorModel->setNameOfInputFile(inputFileNameError);
 
 	errorModel->readData();
-	errorModel->setParameterBounds(boxConstraints);
+	errorModel->setBoxConstraints(data.getBoxConstraints());
 
 	errorModel->normalizeData();
 	errorModel->initializeSurrogateModel();
@@ -242,6 +242,8 @@ void MultiLevelModel::updateAuxilliaryFields(void){
 void MultiLevelModel::determineGammaBasedOnData(void){
 
 	output.printMessage("Determining the variable gamma...");
+
+	Bounds  boxConstraints = data.getBoxConstraints();
 
 	vec xmin = boxConstraints.getLowerBounds();
 	vec xmax = boxConstraints.getUpperBounds();
@@ -604,6 +606,8 @@ void MultiLevelModel::readData(void){
 }
 
 void MultiLevelModel::normalizeData(void){
+
+	Bounds boxConstraints = data.getBoxConstraints();
 
 	XLowFidelity  = normalizeMatrix(XLowFidelity, boxConstraints);
 

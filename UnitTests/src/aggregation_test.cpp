@@ -59,7 +59,7 @@ TEST(testAggrregationModel, testfindNearestNeighbor){
 	boxConstraints.setBounds(0.0, 1.0);
 
 
-	testModel.setParameterBounds(boxConstraints);
+	testModel.setBoxConstraints(boxConstraints);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 
@@ -103,16 +103,14 @@ TEST(testAggrregationModel, testinterpolateWithLinearFunction){
 
 	testModel.readData();
 
-	testModel.setParameterBounds(0.0,1.0);
+	testModel.setBoxConstraints(0.0,1.0);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 	testModel.setRho(0.0);
 
 	rowvec xTest(2);
 	xTest.fill(0.25);
-	vec xmax = testModel.getxmax();
-	vec xmin = testModel.getxmin();
-	rowvec xTestNotNormalized = normalizeRowVectorBack(xTest, xmin, xmax);
+	rowvec xTestNotNormalized = 2.0*xTest;
 
 	double testValue = testModel. interpolate(xTest);
 	double exactValue = 2*xTestNotNormalized(0) + xTestNotNormalized(1);
@@ -154,7 +152,7 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 
 	testModel.readData();
 
-	testModel.setParameterBounds(0.0, 1.0);
+	testModel.setBoxConstraints(0.0, 1.0);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 	testModel.setNumberOfTrainingIterations(1000);

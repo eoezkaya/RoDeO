@@ -1303,6 +1303,8 @@ void RoDeODriver::runSurrogateModelTest(void){
 		vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
 
 		Bounds boxConstraints(lb,ub);
+
+		boxConstraints.print();
 		surrogateTest.setBoxConstraints(boxConstraints);
 
 

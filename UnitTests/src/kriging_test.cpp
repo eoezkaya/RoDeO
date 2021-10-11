@@ -61,7 +61,7 @@ TEST(testKriging, testReadDataAndNormalize){
 
 
 	testModel.readData();
-	testModel.setParameterBounds(0.0, 200.0);
+	testModel.setBoxConstraints(0.0, 200.0);
 
 
 	testModel.normalizeData();
@@ -102,7 +102,7 @@ TEST(testKriging, testsetParameterBounds){
 	Bounds boxConstraints(2);
 	boxConstraints.setBounds(0.0,2.0);
 
-	testModel.setParameterBounds(boxConstraints);
+	testModel.setBoxConstraints(boxConstraints);
 
 
 }
@@ -133,7 +133,7 @@ TEST(testKriging, testInSampleErrorCloseToZeroWithoutTraining){
 
 	KrigingModel testModel("KrigingTest");
 	testModel.readData();
-	testModel.setParameterBounds(lb, ub);
+	testModel.setBoxConstraints(lb, ub);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 
@@ -174,7 +174,7 @@ TEST(testKriging, testInSampleErrorCloseToZeroAfterTraining){
 
 	KrigingModel testModel("KrigingTest");
 	testModel.readData();
-	testModel.setParameterBounds(lb, ub);
+	testModel.setBoxConstraints(lb, ub);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 

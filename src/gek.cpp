@@ -170,6 +170,8 @@ void GEKModel::initializeSurrogateModel(void){
 
 	mat gradientData = data.getGradientMatrix();
 
+	Bounds boxConstraints = data.getBoxConstraints();
+
 	for(unsigned int i=0; i<dim; i++){
 
 		vec gradx = gradientData.col(i);
@@ -202,7 +204,6 @@ void GEKModel::initializeSurrogateModel(void){
 void GEKModel::printSurrogateModel(void) const{
 
 	data.print();
-	boxConstraints.print();
 
 	printVector(GEK_weights,"GEK_weights");
 

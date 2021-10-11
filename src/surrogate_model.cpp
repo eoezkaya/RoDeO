@@ -110,48 +110,38 @@ void SurrogateModel::setDisplayOff(void){
 }
 
 
-void SurrogateModel::checkIfParameterBoundsAreOk(void) const{
-
-	assert(boxConstraints.checkIfBoundsAreValid());
-
-
-}
-
-
-void SurrogateModel::setParameterBounds(Bounds boxConstraintsInput){
+void SurrogateModel::setBoxConstraints(Bounds boxConstraintsInput){
 
 	assert(boxConstraintsInput.areBoundsSet());
 
 	data.setBoxConstraints(boxConstraintsInput);
 
-	boxConstraints = boxConstraintsInput;
 
 
 }
 
 
 
-void SurrogateModel::setParameterBounds(vec xmin, vec xmax){
+void SurrogateModel::setBoxConstraints(vec xmin, vec xmax){
 
 	Bounds boxConstraints(xmin,xmax);
-	setParameterBounds(boxConstraints);
+	setBoxConstraints(boxConstraints);
 
 }
 
-void SurrogateModel::setParameterBounds(double xmin, double xmax){
+void SurrogateModel::setBoxConstraints(double xmin, double xmax){
 
 	Bounds boxConstraints(data.getDimension());
 	boxConstraints.setBounds(xmin,xmax);
 
-	setParameterBounds(boxConstraints);
+	setBoxConstraints(boxConstraints);
 }
 
 
 void SurrogateModel::setBoxConstraintsFromData(void){
 
-	data.setBoxConstraintsFromData();
 
-	setParameterBounds(data.getBoxConstraints());
+	data.setBoxConstraintsFromData();
 
 
 }
@@ -237,29 +227,6 @@ void SurrogateModel::updateAuxilliaryFields(void){
 
 
 }
-
-
-
-
-void SurrogateModel::setTestData(mat testData){
-
-	assert(testData.n_rows > 0);
-	assert(testData.n_cols == data.getDimension() +1);
-	assert(boxConstraints.areBoundsSet());
-
-	NTest = testData.n_rows;
-
-	XTestraw = testData.submat(0,0,NTest-1, data.getDimension()-1);
-
-	yTest = testData.col(data.getDimension());
-
-	XTest = normalizeMatrix(XTestraw, this->boxConstraints);
-
-	XTest = (1.0/data.getDimension())*XTest;
-
-	ifHasTestData = true;
-}
-
 
 
 
@@ -394,26 +361,11 @@ void SurrogateModel::visualizeTestResults(void) const{
 void SurrogateModel::printSurrogateModel(void) const{
 
 	data.print();
-	boxConstraints.print();
-
 
 }
 
 
 
-
-
-vec SurrogateModel::getxmin(void) const{
-
-
-	return boxConstraints.getLowerBounds();
-
-}
-vec SurrogateModel::getxmax(void) const{
-
-	return boxConstraints.getUpperBounds();
-
-}
 
 
 rowvec SurrogateModel::getRowX(unsigned int index) const{

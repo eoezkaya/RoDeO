@@ -158,15 +158,33 @@ void SurrogateModelTester::performSurrogateModelTest(void){
 
 	outputToScreen.printMessage("Performing surrogate model test...");
 
+
+
 	surrogateModel->readData();
 	surrogateModel->readDataTest();
 
-	surrogateModel->setBoxConstraintsFromData();
+
+
+	if(boxConstraints.areBoundsSet()){
+
+		surrogateModel->setBoxConstraints(boxConstraints);
+
+	}
+	else{
+
+		surrogateModel->setBoxConstraintsFromData();
+
+	}
+
 
 	surrogateModel->normalizeData();
+
 	surrogateModel->normalizeDataTest();
 
+
 	surrogateModel->initializeSurrogateModel();
+
+
 
 	surrogateModel->setNumberOfTrainingIterations(numberOfTrainingIterations);
 	surrogateModel->train();
@@ -186,6 +204,7 @@ void SurrogateModelTester::setDisplayOn(void){
 
 	if(ifSurrogateModelSpecified){
 
+		outputToScreen.printMessage("Setting display on for the surrogate model...");
 		surrogateModel->setDisplayOn();
 
 	}
