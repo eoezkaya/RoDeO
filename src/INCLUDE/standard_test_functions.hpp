@@ -44,15 +44,25 @@ protected:
 	unsigned int dimension = 0;
 	Bounds boxConstraints;
 
+	mat samples;
+
 
 public:
 
 	virtual double evaluate(rowvec) const = 0;
+	virtual rowvec evaluateGradient(rowvec) const;
+
 	unsigned int getDimension(void) const;
 
 	Bounds getBoxConstraints(void) const;
+
+	mat getSamples(void) const;
+
 	void setBoxConstraints(double, double);
 	void setBoxConstraints(Bounds);
+
+	void generateSamples(unsigned int);
+	void generateSamplesWithGradient(unsigned int);
 
 };
 
@@ -64,6 +74,7 @@ public:
 	HimmelblauFunction();
 
 	double evaluate(rowvec) const;
+	void evaluateGradient(rowvec, rowvec) const;
 
 
 };
