@@ -86,6 +86,7 @@ RoDeODriver::RoDeODriver(){
 
 
 
+
 	/* Other keywords */
 	configKeys.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
 
@@ -115,6 +116,13 @@ RoDeODriver::RoDeODriver(){
 	configKeys.add(ConfigKey("DISPLAY","string") );
 
 	configKeys.add(ConfigKey("NUMBER_OF_ITERATIONS_FOR_EXPECTED_IMPROVEMENT_MAXIMIZATION","int") );
+
+	configKeys.add(ConfigKey("GENERATE_ONLY_SAMPLES","string") );
+	configKeys.add(ConfigKey("DOE_OUTPUT_FILENAME","string") );
+
+	configKeys.add(ConfigKey("DISCRETE_VARIABLES","doubleVector") );
+	configKeys.add(ConfigKey("DISCRETE_VARIABLES_VALUE_INCREMENTS","doubleVector") );
+
 
 
 #if 0
@@ -177,12 +185,6 @@ void RoDeODriver::readConfigFile(void){
 	extractConstraintDefinitionsFromString(stringCompleteFile);
 
 
-
-
-
-#if 0
-	printKeywords();
-#endif
 
 	checkConsistencyOfConfigParams();
 }
@@ -888,6 +890,9 @@ void RoDeODriver::extractConfigDefinitionsFromString(std::string inputString){
 	}
 
 
+	displayMessage("Extracting configuration parameters is done...");
+
+
 }
 
 
@@ -1142,6 +1147,38 @@ Optimizer RoDeODriver::setOptimizationStudy(void) {
 }
 
 
+void RoDeODriver::generateDoESamples(void) {
+
+	vec lowerBounds = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
+	vec upperBounds = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
+
+	unsigned int howManySamples =  configKeys.getConfigKeyIntValue("NUMBER_OF_DOE_SAMPLES");
+	unsigned int dimension = configKeys.getConfigKeyIntValue("DIMENSION");
+
+	assert(dimension == upperBounds.size());
+	assert(dimension == lowerBounds.size());
+
+	LHSSamples DoE(dimension, lowerBounds, upperBounds, howManySamples);
+
+	std::string filename= configKeys.getConfigKeyStringValue("DOE_OUTPUT_FILENAME");
+
+	assert(isNotEmpty(filename));
+	DoE.saveSamplesToCSVFile(filename);
+
+
+	vec indicesOfDiscreteVariables = configKeys.getConfigKeyVectorDoubleValue("DISCRETE_VARIABLES");
+
+	printVector(indicesOfDiscreteVariables, "indicesOfDiscreteVariables");
+
+
+
+
+//	DoE.printSamples();
+
+
+}
+
+
 
 void RoDeODriver::runDoE(void) {
 
@@ -1347,6 +1384,7 @@ void RoDeODriver::runSurrogateModelTest(void){
 
 int RoDeODriver::runDriver(void){
 
+
 	std::string problemType = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
 
 	if(problemType == "SURROGATE_TEST"){
@@ -1363,6 +1401,14 @@ int RoDeODriver::runDriver(void){
 
 	if(problemType == "DoE"){
 
+
+
+		if(configKeys.ifFeatureIsOn("GENERATE_ONLY_SAMPLES")){
+			std::cout<<"\n################################## GENERATING DoE SAMPLES ########################\n";
+			generateDoESamples();
+
+			return 0;
+		}
 
 		std::cout<<"\n################################## STARTING DoE ##################################\n";
 		runDoE();

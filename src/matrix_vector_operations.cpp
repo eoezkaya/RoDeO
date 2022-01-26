@@ -399,5 +399,25 @@ bool isEqual(const mat &A, const mat&B, double tolerance){
 }
 
 
+int findInterval(double value, vec discreteValues){
 
+
+	for(unsigned int i=0; i<discreteValues.size()-1; i++) {
+
+		double xs = discreteValues[i];
+		double xe = discreteValues[i+1];
+
+		assert(xe>xs);
+
+		if(value>=xs && value <xe) return i;
+
+	}
+
+	if (value > discreteValues[discreteValues.size()-1]) {
+
+		return discreteValues.size()-1;
+	}
+
+	return -1;
+}
 

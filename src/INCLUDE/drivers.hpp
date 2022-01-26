@@ -143,6 +143,8 @@ public:
 	void runOptimization(void);
 	void runSurrogateModelTest(void);
 	void runDoE(void);
+	void generateDoESamples(void);
+
 
 
 	bool checkIfRunIsNecessary(int idConstraint) const;

@@ -110,5 +110,20 @@ TEST(testMatrixVectorOperations, testnormalizeMatrix){
 
 }
 
+TEST(testMatrixVectorOperations, testfindInterval){
 
+	vec discreteValues(5);
+	discreteValues(0) = -1.8;
+	discreteValues(1) = -1.6;
+	discreteValues(2) = 0;
+	discreteValues(3) = 1.0;
+	discreteValues(4) = 190;
+
+	int index = findInterval(0.9, discreteValues);
+	EXPECT_EQ(index,2);
+
+	index = findInterval(-1.9, discreteValues);
+	EXPECT_EQ(index,-1);
+
+}
 

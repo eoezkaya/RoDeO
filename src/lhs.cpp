@@ -100,6 +100,25 @@ LHSSamples::LHSSamples(unsigned int d, vec lb, vec ub, unsigned int N){
 
 
 }
+
+
+void LHSSamples::setDiscreteParameterIndices(int *indices, int size){
+
+	for(unsigned int i=0; i<size; i++) {
+
+		indicesDiscreteVariables.push_back(indices[i]);
+	}
+
+
+}
+
+void LHSSamples::setDiscreteParameterIncrements(vec increments){
+
+	incrementsDiscreteVariables = increments;
+
+}
+
+
 uvec LHSSamples::returnValidIntervalsForADimension(mat validIntervals, unsigned int dim){
 
 	assert(dim>=0);
@@ -238,6 +257,73 @@ void LHSSamples::generateSamples(void){
 }
 
 
+
+void LHSSamples::roundSamplesToDiscreteValues(void){
+
+	unsigned int howManyVariablesAreDiscrete = indicesDiscreteVariables.size();
+
+	printVector(indicesDiscreteVariables);
+
+	if(howManyVariablesAreDiscrete != 0){
+
+		for(unsigned int i=0; i < samples.n_rows; i++){
+
+
+			for(unsigned int j=0; j < howManyVariablesAreDiscrete; j++){
+
+
+				unsigned int index = indicesDiscreteVariables[j];
+				double valueToRound = samples(i,index);
+
+				double dx = incrementsDiscreteVariables[j];
+				unsigned int howManyDiscreteValues = (upperBounds(index) - lowerBounds(index))/dx;
+				howManyDiscreteValues += 1;
+
+				vec discreteValues(howManyDiscreteValues);
+
+				discreteValues(0) = lowerBounds(index);
+				for(unsigned int k=1; k<howManyDiscreteValues-1; k++){
+
+					discreteValues(k) = discreteValues(k-1) + incrementsDiscreteVariables[j];
+
+
+				}
+
+				discreteValues(howManyDiscreteValues-1) = upperBounds(index);
+
+				int whichInterval = findInterval(valueToRound, discreteValues);
+
+
+				assert(whichInterval>=0);
+
+				double distance1 = valueToRound - discreteValues[whichInterval];
+				double distance2 = discreteValues[whichInterval+1] - valueToRound;
+
+				if(distance1 < distance2){
+
+					samples(i,index) =  discreteValues[whichInterval];
+
+				}
+				else{
+
+					samples(i,index) =  discreteValues[whichInterval+1];
+				}
+
+				samples.print();
+
+		}
+
+
+	}
+
+
+
+}
+
+}
+
+
+
 bool LHSSamples::testIfSamplesAreTooClose(void){
 
 	bool ifTooClose = false;
@@ -340,6 +426,8 @@ mat LHSSamples::getSamples(void){
 	return this->samples;
 
 }
+
+
 
 
 

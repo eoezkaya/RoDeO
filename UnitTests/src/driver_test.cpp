@@ -444,25 +444,25 @@ TEST(testDriver, testsetObjectiveFunction){
 }
 
 
-TEST(testDriver, testsetObjectiveFunctionWithMultiLevel){
-
-	RoDeODriver testDriver;
-	testDriver.setConfigFilename("testConfigFilesetObjectiveFunctionML.cfg");
-	testDriver.readConfigFile();
-
-	ObjectiveFunction testObjFun = testDriver.setObjectiveFunction();
-
-	std::string command = testObjFun.getExecutionCommand();
-	int dim = testObjFun.getDimension();
-
-	ASSERT_EQ(command,"./himmelblauHF");
-	ASSERT_EQ(dim,2);
-
-	std::string commandLowFi = testObjFun.getExecutionCommandLowFi();
-	ASSERT_EQ(commandLowFi,"./himmelblauLF");
-
-
-}
+//TEST(testDriver, testsetObjectiveFunctionWithMultiLevel){
+//
+//	RoDeODriver testDriver;
+//	testDriver.setConfigFilename("testConfigFilesetObjectiveFunctionML.cfg");
+//	testDriver.readConfigFile();
+//
+//	ObjectiveFunction testObjFun = testDriver.setObjectiveFunction();
+//
+//	std::string command = testObjFun.getExecutionCommand();
+//	int dim = testObjFun.getDimension();
+//
+//	ASSERT_EQ(command,"./himmelblauHF");
+//	ASSERT_EQ(dim,2);
+//
+//	std::string commandLowFi = testObjFun.getExecutionCommandLowFi();
+//	ASSERT_EQ(commandLowFi,"./himmelblauLF");
+//
+//
+//}
 
 
 
@@ -820,6 +820,71 @@ TEST(testDriver, testrunDoE6){
 
 }
 
+
+
+
+TEST(testDriver, testrunDoEHimmelblauOnlySamples){
+
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFileDoETestHimmelblauOnlySamples.cfg");
+	testDriver.readConfigFile();
+
+
+	testDriver.runDriver();
+
+	mat results;
+	results.load("himmelblau_samples.csv",csv_ascii);
+
+	EXPECT_EQ(200,results.n_rows);
+	EXPECT_EQ(2,results.n_cols);
+
+
+}
+
+
+TEST(testDriver, testrunDoEHighDimensionalFunctionOnlySamples){
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFileDoEHighDimensionalFunctionOnlySamples.cfg");
+	testDriver.setDisplayOn();
+	testDriver.readConfigFile();
+
+
+	testDriver.runDriver();
+
+	mat results;
+	results.load("highdimensional_function_samples.csv",csv_ascii);
+
+	results.print();
+
+	EXPECT_EQ(220,results.n_rows);
+	EXPECT_EQ(7,results.n_cols);
+
+
+}
+
+TEST(testDriver, testrunDoEHighDimensionalFunctionOnlySamplesWithDiscreteValues){
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFileDoEHighDimensionalFunctionOnlySamplesWithDiscreteValues.cfg");
+	testDriver.setDisplayOn();
+	testDriver.readConfigFile();
+
+
+	testDriver.runDriver();
+
+	mat results;
+	results.load("highdimensional_function_samples_with_discrete_values.csv",csv_ascii);
+
+	results.print();
+
+	EXPECT_EQ(220,results.n_rows);
+	EXPECT_EQ(7,results.n_cols);
+
+
+
+}
 
 
 

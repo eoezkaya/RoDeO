@@ -41,11 +41,18 @@ private:
 
 	vec lowerBounds;
 	vec upperBounds;
+
+	std::vector<int> indicesDiscreteVariables;
+	vec incrementsDiscreteVariables;
+
+
 	mat samples;
 
 	void generateSamples(void);
+
 	uvec returnAValidInterval(mat validIntervals);
 	uvec returnValidIntervalsForADimension(mat validIntervals, unsigned int dim);
+
 
 public:
 
@@ -53,10 +60,16 @@ public:
 	LHSSamples(unsigned int d, vec lb, vec ub, unsigned int N);
 	LHSSamples(unsigned int d, double *lb, double* ub, unsigned int N);
 
+	void setDiscreteParameterIndices(int *indices, int size);
+	void setDiscreteParameterIncrements(vec increments);
+
+
 	void saveSamplesToCSVFile(std::string);
 	void visualize(void);
 	void printSamples(void);
 	mat getSamples(void);
+
+	void roundSamplesToDiscreteValues(void);
 
 	bool testIfSamplesAreTooClose(void);
 
@@ -80,6 +93,7 @@ private:
 	mat samples;
 
 	void generateSamples(void);
+
 
 
 

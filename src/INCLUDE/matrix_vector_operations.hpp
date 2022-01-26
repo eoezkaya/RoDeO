@@ -39,7 +39,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
-#include <quadmath.h>
+
 using namespace arma;
 
 void abortIfHasNan(rowvec &);
@@ -69,5 +69,10 @@ void saveMatToCVSFile(mat M, std::string fileName);
 mat normalizeMatrix(mat matrixIn);
 mat normalizeMatrix(mat matrixIn, vec xmin, vec xmax);
 mat normalizeMatrix(mat matrixIn, Bounds &boxConstraints);
+
+
+int findInterval(double value, vec discreteValues);
+
+
 
 #endif
