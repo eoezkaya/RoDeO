@@ -64,6 +64,8 @@ protected:
 
 	std::string filenameTestResults;
 
+	bool ifMinimize = true;
+	bool ifMaximize = false;
 
 
 	unsigned int numberOfHyperParameters  = 0;
@@ -115,6 +117,9 @@ public:
 
 	virtual void setDisplayOn(void);
 	virtual void setDisplayOff(void);
+
+	virtual void setMinimizeOn(void);
+	virtual void setMaximizeOn(void);
 
 	string getNameOfHyperParametersFile(void) const;
 	string getNameOfInputFile(void) const;

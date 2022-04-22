@@ -300,7 +300,10 @@ double SurrogateModelData::getMinimumOutputVector(void) const{
 	return min(y);
 }
 
+double SurrogateModelData::getMaximumOutputVector(void) const{
 
+	return max(y);
+}
 
 mat SurrogateModelData::getGradientMatrix(void) const{
 

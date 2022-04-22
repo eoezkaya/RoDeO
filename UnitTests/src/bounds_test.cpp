@@ -38,7 +38,7 @@ using namespace arma;
 #define TEST_BOUNDS
 #ifdef TEST_BOUNDS
 
-TEST(testBounds, testBoundsConstructor){
+TEST(testBounds, testBounds_Constructor){
 
 	unsigned int dim = 5;
 	Bounds testBounds(dim);
@@ -49,7 +49,7 @@ TEST(testBounds, testBoundsConstructor){
 
 }
 
-TEST(testBounds, testBoundsConstructorWithVectors){
+TEST(testBounds, testBounds_ConstructorWithVectors){
 
 	unsigned int dim = 5;
 	vec lowerBounds = zeros<vec>(dim);
@@ -67,7 +67,7 @@ TEST(testBounds, testBoundsConstructorWithVectors){
 }
 
 
-TEST(testBounds, testsetBoundsWithVectors){
+TEST(testBounds, testBounds_setBoundsWithVectors){
 
 	unsigned int dim = 5;
 	vec lowerBounds = zeros<vec>(dim);
@@ -84,7 +84,7 @@ TEST(testBounds, testsetBoundsWithVectors){
 
 }
 
-TEST(testBounds, testsetBoundsWithDoubles){
+TEST(testBounds, testBounds_setBoundsWithDoubles){
 
 	unsigned int dim = 5;
 	Bounds testBounds(dim);
@@ -95,7 +95,7 @@ TEST(testBounds, testsetBoundsWithDoubles){
 }
 
 
-TEST(testBounds, testisBoundsAreSet){
+TEST(testBounds, testBounds_isBoundsAreSet){
 
 	unsigned int dim = 5;
 	Bounds testBounds(dim);
@@ -109,7 +109,7 @@ TEST(testBounds, testisBoundsAreSet){
 }
 
 
-TEST(testBounds, testcheckIfBoundsAreValid){
+TEST(testBounds, testBounds_checkIfBoundsAreValid){
 
 	unsigned int dim = 5;
 	vec lowerBound = zeros<vec>(dim);
@@ -122,7 +122,7 @@ TEST(testBounds, testcheckIfBoundsAreValid){
 
 }
 
-TEST(testBounds, testlowerBound){
+TEST(testBounds, testBounds_lowerBound){
 
 	unsigned int dim = 5;
 	Bounds testBounds(dim);
@@ -141,7 +141,7 @@ TEST(testBounds, testlowerBound){
 
 }
 
-TEST(testBounds, testisPointWithinBounds){
+TEST(testBounds, testBounds_isPointWithinBounds){
 
 	unsigned int dim = 5;
 	vec lowerBound = zeros<vec>(dim);
@@ -158,7 +158,20 @@ TEST(testBounds, testisPointWithinBounds){
 
 }
 
+TEST(testBounds, testBounds_generateRandomVector){
 
+	unsigned int dim = 5;
+	vec lowerBound = zeros<vec>(dim);
+	vec upperBound = ones<vec>(dim);
+
+	Bounds testBounds(lowerBound,upperBound);
+
+	vec randomTestVector = testBounds.generateVectorWithinBounds();
+
+	bool result = testBounds.isPointWithinBounds(randomTestVector);
+	ASSERT_EQ(result,true);
+
+}
 
 
 #endif

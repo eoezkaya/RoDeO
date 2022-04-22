@@ -120,9 +120,6 @@ void KrigingModel::initializeSurrogateModel(void){
 	gamma = zeros<vec>(dim);
 	gamma.fill(2.0);
 
-
-	correlationMatrix = zeros<mat>(numberOfSamples,numberOfSamples);
-	upperDiagonalMatrix= zeros<mat>(numberOfSamples,numberOfSamples);
 	R_inv_ys_min_beta = zeros<vec>(numberOfSamples);
 	R_inv_I= zeros<vec>(numberOfSamples);
 	vectorOfOnes= ones<vec>(numberOfSamples);
@@ -345,8 +342,6 @@ void KrigingModel::printSurrogateModel(void) const{
 
 void KrigingModel::resetDataObjects(void){
 
-	correlationMatrix.reset();
-	upperDiagonalMatrix.reset();
 	R_inv_I.reset();
 	R_inv_ys_min_beta.reset();
 	vectorOfOnes.reset();
@@ -363,10 +358,7 @@ void KrigingModel::resizeDataObjects(void){
 
 	unsigned int numberOfSamples = data.getNumberOfSamples();
 
-	correlationMatrix.set_size(numberOfSamples,numberOfSamples);
-	correlationMatrix.fill(0.0);
-	upperDiagonalMatrix.set_size(numberOfSamples,numberOfSamples);
-	upperDiagonalMatrix.fill(0.0);
+
 	R_inv_ys_min_beta.set_size(numberOfSamples);
 	R_inv_ys_min_beta.fill(0.0);
 	R_inv_I.set_size(numberOfSamples);
@@ -399,39 +391,34 @@ void KrigingModel::updateAuxilliaryFields(void){
 
 	}
 
-	computeCorrelationMatrix();
+	mat R = computeCorrelationMatrix();
 
-	/* Cholesky decomposition R = LDL^T */
+	linearSystemCorrelationMatrix.setMatrix(R);
 
+	/* Cholesky decomposition R = L L^T */
 
-	int cholesky_return = chol(upperDiagonalMatrix, correlationMatrix);
-
-	if (cholesky_return == 0) {
-		printf("ERROR: Ill conditioned correlation matrix, Cholesky decomposition failed!\n");
-		abort();
-	}
-
+	linearSystemCorrelationMatrix.factorize();
 
 	vec R_inv_ys(numberOfSamples);
 	R_inv_ys.fill(0.0);
 
+    /* solve R x = ys */
 
-	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_ys, ys);    /* solve R x = ys */
+	R_inv_ys = linearSystemCorrelationMatrix.solveLinearSystem(ys);
 
 	R_inv_I = zeros(numberOfSamples);
 
-	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_I, vectorOfOnes);      /* solve R x = I */
+   /* solve R x = I */
 
+	R_inv_I = linearSystemCorrelationMatrix.solveLinearSystem(vectorOfOnes);
 
 	beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
 
 	vec ys_min_betaI = ys - beta0*vectorOfOnes;
 
-
-
 	/* solve R x = ys-beta0*I */
-	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_ys_min_beta , ys_min_betaI);
 
+	R_inv_ys_min_beta = linearSystemCorrelationMatrix.solveLinearSystem( ys_min_betaI);
 
 	sigmaSquared = (1.0 / numberOfSamples) * dot(ys_min_betaI, R_inv_ys_min_beta);
 
@@ -447,10 +434,6 @@ void KrigingModel::updateModelWithNewData(void){
 
 	normalizeData();
 
-	correlationMatrix.set_size(numberOfSamples,numberOfSamples);
-	correlationMatrix.fill(0.0);
-	upperDiagonalMatrix.set_size(numberOfSamples,numberOfSamples);
-	upperDiagonalMatrix.fill(0.0);
 	R_inv_ys_min_beta.set_size(numberOfSamples);
 	R_inv_ys_min_beta.fill(0.0);
 	R_inv_I.set_size(numberOfSamples);
@@ -524,14 +507,29 @@ void KrigingModel::calculateExpectedImprovement(CDesignExpectedImprovement &curr
 	if(fabs(sigma) > EPSILON){
 
 		double ymin = data.getMinimumOutputVector();
-		double	Z = (ymin - ftilde)/sigma;
+		double ymax = data.getMaximumOutputVector();
+
+		double improvement = 0.0;
+
+		if(ifMinimize){
+
+			improvement = ymin - ftilde;
+		}
+		if(ifMaximize){
+
+			improvement = ftilde - ymax;
+		}
+
+
+
+		double	Z = (improvement)/sigma;
 #if 0
 		printf("Z = %15.10f\n",Z);
 		printf("ymin = %15.10f\n",ymin);
 #endif
 
 
-		expectedImprovementValue = (ymin - ftilde)*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
+		expectedImprovementValue = improvement*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
 	}
 	else{
 
@@ -556,7 +554,7 @@ void KrigingModel::calculateExpectedImprovement(CDesignExpectedImprovement &curr
 
 void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const{
 
-	assert(this->ifInitialized);
+	assert(ifInitialized);
 	unsigned int N = data.getNumberOfSamples();
 
 	*ftildeOutput =  interpolate(xp);
@@ -566,10 +564,11 @@ void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double
 	vec r = computeCorrelationVector(xp);
 
 	/* solve the linear system R x = r by Cholesky matrices U and L*/
-	solveLinearSystemCholesky(upperDiagonalMatrix, R_inv_r, r);
+
+	R_inv_r = linearSystemCorrelationMatrix.solveLinearSystem(r);
 
 
-	*sSqrOutput = sigmaSquared*( 1.0 - dot(r,R_inv_r)+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(vectorOfOnes,R_inv_I) ) );
+   *sSqrOutput = sigmaSquared*( 1.0 - dot(r,R_inv_r)+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(vectorOfOnes,R_inv_I) ) );
 
 
 }
@@ -589,25 +588,29 @@ double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j) const {
 }
 
 
-void KrigingModel::computeCorrelationMatrix(void)  {
+mat KrigingModel::computeCorrelationMatrix(void)  {
 
 	unsigned int N = data.getNumberOfSamples();
 
 	mat identityMatrix = eye(N,N);
-	correlationMatrix.fill(0.0);
+	mat R = eye(N,N);
 
 	for (unsigned int i = 0; i < N; i++) {
 		for (unsigned int j = i + 1; j < N; j++) {
 
 
-			double R = computeCorrelation(data.getRowX(i), data.getRowX(j));
-			correlationMatrix(i, j) = R;
-			correlationMatrix(j, i) = R;
+			double correlation = computeCorrelation(data.getRowX(i), data.getRowX(j));
+			R(i, j) = correlation;
+			R(j, i) = correlation;
 		}
 
 	}
 
-	correlationMatrix = correlationMatrix + identityMatrix + identityMatrix*epsilonKriging;
+	R += identityMatrix*epsilonKriging;
+
+
+
+	return R;
 
 }
 

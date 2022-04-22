@@ -142,16 +142,19 @@ void ObjectiveFunction::bindSurrogateModel(void){
 	else if(ifGradientAvailable == false){
 
 		surrogateModel.setNameOfInputFile(fileNameTrainingDataForSurrogate);
+		if(ifMaximization) surrogateModel.setMaximizeOn();
 		output.printMessage("Binding the surrogate model with the Kriging modeĺ...");
 		surrogate = &surrogateModel;
 
 	}
 	else{
 
-		surrogateModel.setNameOfInputFile(fileNameTrainingDataForSurrogate);
+		surrogateModelGradient.setNameOfInputFile(fileNameTrainingDataForSurrogate);
 		output.printMessage("Binding the surrogate model with the Agrregation modeĺ...");
 		surrogate = &surrogateModelGradient;
 	}
+
+
 
 
 
@@ -240,6 +243,20 @@ void ObjectiveFunction::setDisplayOn(void){
 void ObjectiveFunction::setDisplayOff(void){
 
 	output.ifScreenDisplay = false;
+
+}
+
+
+void ObjectiveFunction::setMinimizationOn(void){
+
+	ifMinimization = true;
+	ifMaximization = false;
+
+}
+void ObjectiveFunction::setMaximizationOn(void){
+
+	ifMinimization = false;
+	ifMaximization = true;
 
 }
 

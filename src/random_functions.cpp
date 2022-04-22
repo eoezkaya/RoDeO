@@ -59,6 +59,7 @@ int generateRandomInt(uvec indices){
 
 double generateRandomDouble(double a, double b) {
 
+
 	double random = ((double) rand()) / (double) RAND_MAX;
 	double diff = b - a;
 	double r = random * diff;

@@ -110,6 +110,22 @@ void SurrogateModel::setDisplayOff(void){
 }
 
 
+void SurrogateModel::setMinimizeOn(void){
+
+	ifMinimize = true;
+	ifMaximize = false;
+
+}
+
+void SurrogateModel::setMaximizeOn(void){
+
+	ifMinimize = false;
+	ifMaximize = true;
+
+}
+
+
+
 void SurrogateModel::setBoxConstraints(Bounds boxConstraintsInput){
 
 	assert(boxConstraintsInput.areBoundsSet());

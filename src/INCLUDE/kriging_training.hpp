@@ -36,7 +36,7 @@
 #include "surrogate_model.hpp"
 #include "linear_regression.hpp"
 #include "design.hpp"
-
+#include "linear_solver.hpp"
 
 
 using namespace arma;
@@ -52,8 +52,9 @@ private:
 	vec R_inv_ys_min_beta;
 	vec R_inv_I;
 	vec vectorOfOnes;
-	mat correlationMatrix;
-	mat upperDiagonalMatrix;
+
+
+	CholeskySystem linearSystemCorrelationMatrix;
 
 	double beta0 = 0.0;
 	double sigmaSquared = 0.0;
@@ -68,9 +69,10 @@ private:
 
 	void updateWithNewData(void);
 	void updateModelParams(void);
-	void computeCorrelationMatrix(void);
+	mat computeCorrelationMatrix(void);
 	vec computeCorrelationVector(rowvec x) const;
 	double computeCorrelation(rowvec x_i, rowvec x_j) const;
+
 
 public:
 

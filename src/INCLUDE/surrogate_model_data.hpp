@@ -114,6 +114,7 @@ public:
 
 	vec getOutputVector(void) const;
 	double getMinimumOutputVector(void) const;
+	double getMaximumOutputVector(void) const;
 
 	mat getGradientMatrix(void) const;
 

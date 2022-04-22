@@ -66,6 +66,8 @@ bool checkMatrix(mat values, mat expected, double tolerance);
 bool checkMatrix(mat values, mat expected);
 
 void abortIfDoesNotMatch(int firstNumber, int secondNumber, string message = "None");
+void abortWithErrorMessage(string message);
+
 
 bool isEmpty(std::string);
 bool isNotEmpty(std::string);
@@ -102,9 +104,13 @@ std::string removeKeywordFromString(std::string inputStr,  std::string keyword);
 
 
 int check_if_lists_are_equal(int *list1, int *list2, int dim);
+
 int is_in_the_list(int entry, int *list, int list_size);
 int is_in_the_list(int entry, std::vector<int> &list);
+bool isAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list);
+bool isNotAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list);
 int is_in_the_list(unsigned int entry, uvec &list);
+
 
 bool ifIsInTheList(const std::vector<std::string> &vec, std::string item);
 
@@ -126,6 +132,8 @@ bool checkifTooCLose(const rowvec &, const mat &,double = 10E-6);
 bool checkLinearSystem(mat A, vec x, vec b, double tol);
 vec calculateResidual(mat A, vec x, vec b);
 
+
+#define PRINT_HERE printf("Here : %s(%d)--:",__FILE__,__LINE__);
 
 
 /* distance functions */

@@ -831,7 +831,7 @@ TEST(testDriver, testrunDoEHimmelblauOnlySamples){
 	testDriver.readConfigFile();
 
 
-	testDriver.runDriver();
+	testDriver.generateDoESamples();
 
 	mat results;
 	results.load("himmelblau_samples.csv",csv_ascii);
@@ -843,41 +843,22 @@ TEST(testDriver, testrunDoEHimmelblauOnlySamples){
 }
 
 
-TEST(testDriver, testrunDoEHighDimensionalFunctionOnlySamples){
 
-	RoDeODriver testDriver;
-	testDriver.setConfigFilename("testConfigFileDoEHighDimensionalFunctionOnlySamples.cfg");
-	testDriver.setDisplayOn();
-	testDriver.readConfigFile();
-
-
-	testDriver.runDriver();
-
-	mat results;
-	results.load("highdimensional_function_samples.csv",csv_ascii);
-
-	results.print();
-
-	EXPECT_EQ(220,results.n_rows);
-	EXPECT_EQ(7,results.n_cols);
-
-
-}
 
 TEST(testDriver, testrunDoEHighDimensionalFunctionOnlySamplesWithDiscreteValues){
 
 	RoDeODriver testDriver;
 	testDriver.setConfigFilename("testConfigFileDoEHighDimensionalFunctionOnlySamplesWithDiscreteValues.cfg");
-	testDriver.setDisplayOn();
+//	testDriver.setDisplayOn();
 	testDriver.readConfigFile();
 
 
-	testDriver.runDriver();
+	testDriver.generateDoESamples();
 
 	mat results;
 	results.load("highdimensional_function_samples_with_discrete_values.csv",csv_ascii);
 
-	results.print();
+//	printMatrix(results, "results");
 
 	EXPECT_EQ(220,results.n_rows);
 	EXPECT_EQ(7,results.n_cols);
@@ -953,5 +934,45 @@ TEST(testDriver, testrunOptimization4){
 	testDriver.runOptimization();
 
 }
+
+
+TEST(testDriver, testHimmelblauOptimizationWithDiscreteParameters){
+
+	/* In this test we perform minimization of the Himmelblau function with function values, and discrete values
+	 * for parameters x1 and x2
+	 *  */
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFileHimmelblauOptimizationWithDiscreteParameters.cfg");
+//	testDriver.setDisplayOn();
+	testDriver.readConfigFile();
+	compileWithCpp("himmelblau.cpp","himmelblau");
+
+	testDriver.runOptimization();
+
+
+
+
+}
+
+TEST(testDriver, testHimmelblauOptimizationWithOneDiscreteParameter){
+
+	/* In this test we perform minimization of the Himmelblau function with function values, and discrete values
+	 * for parameter x1
+	 *  */
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFileHimmelblauOptimizationWithOneDiscreteParameter.cfg");
+//	testDriver.setDisplayOn();
+	testDriver.readConfigFile();
+	compileWithCpp("himmelblau.cpp","himmelblau");
+
+	testDriver.runOptimization();
+
+
+
+}
+
+
 
 #endif

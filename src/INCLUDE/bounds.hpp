@@ -66,6 +66,7 @@ public:
 
 	bool areBoundsSet(void) const;
 
+	vec generateVectorWithinBounds(void) const;
 	bool isPointWithinBounds(const vec &) const;
 
 	void print(void) const;

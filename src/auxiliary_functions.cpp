@@ -210,6 +210,15 @@ void abortIfDoesNotMatch(int firstNumber, int secondNumber, string message ){
 
 }
 
+void abortWithErrorMessage(string message){
+
+	std::cout<<"ERROR: "<<message<<"\n";
+	abort();
+
+
+}
+
+
 
 bool isEmpty(std::string inputStr){
 
@@ -453,6 +462,33 @@ int is_in_the_list(int entry, std::vector<int> &list){
 	return flag;
 }
 
+bool isNotAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list){
+
+	if(isAlreadyInTheList(entry, list)){
+
+		return false;
+	}
+	else{
+
+		return true;
+	}
+
+}
+
+bool isAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list){
+
+	for (std::vector<unsigned int>::iterator it = list.begin() ; it != list.end(); ++it){
+
+		if(*it == entry) {
+
+			return true;
+		}
+
+	}
+
+	return false;
+}
+
 /** checks whether an entry is in a list or not.
  *
  * @param[in] entry
@@ -548,6 +584,7 @@ void solveLinearSystemCholesky(mat U, vec &x, vec b){
 	}
 
 }
+
 
 
 bool checkLinearSystem(mat A, vec x, vec b, double tol){

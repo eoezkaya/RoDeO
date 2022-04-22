@@ -943,6 +943,11 @@ double Eggholder(double *x){
 
 }
 
+double Eggholder(vec x){
+	return -(x[1]+47.0)*sin(sqrt(fabs(x[1]+0.5*x[0]+47.0)))-x[0]*sin(sqrt(fabs(x[0]-(x[1]+47.0) )));
+
+}
+
 double EggholderAdj(double *x, double *xb) {
 	double fabs0;
 	double fabs0b;

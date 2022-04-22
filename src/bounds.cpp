@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -31,6 +31,7 @@
 
 #include "bounds.hpp"
 #include "matrix_vector_operations.hpp"
+#include "random_functions.hpp"
 #include<cassert>
 
 Bounds::Bounds(){
@@ -164,5 +165,15 @@ void Bounds::print(void) const{
 
 	printVector(this->lowerBounds,"Lower bounds");
 	printVector(this->upperBounds,"Upper bounds");
+
+}
+
+
+vec Bounds::generateVectorWithinBounds(void) const{
+
+	assert(areBoundsSet());
+	vec randomVector = generateRandomVector(lowerBounds, upperBounds);
+
+	return randomVector;
 
 }

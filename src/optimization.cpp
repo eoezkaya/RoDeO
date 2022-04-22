@@ -83,6 +83,19 @@ Optimizer::Optimizer(std::string nameTestcase, int numberOfOptimizationParams, s
 
 }
 
+void Optimizer::setParameterToDiscrete(unsigned int index, double increment){
+
+	assert(index <dimension);
+	incrementsForDiscreteVariables.push_back(increment);
+	indicesForDiscreteVariables.push_back(index);
+	numberOfDisceteVariables++;
+
+
+}
+
+
+
+
 bool Optimizer::checkSettings(void) const{
 
 	if(this->ifDisplay){
@@ -413,6 +426,13 @@ void Optimizer::print(void) const{
 	if (constraintFunctions.empty()){
 
 		std::cout << "Optimization problem does not have any constraints\n";
+	}
+
+	if(numberOfDisceteVariables > 0){
+		std::cout << "Indices for discrete parameters = \n";
+		printVector(indicesForDiscreteVariables);
+		std::cout << "Incremental values for discrete parameters = \n";
+		printVector(incrementsForDiscreteVariables);
 	}
 
 
@@ -1090,6 +1110,9 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 #endif
 
+
+		roundDiscreteParameters(best_dv);
+
 		Design currentBestDesign(best_dv);
 		currentBestDesign.setNumberOfConstraints(numberOfConstraints);
 		currentBestDesign.saveDesignVector(designVectorFileName);
@@ -1203,6 +1226,59 @@ void Optimizer::cleanDoEFiles(void) const{
 
 }
 
+void Optimizer::roundDiscreteParameters(rowvec &designVector){
+
+	if(numberOfDisceteVariables>0){
+
+		for(unsigned int j=0; j < numberOfDisceteVariables; j++){
+
+
+			unsigned int index = indicesForDiscreteVariables[j];
+			double valueToRound = designVector(index);
+
+			double dx = incrementsForDiscreteVariables[j];
+			unsigned int howManyDiscreteValues = (upperBounds(index) - lowerBounds(index))/dx;
+			howManyDiscreteValues += 1;
+
+			vec discreteValues(howManyDiscreteValues);
+
+			discreteValues(0) = lowerBounds(index);
+			for(unsigned int k=1; k<howManyDiscreteValues-1; k++){
+
+				discreteValues(k) = discreteValues(k-1) + dx;
+
+
+			}
+
+			discreteValues(howManyDiscreteValues-1) = upperBounds(index);
+
+			int whichInterval = findInterval(valueToRound, discreteValues);
+
+
+			assert(whichInterval>=0);
+
+			double distance1 = valueToRound - discreteValues[whichInterval];
+			double distance2 = discreteValues[whichInterval+1] - valueToRound;
+
+			if(distance1 < distance2){
+
+				designVector(index) =  discreteValues[whichInterval];
+
+			}
+			else{
+
+				designVector(index) =  discreteValues[whichInterval+1];
+			}
+
+
+		}
+
+	}
+
+
+}
+
+
 void Optimizer::calculateImprovementValue(Design &d){
 
 
@@ -1232,6 +1308,7 @@ void Optimizer::calculateImprovementValue(Design &d){
 				d.improvementValue = d.objectiveFunctionValue - initialobjectiveFunctionValue;
 
 			}
+
 
 		}
 
@@ -1276,6 +1353,15 @@ void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 	if(methodID == LHS){
 
 		LHSSamples DoE(dimension, lowerBounds, upperBounds, howManySamples);
+
+		if(numberOfDisceteVariables>0){
+
+			DoE.setDiscreteParameterIndices(indicesForDiscreteVariables);
+			DoE.setDiscreteParameterIncrements(incrementsForDiscreteVariables);
+			DoE.roundSamplesToDiscreteValues();
+
+		}
+
 
 		std::string filename= this->name + "_samples.csv";
 		DoE.saveSamplesToCSVFile(filename);

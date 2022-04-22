@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -112,11 +112,34 @@ void LHSSamples::setDiscreteParameterIndices(int *indices, int size){
 
 }
 
+
+void LHSSamples::setDiscreteParameterIndices(std::vector<int> indices){
+
+	indicesDiscreteVariables = indices;
+
+
+}
+
 void LHSSamples::setDiscreteParameterIncrements(vec increments){
 
 	incrementsDiscreteVariables = increments;
 
 }
+
+void LHSSamples::setDiscreteParameterIncrements(std::vector<double> increments){
+
+	unsigned int count = 0;
+	incrementsDiscreteVariables = zeros<vec>(increments.size());
+	for ( auto i = increments.begin(); i != increments.end(); i++ ) {
+
+		incrementsDiscreteVariables(count) = *i;
+		count++;
+	}
+
+
+
+}
+
 
 
 uvec LHSSamples::returnValidIntervalsForADimension(mat validIntervals, unsigned int dim){
@@ -262,7 +285,7 @@ void LHSSamples::roundSamplesToDiscreteValues(void){
 
 	unsigned int howManyVariablesAreDiscrete = indicesDiscreteVariables.size();
 
-	printVector(indicesDiscreteVariables);
+
 
 	if(howManyVariablesAreDiscrete != 0){
 
@@ -309,7 +332,6 @@ void LHSSamples::roundSamplesToDiscreteValues(void){
 					samples(i,index) =  discreteValues[whichInterval+1];
 				}
 
-				samples.print();
 
 		}
 

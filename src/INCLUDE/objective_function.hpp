@@ -69,6 +69,8 @@ public:
 	bool ifGradientLowFi = false;
 	bool ifDefined = false;
 
+
+
 	ObjectiveFunctionDefinition(std::string);
 	ObjectiveFunctionDefinition();
 	void print(void) const;
@@ -111,6 +113,9 @@ protected:
 
 	bool ifMarkerIsSet = false;
 	bool ifAdjointMarkerIsSet = false;
+
+	bool ifMinimization = true;
+	bool ifMaximization = false;
 
 
 	vec upperBounds;
@@ -174,6 +179,9 @@ public:
 
 	void setDisplayOn(void);
 	void setDisplayOff(void);
+
+	void setMinimizationOn(void);
+	void setMaximizationOn(void);
 
 
 	void setParameterBounds(vec , vec );

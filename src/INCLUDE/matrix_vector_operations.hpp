@@ -52,6 +52,14 @@ void printVector(rowvec v, std::string name="None");
 void printVector(std::vector<std::string> v);
 void printVector(std::vector<int> v);
 void printVector(std::vector<bool> v);
+void printVector(std::vector<double> v);
+
+#define printScalar(name) printScalarValueWithName(#name, (name))
+
+void printScalarValueWithName(std::string name, int value) ;
+void printScalarValueWithName(std::string name, double value);
+void printScalarValueWithName(std::string name, unsigned int value);
+
 
 vec normalizeColumnVector(vec x, double xmin, double xmax);
 

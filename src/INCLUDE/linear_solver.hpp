@@ -29,62 +29,49 @@
  *
  */
 
+#ifndef LINEARSYSTEMSOLVE_HPP
+#define LINEARSYSTEMSOLVE_HPP
 
-#include "lhs.hpp"
-#include<gtest/gtest.h>
-
-#define TEST_LHS_ON
-
-#ifdef TEST_LHS_ON
-
-TEST(testLHS, testLHSConstructor){
-
-	unsigned int dim = 4;
-	unsigned int N = 10;
-	vec lb(dim);
-	vec ub(dim);
-	lb.fill(0.0);
-	ub.fill(1.0);
-
-	LHSSamples LHSTest(dim, lb, ub, N);
-
-	mat samples = LHSTest.getSamples();
-
-	EXPECT_EQ(samples.n_rows,N);
-	EXPECT_EQ(samples.n_cols,dim);
+#include <armadillo>
 
 
-}
+using namespace arma;
+
+class CholeskySystem{
+
+private:
+
+	unsigned int dimension = 0;
+	mat A;
+	mat L;
+	mat U;
+	bool ifFactorizationIsDone = false;
+	bool ifMatrixIsSet = false;
+
+	vec forwardSubstitution(vec rhs) const;
+	vec backwardSubstitution(vec rhs) const;
+
+public:
 
 
-TEST(testLHS, testcalculateDiscreteParameterValues){
+	CholeskySystem(unsigned int);
+	CholeskySystem(){};
 
-	unsigned int dim = 4;
-	unsigned int N = 10;
-	vec lb(dim);
-	vec ub(dim);
-	lb.fill(0.0);
-	ub.fill(1.0);
+	void setDimension(unsigned int);
+	unsigned int getDimension(void) const;
+	bool checkDimension(unsigned int);
 
-	LHSSamples LHSTest(dim, lb, ub, N);
-
-	mat samples = LHSTest.getSamples();
-
-	int indices[2] = {0,2};
-	vec increments(2);
-	increments(0) = 0.1;
-	increments(1) = 0.25;
+	mat getLowerDiagonalMatrix(void) const;
+	void setMatrix(mat);
+	mat getMatrix(void) const;
+	void factorize();
 
 
-//	LHSTest.printSamples();
-	LHSTest.setDiscreteParameterIndices(indices,2);
-	LHSTest.setDiscreteParameterIncrements(increments);
-	LHSTest.roundSamplesToDiscreteValues();
-//	LHSTest.printSamples();
+	vec solveLinearSystem(vec) const;
 
 
-}
 
 
+};
 
 #endif

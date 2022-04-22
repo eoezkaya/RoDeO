@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -37,6 +37,23 @@
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
+
+
+void printScalarValueWithName(std::string name, int value) {
+
+    std::cout<<name<<" = "<<value<<"\n";
+
+}
+void printScalarValueWithName(std::string name, double value) {
+
+	std::cout<<name<<" = "<<value<<"\n";
+}
+
+
+void printScalarValueWithName(std::string name, unsigned int value) {
+
+	std::cout<<name<<" = "<<value<<"\n";
+}
 
 void abortIfHasNan(rowvec &v){
 
@@ -204,8 +221,6 @@ void printVector(std::vector<std::string> v){
 	std::cout << v[v.size()-1] << "\n";
 
 
-
-
 }
 
 void printVector(std::vector<int> v){
@@ -218,6 +233,7 @@ void printVector(std::vector<int> v){
 
 }
 
+
 void printVector(std::vector<bool> v){
 
 	for (std::vector<bool>::const_iterator i = v.begin(); i != v.end(); ++i){
@@ -227,6 +243,20 @@ void printVector(std::vector<bool> v){
 
 
 }
+
+
+void printVector(std::vector<double> v){
+
+
+	for(std::size_t i = 0; i < v.size()-1; ++i) {
+		std::cout << v[i] << ", ";
+	}
+
+	std::cout << v[v.size()-1] << "\n";
+
+
+}
+
 
 
 vec normalizeColumnVector(vec x, double xmin, double xmax){

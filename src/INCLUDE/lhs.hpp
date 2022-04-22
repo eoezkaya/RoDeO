@@ -63,6 +63,9 @@ public:
 	void setDiscreteParameterIndices(int *indices, int size);
 	void setDiscreteParameterIncrements(vec increments);
 
+	void setDiscreteParameterIndices(std::vector<int>);
+	void setDiscreteParameterIncrements(std::vector<double>);
+
 
 	void saveSamplesToCSVFile(std::string);
 	void visualize(void);

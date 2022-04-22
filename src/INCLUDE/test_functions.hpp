@@ -171,9 +171,11 @@ double LinearTF1Adj(double *x, double *xb);
 
 void generateEggholderData(std::string filename, unsigned int nSamples);
 void generateEggholderDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi);
+
+
 double Eggholder(double *x);
 double EggholderAdj(double *x, double *xb);
-
+double Eggholder(vec x);
 
 
 double Rastrigin6D(double *x);

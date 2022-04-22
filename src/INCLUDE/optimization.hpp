@@ -79,6 +79,12 @@ private:
 
 	unsigned int iterMaxEILoop;
 
+	unsigned int numberOfDisceteVariables = 0;
+	std::vector<double> incrementsForDiscreteVariables;
+	std::vector<int> indicesForDiscreteVariables;
+
+
+
 
 
 
@@ -104,6 +110,10 @@ public:
 
 
 	Optimizer(std::string ,int, std::string = "minimize");
+	void setParameterToDiscrete(unsigned int, double);
+
+	void roundDiscreteParameters(rowvec &);
+
 	bool checkSettings(void) const;
 	void print(void) const;
 	void printConstraints(void) const;

@@ -434,7 +434,7 @@ void RoDeODriver::checkIfProblemTypeIsSetProperly(void) const{
 
 bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 
-	if (s == "DoE" || s == "MINIMIZATION" || s == "MAXIMIZATION" || s == "SURROGATE_TEST"){
+	if (s == "DoE" || s == "DOE" || s == "MINIMIZATION" || s == "MAXIMIZATION" || s == "SURROGATE_TEST"){
 
 		return true;
 	}
@@ -452,9 +452,20 @@ ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 
 	}
 
+
+
 	std::string objFunName = configKeysObjectiveFunction.getConfigKeyStringValue("NAME");
 	int dim = configKeys.getConfigKeyIntValue("DIMENSION");
 	ObjectiveFunction objFunc(objFunName, dim);
+
+	std::string optimizationType = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
+
+	if(optimizationType == "MAXIMIZATION"){
+
+		objFunc.setMaximizationOn();
+	}
+
+
 
 	objFunc.setParametersByDefinition(objectiveFunction);
 
@@ -1140,6 +1151,16 @@ Optimizer RoDeODriver::setOptimizationStudy(void) {
 	}
 
 
+	vec indicesOfDiscreteVariables = configKeys.getConfigKeyVectorDoubleValue("DISCRETE_VARIABLES");
+	vec increments = configKeys.getConfigKeyVectorDoubleValue("DISCRETE_VARIABLES_VALUE_INCREMENTS");
+
+	for(unsigned int i = 0; i<indicesOfDiscreteVariables.size(); i++){
+
+		optimizationStudy.setParameterToDiscrete(int(indicesOfDiscreteVariables(i)), increments(i));
+	}
+
+
+
 
 	return optimizationStudy;
 
@@ -1160,21 +1181,44 @@ void RoDeODriver::generateDoESamples(void) {
 
 	LHSSamples DoE(dimension, lowerBounds, upperBounds, howManySamples);
 
-	std::string filename= configKeys.getConfigKeyStringValue("DOE_OUTPUT_FILENAME");
 
-	assert(isNotEmpty(filename));
-	DoE.saveSamplesToCSVFile(filename);
 
 
 	vec indicesOfDiscreteVariables = configKeys.getConfigKeyVectorDoubleValue("DISCRETE_VARIABLES");
 
-	printVector(indicesOfDiscreteVariables, "indicesOfDiscreteVariables");
+	unsigned int howManyDiscreteVariablesExist = indicesOfDiscreteVariables.size();
+
+	if(howManyDiscreteVariablesExist > 0) {
+
+		int *indicesForDiscreteVariables = new int[howManyDiscreteVariablesExist];
+
+		for(unsigned int i=0; i<howManyDiscreteVariablesExist; i++){
+
+			indicesForDiscreteVariables[i] = indicesOfDiscreteVariables[i];
+
+		}
 
 
+		DoE.setDiscreteParameterIndices(indicesForDiscreteVariables, howManyDiscreteVariablesExist);
 
 
-//	DoE.printSamples();
+		vec increments = configKeys.getConfigKeyVectorDoubleValue("DISCRETE_VARIABLES_VALUE_INCREMENTS");
 
+		DoE.setDiscreteParameterIncrements(increments);
+
+
+		DoE.roundSamplesToDiscreteValues();
+
+
+		delete[] indicesForDiscreteVariables;
+
+
+	}
+
+	std::string filename= configKeys.getConfigKeyStringValue("DOE_OUTPUT_FILENAME");
+
+	assert(isNotEmpty(filename));
+	DoE.saveSamplesToCSVFile(filename);
 
 }
 
@@ -1399,7 +1443,7 @@ int RoDeODriver::runDriver(void){
 	}
 
 
-	if(problemType == "DoE"){
+	if(problemType == "DoE" || problemType == "DOE"){
 
 
 
@@ -1506,8 +1550,9 @@ bool RoDeODriver::ifDisplayIsOn(void) const{
 
 		return false;
 
-
 	}
+
+
 }
 
 
