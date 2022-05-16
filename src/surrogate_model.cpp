@@ -199,7 +199,16 @@ mat SurrogateModel::getRawData(void) const{
 
 }
 
+mat SurrogateModel::getX(void) const{
 
+	return data.getInputMatrix();
+}
+
+vec SurrogateModel::gety(void) const{
+
+	return data.getOutputVector();
+
+}
 
 void SurrogateModel::readData(void){
 

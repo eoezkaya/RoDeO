@@ -161,7 +161,7 @@ void EAIndividual::print(void) const{
 
 EAOptimizer::EAOptimizer(){
 
-
+	setNumberOfThreads(1);
 
 
 }
@@ -222,15 +222,25 @@ void EAOptimizer::setObjectiveFunction(EAObjectiveFunction functionToSet ){
 }
 
 
-void EAOptimizer::callObjectiveFunction(EAIndividual &individual) const{
+void EAOptimizer::callObjectiveFunction(EAIndividual &individual){
 
-	assert(ifObjectiveFunctionIsSet);
 	assert(dimension > 0);
 
 	vec designVector = individual.getGenes();
 	assert(designVector.size() == dimension);
 
-	double objectiveFunctionValue = calculateObjectiveFunction(designVector);
+	double objectiveFunctionValue = 0.0;
+
+	if(ifObjectiveFunctionIsSet){
+		objectiveFunctionValue = calculateObjectiveFunction(designVector);
+
+	}
+
+	else{
+
+		objectiveFunctionValue = calculateObjectiveFunctionInternal(designVector);
+
+	}
 
 	individual.setObjectiveFunctionValue(objectiveFunctionValue);
 
@@ -238,7 +248,13 @@ void EAOptimizer::callObjectiveFunction(EAIndividual &individual) const{
 
 }
 
+double EAOptimizer::calculateObjectiveFunctionInternal(vec input){
 
+	assert(ifObjectiveFunctionIsSet);
+	return calculateObjectiveFunction(input);
+
+
+}
 
 
 void EAOptimizer::setOptimizationType(std::string type){
@@ -295,6 +311,8 @@ void EAOptimizer::setMaximumNumberOfGeneratedIndividuals(unsigned int number){
 }
 
 EAIndividual  EAOptimizer::generateRandomIndividual(void){
+
+
 
 	assert(parameterBounds.areBoundsSet());
 	EAIndividual newIndividual(dimension);
@@ -430,18 +448,71 @@ EAIndividual  EAOptimizer::generateIndividualByReproduction(std::pair<unsigned i
 
 }
 
+void EAOptimizer::setNumberOfThreads(unsigned int nTreads){
+
+	omp_set_num_threads(nTreads);
+
+
+}
+
+unsigned int EAOptimizer::getNumberOfThreads(void) const{
+
+	int numberOfTreads;
+#pragma omp parallel
+	{
+		numberOfTreads = omp_get_num_threads();
+
+
+	}
+	printScalar(numberOfTreads);
+
+	return numberOfTreads;
+
+}
+
+
+void wait(void){
+
+	for(unsigned int i=0;i<100000; i++){
+
+		double a = 1.0*i;
+		double b = a*a+1;
+
+	}
+
+}
+
 
 void EAOptimizer::initializePopulation(void){
 
 	assert(sizeOfInitialPopulation>0);
 	assert(areBoundsSet());
 
-	for(unsigned int i=0; i<sizeOfInitialPopulation; i++){
 
-		EAIndividual generatedIndividual = generateRandomIndividual();
-		population.push_back(generatedIndividual);
-		sizeOfPopulation++;
+#pragma omp parallel
+	{
+
+		std::vector<EAIndividual> slavePopulation;
+
+#pragma omp for nowait
+		for (unsigned int i = 0; i < sizeOfInitialPopulation; ++i)
+		{
+
+			EAIndividual generatedIndividual = generateRandomIndividual();
+			slavePopulation.push_back(generatedIndividual);
+		}
+
+
+#pragma omp critical
+		{
+			/* merge populations from each thread */
+			addToList(slavePopulation,population);
+
+		}
 	}
+
+
+	sizeOfPopulation = population.size();
 
 	updatePopulationProperties();
 	findTheBestIndividualInPopulation();
@@ -781,18 +852,45 @@ std::pair<unsigned int, unsigned int> EAOptimizer::generateRandomParents(void) c
 	return indicesOfParents;
 }
 
+void EAOptimizer::addToList(std::vector<EAIndividual> &slavePopulation,
+		std::vector<EAIndividual> &groupOfNewIndividualsToAdd) {
+	/* merge populations from each thread */
+	groupOfNewIndividualsToAdd.insert(groupOfNewIndividualsToAdd.end(),
+			std::make_move_iterator(slavePopulation.begin()),
+			std::make_move_iterator(slavePopulation.end()));
+}
+
 void EAOptimizer::addNewIndividualsToPopulation() {
 
 	assert(numberOfNewIndividualsInAGeneration > 0);
-
 	std::vector<EAIndividual> groupOfNewIndividualsToAdd;
 
-	for (unsigned int i = 0; i < numberOfNewIndividualsInAGeneration; i++) {
-		std::pair<unsigned int, unsigned int> indicesOfParents;
-		indicesOfParents = generateRandomParents();
-		EAIndividual aNewIndividual = generateIndividualByReproduction(indicesOfParents);
-		groupOfNewIndividualsToAdd.push_back(aNewIndividual);
+
+#pragma omp parallel
+	{
+
+		std::vector<EAIndividual> slavePopulation;
+
+#pragma omp for nowait
+		for (unsigned int i = 0; i < numberOfNewIndividualsInAGeneration; ++i)
+		{
+
+			std::pair<unsigned int, unsigned int> indicesOfParents;
+			indicesOfParents = generateRandomParents();
+			EAIndividual aNewIndividual = generateIndividualByReproduction(indicesOfParents);
+
+			slavePopulation.push_back(aNewIndividual);
+		}
+
+
+#pragma omp critical
+		{
+
+			/* merge populations from each thread */
+			addToList(slavePopulation, groupOfNewIndividualsToAdd);
+		}
 	}
+
 
 
 	addAGroupOfIndividualsToPopulation(groupOfNewIndividualsToAdd);
@@ -846,45 +944,45 @@ void EAOptimizer::addIndividualToPopulation(EAIndividual individualToAdd){
 
 }
 
-void EAOptimizer::removeIndividualsFromPopulation(void) {
-	std::vector<unsigned int> idsOfIndividualsToErase;
-	/* First we decide which individuals are to be removed */
 
-	unsigned int count = 0;
-	while(true){
+
+void EAOptimizer::removeIndividualsFromPopulation(void) {
+
+	for(unsigned int i=0; i<numberOfDeathsInAGeneration; i++){
+
 		unsigned int id = pickUpAnIndividualThatWillDie();
 
-		if(isNotAlreadyInTheList(id,idsOfIndividualsToErase)){
+		removeIndividualFromPopulation(id);
 
-			idsOfIndividualsToErase.push_back(id);
-			count++;
-		}
+		updatePopulationProperties();
 
-		if(count == numberOfDeathsInAGeneration) break;
 
 	}
-	for (auto it = std::begin(idsOfIndividualsToErase);
-			it != std::end(idsOfIndividualsToErase); ++it) {
-		removeIndividualFromPopulation(*it);
-	}
+
+
+
 }
+
+
 
 void EAOptimizer::generateNewGeneration(void){
 
 	output.printMessage("EA Optimizer: Generating a new generation");
+	output.printMessage("EA Optimizer: Adding some individuals to the population");
 	addNewIndividualsToPopulation();
 	updatePopulationProperties();
-
+	output.printMessage("EA Optimizer: Removing some individuals from the population");
 	removeIndividualsFromPopulation();
+	output.printMessage("EA Optimizer: Updating population properties");
 	updatePopulationProperties();
 
 	findTheBestIndividualInPopulation();
+
 }
 
 
 void EAOptimizer::checkIfSettingsAreOk(void) const{
 
-	assert(ifObjectiveFunctionIsSet);
 	assert(areBoundsSet());
 	assert(parameterBounds.checkIfBoundsAreValid());
 	assert(numberOfNewIndividualsInAGeneration>0);
@@ -902,8 +1000,9 @@ void EAOptimizer::optimize(void){
 	checkIfSettingsAreOk();
 
 	initializePopulation();
-
+#if 0
 	printPopulation();
+#endif
 
 	for(unsigned int i=0; i<numberOfGenerations; i++){
 
@@ -915,7 +1014,7 @@ void EAOptimizer::optimize(void){
 
 	}
 
-	printPopulation();
+
 	printTheBestIndividual();
 
 	double mutationCrossOverRatio = double(totalNumberOfMutations)/double(totalNumberOfCrossOvers);
@@ -928,7 +1027,7 @@ vec EAOptimizer::getBestDesignvector(void) const{
 
 	unsigned int index = 0;
 
-	getIndividualLocation(idPopulationBest);
+	index = getIndividualLocation(idPopulationBest);
 
 	return population[index].getGenes();
 
@@ -939,7 +1038,7 @@ double EAOptimizer::getBestObjectiveFunction(void) const{
 
 	unsigned int index = 0;
 
-	getIndividualLocation(idPopulationBest);
+	index = getIndividualLocation(idPopulationBest);
 
 	return population[index].getObjectiveFunctionValue();
 

@@ -33,6 +33,7 @@
 #include "Rodeo_macros.hpp"
 #include "surrogate_model.hpp"
 #include "design.hpp"
+#include "bounds.hpp"
 
 #include <string>
 #include <armadillo>
@@ -49,8 +50,8 @@ private:
 	unsigned int dimension;
 	std::string function_name;
 
-	vec lb; /*lower bounds */
-	vec ub; /*upper bounds */
+	Bounds boxConstraints;
+
 
 	mat trainingSamples;
 	mat testSamples;
@@ -82,8 +83,8 @@ private:
 
 	std::string fileNameSurrogateModelData;
 
-	double (*func_ptr)(double *);
-	double (*adj_ptr)(double *, double *);
+	double (*func_ptr)(double *) = NULL;
+	double (*adj_ptr)(double *, double *) = NULL;
 
 
 
@@ -219,6 +220,9 @@ double ShubertAdj(double *x, double *xb);
 
 double Himmelblau(double *x);
 double HimmelblauAdj(double *x, double *xb);
+double Himmelblau(vec x);
+vec HimmelblauGradient(vec x);
+
 void generateHimmelblauDataMultiFidelity(std::string, std::string, unsigned int, unsigned int);
 void generateHimmelblauDataMultiFidelityWithGradients(std::string, std::string, unsigned int, unsigned int);
 

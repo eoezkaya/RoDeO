@@ -31,9 +31,51 @@
 
 #include "metric.hpp"
 #include "auxiliary_functions.hpp"
+#include "bounds.hpp"
 
 
-WeightedL1Norm:: WeightedL1Norm(){
+
+
+
+double WeightedL1NormOptimizer::calculateObjectiveFunctionInternal(vec input){
+
+	weightedL1NormForCalculations.setWeights(input);
+
+	double meanL1Error = weightedL1NormForCalculations.calculateMeanL1ErrorOnData();
+
+	return meanL1Error;
+
+}
+void WeightedL1NormOptimizer::initializeWeightedL1NormObject(WeightedL1Norm input){
+
+	assert(input.getDimension() > 0);
+	assert(input.isTrainingDataSet());
+	assert(input.isValidationDataSet());
+	weightedL1NormForCalculations = input;
+	ifWeightedL1NormForCalculationsIsSet = true;
+
+}
+
+
+
+bool WeightedL1NormOptimizer::isWeightedL1NormForCalculationsSet(void) const{
+
+	return ifWeightedL1NormForCalculationsIsSet;
+
+}
+
+
+
+
+WeightedL1Norm:: WeightedL1Norm(){}
+
+void WeightedL1Norm::initializeNumberOfTrainingIterations(void) {
+
+
+	nTrainingIterations = dim * 10000;
+	if (nTrainingIterations > 500000) {
+		nTrainingIterations = 500000;
+	}
 
 
 }
@@ -42,6 +84,7 @@ WeightedL1Norm::WeightedL1Norm(unsigned int d){
 
 	dim = d;
 	weights = zeros<vec>(dim);
+
 
 }
 
@@ -64,11 +107,22 @@ void WeightedL1Norm::initialize(unsigned int dimension){
 
 }
 
+void WeightedL1Norm::setDimensionIfNotSet() {
+	if (dim == 0) {
+		dim = trainingData.n_cols - 1;
+	} else {
+		assert(dim == trainingData.n_cols - 1);
+	}
+}
 
 void WeightedL1Norm::setTrainingData(mat inputMatrix){
 
 	assert(inputMatrix.n_rows>0);
 	trainingData = inputMatrix;
+
+	setDimensionIfNotSet();
+
+	ifTrainingDataIsSet = true;
 
 }
 void WeightedL1Norm:: setValidationData(mat inputMatrix){
@@ -76,13 +130,36 @@ void WeightedL1Norm:: setValidationData(mat inputMatrix){
 	assert(inputMatrix.n_rows>0);
 	validationData = inputMatrix;
 
+	setDimensionIfNotSet();
+	ifValidationDataIsSet = true;
 }
+
+bool WeightedL1Norm::isTrainingDataSet(void) const{
+
+	return ifTrainingDataIsSet;
+
+
+}
+
+bool WeightedL1Norm::isValidationDataSet(void) const{
+
+	return ifValidationDataIsSet;
+
+
+}
+
+bool WeightedL1Norm::isNumberOfTrainingIterationsSet(void) const{
+
+	return ifNumberOfTrainingIterationsIsSet;
+
+}
+
 
 
 void WeightedL1Norm::setNumberOfTrainingIterations(unsigned int value){
 
 	nTrainingIterations = value;
-
+	this->ifNumberOfTrainingIterationsIsSet = true;
 }
 
 
@@ -96,10 +173,10 @@ vec WeightedL1Norm::getWeights(void) const{
 	return weights;
 }
 
-void WeightedL1Norm::setWeights(vec wIn){
+void WeightedL1Norm::setWeights(vec weightInput){
 
-	assert(wIn.size() == dim);
-	weights = wIn;
+	assert(weightInput.size() == dim);
+	weights = weightInput;
 }
 
 double WeightedL1Norm::calculateNorm(const rowvec &x) const{
@@ -165,6 +242,32 @@ double WeightedL1Norm::interpolateByNearestNeighbour(rowvec x) const{
 
 }
 
+double WeightedL1Norm::calculateMeanL1ErrorOnData(void) const{
+
+	assert(dim == validationData.n_cols-1);
+
+	unsigned int numberOfValidationSamples = validationData.n_rows;
+
+	mat X = validationData.submat(0,0,numberOfValidationSamples-1,dim-1);
+	vec y = validationData.col(dim);
+
+	double L1Error = 0.0;
+
+	for(unsigned int i=0; i<numberOfValidationSamples; i++){
+
+		rowvec xp = X.row(i);
+		double fTilde = interpolateByNearestNeighbour(xp);
+		L1Error += fabs(fTilde - y(i));
+
+#if 0
+		std::cout<<"fTilde = "<<fTilde<<" fExact = "<<y(i)<<" SE = "<<squaredError<<"\n";
+#endif
+	}
+
+
+	return L1Error/numberOfValidationSamples ;
+
+}
 
 double WeightedL1Norm::calculateMeanSquaredErrorOnData(void) const{
 
@@ -196,48 +299,47 @@ double WeightedL1Norm::calculateMeanSquaredErrorOnData(void) const{
 
 void WeightedL1Norm::findOptimalWeights(void){
 
-	assert(trainingData.n_rows>0);
-	assert(validationData.n_rows>0);
-	assert(validationData.n_cols == trainingData.n_cols);
 
-	vec optimalWeights;
-	double minError = LARGE;
+	assert(dim>0);
 
+	WeightedL1NormOptimizer optimizerForWeights;
 
-	for(unsigned int i=0; i<nTrainingIterations; i++){
+	Bounds boxConstraints(dim);
+	boxConstraints.setBounds(0.0,1.0);
+	optimizerForWeights.setBounds(boxConstraints);
+	optimizerForWeights.setDimension(dim);
 
-		generateRandomWeights();
-		double error = calculateMeanSquaredErrorOnData();
+	unsigned int initialPopulationSize = dim*1000;
+	optimizerForWeights.setInitialPopulationSize(initialPopulationSize);
 
+	if(!ifNumberOfTrainingIterationsIsSet){
 
-		if(error < minError){
-
-			if(ifDisplay){
-
-				printVector(weights,"weights");
-				std::cout<<"minError = "<<minError<<"\n";
-
-			}
-
-			optimalWeights = weights;
-			minError = error;
-
-		}
-
-
+		initializeNumberOfTrainingIterations();
 	}
 
 
+	optimizerForWeights.setMaximumNumberOfGeneratedIndividuals(nTrainingIterations);
 
-	weights = optimalWeights;
+	optimizerForWeights.setMutationProbability(0.1);
+	optimizerForWeights.setNumberOfGenerations(100);
+	optimizerForWeights.setNumberOfNewIndividualsInAGeneration(dim*20);
+	optimizerForWeights.setNumberOfDeathsInAGeneration(dim*20);
 
-	if(ifDisplay){
+	optimizerForWeights.initializeWeightedL1NormObject(*this);
+	optimizerForWeights.optimize();
 
-		printVector(weights,"optimal weights");
+	vec optimalWeights = optimizerForWeights.getBestDesignvector();
 
-	}
+
+	double sumWeights = sum(optimalWeights);
+	optimalWeights = optimalWeights/sumWeights;
+
+	setWeights(optimalWeights);
 
 }
+
+
+
 
 
 double calculateL1norm(const rowvec &x){
@@ -275,35 +377,9 @@ double calculateMetric(rowvec &xi,rowvec &xj, mat M){
 }
 
 
-double calculateMetricAdjoint(rowvec xi, rowvec xj, mat M, mat &Mb, double calculateMetricb) {
-
-	int dim = xi.size();
-	rowvec diff(dim);
 
 
-	rowvec tempb(dim, fill::zeros);
-	double calculateMetric;
 
-	diff = xi-xj;
-	colvec diffT= trans(diff);
-
-	calculateMetric = dot(diff,M*diffT);
-	double sumb = 0.0;
-	sumb = calculateMetricb;
-	tempb = sumb*diff;
-
-	for (int i = dim-1; i > -1; --i) {
-		double sumb = 0.0;
-		sumb = tempb[i];
-		tempb[i] = 0.0;
-		for (int j = dim-1; j > -1; --j){
-
-			Mb(i,j) += diff[j]*sumb;
-		}
-	}
-
-	return calculateMetric;
-}
 
 unsigned int findNearestNeighborL1(const rowvec &xp, const mat &X){
 

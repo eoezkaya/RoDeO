@@ -38,4 +38,5 @@ extern Rodeo_settings settings;
 const double rootTwoPi = 2.506628274631000;
 const double LARGE = 10E14;
 const double EPSILON = 10E-14;
+const double GOLDENRATIO = 1.618033988749;
 #endif

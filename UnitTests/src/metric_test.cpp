@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -32,6 +32,36 @@
 #include "metric.hpp"
 #include "test_functions.hpp"
 #include<gtest/gtest.h>
+
+
+TEST(testMetric, test_WeightedL1NormOptimizerConstructor){
+
+	WeightedL1NormOptimizer testOptimizer;
+
+	unsigned int dim = testOptimizer.getDimension();
+
+	ASSERT_EQ(dim, 0);
+
+}
+TEST(testMetric, test_initializeWeightedL1NormObject){
+
+	unsigned int N = 100;
+	unsigned int dim = 5;
+	WeightedL1NormOptimizer testOptimizer;
+	WeightedL1Norm normTest(dim);
+
+	mat testData(N,dim+1, fill::randu);
+	normTest.setTrainingData(testData);
+
+	mat testValidationData(N,dim+1, fill::randu);
+	normTest.setValidationData(testValidationData);
+
+	testOptimizer.initializeWeightedL1NormObject(normTest);
+
+	ASSERT_TRUE(testOptimizer.isWeightedL1NormForCalculationsSet());
+
+}
+
 
 TEST(testMetric, testinitalize){
 
@@ -140,21 +170,21 @@ TEST(testMetric, testcalculateMeanSquaredErrorOnData){
 }
 
 
-TEST(testMetric, testfindOptimalWeights){
+TEST(testMetric, testfindOptimalWeight){
 
-	unsigned int NTraining   = 100;
-	unsigned int NValidation = 20;
+	unsigned int numberOfTrainingSamples   = 100;
+	unsigned int numberOfValidationSamples = 100;
 	unsigned int dim = 5;
-	mat trainingData(NTraining,dim+1, fill::randu);
-	mat validationData(NValidation,dim+1, fill::randu);
+	mat trainingData(numberOfTrainingSamples,dim+1, fill::randu);
+	mat validationData(numberOfValidationSamples,dim+1, fill::randu);
 
 	/* we have a simple function y=f(x_1,x_2,x_3,x_4, ...) = x_1^2 + x_2^2 */
-	for(unsigned int i=0; i<NTraining; i++){
+	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
 
 		trainingData(i,dim) = trainingData(i,0)* trainingData(i,0) +  trainingData(i,1)* trainingData(i,1);
 
 	}
-	for(unsigned int i=0; i<NValidation; i++ ){
+	for(unsigned int i=0; i<numberOfValidationSamples; i++ ){
 
 		validationData(i,dim) = validationData(i,0)* validationData(i,0) + validationData(i,1)* validationData(i,1);
 
@@ -166,8 +196,8 @@ TEST(testMetric, testfindOptimalWeights){
 	normTest.setValidationData(validationData);
 
 	normTest.ifDisplay = false;
-	normTest.setNumberOfTrainingIterations(5000);
 	normTest.findOptimalWeights();
+
 
 	vec w = normTest.getWeights();
 
@@ -176,5 +206,7 @@ TEST(testMetric, testfindOptimalWeights){
 
 
 }
+
+
 
 

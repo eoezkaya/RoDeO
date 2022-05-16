@@ -170,6 +170,30 @@ TEST(testEAOptimizer, testEAOptimizer_initializePopulation){
 
 }
 
+
+TEST(testEAOptimizer, testEAOptimizer_initializePopulationInParallel){
+
+	Bounds testBounds(2);
+	testBounds.setBounds(0.0,512.0);
+	EAOptimizer test;
+	test.setBounds(testBounds);
+
+
+	test.setObjectiveFunction(Eggholder);
+	test.setDimension(2);
+	test.setInitialPopulationSize(400);
+	test.setNumberOfThreads(4);
+	test.initializePopulation();
+
+
+	ASSERT_TRUE(test.getPopulationSize() == 400);
+
+
+}
+
+
+
+
 TEST(testEAOptimizer, testEAOptimizer_updatePopulationFitness){
 
 	Bounds testBounds(2);
@@ -419,7 +443,83 @@ TEST(testEAOptimizer, testEAOptimizer_optimize){
 
 	double objectiveFunctionValueOptimized = test.getBestObjectiveFunction();
 
-	ASSERT_LT(objectiveFunctionValueOptimized, -700.0);
+	ASSERT_LT(objectiveFunctionValueOptimized, -500.0);
+
+}
+
+/* Using this class, we test the derived class functionality based on the base class "EAOptimizer" */
+class EggholderOptimizer : public EAOptimizer{
+
+private:
+
+	double calculateObjectiveFunctionInternal(vec input){
+
+		return Eggholder(input);
+
+	}
+
+
+public:
+
+
+
+
+};
+
+TEST(testEAOptimizer, testEAOptimizer_optimizeWithDerivedClass){
+
+	Bounds testBounds(2);
+	testBounds.setBounds(0.0,512.0);
+	EggholderOptimizer test;
+
+
+	test.setBounds(testBounds);
+
+	test.setDimension(2);
+	test.setInitialPopulationSize(50);
+	test.setNumberOfNewIndividualsInAGeneration(10);
+	test.setNumberOfDeathsInAGeneration(10);
+	test.setMutationProbability(0.1);
+	test.setNumberOfGenerations(50);
+	test.setDisplayOff();
+	test.setMaximumNumberOfGeneratedIndividuals(1000);
+
+	test.optimize();
+
+
+	double objectiveFunctionValueOptimized = test.getBestObjectiveFunction();
+
+	ASSERT_LT(objectiveFunctionValueOptimized, -500.0);
+
+
+}
+
+TEST(testEAOptimizer, testEAOptimizer_optimizeWithDerivedClassParallel){
+
+	Bounds testBounds(2);
+	testBounds.setBounds(0.0,512.0);
+	EggholderOptimizer test;
+
+
+	test.setBounds(testBounds);
+
+	test.setDimension(2);
+	test.setInitialPopulationSize(500);
+	test.setNumberOfNewIndividualsInAGeneration(500);
+	test.setNumberOfDeathsInAGeneration(100);
+	test.setMutationProbability(0.1);
+	test.setNumberOfGenerations(50);
+	test.setDisplayOff();
+	test.setMaximumNumberOfGeneratedIndividuals(1000000);
+	test.setNumberOfThreads(4);
+
+	test.optimize();
+
+
+	double objectiveFunctionValueOptimized = test.getBestObjectiveFunction();
+
+	ASSERT_LT(objectiveFunctionValueOptimized, -500.0);
+
 
 }
 

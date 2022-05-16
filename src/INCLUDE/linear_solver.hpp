@@ -62,10 +62,14 @@ public:
 	bool checkDimension(unsigned int);
 
 	mat getLowerDiagonalMatrix(void) const;
+	mat getUpperDiagonalMatrix(void) const;
 	void setMatrix(mat);
 	mat getMatrix(void) const;
 	void factorize();
+	bool isFactorizationDone(void);
 
+	double calculateDeterminant(void);
+	double calculateLogDeterminant(void);
 
 	vec solveLinearSystem(vec) const;
 

@@ -225,12 +225,20 @@ vec KrigingModel::getGamma(void) const{
 
 }
 
+
+double KrigingModel::getEpsilonKriging(void) const{
+
+	return epsilonKriging;
+}
+
 void KrigingModel::setTheta(vec theta){
 
 	this->theta = theta;
 
 
 }
+
+
 void KrigingModel::setGamma(vec gamma){
 
 	this->gamma = gamma;
@@ -373,7 +381,7 @@ void KrigingModel::resizeDataObjects(void){
 
 void KrigingModel::updateAuxilliaryFields(void){
 
-	unsigned int numberOfSamples = data.getNumberOfSamples();
+	unsigned int N = data.getNumberOfSamples();
 
 #if 0
 	cout<<"Updating auxiliary variables of the Kriging model\n";
@@ -399,28 +407,38 @@ void KrigingModel::updateAuxilliaryFields(void){
 
 	linearSystemCorrelationMatrix.factorize();
 
-	vec R_inv_ys(numberOfSamples);
+	vec R_inv_ys(N);
 	R_inv_ys.fill(0.0);
 
-    /* solve R x = ys */
+	R_inv_I = zeros(N);
+	R_inv_ys_min_beta = zeros(N);
+	beta0 = 0.0;
+	sigmaSquared = 0.0;
 
-	R_inv_ys = linearSystemCorrelationMatrix.solveLinearSystem(ys);
 
-	R_inv_I = zeros(numberOfSamples);
 
-   /* solve R x = I */
+	if(linearSystemCorrelationMatrix.isFactorizationDone()){
 
-	R_inv_I = linearSystemCorrelationMatrix.solveLinearSystem(vectorOfOnes);
+		/* solve R x = ys */
+		R_inv_ys = linearSystemCorrelationMatrix.solveLinearSystem(ys);
 
-	beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
 
-	vec ys_min_betaI = ys - beta0*vectorOfOnes;
+		/* solve R x = I */
 
-	/* solve R x = ys-beta0*I */
+		R_inv_I = linearSystemCorrelationMatrix.solveLinearSystem(vectorOfOnes);
 
-	R_inv_ys_min_beta = linearSystemCorrelationMatrix.solveLinearSystem( ys_min_betaI);
+		beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
 
-	sigmaSquared = (1.0 / numberOfSamples) * dot(ys_min_betaI, R_inv_ys_min_beta);
+		vec ys_min_betaI = ys - beta0*vectorOfOnes;
+
+		/* solve R x = ys-beta0*I */
+
+		R_inv_ys_min_beta = linearSystemCorrelationMatrix.solveLinearSystem( ys_min_betaI);
+
+		sigmaSquared = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
+
+	}
+
 
 
 }
@@ -568,7 +586,7 @@ void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double
 	R_inv_r = linearSystemCorrelationMatrix.solveLinearSystem(r);
 
 
-   *sSqrOutput = sigmaSquared*( 1.0 - dot(r,R_inv_r)+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(vectorOfOnes,R_inv_I) ) );
+	*sSqrOutput = sigmaSquared*( 1.0 - dot(r,R_inv_r)+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(vectorOfOnes,R_inv_I) ) );
 
 
 }
@@ -611,6 +629,52 @@ mat KrigingModel::computeCorrelationMatrix(void)  {
 
 
 	return R;
+
+}
+
+
+double KrigingModel::calculateLikelihoodFunction(vec hyperParameters){
+
+	assert(ifDataIsRead);
+	assert(ifNormalized);
+
+	unsigned int dim = data.getDimension();
+	unsigned int N = data.getNumberOfSamples();
+	vec gammaInput = hyperParameters.tail(dim);
+	vec thetaInput = hyperParameters.head(dim);
+
+	setGamma(gammaInput);
+	setTheta(thetaInput);
+
+	updateAuxilliaryFields();
+
+	if(linearSystemCorrelationMatrix.isFactorizationDone() == false){
+
+		return -LARGE;
+
+
+	}
+
+
+
+	double logdetR = linearSystemCorrelationMatrix.calculateLogDeterminant();
+
+	double NoverTwo = double(N)/2.0;
+
+	double likelihoodValue = 0.0;
+
+	if(sigmaSquared > 0 ){
+		likelihoodValue = (- NoverTwo) * log(sigmaSquared);
+		likelihoodValue -= 0.5 * logdetR;
+	}
+	else{
+
+		likelihoodValue = -LARGE;
+
+	}
+
+	return likelihoodValue;
+
 
 }
 
@@ -1224,9 +1288,26 @@ void update_population_properties(std::vector<EAdesign> &population) {
 
 }
 
+void KrigingHyperParameterOptimizer::initializeKrigingModelObject(KrigingModel input){
+
+	assert(input.ifDataIsRead);
+	assert(input.ifNormalized);
+	assert(input.ifInitialized);
+
+	KrigingModelForCalculations = input;
 
 
+	ifModelObjectIsSet = true;
 
+}
+
+double KrigingHyperParameterOptimizer::calculateObjectiveFunctionInternal(vec input){
+
+	KrigingModel modelFortheCalculation;
+	modelFortheCalculation = KrigingModelForCalculations;
+	return modelFortheCalculation.calculateLikelihoodFunction(input);
+
+}
 
 
 

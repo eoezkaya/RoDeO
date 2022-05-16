@@ -77,6 +77,46 @@ mat CholeskySystem::getLowerDiagonalMatrix(void) const{
 
 }
 
+mat CholeskySystem::getUpperDiagonalMatrix(void) const{
+
+	return U;
+
+}
+
+double CholeskySystem::calculateDeterminant(void){
+
+	assert(ifFactorizationIsDone);
+	double determinant = 0.0;
+
+
+	vec U_diagonal = U.diag();
+
+	determinant = prod(U_diagonal);
+
+
+	return determinant*determinant;
+
+}
+
+double CholeskySystem::calculateLogDeterminant(void){
+
+	assert(ifFactorizationIsDone);
+
+	double determinant = 0.0;
+
+	vec U_diagonal = U.diag();
+
+	for(unsigned int i=0; i<dimension; i++) {
+
+		determinant+= log(U_diagonal(i));
+	}
+
+	return 2.0*determinant;
+
+}
+
+
+
 void CholeskySystem::setMatrix(mat input){
 
 	assert(input.n_rows!=0);
@@ -88,6 +128,7 @@ void CholeskySystem::setMatrix(mat input){
 	L = zeros<mat>(dimension,dimension);
 
 	ifMatrixIsSet = true;
+	ifFactorizationIsDone = false;
 }
 
 mat CholeskySystem::getMatrix(void) const{
@@ -95,7 +136,11 @@ mat CholeskySystem::getMatrix(void) const{
 	return(A);
 }
 
+bool CholeskySystem::isFactorizationDone(void){
 
+	return ifFactorizationIsDone;
+
+}
 
 void CholeskySystem::factorize(void){
 
@@ -106,13 +151,17 @@ void CholeskySystem::factorize(void){
 
 
 	if (cholesky_return == false) {
-		std::cout<<"ERROR: Ill conditioned correlation matrix, Cholesky decomposition failed!\n";
-		abort();
+
+		ifFactorizationIsDone = false;
+	}
+	else{
+
+		U = trans(L);
+
+		ifFactorizationIsDone = true;
 	}
 
-	U = trans(L);
 
-	ifFactorizationIsDone = true;
 
 
 }

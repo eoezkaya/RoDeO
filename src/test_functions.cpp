@@ -57,7 +57,7 @@ using namespace arma;
 
 
 
-TestFunction::TestFunction(std::string name,int dim){
+TestFunction::TestFunction(std::string name,int dim):boxConstraints(dim){
 
 	assert(dim > 0);
 	assert(!name.empty());
@@ -65,14 +65,12 @@ TestFunction::TestFunction(std::string name,int dim){
 	dimension = dim;
 	function_name = name;
 
-
-	lb.zeros(dimension);
-	ub.zeros(dimension);
-
 	fileNameSurrogateModelData = function_name + ".csv";
 
 
 }
+
+
 
 
 void TestFunction::setNoiseLevel(double noise){
@@ -121,8 +119,7 @@ void TestFunction::setDisplayOff(void){
 void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
 
 	assert(lowerBound < upperBound);
-	lb.fill(lowerBound);
-	ub.fill(upperBound);
+	boxConstraints.setBounds(lowerBound, upperBound);
 	ifBoxConstraintsSet = true;
 
 
@@ -133,16 +130,8 @@ void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
 void TestFunction::setBoxConstraints(vec lowerBound, vec upperBound){
 
 
-	for(unsigned int i=0; i<dimension; i++){
-
-
-		lb(i) = lowerBound(i);
-		ub(i) = upperBound(i);
-		assert(lb(i) < ub(i));
-
-
-	}
-
+	boxConstraints.setBounds(lowerBound, upperBound);
+	assert(boxConstraints.checkIfBoundsAreValid());
 	ifBoxConstraintsSet= true;
 
 }
@@ -191,11 +180,13 @@ void TestFunction::evaluateGlobalExtrema(void) const{
 	double globalMin = LARGE;
 	double globalMax = -LARGE;
 
+
+
 	const int numberOfBruteForceIterations = 100000;
 
 	for(unsigned int i=0; i<numberOfBruteForceIterations; i++ ){
 
-		rowvec x = generateRandomRowVector(lb, ub);
+		rowvec x = boxConstraints.generateVectorWithinBounds();
 		double functionValue = func_ptr(x.memptr());
 
 		if(functionValue < globalMin){
@@ -231,14 +222,9 @@ void TestFunction::print(void){
 	printf("Parameter bounds:\n");
 
 
-	for(unsigned int i=0; i<dimension; i++){
-
-		printf("x[%d]: %15.10f , %15.10f\n",i,lb(i),ub(i));
-
-	}
-
 	printMatrix(trainingSamples, "trainingSamples");
 	printMatrix(testSamples, "testSamples");
+	boxConstraints.print();
 
 
 }
@@ -262,6 +248,9 @@ void TestFunction::plot(int resolution) const{
 		double dx; /* step sizes in x direction */
 		double x;
 		double func_val;
+
+		vec lb = boxConstraints.getLowerBounds();
+		vec ub = boxConstraints.getUpperBounds();
 		dx = (ub(0)-lb(0))/(resolution-1);
 
 		x = lb(0);
@@ -302,6 +291,9 @@ void TestFunction::plot(int resolution) const{
 		double dx,dy; /* step sizes in x and y directions */
 		double x[2];
 		double func_val;
+		vec lb = boxConstraints.getLowerBounds();
+		vec ub = boxConstraints.getUpperBounds();
+
 		dx = (ub(0)-lb(0))/(resolution-1);
 		dy = (ub(1)-lb(1))/(resolution-1);
 
@@ -391,7 +383,8 @@ void TestFunction::generateSamplesInputTrainingData(void){
 
 	assert(numberOfTrainingSamples> 0);
 	assert(ifBoxConstraintsSet);
-
+	vec lb = boxConstraints.getLowerBounds();
+	vec ub = boxConstraints.getUpperBounds();
 
 	LHSSamples samplesTraining(dimension, lb, ub, numberOfTrainingSamples);
 
@@ -404,7 +397,8 @@ void TestFunction::generateSamplesInputTestData(void){
 
 	assert(numberOfTestSamples> 0);
 	assert(ifBoxConstraintsSet);
-
+	vec lb = boxConstraints.getLowerBounds();
+	vec ub = boxConstraints.getUpperBounds();
 	LHSSamples samplesTest(dimension, lb, ub, numberOfTestSamples);
 
 	testSamplesInput = samplesTest.getSamples();
@@ -544,27 +538,9 @@ mat TestFunction::getTestSamples(void) const{
 
 
 mat TestFunction::generateRandomSamples(unsigned int howManySamples){
-#if 0
-	printf("Generating %d random samples for the function: %s\n",howManySamples,function_name.c_str());
-#endif
-	if(!ifBoxConstraintsSet){
 
-		cout<<"\nERROR: Box constraints are not set!\n";
-		abort();
-
-	}
-
-	for(unsigned int j=0; j<dimension;j++) {
-
-		if (lb(j) >= ub(j)){
-
-			printf("\nERROR: lb(%d) >= ub(%d) (%10.7f >= %10.7f)!\n",j,j,lb(j),ub(j));
-			printf("Did you set box constraints properly?\n");
-			abort();
-
-		}
-	}
-
+	assert(boxConstraints.areBoundsSet());
+	assert(ifFunctionPointerIsSet);
 
 	mat sampleMatrix = zeros(howManySamples,dimension+1 );
 
@@ -572,9 +548,12 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 
 	for(unsigned int i=0; i<howManySamples; i++ ){
 
+		vec xRandom  =  boxConstraints.generateVectorWithinBounds();
+
+
 		for(unsigned int j=0; j<dimension;j++) {
 
-			x[j] = generateRandomDouble(lb(j), ub(j));
+			x[j] =  xRandom(j);
 
 			if(ifFunctionIsNoisy){
 
@@ -594,6 +573,7 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 			double *xb  = new double[dimension];
 
 			functionValue = adj_ptr(x,xb);
+
 
 			delete[] xb;
 		}
@@ -629,26 +609,7 @@ mat TestFunction::generateRandomSamples(unsigned int howManySamples){
 
 mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples){
 
-
-	printf("Generating %d random samples with gradients for the function: %s\n",howManySamples,function_name.c_str());
-
-	if(!ifBoxConstraintsSet){
-
-		cout<<"\nERROR: Box constraints are not set!\n";
-		abort();
-
-	}
-
-	for(unsigned int j=0; j<dimension;j++) {
-
-		if (lb(j) >= ub(j)){
-
-			printf("\nERROR: lb(%d) >= ub(%d) (%10.7f >= %10.7f)!\n",j,j,lb(j),ub(j));
-			printf("Did you set box constraints properly?\n");
-			abort();
-
-		}
-	}
+	assert(boxConstraints.areBoundsSet());
 
 	mat sampleMatrix = zeros(howManySamples,2*dimension+1 );
 
@@ -656,12 +617,14 @@ mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples
 	double *xb  = new double[dimension];
 
 
+
 	for(unsigned int i=0; i<howManySamples; i++ ){
 
+		vec xRandom  =  boxConstraints.generateVectorWithinBounds();
 
 		for(unsigned int j=0; j<dimension;j++) {
 
-			x[j] = generateRandomDouble(lb(j), ub(j));
+			x[j] = xRandom(j);
 		}
 
 		for(unsigned int k=0; k<dimension;k++) xb[k] = 0.0;
@@ -694,78 +657,75 @@ mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples
 }
 
 
-void TestFunction::validateAdjoints(void){
-
-	cout<<"\nValidating adjoints...\n";
-
-	if(func_ptr == NULL || adj_ptr == NULL){
-		cout<<"\nERROR: cannot validate adjoints with empty primal and/or adjoint function pointer: set func_ptr and adj_ptr first\n";
-		abort();
-	}
-
-	if(!ifBoxConstraintsSet){
-
-		cout<<"\nERROR: Box constraints are not set!\n";
-		abort();
-
-	}
-
-	unsigned int NValidationPoints = 100;
-	double *x  = new double[dimension];
-	double *xb  = new double[dimension];
-
-	bool passTest = false;
-
-	for(unsigned int i=0; i<NValidationPoints; i++ ){
-
-		generateRandomVector(lb, ub, dimension, x);
-
-
-		double functionValueFromAdjoint = adj_ptr(x,xb);
-		double functionValue = func_ptr(x);
-
-		passTest= checkValue(functionValueFromAdjoint,functionValue);
-		if(passTest == false){
-
-			cout<<"ERROR: The primal values does not match between function and the adjoint: check your implementations\n";
-			abort();
-		}
-
-		for(unsigned int j=0; j<dimension; j++ ){
-
-			double xsave = x[j];
-
-			double epsilon = x[j]*0.0001;
-			x[j] = xsave - epsilon;
-
-			double fmin = func_ptr(x);
-			x[j] = xsave + epsilon;
-			double fplus = func_ptr(x);
-			double fdValue = (fplus-fmin)/(2.0*epsilon);
-
-			passTest= checkValue(fdValue,xb[j]);
-
-			if(passTest == false){
-
-				cout<<"ERROR: The adjoint value does not seem to be correct!\n";
-				abort();
-			}
-
-			x[j] = xsave;
-
-		}
-
-
-
-
-	}
-
-	delete[] x;
-	delete[] xb;
-
-
-
-}
+//void TestFunction::validateAdjoints(void){
+//
+//	assert(func_ptr == NULL && adj_ptr == NULL);
+//	assert()
+//
+//
+//	if(!ifBoxConstraintsSet){
+//
+//		cout<<"\nERROR: Box constraints are not set!\n";
+//		abort();
+//
+//	}
+//
+//	unsigned int NValidationPoints = 100;
+//	double *x  = new double[dimension];
+//	double *xb  = new double[dimension];
+//
+//	bool passTest = false;
+//
+//	for(unsigned int i=0; i<NValidationPoints; i++ ){
+//
+//		generateRandomVector(lb, ub, dimension, x);
+//
+//
+//		double functionValueFromAdjoint = adj_ptr(x,xb);
+//		double functionValue = func_ptr(x);
+//
+//		passTest= checkValue(functionValueFromAdjoint,functionValue);
+//		if(passTest == false){
+//
+//			cout<<"ERROR: The primal values does not match between function and the adjoint: check your implementations\n";
+//			abort();
+//		}
+//
+//		for(unsigned int j=0; j<dimension; j++ ){
+//
+//			double xsave = x[j];
+//
+//			double epsilon = x[j]*0.0001;
+//			x[j] = xsave - epsilon;
+//
+//			double fmin = func_ptr(x);
+//			x[j] = xsave + epsilon;
+//			double fplus = func_ptr(x);
+//			double fdValue = (fplus-fmin)/(2.0*epsilon);
+//
+//			passTest= checkValue(fdValue,xb[j]);
+//
+//			if(passTest == false){
+//
+//				cout<<"ERROR: The adjoint value does not seem to be correct!\n";
+//				abort();
+//			}
+//
+//			x[j] = xsave;
+//
+//		}
+//
+//
+//
+//
+//	}
+//
+//	delete[] x;
+//	delete[] xb;
+//
+//
+//
+//}
 
 
 
@@ -1333,6 +1293,13 @@ double Himmelblau(double *x){
 
 }
 
+
+double Himmelblau(vec x){
+
+	return Himmelblau(x.memptr());
+
+}
+
 double HimmelblauAdj(double *x, double *xb) {
 	double tempb;
 	double tempb0;
@@ -1344,6 +1311,20 @@ double HimmelblauAdj(double *x, double *xb) {
 	return pow( (x[0]*x[0]+x[1]-11.0), 2.0 ) + pow( (x[0]+x[1]*x[1]-7.0), 2.0 );
 
 }
+
+vec HimmelblauGradient(vec x){
+
+	vec gradient(2);
+	double tempb;
+	double tempb0;
+	tempb = 2.0*pow(x[0]*x[0]+x[1]-11.0, 2.0-1);
+	tempb0 = 2.0*pow(x[0]+x[1]*x[1]-7.0, 2.0-1);
+	gradient[0] = tempb0 + 2*x[0]*tempb;
+	gradient[1] = 2*x[1]*tempb0 + tempb;
+
+	return gradient;
+}
+
 
 void generateHimmelblauDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
 

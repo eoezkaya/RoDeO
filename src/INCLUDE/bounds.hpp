@@ -54,6 +54,8 @@ public:
 	Bounds(vec , vec);
 
 	unsigned int getDimension(void) const;
+	void setDimension(unsigned int);
+
 	vec getLowerBounds(void) const;
 	double getLowerBound(unsigned int) const;
 	double getUpperBound(unsigned int) const;

@@ -129,6 +129,7 @@ public:
 	mat getRawData(void) const;
 
 
+
 	void setNameOfInputFileTest(string filename);
 
 	virtual void setNameOfInputFile(string filename) = 0;
@@ -155,7 +156,8 @@ public:
 	double getOutSampleErrorMSE(void) const;
 	void saveTestResults(void) const;
 
-
+	mat getX(void) const;
+	vec gety(void) const;
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
 

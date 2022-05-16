@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -36,76 +36,144 @@
 #include<gtest/gtest.h>
 
 
-TEST(testKriging, testKrigingConstructor){
+mat generate2DEggholderTestDataForKrigingModel(unsigned int N){
 
-	KrigingModel testModel("testKrigingModel");
-	std::string filenameDataInput = testModel.getNameOfInputFile();
-	ASSERT_TRUE(filenameDataInput == "testKrigingModel.csv");
+	TestFunction testFunctionEggholder("Eggholder",2);
+
+	testFunctionEggholder.setFunctionPointer(Eggholder);
+
+	testFunctionEggholder.setBoxConstraints(0,200.0);
+	mat samples = testFunctionEggholder.generateRandomSamples(N);
+	saveMatToCVSFile(samples,"Eggholder.csv");
+
+	return samples;
+}
+
+
+class KrigingModelTest : public ::testing::Test {
+protected:
+	void SetUp() override {
+
+
+		unsigned int N = 100;
+		generate2DEggholderTestDataForKrigingModel(N);
+		testModel.setName("Eggholder");
+		testModel.setNameOfInputFile("Eggholder.csv");
+		testModel.readData();
+		testModel.setBoxConstraints(0.0, 200.0);
+		testModel.normalizeData();
+		testModel.initializeSurrogateModel();
+
+
+	}
+
+	//  void TearDown() override {}
+
+	KrigingModel testModel;
+	KrigingHyperParameterOptimizer testOptimizer;
+};
+
+TEST_F(KrigingModelTest, testIfConstructorWorks) {
+
+	ASSERT_TRUE(testModel.ifDataIsRead);
+	ASSERT_TRUE(testModel.ifInitialized);
+	ASSERT_TRUE(testModel.ifNormalized);
+	ASSERT_FALSE(testModel.ifHasTestData);
 	ASSERT_FALSE(testModel.areGradientsOn());
 
-
-}
-
-TEST(testKriging, testReadDataAndNormalize){
-
-	TestFunction testFunctionEggholder("Eggholder",2);
-
-	testFunctionEggholder.setFunctionPointer(Eggholder);
-
-	testFunctionEggholder.setBoxConstraints(0,200.0);
-	mat samples = testFunctionEggholder.generateRandomSamples(10);
-	saveMatToCVSFile(samples,"Eggholder.csv");
-
-
-	KrigingModel testModel("Eggholder");
-
-
-	testModel.readData();
-	testModel.setBoxConstraints(0.0, 200.0);
-
-
-	testModel.normalizeData();
-
-
-	unsigned int N = testModel.getNumberOfSamples();
-	ASSERT_TRUE(N == 10);
-	unsigned int d = testModel.getDimension();
-	ASSERT_TRUE(d == 2);
-	mat rawData = testModel.getRawData();
-	bool ifBothMatricesAreEqual = isEqual(samples,rawData,10E-10);
-
-
-	ASSERT_TRUE(ifBothMatricesAreEqual);
-
-	remove("Eggholder.csv");
-}
-
-
-
-TEST(testKriging, testsetParameterBounds){
-
-
-	TestFunction testFunctionEggholder("Eggholder",2);
-
-	testFunctionEggholder.setFunctionPointer(Eggholder);
-
-	testFunctionEggholder.setBoxConstraints(0,200.0);
-	mat samples = testFunctionEggholder.generateRandomSamples(10);
-	saveMatToCVSFile(samples,"Eggholder.csv");
-
-
-	KrigingModel testModel("Eggholder");
-
-
-	testModel.readData();
-
-	Bounds boxConstraints(2);
-	boxConstraints.setBounds(0.0,2.0);
-
-	testModel.setBoxConstraints(boxConstraints);
+	ASSERT_TRUE(testModel.getDimension() == 2);
+	std::string filenameDataInput = testModel.getNameOfInputFile();
+	ASSERT_TRUE(filenameDataInput == "Eggholder.csv");
 
 
 }
+
+
+TEST_F(KrigingModelTest, testcalculateLikelihood) {
+
+
+	vec hyperParameters(4);
+	hyperParameters(0) = 5.0;
+	hyperParameters(1) = 5.0;
+	hyperParameters(2) = 1.5;
+	hyperParameters(3) = 1.5;
+	double L = testModel.calculateLikelihoodFunction(hyperParameters);
+
+
+	EAdesign testDesign(2);
+	testDesign.theta = hyperParameters.head(2);
+	testDesign.gamma = hyperParameters.tail(2);
+
+
+	mat X = testModel.getX();
+	vec y = testModel.gety();
+
+	testDesign.calculate_fitness(testModel.getEpsilonKriging(), X, y);
+
+	double Lvalidation = testDesign.objective_val;
+
+
+	double error = fabs(L-Lvalidation);
+	EXPECT_LT(error,10E-08);
+
+
+}
+
+
+
+
+TEST_F(KrigingModelTest, testKrigingOptimizerinitializeKrigingModelObject) {
+
+	KrigingHyperParameterOptimizer testOptimizer;
+
+	testOptimizer.initializeKrigingModelObject(testModel);
+	ASSERT_TRUE(testOptimizer.ifModelObjectIsSet);
+
+}
+
+
+
+TEST_F(KrigingModelTest, testKrigingOptimizertestKrigingOptimizerOptimize) {
+
+	unsigned int dim = 2;
+
+	vec hyperParameters(2*dim);
+	hyperParameters(0) = 5.0;
+	hyperParameters(dim-1) = 5.0;
+	hyperParameters(dim) = 1.5;
+	hyperParameters(dim+1) = 1.5;
+	double L = testModel.calculateLikelihoodFunction(hyperParameters);
+
+
+	KrigingHyperParameterOptimizer testOptimizer;
+	testOptimizer.initializeKrigingModelObject(testModel);
+
+	testOptimizer.setDimension(2*dim);
+	Bounds boxConstraints(2*dim);
+	vec lb(2*dim); lb(0) = 0.0; lb(1) = 0.0; lb(2) = 0.0; lb(3) = 0.0;
+	vec ub(2*dim); ub(0) = 10.0; ub(1) = 10.0; ub(2) = 2.0; ub(3) = 2.0;
+	boxConstraints.setBounds(lb,ub);
+	testOptimizer.setBounds(boxConstraints);
+	testOptimizer.setNumberOfNewIndividualsInAGeneration(1000*2*dim);
+	testOptimizer.setMutationProbability(0.1);
+	testOptimizer.setMaximumNumberOfGeneratedIndividuals(100000*2*dim);
+	testOptimizer.setNumberOfGenerations(20);
+	testOptimizer.setInitialPopulationSize(2*dim*1000);
+	testOptimizer.setDisplayOn();
+//	testOptimizer.setNumberOfThreads(1);
+
+	testOptimizer.optimize();
+
+	vec optimizedHyperParameters = testOptimizer.getBestDesignvector();
+
+	optimizedHyperParameters.print();
+
+}
+
+
+
+
+
 
 
 

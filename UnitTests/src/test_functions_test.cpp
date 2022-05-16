@@ -56,6 +56,55 @@ TEST(testTestFunctions, testGenerateSamplesInput){
 
 }
 
+
+TEST(testTestFunctions, testgenerateRandomSamples){
+
+	unsigned int dim = 2;
+	unsigned int N = 100;
+	TestFunction testFun("testFunction",dim);
+	testFun.setBoxConstraints(0.0, 200);
+	testFun.setFunctionPointer(Eggholder);
+
+	mat samples = testFun.generateRandomSamples(N);
+
+
+	ASSERT_TRUE(samples.n_cols == dim+1);
+	ASSERT_TRUE(samples.n_rows == N);
+
+}
+
+TEST(testTestFunctions, testgenerateRandomSamplesWithAdjoint){
+
+	unsigned int dim = 2;
+	unsigned int N = 100;
+	TestFunction testFun("testFunction",dim);
+	testFun.setBoxConstraints(0.0, 200);
+	testFun.setFunctionPointer(EggholderAdj);
+
+	mat samples = testFun.generateRandomSamples(N);
+
+	ASSERT_TRUE(samples.n_cols == dim+1);
+	ASSERT_TRUE(samples.n_rows == N);
+
+}
+
+
+TEST(testTestFunctions, testgenerateRandomSamplesWithGradients){
+
+	unsigned int dim = 2;
+	unsigned int N = 100;
+	TestFunction testFun("testFunction",dim);
+	testFun.setBoxConstraints(0.0, 200);
+	testFun.setFunctionPointer(EggholderAdj);
+
+	mat samples = testFun.generateRandomSamplesWithGradients(100);
+
+	ASSERT_TRUE(samples.n_cols == 2*dim+1);
+	ASSERT_TRUE(samples.n_rows == N);
+
+}
+
+
 TEST(testTestFunctions, testevaluate){
 
 	TestFunction testFun("testFunction",2);

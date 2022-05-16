@@ -142,6 +142,9 @@ private:
 
 	OutputDevice output;
 
+	virtual double calculateObjectiveFunctionInternal(vec);
+	void addToList(std::vector<EAIndividual> &slavePopulation,
+			std::vector<EAIndividual> &groupOfNewIndividualsToAdd);
 
 public:
 
@@ -168,13 +171,16 @@ public:
 	void setNumberOfDeathsInAGeneration(unsigned int);
 	void setNumberOfGenerations(unsigned int number);
 	void setMaximumNumberOfGeneratedIndividuals(unsigned int number);
+	void setNumberOfThreads(unsigned int nTreads);
+
 
 	void setObjectiveFunction(EAObjectiveFunction);
-	void callObjectiveFunction(EAIndividual &) const;
+	void callObjectiveFunction(EAIndividual &);
 
 
 
 	unsigned int  getIndividualLocation(unsigned int id) const;
+	unsigned int getNumberOfThreads(void) const;
 
 	EAIndividual generateRandomIndividual(void);
 	EAIndividual generateIndividualByReproduction(std::pair<unsigned int, unsigned int> indicesParents);

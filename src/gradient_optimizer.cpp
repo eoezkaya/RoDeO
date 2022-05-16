@@ -1,0 +1,443 @@
+/*
+ * RoDeO, a Robust Design Optimization Package
+ *
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Homepage: http://www.scicomp.uni-kl.de
+ * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
+ *
+ * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ *
+ *  file is part of RoDeO
+ *
+ * RoDeO is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * RoDeO is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ * You should have received a copy of the GNU
+ * General Public License along with CoDiPack.
+ * If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ *
+ *
+ *
+ */
+
+
+#include "gradient_optimizer.hpp"
+#include "matrix_vector_operations.hpp"
+#include "auxiliary_functions.hpp"
+
+#define ARMA_DONT_PRINT_ERRORS
+#include <armadillo>
+#include<cassert>
+
+using namespace arma;
+using namespace std;
+
+
+GradientOptimizer::GradientOptimizer(){
+
+}
+
+
+void GradientOptimizer::setDisplayOn(void){
+
+	output.ifScreenDisplay = true;
+}
+void GradientOptimizer::setDisplayOff(void){
+
+	output.ifScreenDisplay = false;
+}
+
+bool GradientOptimizer::isOptimizationTypeMinimization(void) const{
+
+	if(optimizationType == "minimization") return true;
+	else return false;
+
+
+}
+
+
+bool GradientOptimizer::isOptimizationTypeMaximization(void)const {
+
+	if(optimizationType == "maximization") return true;
+	else return false;
+
+
+}
+
+
+bool  GradientOptimizer::isInitialPointSet(void) const{
+
+	return ifInitialPointIsSet;
+
+}
+
+bool  GradientOptimizer::isObjectiveFunctionSet(void) const{
+
+	return ifObjectiveFunctionIsSet;
+
+}
+
+bool  GradientOptimizer::isGradientFunctionSet(void) const{
+
+	return ifGradientFunctionIsSet;
+
+}
+
+bool GradientOptimizer::areBoundsSet(void)const {
+
+	return parameterBounds.areBoundsSet();
+
+}
+
+void GradientOptimizer::setDimension(unsigned int dim){
+
+	dimension = dim;
+	ifDimensionIsSet = true;
+
+
+}
+
+void GradientOptimizer::setInitialPoint(vec input){
+
+	assert(input.size() == dimension);
+	currentIterate.x = input;
+
+	ifInitialPointIsSet = true;
+
+}
+
+
+void GradientOptimizer::setBounds(Bounds input){
+
+	assert(input.areBoundsSet());
+	parameterBounds = input;
+
+}
+
+void GradientOptimizer::setMaximumStepSize(double value){
+
+	maximumStepSize = value;
+}
+void GradientOptimizer::setTolerance(double value){
+
+	tolerance = value;
+}
+void GradientOptimizer::setMaximumNumberOfIterationsInLineSearch(unsigned int value){
+
+	maximumNumberOfIterationsInLineSearch = value;
+
+}
+
+
+
+unsigned int GradientOptimizer::getDimension(void) const{
+
+	return dimension;
+
+
+}
+
+void GradientOptimizer::setObjectiveFunction(ObjectiveFunctionType functionToSet ){
+
+	assert(functionToSet != NULL);
+	calculateObjectiveFunction = functionToSet;
+	ifObjectiveFunctionIsSet = true;
+
+}
+
+void GradientOptimizer::setGradientFunction(GradientFunctionType functionToSet ){
+
+	assert(functionToSet != NULL);
+
+	calculateGradientFunction = functionToSet;
+
+	ifGradientFunctionIsSet = true;
+
+
+}
+
+void GradientOptimizer::setNumberOfThreads(unsigned int nTreads){
+
+	omp_set_num_threads(nTreads);
+
+
+}
+
+void GradientOptimizer::setMaximumNumberOfFunctionEvaluations(unsigned int input){
+
+	numberOfMaximumFunctionEvaluations = input;
+
+}
+
+void GradientOptimizer::setFiniteDifferenceMethod(string method){
+
+	assert(method == "central" || method == "forward");
+	finiteDifferenceMethod = method;
+	areFiniteDifferenceApproximationToBeUsed = true;
+
+
+}
+
+void GradientOptimizer::checkIfOptimizationSettingsAreOk(void) const{
+
+
+	assert(ifDimensionIsSet);
+	assert(ifInitialPointIsSet);
+	assert(numberOfMaximumFunctionEvaluations > 0);
+	assert(areBoundsSet());
+
+}
+
+void GradientOptimizer::setEpsilonForFiniteDifference(double value) {
+
+	assert(value>0.0);
+	assert(value<0.1);
+	epsilonForFiniteDifferences = value;
+
+}
+
+
+double GradientOptimizer::calculateObjectiveFunctionInternal(vec input){
+
+	assert(ifObjectiveFunctionIsSet);
+	return calculateObjectiveFunction(input);
+
+
+}
+
+vec GradientOptimizer::calculateGradientFunctionInternal(vec input){
+
+	assert(ifGradientFunctionIsSet);
+	return calculateGradientFunction(input);
+
+
+}
+
+vec GradientOptimizer::calculateCentralFiniteDifferences(designPoint &input) {
+
+	vec gradient(dimension,fill::zeros);
+
+	printVector(input.x);
+	for (unsigned int i = 0; i < dimension; i++) {
+		double inputSave = input.x(i);
+		double eps = epsilonForFiniteDifferences * input.x(i);
+		input.x(i) += eps;
+		printVector(input.x);
+		evaluateObjectiveFunction(input);
+		double fplus = input.objectiveFunctionValue;
+		input.x(i) -= 2 * eps;
+		evaluateObjectiveFunction(input);
+		double fminus = input.objectiveFunctionValue;
+		input.x(i) = inputSave;
+		gradient(i) = (fplus - fminus) / (2 * eps);
+	}
+
+	return gradient;
+}
+
+vec GradientOptimizer::calculateForwardFiniteDifferences(designPoint &input) {
+	vec gradient(dimension, fill::zeros);
+	evaluateObjectiveFunction(input);
+	double f0 = input.objectiveFunctionValue;
+
+	for (unsigned int i = 0; i < dimension; i++) {
+		double inputSave = input.x(i);
+		double eps = epsilonForFiniteDifferences * input.x(i);
+		input.x(i) += eps;
+		evaluateObjectiveFunction(input);
+		double fplus = input.objectiveFunctionValue;
+		input.x(i) = inputSave;
+		gradient(i) = (fplus - f0) / (eps);
+	}
+	return gradient;
+}
+
+void GradientOptimizer::approximateGradientUsingFiniteDifferences(designPoint &input){
+
+	assert(dimension>0);
+
+
+
+	if(finiteDifferenceMethod == "central"){
+
+		input.gradient = calculateCentralFiniteDifferences(input);
+
+
+	}
+
+	if(finiteDifferenceMethod == "forward"){
+
+		calculateForwardFiniteDifferences(input);
+	}
+
+
+}
+
+void GradientOptimizer::evaluateObjectiveFunction(designPoint &input){
+
+
+	if(ifObjectiveFunctionIsSet){
+
+		input.objectiveFunctionValue = calculateObjectiveFunction(input.x);
+
+	}
+	else{
+
+		input.objectiveFunctionValue = calculateObjectiveFunctionInternal(input.x);
+	}
+
+
+	numberOfFunctionEvaluations++;
+
+
+}
+
+
+void GradientOptimizer::evaluateGradientFunction(designPoint &input){
+
+	if(areFiniteDifferenceApproximationToBeUsed){
+
+		approximateGradientUsingFiniteDifferences(input);
+
+	}
+
+
+	else if(ifGradientFunctionIsSet){
+
+		input.gradient = calculateGradientFunction(input.x);
+
+	}
+	else{
+
+		input.gradient = calculateGradientFunctionInternal(input.x);
+	}
+
+	input.L2NormGradient = norm(input.gradient);
+
+
+
+}
+
+
+void GradientOptimizer::performGoldenSectionSearch(void){
+
+
+
+
+
+}
+
+void GradientOptimizer::performBacktrackingLineSearch(void){
+
+	assert(maximumStepSize > 0);
+
+	designPoint currentIterateSave = currentIterate;
+
+	double stepSize = maximumStepSize;
+	while(true){
+
+
+		nextIterate.x = currentIterate.x - stepSize* currentIterate.gradient;
+
+		evaluateObjectiveFunction(nextIterate);
+
+		if(nextIterate.objectiveFunctionValue < currentIterate.objectiveFunctionValue){
+
+			break;
+		}
+		else{
+
+			output.printMessage("Decreasing stepsize...");
+			stepSize = stepSize*0.5;
+			output.printMessage("Stepsize = " , stepSize);
+		}
+
+
+
+	}
+
+
+	currentIterate = nextIterate;
+	evaluateGradientFunction(currentIterate);
+
+	output.printMessage("f1 = ",currentIterate.objectiveFunctionValue);
+	optimalObjectiveFunctionValue = currentIterate.objectiveFunctionValue;
+
+
+
+}
+
+
+
+void GradientOptimizer::performLineSearch(void){
+
+	if(LineSearchMethod == "golden_section_search"){
+
+		performGoldenSectionSearch();
+	}
+
+	if(LineSearchMethod == "backtracking_line_search"){
+
+		performBacktrackingLineSearch();
+
+	}
+
+
+}
+
+
+void GradientOptimizer::optimize(void){
+
+
+	checkIfOptimizationSettingsAreOk();
+
+	evaluateObjectiveFunction(currentIterate);
+	evaluateGradientFunction(currentIterate);
+
+	output.printMessage("Initial gradient", currentIterate.gradient);
+
+	unsigned int noOptimizationIteration = 1;
+	while(true){
+
+
+		if(currentIterate.L2NormGradient < tolerance){
+
+			break;
+		}
+
+		performLineSearch();
+
+
+
+
+
+		if(numberOfFunctionEvaluations >= numberOfMaximumFunctionEvaluations){
+
+			break;
+		}
+
+	}
+
+
+
+
+	noOptimizationIteration++;
+}
+
+
+double GradientOptimizer::getOptimalObjectiveFunctionValue(void) const{
+
+	return optimalObjectiveFunctionValue;
+}
+
+
+

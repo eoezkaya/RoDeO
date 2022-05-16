@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -37,7 +37,7 @@
 #include "linear_regression.hpp"
 #include "design.hpp"
 #include "linear_solver.hpp"
-
+#include "ea_optimizer.hpp"
 
 using namespace arma;
 
@@ -110,6 +110,7 @@ public:
 
 	vec getTheta(void) const;
 	vec getGamma(void) const;
+	double getEpsilonKriging(void) const;
 	void setTheta(vec theta);
 	void setGamma(vec gamma);
 
@@ -120,11 +121,29 @@ public:
 	void updateModelWithNewData(void);
 	void updateAuxilliaryFields(void);
 
+	double calculateLikelihoodFunction(vec);
+
 
 };
 
 
+class KrigingHyperParameterOptimizer : public EAOptimizer{
 
+private:
+
+	double calculateObjectiveFunctionInternal(vec input);
+	KrigingModel  KrigingModelForCalculations;
+
+
+
+public:
+
+	void initializeKrigingModelObject(KrigingModel);
+	bool ifModelObjectIsSet = false;
+
+
+
+};
 
 
 class EAdesign {

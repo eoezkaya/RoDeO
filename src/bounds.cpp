@@ -67,6 +67,13 @@ unsigned int Bounds::getDimension(void) const{
 }
 
 
+void Bounds::setDimension(unsigned int value){
+
+	dimension = value;
+
+}
+
+
 void Bounds::setBounds(vec lowerBoundsInput, vec upperBoundsInput) {
 
 	lowerBounds = lowerBoundsInput;

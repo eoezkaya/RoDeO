@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -28,34 +28,40 @@
  *
  *
  */
+#ifndef CORRELATION_FUNCTIONS_HPP
+#define CORRELATION_FUNCTIONS_HPP
 
-#ifndef RODEO_MACROS_HPP
-#define RODEO_MACROS_HPP
+#include <armadillo>
+#include "correlation_functions.hpp"
+using namespace arma;
 
+class Correlationfunction{
 
-enum DoE_METHOD {
-	LHS,
-	RANDOM};
-
-
-enum LOSS_FUNCTION {
-	L1_LOSS_FUNCTION,
-	L2_LOSS_FUNCTION};
+private:
 
 
-enum SURROGATE_MODEL {
-	NONE,
-	LINEAR_REGRESSION,
-	ORDINARY_KRIGING,
-	UNIVERSAL_KRIGING,
-	KERNEL_REGRESSION,
-	GRADIENT_ENHANCED_KERNEL_REGRESSION,
-	AGGREGATION,
-    GRADIENT_ENHANCED_KRIGING,
-	SLICED_GRADIENT_ENHANCED_KRIGING, /*Modified by Kai Cheng*/
-	MULTI_LEVEL};
+	vec theta;             // hyper-parameter
+	mat X;                 // input samples
+	mat xtest;             // test samples
+	mat correlationMatrix;
+	mat correlationVec;
 
+public:
 
+	Correlationfunction();
+
+	void corrgaussian_gekriging(mat &X, vec theta);
+	mat corrbiquadspline_gekriging(mat &X,vec theta);
+
+	void corrgaussian_gekriging_vec(mat &xtest, mat &X, vec theta);
+	void corrbiquadspline_gekriging_vec(mat &xtest,mat &X, vec theta);
+
+	void corrgaussian_kriging(mat &X,vec theta);
+	void corrbiquadspline_kriging(mat &X,vec theta);
+
+	void corrgaussian_kriging_vec(mat &xtest,mat &X,vec theta);
+	void corrbiquadspline_kriging_vec(mat &xtest,mat &X,vec theta);
+};
 
 
 

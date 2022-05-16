@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -32,6 +32,8 @@
 #ifndef METRIC
 #define METRIC
 #include <armadillo>
+#include "ea_optimizer.hpp"
+#include "gradient_optimizer.hpp"
 using namespace arma;
 
 class WeightedL1Norm{
@@ -42,12 +44,18 @@ private:
 	mat trainingData;
 	mat validationData;
 
-	unsigned int nTrainingIterations = 1000;
+	unsigned int nTrainingIterations = 0;
+	bool ifTrainingDataIsSet = false;
+	bool ifValidationDataIsSet = false;
+	bool ifNumberOfTrainingIterationsIsSet = false;
 
+	void initializeNumberOfTrainingIterations();
+	void setDimensionIfNotSet();
 
 public:
 
 	bool ifDisplay = false;
+
 
 
 	WeightedL1Norm();
@@ -60,25 +68,55 @@ public:
 	void setValidationData(mat);
 	void setNumberOfTrainingIterations(unsigned int);
 
+	bool isTrainingDataSet(void) const;
+	bool isValidationDataSet(void) const;
+	bool isNumberOfTrainingIterationsSet(void) const;
+
 	unsigned int getDimension(void) const;
 	vec getWeights(void) const;
 	void setWeights(vec wIn);
 
 	double calculateNorm(const rowvec &) const;
 	void findOptimalWeights();
+
 	double interpolateByNearestNeighbour(rowvec) const;
 	double calculateMeanSquaredErrorOnData(void) const;
+	double calculateMeanL1ErrorOnData(void) const;
 	void generateRandomWeights(void);
+
+
+
+};
+
+
+class WeightedL1NormOptimizer : public EAOptimizer{
+
+private:
+
+	double calculateObjectiveFunctionInternal(vec input);
+	WeightedL1Norm  weightedL1NormForCalculations;
+
+	bool ifWeightedL1NormForCalculationsIsSet = false;
+
+
+public:
+
+	bool isWeightedL1NormForCalculationsSet(void) const;
+
+	void initializeWeightedL1NormObject(WeightedL1Norm);
+
 
 
 };
 
 
 
+
+
+
 double calculateL1norm(const rowvec &x);
 double calculateWeightedL1norm(const rowvec &x, vec w);
 double calculateMetric(rowvec &xi,rowvec &xj, mat M);
-double calculateMetricAdjoint(rowvec xi, rowvec xj, mat M, mat &Mb, double calculateMetricb);
 unsigned int findNearestNeighborL1(const rowvec &xp, const mat &X);
 
 
