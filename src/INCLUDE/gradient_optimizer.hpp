@@ -36,6 +36,7 @@
 #include "bounds.hpp"
 #include "output.hpp"
 #include "Rodeo_globals.hpp"
+#include "general_purpose_optimizer.hpp"
 using namespace arma;
 
 typedef double (*ObjectiveFunctionType)(vec);
@@ -51,25 +52,21 @@ struct designPoint {
 
 
 
-class GradientOptimizer{
+class GradientOptimizer : public GeneralPurposeOptimizer{
 
 private:
 
-	unsigned int dimension = 0;
+
 	std::string optimizationType = "minimization";
 	std::string LineSearchMethod = "backtracking_line_search";
 	std::string finiteDifferenceMethod;
 	bool ifOptimizationTypeMinimization = true;
 	bool ifInitialPointIsSet = false;
-	bool ifDimensionIsSet = false;
-	bool ifObjectiveFunctionIsSet = false;
+
 	bool ifGradientFunctionIsSet = false;
-	bool areFiniteDifferenceApproximationToBeUsed = false;
+	bool areFiniteDifferenceApproximationsToBeUsed = false;
 
 
-	OutputDevice output;
-
-	Bounds parameterBounds;
 
 	designPoint currentIterate;
 	designPoint nextIterate;
@@ -82,7 +79,6 @@ private:
 	double maximumStepSize = 0.0;
 	unsigned int maximumNumberOfIterationsInLineSearch  = 10;
 
-	double (*calculateObjectiveFunction)(vec);
 	vec (*calculateGradientFunction)(vec);
 
 	double optimalObjectiveFunctionValue = LARGE;
@@ -90,7 +86,7 @@ private:
 	unsigned int numberOfMaximumFunctionEvaluations = 0;
 	unsigned int numberOfFunctionEvaluations = 0;
 
-	virtual double calculateObjectiveFunctionInternal(vec);
+
 	virtual vec calculateGradientFunctionInternal(vec);
 	vec calculateCentralFiniteDifferences(designPoint &input);
 	vec calculateForwardFiniteDifferences(designPoint &input);
@@ -99,26 +95,21 @@ public:
 
 	GradientOptimizer();
 
-	void setDimension(unsigned int dim);
-	unsigned int getDimension(void) const;
 
 	bool isOptimizationTypeMinimization(void) const;
 	bool isOptimizationTypeMaximization(void) const;
 	bool isInitialPointSet(void) const;
-	bool isObjectiveFunctionSet(void) const;
+
 	bool isGradientFunctionSet(void) const;
 
-	bool areBoundsSet(void) const;
 
-	void setDisplayOn(void);
-	void setDisplayOff(void);
-	void setNumberOfThreads(unsigned int nTreads);
 
-	void setBounds(Bounds);
+
+
 
 	void setInitialPoint(vec input);
 	void setMaximumNumberOfFunctionEvaluations(unsigned int);
-	void setObjectiveFunction(ObjectiveFunctionType functionToSet );
+
 	void setGradientFunction(GradientFunctionType functionToSet );
 
 	void setMaximumStepSize(double);

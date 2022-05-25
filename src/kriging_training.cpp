@@ -86,6 +86,14 @@ void KrigingModel::setNumberOfTrainingIterations(unsigned int nIters){
 
 }
 
+void KrigingModel::setnumberOfThreadsUsedForTraining(unsigned int nThreads){
+
+
+	numberOfThreadsUsedForTraining = nThreads;
+
+}
+
+
 void KrigingModel::setNameOfHyperParametersFile(std::string label){
 
 	assert(isNotEmpty(label));
@@ -599,8 +607,9 @@ double KrigingModel::computeCorrelation(rowvec x_i, rowvec x_j) const {
 	for (unsigned int k = 0; k < dim; k++) {
 
 		sum += theta(k) * pow(fabs(x_i(k) - x_j(k)), gamma(k));
-
 	}
+
+	double correlation = exp(-sum);
 
 	return exp(-sum);
 }
@@ -632,6 +641,13 @@ mat KrigingModel::computeCorrelationMatrix(void)  {
 
 }
 
+mat KrigingModel::getCorrelationMatrix(void) const{
+
+	return linearSystemCorrelationMatrix.getMatrix();
+
+
+}
+
 
 double KrigingModel::calculateLikelihoodFunction(vec hyperParameters){
 
@@ -659,12 +675,14 @@ double KrigingModel::calculateLikelihoodFunction(vec hyperParameters){
 
 	double logdetR = linearSystemCorrelationMatrix.calculateLogDeterminant();
 
+
 	double NoverTwo = double(N)/2.0;
 
 	double likelihoodValue = 0.0;
 
 	if(sigmaSquared > 0 ){
-		likelihoodValue = (- NoverTwo) * log(sigmaSquared);
+		double logSigmaSqr = log(sigmaSquared);
+		likelihoodValue = (- NoverTwo) * logSigmaSqr;
 		likelihoodValue -= 0.5 * logdetR;
 	}
 	else{
@@ -678,7 +696,56 @@ double KrigingModel::calculateLikelihoodFunction(vec hyperParameters){
 
 }
 
+void KrigingModel::train2(void){
 
+	assert(ifInitialized);
+	unsigned int dim = data.getDimension();
+	printScalar(dim);
+	assert(dim>0);
+
+	Bounds boxConstraintsForTheTraining(2*dim);
+	vec lb(2*dim,fill::zeros);
+	vec ub(2*dim);
+
+	for(unsigned int i=0; i<dim; i++)     ub(i) = 10.0;
+	for(unsigned int i=dim; i<2*dim; i++) ub(i) = 2.0;
+
+	boxConstraintsForTheTraining.setBounds(lb,ub);
+
+
+
+
+#pragma omp parallel
+	{
+		for(unsigned int thread = 0; thread< numberOfThreadsUsedForTraining; thread++){
+
+			KrigingHyperParameterOptimizer testOptimizer;
+			testOptimizer.setDimension(2*dim);
+			testOptimizer.initializeKrigingModelObject(*this);
+			testOptimizer.setDisplayOn();
+
+			testOptimizer.setBounds(boxConstraintsForTheTraining);
+			testOptimizer.setNumberOfNewIndividualsInAGeneration(100*2*dim);
+			testOptimizer.setNumberOfDeathsInAGeneration(100*dim);
+			testOptimizer.setInitialPopulationSize(2*dim*100);
+			testOptimizer.setMutationProbability(0.1);
+			testOptimizer.setMaximumNumberOfGeneratedIndividuals(100000*2*dim);
+			testOptimizer.setNumberOfGenerations(5);
+
+
+			testOptimizer.optimize();
+
+			vec optimizedHyperParameters = testOptimizer.getBestDesignvector();
+
+			printVector(optimizedHyperParameters);
+
+
+		}
+
+	}
+
+
+}
 
 void KrigingModel::train(void){
 
@@ -1015,6 +1082,11 @@ void EAdesign::print(void){
 }
 
 
+
+
+
+
+
 int EAdesign::calculate_fitness(double epsilon, mat &X,vec &ys){
 
 	double beta0 = 0.0;
@@ -1303,9 +1375,7 @@ void KrigingHyperParameterOptimizer::initializeKrigingModelObject(KrigingModel i
 
 double KrigingHyperParameterOptimizer::calculateObjectiveFunctionInternal(vec input){
 
-	KrigingModel modelFortheCalculation;
-	modelFortheCalculation = KrigingModelForCalculations;
-	return modelFortheCalculation.calculateLikelihoodFunction(input);
+	return -1.0* KrigingModelForCalculations.calculateLikelihoodFunction(input);
 
 }
 

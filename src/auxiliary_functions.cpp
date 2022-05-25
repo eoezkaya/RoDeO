@@ -38,6 +38,8 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include<algorithm>
+#include<cctype>
 
 
 using std::string;
@@ -874,11 +876,13 @@ void readFileToaString(std::string filename, std::string & stringCompleteFile){
 }
 
 
+
 std::string removeSpacesFromString(std::string inputString){
 
-	inputString.erase(remove_if(inputString.begin(), inputString.end(), isspace), inputString.end());
+	inputString.erase(std::remove_if(inputString.begin(), inputString.end(), ::isspace), inputString.end());
 	return inputString;
 }
+
 
 
 std::string removeKeywordFromString(std::string inputStr,  std::string keyword){
@@ -890,7 +894,7 @@ std::string removeKeywordFromString(std::string inputStr,  std::string keyword){
 
 	if(found != std::string::npos){
 
-		inputStr.erase(std::remove_if(inputStr.begin(), inputStr.end(), isspace), inputStr.end());
+		inputStr.erase(std::remove_if(inputStr.begin(), inputStr.end(), ::isspace), inputStr.end());
 		std::string sub_str = inputStr.substr(found+keyword.length() + 1);
 
 

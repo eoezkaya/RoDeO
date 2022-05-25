@@ -44,8 +44,14 @@ using namespace std;
 
 EAIndividual::EAIndividual(unsigned int dim){
 
+	assert(dim >0);
 	dimension = dim;
 	genes = zeros<vec>(dim);
+
+}
+
+EAIndividual::EAIndividual(){
+
 
 }
 
@@ -158,68 +164,551 @@ void EAIndividual::print(void) const{
 
 }
 
+void EAIndividual::initializeRandom(void){
+
+	assert(dimension>0);
+	genes = generateRandomVector(0.0,1.0,dimension);
+	fitness = generateRandomDouble(0.0,1.0);
+	objectiveFunctionValue = generateRandomDouble(0.0,1.0);
+	reproductionProbability = generateRandomDouble(0.0,0.1);
+	deathProbability = generateRandomDouble(0.0,0.1);
+
+}
+
+
+
+void EAPopulation::setDimension(unsigned int value){
+
+	dimension = value;
+
+}
+
+unsigned int EAPopulation::getSize(void) const{
+
+	return population.size();
+
+}
+
+void EAPopulation::addIndividual(EAIndividual itemToAdd){
+
+	population.push_back(itemToAdd);
+
+	double J = itemToAdd.getObjectiveFunctionValue();
+	unsigned int id = itemToAdd.getId();
+
+	updateMinAndMaxIfNecessary(J, id);
+
+}
+
+
+void EAPopulation::addAGroupOfIndividuals(std::vector<EAIndividual> individualsToAdd){
+
+	for(auto it = std::begin(individualsToAdd); it != std::end(individualsToAdd); ++it) {
+
+		addIndividual(*it);
+
+	}
+
+}
+
+void EAPopulation::removeIndividual(unsigned int id){
+
+	unsigned int index = getIndividualOrderInPopulationById(id);
+
+	population.erase(population.begin() + index);
+
+	if(id == idPopulationMaximum || id == idPopulationMinimum){
+
+		updatePopulationMinAndMax();
+	}
+
+
+}
+
+
+
+unsigned int EAPopulation::getIdOftheIndividual(unsigned int index) const{
+
+	assert(index < getSize());
+	return population[index].getId();
+
+}
+
+EAIndividual EAPopulation::getIndividual(unsigned int id) const{
+
+	unsigned int order = getIndividualOrderInPopulationById(id);
+	assert(order!=-1);
+	return population.at(order);
+
+
+}
+
+EAIndividual EAPopulation::getTheBestIndividual(void) const{
+
+	return getIndividual(idPopulationMinimum);
+
+}
+
+EAIndividual EAPopulation::getTheWorstIndividual(void) const{
+
+	return getIndividual(idPopulationMaximum);
+
+
+}
+
+
+int  EAPopulation::getIndividualOrderInPopulationById(unsigned int id) const{
+
+
+	unsigned int index = 0;
+	for(auto it = std::begin(population); it != std::end(population); ++it) {
+
+		if(id == it->getId()){
+
+			return index;
+		}
+
+		index++;
+	}
+
+	/* if the id coud not be found return -1 as failure */
+	return -1;
+}
+
+
+void EAPopulation::print(void) const{
+
+	std::ios oldState(nullptr);
+	oldState.copyfmt(std::cout);
+	std::setprecision(9);
+	std::cout<<"\nEA Population has total "<< getSize() << " individuals ...\n";
+	std::cout<<"fmin = "<<populationMinimum<<" fmax = "<<populationMaximum<<"\n";
+	std::cout<<"fmin ID = "<<idPopulationMinimum<<" fmax ID = "<<idPopulationMaximum<<"\n";
+	std::cout<<"ID    Obj. Fun.     Fitness        Rep. P.       Death P.\n";
+	for(auto it = std::begin(population); it != std::end(population); ++it) {
+
+
+		unsigned int id = it->getId();
+		double J = it->getObjectiveFunctionValue();
+		double fitness = it->getFitnessValue();
+		double reproductionP = it->getReproductionProbability();
+		double deathP = it->getDeathProbability();
+		cout << scientific;
+		std::cout << id << "   "<< std::showpos<< setw(6) << J <<"  "<< std::noshowpos<< setw(6) << fitness <<"  "<<setw(6) << reproductionP<<"  "<< setw(6) << deathP<<"\n";
+	}
+
+	std::cout.copyfmt(oldState);
+
+}
+
+void EAPopulation::updateMinAndMaxIfNecessary(double J, unsigned int id) {
+
+
+
+	if (J > populationMaximum) {
+		populationMaximum = J;
+		idPopulationMaximum = id;
+
+	}
+	if (J < populationMinimum) {
+		populationMinimum = J;
+		idPopulationMinimum = id;
+	}
+
+
+}
+
+void EAPopulation::updatePopulationMinAndMax(void){
+
+	populationMaximum = -LARGE;
+	populationMinimum =  LARGE;
+	for(auto it = std::begin(population); it != std::end(population); ++it) {
+
+
+		double J = it->getObjectiveFunctionValue();
+		unsigned int id = it->getId();
+
+		updateMinAndMaxIfNecessary(J, id);
+	}
+
+
+
+
+}
+
+void EAPopulation::updateFitnessValuesLinear() {
+	for (auto it = std::begin(population); it != std::end(population); ++it) {
+		double fitnessValue = (populationMaximum
+				- it->getObjectiveFunctionValue())
+														/ (populationMaximum - populationMinimum);
+		it->setFitnessValue(fitnessValue);
+	}
+}
+
+void EAPopulation::updateFitnessValuesQuadratic() {
+	vec coefficients =
+			findPolynomialCoefficientsForQuadraticFitnessDistribution();
+	for (auto it = std::begin(population); it != std::end(population); ++it) {
+		double x = it->getObjectiveFunctionValue();
+		double fitnessValue = coefficients(0) * x * x + coefficients(1) * x
+				+ coefficients(2);
+		it->setFitnessValue(fitnessValue);
+	}
+}
+
+void EAPopulation::updateFitnessValues(void){
+
+
+	/* we assume always minimization => maximum value has the worst fitness, minimum value has the best */
+
+
+	if(polynomialForFitnessDistrubution == "linear"){
+
+		updateFitnessValuesLinear();
+
+	}
+
+	if(polynomialForFitnessDistrubution == "quadratic"){
+
+
+		updateFitnessValuesQuadratic();
+	}
+
+
+
+}
+
+
+
+
+vec EAPopulation::findPolynomialCoefficientsForQuadraticFitnessDistribution(void) const{
+
+	/* f(x) = ax^2 + bx + c
+	 *
+	 * f(populationMinimum)  = 1
+	 * f(populationMaximum)  = aValueCloseButNotEqualToZero
+	 * f'(populationMaximum) = 0
+	 *
+	 * */
+	vec coefficients(3);
+	mat A(3, 3, fill::zeros);
+	double aValueCloseButNotEqualToZero = 0.001;
+
+	A(0,0) = populationMinimum*populationMinimum;
+	A(0,1) = populationMinimum;
+	A(0,2) = 1.0;
+
+	A(1,0) = populationMaximum*populationMaximum;
+	A(1,1) = populationMaximum;
+	A(1,2) = 1.0;
+
+	A(2,0) = 2.0*populationMaximum;
+	A(2,1) = 1.0;
+	A(2,2) = 0.0;
+
+	vec rhs(3);
+	rhs(0) = 1.0 ;
+	rhs(1) = aValueCloseButNotEqualToZero;
+	rhs(2) = 0.0;
+
+	coefficients = inv(A)*rhs;
+
+
+	double f1 = coefficients(0)*populationMinimum*populationMinimum + coefficients(1) * populationMinimum + coefficients(2);
+	assert(fabs(f1-1.0) < 10E-8);
+	double f2 = coefficients(0)*populationMaximum*populationMaximum + coefficients(1) * populationMaximum + coefficients(2);
+	assert(fabs(f2-aValueCloseButNotEqualToZero) < 10E-5);
+	double fmin = 2*coefficients(0)*populationMaximum + coefficients(1);
+	assert(fabs(fmin) < 10E-8);
+	return coefficients;
+
+}
+
+
+void EAPopulation::updateReproductionProbabilities(void){
+
+	double sumFitness = 0.0;
+
+	for(auto it = std::begin(population); it != std::end(population); ++it) {
+
+		sumFitness+=it->getFitnessValue();
+	}
+
+	assert(sumFitness > 0.0);
+
+
+	for(auto it = std::begin(population); it != std::end(population); ++it) {
+
+		double reproductionProbability = it->getFitnessValue()/sumFitness;
+		it->setReproductionProbabilityValue(reproductionProbability);
+
+	}
+
+
+}
+
+
+void EAPopulation::updateDeathProbabilities(void){
+
+	vec fitnessValues(getSize());
+	unsigned int i = 0;
+	for(auto it = std::begin(population); it != std::end(population); ++it) {
+
+		fitnessValues(i) = it->getFitnessValue();
+		i++;
+	}
+
+	vec P = { 0.9 };
+	vec Q = quantile(fitnessValues, P);
+
+	double best10PercentThreshold = Q(0);
+
+
+	vec oneOverFitness(getSize());
+
+
+	for(i=0; i<getSize(); i++) {
+
+		if(fitnessValues(i) > best10PercentThreshold){
+
+			oneOverFitness(i) = 0.0;
+		}
+		else{
+
+			oneOverFitness(i) = 1.0/fitnessValues(i);
+
+		}
+
+	}
+
+	double sumoneOverFitness = sum(oneOverFitness);
+
+	i=0;
+	for(auto it = std::begin(population); it != std::end(population); ++it) {
+
+
+		double deathProbability = oneOverFitness(i)/sumoneOverFitness;
+		it->setDeathProbabilityValue(deathProbability );
+		i++;
+	}
+
+
+}
+
+
+void EAPopulation::updatePopulationProperties(void){
+
+	assert(getSize());
+	updateFitnessValues();
+	updateReproductionProbabilities();
+	updateDeathProbabilities();
+
+}
+
+
+EAIndividual EAPopulation::pickUpARandomIndividualForReproduction(void) const{
+
+
+
+
+}
+
+
+
+
+
+
+EAOptimizer2::EAOptimizer2(){
+
+	setNumberOfThreads(1);
+
+}
+
+
+
+
+
+void EAOptimizer2::setMutationProbability(double value){
+
+	assert(value>0.0 && value <1.0);
+	mutationProbability = value;
+	mutationProbabilityLastGeneration = value;
+
+}
+
+
+
+void EAOptimizer2::setInitialPopulationSize(unsigned int size){
+
+	sizeOfInitialPopulation = size;
+
+}
+
+
+void EAOptimizer2::setNumberOfNewIndividualsInAGeneration(unsigned int number){
+
+	numberOfNewIndividualsInAGeneration = number;
+
+}
+
+void EAOptimizer2::setNumberOfDeathsInAGeneration(unsigned int number){
+
+	numberOfDeathsInAGeneration = number;
+
+}
+
+void EAOptimizer2::setNumberOfGenerations(unsigned int number){
+
+	numberOfGenerations = number;
+
+}
+
+void EAOptimizer2::setMaximumNumberOfGeneratedIndividuals(unsigned int number){
+
+	maximumNumberOfGeneratedIndividuals = number;
+
+}
+
+
+
+
+
+
+
+
+void EAOptimizer2::callObjectiveFunction(EAIndividual &individual){
+
+	assert(dimension > 0);
+
+	vec designVector = individual.getGenes();
+	assert(designVector.size() == dimension);
+
+	double objectiveFunctionValue = 0.0;
+
+	if(ifObjectiveFunctionIsSet){
+		objectiveFunctionValue = calculateObjectiveFunction(designVector);
+
+	}
+
+	else{
+
+		objectiveFunctionValue = calculateObjectiveFunctionInternal(designVector);
+
+	}
+
+	individual.setObjectiveFunctionValue(objectiveFunctionValue);
+
+
+}
+
+
+EAIndividual  EAOptimizer2::generateRandomIndividual(void){
+
+
+
+	assert(parameterBounds.areBoundsSet());
+	EAIndividual newIndividual(dimension);
+
+	vec randomGenes = parameterBounds.generateVectorWithinBounds();
+	newIndividual.initializeGenes(randomGenes);
+	newIndividual.setId(totalNumberOfGeneratedIndividuals);
+	totalNumberOfGeneratedIndividuals++;
+
+	callObjectiveFunction(newIndividual);
+
+
+	return newIndividual;
+
+}
+
+
+void EAOptimizer2::initializePopulation(void){
+
+	assert(sizeOfInitialPopulation>0);
+	assert(areBoundsSet());
+
+
+#pragma omp parallel
+	{
+
+		std::vector<EAIndividual> slavePopulation;
+
+#pragma omp for nowait
+		for (unsigned int i = 0; i < sizeOfInitialPopulation; ++i)
+		{
+
+			EAIndividual generatedIndividual = generateRandomIndividual();
+			slavePopulation.push_back(generatedIndividual);
+		}
+
+
+#pragma omp critical
+		{
+			/* merge populations from each thread */
+			population.addAGroupOfIndividuals(slavePopulation);
+
+
+		}
+	}
+
+
+	population.updatePopulationProperties();
+
+	ifPopulationIsInitialized = true;
+}
+
+
+void EAOptimizer2::printPopulation(void) const{
+
+	population.print();
+
+}
+unsigned int EAOptimizer2::getPopulationSize(void) const{
+
+	return population.getSize();
+}
+
+
+
+
+std::pair<EAIndividual, EAIndividual> EAOptimizer2::generateRandomParents(void) const{
+
+	assert(ifPopulationIsInitialized);
+	std::pair<EAIndividual, EAIndividual> parents;
+
+	EAIndividual mother = population.pickUpARandomIndividualForReproduction();
+
+
+	while (true) {
+
+		EAIndividual father = population.pickUpARandomIndividualForReproduction();
+
+
+		if (mother.getId() != father.getId()) {
+
+			parents.first = mother;
+			parents.second = father;
+			break;
+		}
+
+	}
+
+	return parents;
+}
+
+
+
+
+
+
 
 EAOptimizer::EAOptimizer(){
 
 	setNumberOfThreads(1);
 
-
 }
 
 
-void EAOptimizer::setDisplayOn(void){
-
-	output.ifScreenDisplay = true;
-}
-void EAOptimizer::setDisplayOff(void){
-
-	output.ifScreenDisplay = false;
-}
-
-bool EAOptimizer::isOptimizationTypeMinimization(void) const{
-
-	if(optimizationType == "minimization") return true;
-	else return false;
-
-
-}
-
-
-bool EAOptimizer::isOptimizationTypeMaximization(void)const {
-
-	if(optimizationType == "maximization") return true;
-	else return false;
-
-
-}
-
-bool EAOptimizer::areBoundsSet(void)const {
-
-	return parameterBounds.areBoundsSet();
-
-}
-
-void EAOptimizer::setDimension(unsigned int dim){
-
-	dimension = dim;
-
-
-}
-
-unsigned int EAOptimizer::getDimension(void) const{
-
-	return dimension;
-
-
-}
-
-void EAOptimizer::setObjectiveFunction(EAObjectiveFunction functionToSet ){
-
-	assert(functionToSet != NULL);
-	calculateObjectiveFunction = functionToSet;
-	ifObjectiveFunctionIsSet = true;
-
-}
 
 
 void EAOptimizer::callObjectiveFunction(EAIndividual &individual){
@@ -248,21 +737,7 @@ void EAOptimizer::callObjectiveFunction(EAIndividual &individual){
 
 }
 
-double EAOptimizer::calculateObjectiveFunctionInternal(vec input){
 
-	assert(ifObjectiveFunctionIsSet);
-	return calculateObjectiveFunction(input);
-
-
-}
-
-
-void EAOptimizer::setOptimizationType(std::string type){
-
-	assert(type == "minimization" || type == "maximization");
-	optimizationType = type;
-
-}
 
 void EAOptimizer::setMutationProbability(double value){
 
@@ -272,11 +747,6 @@ void EAOptimizer::setMutationProbability(double value){
 
 }
 
-void EAOptimizer::setBounds(Bounds boundsToSet){
-
-	parameterBounds = boundsToSet;
-
-}
 
 
 void EAOptimizer::setInitialPopulationSize(unsigned int size){
@@ -448,27 +918,6 @@ EAIndividual  EAOptimizer::generateIndividualByReproduction(std::pair<unsigned i
 
 }
 
-void EAOptimizer::setNumberOfThreads(unsigned int nTreads){
-
-	omp_set_num_threads(nTreads);
-
-
-}
-
-unsigned int EAOptimizer::getNumberOfThreads(void) const{
-
-	int numberOfTreads;
-#pragma omp parallel
-	{
-		numberOfTreads = omp_get_num_threads();
-
-
-	}
-	printScalar(numberOfTreads);
-
-	return numberOfTreads;
-
-}
 
 
 void wait(void){
@@ -674,7 +1123,6 @@ void EAOptimizer::updatePopulationFitnessValues(void){
 
 	vec objectiveFunctionValues = getPopulationObjectiveFunctionValues();
 
-	if(optimizationType == "maximization") objectiveFunctionValues = -objectiveFunctionValues;
 
 	/* we assume always minimization => maximum value has the worst fitness, minimum value has the best */
 
@@ -990,6 +1438,7 @@ void EAOptimizer::checkIfSettingsAreOk(void) const{
 	assert(dimension >0);
 	assert(numberOfGenerations >0);
 	assert(maximumNumberOfGeneratedIndividuals>0);
+	assert(numberOfDeathsInAGeneration < sizeOfInitialPopulation);
 
 }
 

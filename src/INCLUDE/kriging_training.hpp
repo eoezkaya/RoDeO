@@ -66,6 +66,8 @@ private:
 
 	LinearModel linearModel;
 
+	unsigned int numberOfThreadsUsedForTraining = 1;
+
 
 	void updateWithNewData(void);
 	void updateModelParams(void);
@@ -82,6 +84,7 @@ public:
 	void setNameOfInputFile(std::string filename);
 	void setNameOfHyperParametersFile(std::string filename);
 	void setNumberOfTrainingIterations(unsigned int);
+	void setnumberOfThreadsUsedForTraining(unsigned int);
 
 
 
@@ -91,6 +94,7 @@ public:
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
 	void train(void);
+	void train2(void);
 	double interpolateWithGradients(rowvec x) const ;
 	double interpolate(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
@@ -110,6 +114,7 @@ public:
 
 	vec getTheta(void) const;
 	vec getGamma(void) const;
+	mat getCorrelationMatrix(void) const;
 	double getEpsilonKriging(void) const;
 	void setTheta(vec theta);
 	void setGamma(vec gamma);

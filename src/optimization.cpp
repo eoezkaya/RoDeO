@@ -1065,18 +1065,12 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 	initializeSurrogates();
 
-
-
 	while(1){
 
-
 		iterOpt++;
-
-
 #if 0
 		printf("Optimization Iteration = %d\n",iterOpt);
 #endif
-
 
 		if(simulationCount%howOftenTrainModels == 0) {
 
@@ -1088,7 +1082,6 @@ void Optimizer::EfficientGlobalOptimization(void){
 			zoomInDesignSpace();
 
 		}
-
 
 		findTheMostPromisingDesign();
 
@@ -1129,17 +1122,12 @@ void Optimizer::EfficientGlobalOptimization(void){
 			objFun.evaluateAdjoint(currentBestDesign);
 		}
 
-
 		objFun.readEvaluateOutput(currentBestDesign);
-
 		objFun.addDesignToData(currentBestDesign);
-
-
 
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 
 		calculateImprovementValue(currentBestDesign);
-
 
 		if(currentBestDesign.checkIfHasNan()){
 
@@ -1150,7 +1138,6 @@ void Optimizer::EfficientGlobalOptimization(void){
 #if 0
 		currentBestDesign.print();
 #endif
-
 
 		addConstraintValuesToData(currentBestDesign);
 		updateOptimizationHistory(currentBestDesign);
@@ -1165,10 +1152,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 			currentBestDesign.print();
 			std::cout<<"\n\n";
 
-
 		}
-
-
 		simulationCount ++;
 
 		/* terminate optimization */
@@ -1184,7 +1168,6 @@ void Optimizer::EfficientGlobalOptimization(void){
 				globalOptimalDesign.print();
 				std::cout<<"\n\n";
 
-
 			}
 
 			if(ifVisualize){
@@ -1192,16 +1175,10 @@ void Optimizer::EfficientGlobalOptimization(void){
 				visualizeOptimizationHistory();
 			}
 
-
-
 			break;
 		}
 
-
-
 	} /* end of the optimization loop */
-
-
 
 }
 void Optimizer::cleanDoEFiles(void) const{

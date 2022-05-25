@@ -37,50 +37,48 @@
 #define TESTGRADIENTOPTIMIZER
 #ifdef  TESTGRADIENTOPTIMIZER
 
-TEST(testGradientOptimizer, testGradientOptimizer_Constructor){
 
-	GradientOptimizer test;
+class GradientOptimizerTest : public ::testing::Test {
+protected:
+	void SetUp() override {
 
-	ASSERT_TRUE(test.isOptimizationTypeMinimization());
-	ASSERT_FALSE(test.areBoundsSet());
-	ASSERT_FALSE(test.isInitialPointSet());
-	ASSERT_FALSE(test.isObjectiveFunctionSet());
+		testOptimizer.setDimension(2);
+		testOptimizer.setBounds(0.0,200.0);
+		testOptimizer.setObjectiveFunction(Himmelblau);
+		testOptimizer.setGradientFunction(HimmelblauGradient);
 
+
+
+
+	}
+
+	//  void TearDown() override {}
+
+	GradientOptimizer testOptimizer;
+
+
+};
+
+TEST_F(GradientOptimizerTest, testIfConstructorWorks) {
+
+	ASSERT_TRUE(testOptimizer.getDimension() == 2);
+	ASSERT_TRUE(testOptimizer.areBoundsSet());
+	ASSERT_TRUE(testOptimizer.isObjectiveFunctionSet());
+	ASSERT_FALSE(testOptimizer.isInitialPointSet());
+
+}
+
+TEST_F(GradientOptimizerTest, testSetInitialPoint) {
+
+	vec x0(2);
+	x0(0) = 1.0; x0(1) = 0.0;
+	testOptimizer.setInitialPoint(x0);
+	ASSERT_TRUE(testOptimizer.isInitialPointSet());
 
 
 }
 
-
-TEST(testGradientOptimizer, testGradientOptimizer_setInitialPoint){
-
-	GradientOptimizer test;
-
-	vec x0(3);
-	x0(0) = 1.0; x0(1) = 0.0; x0(2) = -1.0;
-	test.setDimension(3);
-	test.setInitialPoint(x0);
-
-	ASSERT_TRUE(test.isInitialPointSet());
-
-}
-
-TEST(testGradientOptimizer, testGradientOptimizer_setObjectiveFunction){
-
-	GradientOptimizer test;
-
-	test.setObjectiveFunction(Eggholder);
-
-	ASSERT_TRUE(test.isObjectiveFunctionSet());
-
-
-}
-
-
-TEST(testGradientOptimizer, testGradientOptimizer_evaluateObjectiveFunction){
-
-	GradientOptimizer test;
-
-	test.setObjectiveFunction(Eggholder);
+TEST_F(GradientOptimizerTest, testEvaluateObjectiveFunction) {
 
 	vec x(2);
 	x(0) = 1.7; x(1) = 1.2;
@@ -88,9 +86,9 @@ TEST(testGradientOptimizer, testGradientOptimizer_evaluateObjectiveFunction){
 	designPoint iterateTest;
 	iterateTest.x = x;
 
-	test.evaluateObjectiveFunction(iterateTest);
+	testOptimizer.evaluateObjectiveFunction(iterateTest);
 
-	double error = fabs(iterateTest.objectiveFunctionValue - Eggholder(x));
+	double error = fabs(iterateTest.objectiveFunctionValue - Himmelblau(x));
 
 	EXPECT_LT(error, 10E-08);
 
@@ -99,28 +97,7 @@ TEST(testGradientOptimizer, testGradientOptimizer_evaluateObjectiveFunction){
 
 
 
-
-
-TEST(testGradientOptimizer, testGradientOptimizer_setGradientFunction){
-
-	GradientOptimizer test;
-
-	test.setGradientFunction(HimmelblauGradient);
-
-	ASSERT_TRUE(test.isGradientFunctionSet());
-
-
-
-}
-
-
-
-
-TEST(testGradientOptimizer, testGradientOptimizer_evaluateGradientFunction){
-
-	GradientOptimizer test;
-
-	test.setGradientFunction(HimmelblauGradient);
+TEST_F(GradientOptimizerTest, testEvaluateGradientFunction) {
 
 	vec x(2);
 	x(0) = 1.7; x(1) = 1.2;
@@ -128,7 +105,9 @@ TEST(testGradientOptimizer, testGradientOptimizer_evaluateGradientFunction){
 	designPoint iterateTest;
 	iterateTest.x = x;
 
-	test.evaluateGradientFunction(iterateTest);
+	ASSERT_TRUE(testOptimizer.isGradientFunctionSet());
+
+	testOptimizer.evaluateGradientFunction(iterateTest);
 
 	vec gradient = HimmelblauGradient(x);
 
@@ -138,16 +117,10 @@ TEST(testGradientOptimizer, testGradientOptimizer_evaluateGradientFunction){
 	EXPECT_LT(errorGradient1, 10E-08);
 	EXPECT_LT(errorGradient2, 10E-08);
 
-
-
 }
 
+TEST_F(GradientOptimizerTest, testEvaluateGradientFunctionWithFiniteDifference) {
 
-TEST(testGradientOptimizer, testGradientOptimizer_evaluateGradientFunctionWithFiniteDifference){
-
-	GradientOptimizer test;
-	test.setDimension(2);
-	test.setObjectiveFunction(Himmelblau);
 
 	vec x(2);
 	x(0) = 1.7; x(1) = 1.2;
@@ -155,11 +128,12 @@ TEST(testGradientOptimizer, testGradientOptimizer_evaluateGradientFunctionWithFi
 	designPoint iterateTest;
 	iterateTest.x = x;
 
-	test.setFiniteDifferenceMethod("central");
-	test.evaluateGradientFunction(iterateTest);
+	testOptimizer.setFiniteDifferenceMethod("central");
+	testOptimizer.evaluateGradientFunction(iterateTest);
 
 
 	vec gradient = HimmelblauGradient(x);
+
 
 	double errorGradient1 = fabs(iterateTest.gradient(0) - gradient(0));
 	double errorGradient2 = fabs(iterateTest.gradient(1) - gradient(1));
@@ -168,42 +142,36 @@ TEST(testGradientOptimizer, testGradientOptimizer_evaluateGradientFunctionWithFi
 	EXPECT_LT(errorGradient2, 10E-05);
 
 
-	test.setFiniteDifferenceMethod("forward");
-	test.evaluateGradientFunction(iterateTest);
+	testOptimizer.setFiniteDifferenceMethod("forward");
+	testOptimizer.evaluateGradientFunction(iterateTest);
+
+
 	errorGradient1 = fabs(iterateTest.gradient(0) - gradient(0));
 	errorGradient2 = fabs(iterateTest.gradient(1) - gradient(1));
 
 	EXPECT_LT(errorGradient1, 10E-05);
 	EXPECT_LT(errorGradient2, 10E-05);
-
 }
 
+TEST_F(GradientOptimizerTest, testOptimizeWithSteepestDescent) {
 
-TEST(testGradientOptimizer, testGradientOptimizer_optimizeWithSteepestDescent){
 
-	GradientOptimizer test;
-
-	test.setObjectiveFunction(Himmelblau);
-	test.setGradientFunction(HimmelblauGradient);
-	test.setDimension(2);
-
-	vec x0(2);
-	x0(0) = 1.7; x0(1) = 1.2;
-	test.setInitialPoint(x0);
+	testOptimizer.setMaximumNumberOfFunctionEvaluations(200);
+	testOptimizer.setMaximumStepSize(1.0);
 
 	Bounds boxConstraints(2);
 	boxConstraints.setBounds(-6.0,6.0);
 
-	test.setMaximumNumberOfFunctionEvaluations(200);
-	test.setMaximumStepSize(1.0);
-	test.setBounds(boxConstraints);
-	//	test.setDisplayOn();
+	vec x0(2);
+	x0(0) = 1.7; x0(1) = 1.2;
+	testOptimizer.setInitialPoint(x0);
 
-	test.optimize();
+	testOptimizer.setBounds(boxConstraints);
+	testOptimizer.optimize();
 
 
 
-	double J = test.getOptimalObjectiveFunctionValue();
+	double J = testOptimizer.getOptimalObjectiveFunctionValue();
 
 	double error = fabs(J - 0.0);
 
@@ -213,38 +181,5 @@ TEST(testGradientOptimizer, testGradientOptimizer_optimizeWithSteepestDescent){
 }
 
 
-TEST(testGradientOptimizer, testGradientOptimizer_optimizeWithSteepestDescentWithFiniteDifferences){
-
-	GradientOptimizer test;
-
-	test.setObjectiveFunction(Himmelblau);
-	test.setFiniteDifferenceMethod("central");
-	test.setDimension(2);
-
-	vec x0(2);
-	x0(0) = 1.7; x0(1) = 1.2;
-	test.setInitialPoint(x0);
-
-	Bounds boxConstraints(2);
-	boxConstraints.setBounds(-6.0,6.0);
-
-	test.setMaximumNumberOfFunctionEvaluations(200);
-	test.setMaximumStepSize(1.0);
-	test.setBounds(boxConstraints);
-	//	test.setDisplayOn();
-	test.setEpsilonForFiniteDifference(0.000001);
-
-	test.optimize();
-
-
-
-	double J = test.getOptimalObjectiveFunctionValue();
-
-	double error = fabs(J - 0.0);
-
-	EXPECT_LT(error, 10E-06);
-
-
-}
 
 #endif

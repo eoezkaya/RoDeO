@@ -47,15 +47,6 @@ GradientOptimizer::GradientOptimizer(){
 }
 
 
-void GradientOptimizer::setDisplayOn(void){
-
-	output.ifScreenDisplay = true;
-}
-void GradientOptimizer::setDisplayOff(void){
-
-	output.ifScreenDisplay = false;
-}
-
 bool GradientOptimizer::isOptimizationTypeMinimization(void) const{
 
 	if(optimizationType == "minimization") return true;
@@ -80,11 +71,6 @@ bool  GradientOptimizer::isInitialPointSet(void) const{
 
 }
 
-bool  GradientOptimizer::isObjectiveFunctionSet(void) const{
-
-	return ifObjectiveFunctionIsSet;
-
-}
 
 bool  GradientOptimizer::isGradientFunctionSet(void) const{
 
@@ -92,23 +78,12 @@ bool  GradientOptimizer::isGradientFunctionSet(void) const{
 
 }
 
-bool GradientOptimizer::areBoundsSet(void)const {
-
-	return parameterBounds.areBoundsSet();
-
-}
-
-void GradientOptimizer::setDimension(unsigned int dim){
-
-	dimension = dim;
-	ifDimensionIsSet = true;
 
 
-}
 
 void GradientOptimizer::setInitialPoint(vec input){
 
-	assert(input.size() == dimension);
+	assert(input.size() == getDimension());
 	currentIterate.x = input;
 
 	ifInitialPointIsSet = true;
@@ -116,12 +91,6 @@ void GradientOptimizer::setInitialPoint(vec input){
 }
 
 
-void GradientOptimizer::setBounds(Bounds input){
-
-	assert(input.areBoundsSet());
-	parameterBounds = input;
-
-}
 
 void GradientOptimizer::setMaximumStepSize(double value){
 
@@ -139,20 +108,6 @@ void GradientOptimizer::setMaximumNumberOfIterationsInLineSearch(unsigned int va
 
 
 
-unsigned int GradientOptimizer::getDimension(void) const{
-
-	return dimension;
-
-
-}
-
-void GradientOptimizer::setObjectiveFunction(ObjectiveFunctionType functionToSet ){
-
-	assert(functionToSet != NULL);
-	calculateObjectiveFunction = functionToSet;
-	ifObjectiveFunctionIsSet = true;
-
-}
 
 void GradientOptimizer::setGradientFunction(GradientFunctionType functionToSet ){
 
@@ -165,12 +120,7 @@ void GradientOptimizer::setGradientFunction(GradientFunctionType functionToSet )
 
 }
 
-void GradientOptimizer::setNumberOfThreads(unsigned int nTreads){
 
-	omp_set_num_threads(nTreads);
-
-
-}
 
 void GradientOptimizer::setMaximumNumberOfFunctionEvaluations(unsigned int input){
 
@@ -182,7 +132,7 @@ void GradientOptimizer::setFiniteDifferenceMethod(string method){
 
 	assert(method == "central" || method == "forward");
 	finiteDifferenceMethod = method;
-	areFiniteDifferenceApproximationToBeUsed = true;
+	areFiniteDifferenceApproximationsToBeUsed = true;
 
 
 }
@@ -190,7 +140,7 @@ void GradientOptimizer::setFiniteDifferenceMethod(string method){
 void GradientOptimizer::checkIfOptimizationSettingsAreOk(void) const{
 
 
-	assert(ifDimensionIsSet);
+	assert(dimension >0);
 	assert(ifInitialPointIsSet);
 	assert(numberOfMaximumFunctionEvaluations > 0);
 	assert(areBoundsSet());
@@ -206,13 +156,6 @@ void GradientOptimizer::setEpsilonForFiniteDifference(double value) {
 }
 
 
-double GradientOptimizer::calculateObjectiveFunctionInternal(vec input){
-
-	assert(ifObjectiveFunctionIsSet);
-	return calculateObjectiveFunction(input);
-
-
-}
 
 vec GradientOptimizer::calculateGradientFunctionInternal(vec input){
 
@@ -226,12 +169,10 @@ vec GradientOptimizer::calculateCentralFiniteDifferences(designPoint &input) {
 
 	vec gradient(dimension,fill::zeros);
 
-	printVector(input.x);
 	for (unsigned int i = 0; i < dimension; i++) {
 		double inputSave = input.x(i);
 		double eps = epsilonForFiniteDifferences * input.x(i);
 		input.x(i) += eps;
-		printVector(input.x);
 		evaluateObjectiveFunction(input);
 		double fplus = input.objectiveFunctionValue;
 		input.x(i) -= 2 * eps;
@@ -284,18 +225,20 @@ void GradientOptimizer::approximateGradientUsingFiniteDifferences(designPoint &i
 
 void GradientOptimizer::evaluateObjectiveFunction(designPoint &input){
 
+	double objectiveFunctionValue = 0.0;
 
 	if(ifObjectiveFunctionIsSet){
 
-		input.objectiveFunctionValue = calculateObjectiveFunction(input.x);
+		objectiveFunctionValue = calculateObjectiveFunction(input.x);
 
 	}
 	else{
 
-		input.objectiveFunctionValue = calculateObjectiveFunctionInternal(input.x);
+		objectiveFunctionValue = calculateObjectiveFunctionInternal(input.x);
+
 	}
 
-
+	input.objectiveFunctionValue = objectiveFunctionValue;
 	numberOfFunctionEvaluations++;
 
 
@@ -304,7 +247,7 @@ void GradientOptimizer::evaluateObjectiveFunction(designPoint &input){
 
 void GradientOptimizer::evaluateGradientFunction(designPoint &input){
 
-	if(areFiniteDifferenceApproximationToBeUsed){
+	if(areFiniteDifferenceApproximationsToBeUsed){
 
 		approximateGradientUsingFiniteDifferences(input);
 

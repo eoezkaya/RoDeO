@@ -35,6 +35,8 @@
 #include<armadillo>
 #include "bounds.hpp"
 #include "output.hpp"
+#include "general_purpose_optimizer.hpp"
+#include "Rodeo_globals.hpp"
 using namespace arma;
 
 typedef double (*EAObjectiveFunction)(vec);
@@ -44,6 +46,7 @@ class EAIndividual {
 
 
 private:
+
 
 	unsigned int id = 0;
 	double fitness = 0;
@@ -75,22 +78,135 @@ public:
 	void setDeathProbabilityValue(double);
 
 	void initializeGenes(vec);
+	void initializeRandom(void);
 
 	void print(void) const;
 	EAIndividual(unsigned int);
+	EAIndividual();
 
 
 } ;
 
+class EAPopulation{
 
-
-
-class EAOptimizer{
 
 private:
 
+	std::vector<EAIndividual> population;
+
+	double populationMinimum = LARGE;
+	double populationMaximum = -LARGE;
+	unsigned int idPopulationMinimum = 0;
+	unsigned int idPopulationMaximum = 0;
 	unsigned int dimension = 0;
-	std::string optimizationType = "minimization";
+
+	void updateMinAndMaxIfNecessary(double J, unsigned int id);
+	std::string polynomialForFitnessDistrubution = "quadratic";
+
+	vec findPolynomialCoefficientsForQuadraticFitnessDistribution(void) const;
+	void updateFitnessValuesLinear();
+	void updateFitnessValuesQuadratic();
+
+public:
+
+
+	void setDimension(unsigned int);
+	unsigned int getSize(void) const;
+
+	void addIndividual(EAIndividual);
+	void addAGroupOfIndividuals(std::vector<EAIndividual> individualsToAdd);
+	void removeIndividual(unsigned int id);
+	unsigned int getIdOftheIndividual(unsigned int index) const;
+
+	EAIndividual getTheBestIndividual(void) const;
+	EAIndividual getTheWorstIndividual(void) const;
+	EAIndividual getIndividual(unsigned int) const;
+
+
+	int getIndividualOrderInPopulationById(unsigned int id) const;
+
+	void print(void) const;
+
+	void updatePopulationMinAndMax(void);
+	void updateFitnessValues(void);
+	void updateReproductionProbabilities(void);
+	void updateDeathProbabilities(void);
+	void updatePopulationProperties(void);
+
+	EAIndividual pickUpARandomIndividualForReproduction(void) const;
+
+};
+
+
+class EAOptimizer2 : public GeneralPurposeOptimizer{
+
+private:
+
+
+	EAPopulation population;
+
+
+
+	double mutationProbability = 0.0;
+	double mutationProbabilityLastGeneration = 0.0;
+
+
+
+	unsigned int sizeOfInitialPopulation = 0;
+
+	unsigned int totalNumberOfGeneratedIndividuals = 0;
+	unsigned int totalNumberOfGeneratedInviduals = 0;
+	unsigned int numberOfNewIndividualsInAGeneration = 0;
+	unsigned int numberOfDeathsInAGeneration = 0;
+	unsigned int numberOfGenerations = 0;
+	unsigned int maximumNumberOfGeneratedIndividuals = 0;
+	unsigned int totalNumberOfMutations = 0;
+	unsigned int totalNumberOfCrossOvers = 0;
+
+
+
+
+
+	bool ifPopulationIsInitialized = false;
+
+	double improvementFunction = 0.0;
+
+
+
+public:
+
+
+	EAOptimizer2();
+
+	void setMutationProbability(double value);
+	void setInitialPopulationSize(unsigned int);
+	void setNumberOfNewIndividualsInAGeneration(unsigned int);
+	void setNumberOfDeathsInAGeneration(unsigned int);
+	void setNumberOfGenerations(unsigned int number);
+	void setMaximumNumberOfGeneratedIndividuals(unsigned int number);
+
+	void callObjectiveFunction(EAIndividual &individual);
+
+	EAIndividual generateRandomIndividual(void);
+
+	void initializePopulation(void);
+	void printPopulation(void) const;
+	unsigned int getPopulationSize(void) const;
+
+	std::pair<EAIndividual, EAIndividual> generateRandomParents(void) const;
+
+
+
+
+};
+
+
+class EAOptimizer : public GeneralPurposeOptimizer{
+
+private:
+
+
+
 	std::string polynomialForFitnessDistrubution = "quadratic";
 
 	double populationMinimum = 0.0;
@@ -101,9 +217,6 @@ private:
 	double mutationProbability = 0.0;
 	double mutationProbabilityLastGeneration = 0.0;
 
-	double (*calculateObjectiveFunction)(vec);
-
-	Bounds parameterBounds;
 
 	std::vector<EAIndividual> population;
 
@@ -140,47 +253,29 @@ private:
 
 	double improvementFunction = 0.0;
 
-	OutputDevice output;
-
-	virtual double calculateObjectiveFunctionInternal(vec);
 	void addToList(std::vector<EAIndividual> &slavePopulation,
 			std::vector<EAIndividual> &groupOfNewIndividualsToAdd);
 
 public:
 
-	bool ifObjectiveFunctionIsSet = false;
-
 
 	EAOptimizer();
 
-	void setDimension(unsigned int dim);
-	unsigned int getDimension(void) const;
 
-	bool isOptimizationTypeMinimization(void) const;
-	bool isOptimizationTypeMaximization(void) const;
-	bool areBoundsSet(void) const;
 
-	void setDisplayOn(void);
-	void setDisplayOff(void);
-
-	void setOptimizationType(std::string);
-	void setBounds(Bounds);
 	void setMutationProbability(double value);
 	void setInitialPopulationSize(unsigned int);
 	void setNumberOfNewIndividualsInAGeneration(unsigned int);
 	void setNumberOfDeathsInAGeneration(unsigned int);
 	void setNumberOfGenerations(unsigned int number);
 	void setMaximumNumberOfGeneratedIndividuals(unsigned int number);
-	void setNumberOfThreads(unsigned int nTreads);
 
 
-	void setObjectiveFunction(EAObjectiveFunction);
 	void callObjectiveFunction(EAIndividual &);
 
 
 
 	unsigned int  getIndividualLocation(unsigned int id) const;
-	unsigned int getNumberOfThreads(void) const;
 
 	EAIndividual generateRandomIndividual(void);
 	EAIndividual generateIndividualByReproduction(std::pair<unsigned int, unsigned int> indicesParents);

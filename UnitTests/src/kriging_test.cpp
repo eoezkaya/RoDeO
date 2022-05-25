@@ -64,12 +64,47 @@ protected:
 		testModel.normalizeData();
 		testModel.initializeSurrogateModel();
 
+		N = 10;
+		mat testData1D(N,2);
+		testData1D(0,0) = 0.0;
+		testData1D(1,0) = 0.1;
+		testData1D(2,0) = 0.15;
+		testData1D(3,0) = 0.2;
+		testData1D(4,0) = 0.25;
+		testData1D(5,0) = 0.4;
+		testData1D(6,0) = 0.5;
+		testData1D(7,0) = 0.75;
+		testData1D(8,0) = 0.85;
+		testData1D(9,0) = 1.0;
+
+		testData1D(0,1) = 3.027209981231713;
+		testData1D(1,1) = -0.656576774305574;
+		testData1D(2,1) = -0.978280648621704;
+		testData1D(3,1) =  -0.639727105946563;
+		testData1D(4,1) =  -0.210367746201974;
+		testData1D(5,1) =   0.114776974543924;
+		testData1D(6,1) =   0.909297426825682;
+		testData1D(7,1) =  -5.993276716644615;
+		testData1D(8,1) =  -0.798489161076149;
+		testData1D(9,1) =  15.829731945974109;
+
+		saveMatToCVSFile(testData1D, "testdata1D.csv");
+
+		testModel1D.setName("testdata1D");
+		testModel1D.setNameOfInputFile("testdata1D.csv");
+		testModel1D.readData();
+		testModel1D.setBoxConstraints(0.0, 1.0);
+		testModel1D.normalizeData();
+		testModel1D.initializeSurrogateModel();
+
+
 
 	}
 
 	//  void TearDown() override {}
 
 	KrigingModel testModel;
+	KrigingModel testModel1D;
 	KrigingHyperParameterOptimizer testOptimizer;
 };
 
@@ -89,32 +124,18 @@ TEST_F(KrigingModelTest, testIfConstructorWorks) {
 }
 
 
+
 TEST_F(KrigingModelTest, testcalculateLikelihood) {
 
-
-	vec hyperParameters(4);
+	vec hyperParameters(2);
 	hyperParameters(0) = 5.0;
-	hyperParameters(1) = 5.0;
-	hyperParameters(2) = 1.5;
-	hyperParameters(3) = 1.5;
-	double L = testModel.calculateLikelihoodFunction(hyperParameters);
+	hyperParameters(1) = 2.0;
+	double L = testModel1D.calculateLikelihoodFunction(hyperParameters);
 
+	double error = fabs(L - -24.202852114659308);
 
-	EAdesign testDesign(2);
-	testDesign.theta = hyperParameters.head(2);
-	testDesign.gamma = hyperParameters.tail(2);
+	ASSERT_LT(error,0.01);
 
-
-	mat X = testModel.getX();
-	vec y = testModel.gety();
-
-	testDesign.calculate_fitness(testModel.getEpsilonKriging(), X, y);
-
-	double Lvalidation = testDesign.objective_val;
-
-
-	double error = fabs(L-Lvalidation);
-	EXPECT_LT(error,10E-08);
 
 
 }
@@ -138,12 +159,11 @@ TEST_F(KrigingModelTest, testKrigingOptimizertestKrigingOptimizerOptimize) {
 	unsigned int dim = 2;
 
 	vec hyperParameters(2*dim);
-	hyperParameters(0) = 5.0;
-	hyperParameters(dim-1) = 5.0;
-	hyperParameters(dim) = 1.5;
+	hyperParameters(0) = 10.0;
+	hyperParameters(dim-1) = 0.1;
+	hyperParameters(dim) = 0.5;
 	hyperParameters(dim+1) = 1.5;
 	double L = testModel.calculateLikelihoodFunction(hyperParameters);
-
 
 	KrigingHyperParameterOptimizer testOptimizer;
 	testOptimizer.initializeKrigingModelObject(testModel);
@@ -154,21 +174,34 @@ TEST_F(KrigingModelTest, testKrigingOptimizertestKrigingOptimizerOptimize) {
 	vec ub(2*dim); ub(0) = 10.0; ub(1) = 10.0; ub(2) = 2.0; ub(3) = 2.0;
 	boxConstraints.setBounds(lb,ub);
 	testOptimizer.setBounds(boxConstraints);
-	testOptimizer.setNumberOfNewIndividualsInAGeneration(1000*2*dim);
+	testOptimizer.setNumberOfNewIndividualsInAGeneration(100*2*dim);
+	testOptimizer.setNumberOfDeathsInAGeneration(100*dim);
+	testOptimizer.setInitialPopulationSize(2*dim*100);
 	testOptimizer.setMutationProbability(0.1);
 	testOptimizer.setMaximumNumberOfGeneratedIndividuals(100000*2*dim);
-	testOptimizer.setNumberOfGenerations(20);
-	testOptimizer.setInitialPopulationSize(2*dim*1000);
-	testOptimizer.setDisplayOn();
-//	testOptimizer.setNumberOfThreads(1);
+	testOptimizer.setNumberOfGenerations(5);
+//	testOptimizer.setDisplayOn();
+
 
 	testOptimizer.optimize();
 
 	vec optimizedHyperParameters = testOptimizer.getBestDesignvector();
 
-	optimizedHyperParameters.print();
+	double Loptimized = testModel.calculateLikelihoodFunction(optimizedHyperParameters);
+
+	ASSERT_TRUE(Loptimized>L);
 
 }
+
+TEST_F(KrigingModelTest, testKrigingTrain) {
+
+//	testModel.setnumberOfThreadsUsedForTraining(4);
+	testModel.train2();
+
+	abort();
+}
+
+
 
 
 

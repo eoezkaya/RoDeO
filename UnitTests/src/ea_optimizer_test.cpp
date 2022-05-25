@@ -38,6 +38,7 @@
 #ifdef  TESTEAOPTIMIZER
 
 
+
 TEST(testEAOptimizer, testEAIndividual_Constructor){
 
 	EAIndividual testIndividual(2);
@@ -68,64 +69,271 @@ TEST(testEAOptimizer, testEAIndividual_initializeGenes){
 
 
 
-TEST(testEAOptimizer, testEAOptimizer_setDimension){
 
-	EAOptimizer test;
 
-	unsigned int dim = 5;
-	test.setDimension(dim);
 
-	unsigned int dimCheck = test.getDimension();
-	ASSERT_EQ(dim,dimCheck);
+
+class EAPopulationTest : public ::testing::Test {
+protected:
+	void SetUp() override {
+
+
+		testPopulation.setDimension(2);
+
+
+
+	}
+
+	//  void TearDown() override {}
+
+	EAPopulation testPopulation;
+
+
+	void addSomeInvididualsToTestPopulation(unsigned int howMany){
+
+		for(unsigned int i=0; i<howMany; i++){
+
+			vec dv(2);
+			EAIndividual testIndividual(2);
+			dv(0) = i+1; dv(1) = i-1;
+			testIndividual.setId(i);
+			testIndividual.setGenes(dv);
+			testIndividual.setObjectiveFunctionValue(2.0*i);
+			testPopulation.addIndividual(testIndividual);
+
+		}
+
+	}
+
+
+};
+
+
+
+
+TEST_F(EAPopulationTest, testConstructor){
+
+
+	ASSERT_TRUE(testPopulation.getSize() == 0);
+
 }
 
 
-TEST(testEAOptimizer, testEAOptimizer_Constructor){
 
-	EAOptimizer test;
-	ASSERT_TRUE(test.isOptimizationTypeMinimization());
-	ASSERT_FALSE(test.areBoundsSet());
-
-}
-
-
-TEST(testEAOptimizer, testEAOptimizer_setOptimizationType){
-
-	EAOptimizer test;
-	test.setOptimizationType("maximization");
-	ASSERT_FALSE(test.isOptimizationTypeMinimization());
-	ASSERT_TRUE(test.isOptimizationTypeMaximization());
-
-}
-
-TEST(testEAOptimizer, testEAOptimizer_setBounds){
-
-	Bounds testBounds(5);
-	testBounds.setBounds(0.0,1.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-
-	ASSERT_TRUE(test.areBoundsSet());
-
-
-}
-
-
-
-TEST(testEAOptimizer, testEAOptimizer_callObjectiveFunction){
+TEST_F(EAPopulationTest, testaddInvididual){
 
 	EAIndividual testIndividual(2);
-	EAOptimizer test;
+	testPopulation.addIndividual(testIndividual);
+
+	ASSERT_TRUE(testPopulation.getSize() == 1);
+
+}
+
+
+TEST_F(EAPopulationTest, testaddAGroupOfIndividuals){
+
+	std::vector<EAIndividual> itemsToAdd;
+	addSomeInvididualsToTestPopulation(4);
+	EAIndividual testIndividual(2);
+
+	testIndividual.initializeRandom();
+	itemsToAdd.push_back(testIndividual);
+	testIndividual.initializeRandom();
+	itemsToAdd.push_back(testIndividual);
+
+
+	testPopulation.addAGroupOfIndividuals(itemsToAdd);
+
+	ASSERT_TRUE(testPopulation.getSize() == 6);
+
+
+
+}
+
+
+
+
+TEST_F(EAPopulationTest, testgetIdOftheIndividual){
+
+	EAIndividual testIndividual(2);
+	testIndividual.setId(12);
+	testPopulation.addIndividual(testIndividual);
+
+	unsigned int id = testPopulation.getIdOftheIndividual(0);
+	ASSERT_TRUE(id == 12);
+
+
+
+}
+
+TEST_F(EAPopulationTest, testgetTheBestIndividual){
+
+	addSomeInvididualsToTestPopulation(3);
+	ASSERT_TRUE(testPopulation.getSize() == 3);
+
+	EAIndividual best = testPopulation.getTheBestIndividual();
+
+	ASSERT_TRUE(best.getId() == 0);
+
+
+}
+
+TEST_F(EAPopulationTest, testgetIndividualOrderInPopulationById){
+
+	addSomeInvididualsToTestPopulation(3);
+	unsigned int order = testPopulation.getIndividualOrderInPopulationById(1);
+
+	ASSERT_TRUE(order == 1);
+
+}
+
+TEST_F(EAPopulationTest, testremoveIndividual){
+
+	addSomeInvididualsToTestPopulation(3);
+	unsigned int idToRemove = 1;
+
+	testPopulation.removeIndividual(idToRemove);
+	ASSERT_TRUE(testPopulation.getIndividualOrderInPopulationById(0) == 0);
+	ASSERT_TRUE(testPopulation.getIndividualOrderInPopulationById(2) == 1);
+	ASSERT_TRUE(testPopulation.getSize() == 2);
+
+
+}
+
+TEST_F(EAPopulationTest, testremoveIndividualPopulationMaxandMinGetsUpdated){
+
+	addSomeInvididualsToTestPopulation(5);
+	unsigned int idToRemove = 4;
+	testPopulation.removeIndividual(idToRemove);
+	idToRemove = 0;
+	testPopulation.removeIndividual(idToRemove);
+
+
+	EAIndividual min = testPopulation.getTheBestIndividual();
+
+	ASSERT_TRUE(min.getId() == 1);
+
+	EAIndividual max = testPopulation.getTheWorstIndividual();
+
+	ASSERT_TRUE(max.getId() == 3);
+
+}
+
+TEST_F(EAPopulationTest, testupdatePopulationMinAndMax){
+
+
+	addSomeInvididualsToTestPopulation(10);
+
+
+	testPopulation.updatePopulationMinAndMax();
+
+	EAIndividual min = testPopulation.getTheBestIndividual();
+
+	ASSERT_TRUE(min.getId() == 0);
+
+	EAIndividual max = testPopulation.getTheWorstIndividual();
+
+	ASSERT_TRUE(max.getId() == 9);
+
+
+}
+
+
+TEST_F(EAPopulationTest, testupdatePopulationFitness){
+
+
+	addSomeInvididualsToTestPopulation(10);
+	testPopulation.updateFitnessValues();
+
+	EAIndividual bestFit = testPopulation.getIndividual(0);
+	double fitness = bestFit.getFitnessValue();
+	double error = fabs(fitness - 1.0);
+
+	ASSERT_TRUE(error< 10E-08);
+
+
+}
+
+
+TEST_F(EAPopulationTest, testupdateReproductionProbabilities){
+
+	addSomeInvididualsToTestPopulation(10);
+	testPopulation.updateFitnessValues();
+	testPopulation.updateReproductionProbabilities();
+	EAIndividual bestFit = testPopulation.getIndividual(0);
+	double reproductionP = bestFit.getReproductionProbability();
+
+	ASSERT_TRUE(reproductionP > 0.1);
+
+}
+
+
+TEST_F(EAPopulationTest, testupdateDeathProbabilities){
+
+	addSomeInvididualsToTestPopulation(20);
+	testPopulation.updateFitnessValues();
+	testPopulation.updateDeathProbabilities();
+	EAIndividual bestFit = testPopulation.getIndividual(0);
+	double deathP = bestFit.getReproductionProbability();
+
+	ASSERT_TRUE(deathP < 0.0001);
+
+}
+
+
+
+
+class EAOptimizerTest : public ::testing::Test {
+protected:
+	void SetUp() override {
+
+		testOptimizer.setDimension(2);
+		testOptimizer.setObjectiveFunction(Eggholder);
+		Bounds testBounds(2);
+		testBounds.setBounds(0.0,512.0);
+
+		testOptimizer.setBounds(testBounds);
+		testOptimizer.setProblemName("Eggholder_Minimization");
+
+
+
+
+	}
+
+	//  void TearDown() override {}
+
+	EAOptimizer2 testOptimizer;
+
+
+};
+
+
+TEST_F(EAOptimizerTest, testIfConstructorWorks) {
+
+	ASSERT_TRUE(testOptimizer.getDimension() == 2);
+	ASSERT_TRUE(testOptimizer.areBoundsSet());
+	ASSERT_TRUE(testOptimizer.getNumberOfThreads() == 1);
+	ASSERT_TRUE(testOptimizer.isObjectiveFunctionSet());
+	ASSERT_TRUE(testOptimizer.isProblemNameSet());
+	ASSERT_FALSE(testOptimizer.isFilenameOptimizationResultSet());
+	ASSERT_FALSE(testOptimizer.isFilenameWarmStartSet());
+	ASSERT_FALSE(testOptimizer.isFilenameOptimizationHistorySet());
+
+
+}
+
+
+TEST_F(EAOptimizerTest, testcallObjectiveFunction) {
+
+	EAIndividual testIndividual(2);
 
 	vec dv(2);
 	dv(0) = 1.0;
 	dv(1) = 1.0;
 	testIndividual.initializeGenes(dv);
 
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
 
-	test.callObjectiveFunction(testIndividual);
+	testOptimizer.callObjectiveFunction(testIndividual);
 
 	double value = testIndividual.getObjectiveFunctionValue();
 	double valueToCheck = Eggholder(dv);
@@ -135,58 +343,37 @@ TEST(testEAOptimizer, testEAOptimizer_callObjectiveFunction){
 
 }
 
-
-TEST(testEAOptimizer, testEAOptimizer_generateRandomIndividual){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
+TEST_F(EAOptimizerTest, testgenerateRandomIndividual){
 
 
-	EAIndividual testIndvidual = test.generateRandomIndividual();
+	EAIndividual testIndvidual = testOptimizer.generateRandomIndividual();
 
 	ASSERT_TRUE(testIndvidual.getDimension() == 2);
 
 }
 
-TEST(testEAOptimizer, testEAOptimizer_initializePopulation){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
 
 
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(100);
-	test.initializePopulation();
 
-	ASSERT_TRUE(test.getPopulationSize() == 100);
+TEST_F(EAOptimizerTest, testinitializePopulation){
+
+
+	testOptimizer.setInitialPopulationSize(100);
+	testOptimizer.initializePopulation();
+
+	ASSERT_TRUE(testOptimizer.getPopulationSize() == 100);
 
 
 }
 
-
-TEST(testEAOptimizer, testEAOptimizer_initializePopulationInParallel){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
+TEST_F(EAOptimizerTest, testinitializePopulationParallel){
 
 
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(400);
-	test.setNumberOfThreads(4);
-	test.initializePopulation();
+	testOptimizer.setInitialPopulationSize(100);
+	testOptimizer.setNumberOfThreads(4);
+	testOptimizer.initializePopulation();
 
-
-	ASSERT_TRUE(test.getPopulationSize() == 400);
+	ASSERT_TRUE(testOptimizer.getPopulationSize() == 100);
 
 
 }
@@ -194,334 +381,228 @@ TEST(testEAOptimizer, testEAOptimizer_initializePopulationInParallel){
 
 
 
-TEST(testEAOptimizer, testEAOptimizer_updatePopulationFitness){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
+TEST_F(EAOptimizerTest, testgenerateRandomParents){
 
 
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(100);
-	test.initializePopulation();
+	testOptimizer.setInitialPopulationSize(10);
+	testOptimizer.initializePopulation();
 
-	test.updatePopulationFitnessValues();
-
-
-	vec fitnessValues = test.getPopulationFitnessValues();
-	ASSERT_TRUE(fitnessValues.size() == 100);
-
-
-	vec objectiveFunctionValues = test.getPopulationObjectiveFunctionValues();
-	ASSERT_TRUE(objectiveFunctionValues .size() == 100);
-
-	uword minIndexObjectiveFunction = index_min(objectiveFunctionValues);
-	uword maxIndexFitness = index_max(fitnessValues);
-
-	ASSERT_EQ(minIndexObjectiveFunction, maxIndexFitness );
+	std::pair<EAIndividual, EAIndividual> testPair = testOptimizer.generateRandomParents();
 
 
 }
-
-TEST(testEAOptimizer, testEAOptimizer_updatePopulationReproductionProbabilities){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-
-
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(100);
-	test.initializePopulation();
-
-	test.updatePopulationFitnessValues();
-	test.updatePopulationReproductionProbabilities();
-
-
-
-	vec reproductionProbabilities = test.getPopulationReproductionProbabilities();
-	ASSERT_TRUE(reproductionProbabilities.size() == 100);
-
-
-	vec objectiveFunctionValues = test.getPopulationObjectiveFunctionValues();
-	ASSERT_TRUE(objectiveFunctionValues .size() == 100);
-
-	uword minIndexObjectiveFunction = index_min(objectiveFunctionValues);
-	uword maxIndexReproduction      = index_max(reproductionProbabilities );
-
-	ASSERT_EQ(minIndexObjectiveFunction, maxIndexReproduction );
-
-}
-
-TEST(testEAOptimizer, testEAOptimizer_updatePopulationDeathProbabilities){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-
-
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(100);
-	test.initializePopulation();
-
-	test.updatePopulationFitnessValues();
-	test.updatePopulationDeathProbabilities();
-
-
-	vec deathProbabilities = test.getPopulationDeathProbabilities();
-	ASSERT_TRUE(deathProbabilities.size() == 100);
-
-
-	vec objectiveFunctionValues = test.getPopulationObjectiveFunctionValues();
-	ASSERT_TRUE(objectiveFunctionValues .size() == 100);
-
-	uword maxIndexObjectiveFunction = index_max(objectiveFunctionValues);
-	uword maxIndexDeath      = index_max( deathProbabilities );
-
-	ASSERT_EQ(maxIndexObjectiveFunction, maxIndexDeath );
-
-}
-
-
-TEST(testEAOptimizer, testEAOptimizer_generateRandomParents){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-
-
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(10);
-	test.initializePopulation();
-
-	test.updatePopulationProperties();
-
-	std::pair<unsigned int, unsigned int> testPair = test.generateRandomParents();
-
-	ASSERT_FALSE(testPair.first == testPair.second);
-	ASSERT_TRUE(testPair.first < 10);
-
-}
-
-
-TEST(testEAOptimizer, testEAOptimizer_getIndividualLocation){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-
-
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(10);
-	test.initializePopulation();
-
-	unsigned int testIndividualIndex = test.getIndividualLocation(6);
-	ASSERT_TRUE(testIndividualIndex == 6);
-
-
-}
-
-
-TEST(testEAOptimizer, testEAOptimizer_applyMutation){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-
-	vec inputGenes = testBounds.generateVectorWithinBounds();
-	vec inputGenesSave = inputGenes;
-
-	double almostCertainProbabilty = 0.9999999999999;
-	test.setMutationProbability(almostCertainProbabilty);
-	test.applyMutation(inputGenes);
-
-
-	double distance =  fabs(inputGenes(0) - inputGenesSave(0));
-	EXPECT_GT(distance, 10E-6);
-
-	double almostZeroProbability = 0.0000000000001;
-	test.setMutationProbability(almostZeroProbability);
-	inputGenes = inputGenesSave;
-	test.applyMutation(inputGenes);
-
-
-	distance =  fabs(inputGenes(0) - inputGenesSave(0));
-	EXPECT_LT(distance, 10E-6);
-
-
-
-}
-
-
-
-TEST(testEAOptimizer, testEAOptimizer_generateIndividualByReproduction){
-
-	unsigned int N = 4;
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-
-
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(N);
-	test.initializePopulation();
-	test.updatePopulationProperties();
-
-	std::pair<unsigned int, unsigned int> testPair = test.generateRandomParents();
-
-	test.setMutationProbability(0.5);
-
-	EAIndividual testIndividual = test.generateIndividualByReproduction(testPair );
-
-	unsigned int id = testIndividual.getId();
-
-	EXPECT_EQ(id,N);
-
-
-}
-
-
-TEST(testEAOptimizer, testEAOptimizer_generateNewGeneration){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-
-
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(100);
-	test.setNumberOfNewIndividualsInAGeneration(20);
-	test.setNumberOfDeathsInAGeneration(2);
-	test.setMutationProbability(0.1);
-	test.initializePopulation();
-
-	test.updatePopulationProperties();
-
-	test.generateNewGeneration();
-
-
-
-	unsigned int sizeOfPopulation = test.getPopulationSize();
-	EXPECT_EQ(sizeOfPopulation, 118);
-
-}
-
-TEST(testEAOptimizer, testEAOptimizer_optimize){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EAOptimizer test;
-	test.setBounds(testBounds);
-
-
-	test.setObjectiveFunction(Eggholder);
-	test.setDimension(2);
-	test.setInitialPopulationSize(50);
-	test.setNumberOfNewIndividualsInAGeneration(10);
-	test.setNumberOfDeathsInAGeneration(10);
-	test.setMutationProbability(0.1);
-	test.setNumberOfGenerations(50);
-	test.setDisplayOff();
-	test.setMaximumNumberOfGeneratedIndividuals(1000);
-
-	test.optimize();
-
-	double objectiveFunctionValueOptimized = test.getBestObjectiveFunction();
-
-	ASSERT_LT(objectiveFunctionValueOptimized, -500.0);
-
-}
-
-/* Using this class, we test the derived class functionality based on the base class "EAOptimizer" */
-class EggholderOptimizer : public EAOptimizer{
-
-private:
-
-	double calculateObjectiveFunctionInternal(vec input){
-
-		return Eggholder(input);
-
-	}
-
-
-public:
-
-
-
-
-};
-
-TEST(testEAOptimizer, testEAOptimizer_optimizeWithDerivedClass){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EggholderOptimizer test;
-
-
-	test.setBounds(testBounds);
-
-	test.setDimension(2);
-	test.setInitialPopulationSize(50);
-	test.setNumberOfNewIndividualsInAGeneration(10);
-	test.setNumberOfDeathsInAGeneration(10);
-	test.setMutationProbability(0.1);
-	test.setNumberOfGenerations(50);
-	test.setDisplayOff();
-	test.setMaximumNumberOfGeneratedIndividuals(1000);
-
-	test.optimize();
-
-
-	double objectiveFunctionValueOptimized = test.getBestObjectiveFunction();
-
-	ASSERT_LT(objectiveFunctionValueOptimized, -500.0);
-
-
-}
-
-TEST(testEAOptimizer, testEAOptimizer_optimizeWithDerivedClassParallel){
-
-	Bounds testBounds(2);
-	testBounds.setBounds(0.0,512.0);
-	EggholderOptimizer test;
-
-
-	test.setBounds(testBounds);
-
-	test.setDimension(2);
-	test.setInitialPopulationSize(500);
-	test.setNumberOfNewIndividualsInAGeneration(500);
-	test.setNumberOfDeathsInAGeneration(100);
-	test.setMutationProbability(0.1);
-	test.setNumberOfGenerations(50);
-	test.setDisplayOff();
-	test.setMaximumNumberOfGeneratedIndividuals(1000000);
-	test.setNumberOfThreads(4);
-
-	test.optimize();
-
-
-	double objectiveFunctionValueOptimized = test.getBestObjectiveFunction();
-
-	ASSERT_LT(objectiveFunctionValueOptimized, -500.0);
-
-
-}
+//
+//
+//TEST(testEAOptimizer, testEAOptimizer_getIndividualLocation){
+//
+//	Bounds testBounds(2);
+//	testBounds.setBounds(0.0,512.0);
+//	EAOptimizer test;
+//	test.setBounds(testBounds);
+//
+//
+//	test.setObjectiveFunction(Eggholder);
+//	test.setDimension(2);
+//	test.setInitialPopulationSize(10);
+//	test.initializePopulation();
+//
+//	unsigned int testIndividualIndex = test.getIndividualLocation(6);
+//	ASSERT_TRUE(testIndividualIndex == 6);
+//
+//
+//}
+//
+//
+//TEST(testEAOptimizer, testEAOptimizer_applyMutation){
+//
+//	Bounds testBounds(2);
+//	testBounds.setBounds(0.0,512.0);
+//	EAOptimizer test;
+//	test.setBounds(testBounds);
+//
+//	vec inputGenes = testBounds.generateVectorWithinBounds();
+//	vec inputGenesSave = inputGenes;
+//
+//	double almostCertainProbabilty = 0.9999999999999;
+//	test.setMutationProbability(almostCertainProbabilty);
+//	test.applyMutation(inputGenes);
+//
+//
+//	double distance =  fabs(inputGenes(0) - inputGenesSave(0));
+//	EXPECT_GT(distance, 10E-6);
+//
+//	double almostZeroProbability = 0.0000000000001;
+//	test.setMutationProbability(almostZeroProbability);
+//	inputGenes = inputGenesSave;
+//	test.applyMutation(inputGenes);
+//
+//
+//	distance =  fabs(inputGenes(0) - inputGenesSave(0));
+//	EXPECT_LT(distance, 10E-6);
+//
+//
+//
+//}
+//
+//
+//
+//TEST(testEAOptimizer, testEAOptimizer_generateIndividualByReproduction){
+//
+//	unsigned int N = 4;
+//	Bounds testBounds(2);
+//	testBounds.setBounds(0.0,512.0);
+//	EAOptimizer test;
+//	test.setBounds(testBounds);
+//
+//
+//	test.setObjectiveFunction(Eggholder);
+//	test.setDimension(2);
+//	test.setInitialPopulationSize(N);
+//	test.initializePopulation();
+//	test.updatePopulationProperties();
+//
+//	std::pair<unsigned int, unsigned int> testPair = test.generateRandomParents();
+//
+//	test.setMutationProbability(0.5);
+//
+//	EAIndividual testIndividual = test.generateIndividualByReproduction(testPair );
+//
+//	unsigned int id = testIndividual.getId();
+//
+//	EXPECT_EQ(id,N);
+//
+//
+//}
+//
+//
+//TEST(testEAOptimizer, testEAOptimizer_generateNewGeneration){
+//
+//	Bounds testBounds(2);
+//	testBounds.setBounds(0.0,512.0);
+//	EAOptimizer test;
+//	test.setBounds(testBounds);
+//
+//
+//	test.setObjectiveFunction(Eggholder);
+//	test.setDimension(2);
+//	test.setInitialPopulationSize(100);
+//	test.setNumberOfNewIndividualsInAGeneration(20);
+//	test.setNumberOfDeathsInAGeneration(2);
+//	test.setMutationProbability(0.1);
+//	test.initializePopulation();
+//
+//	test.updatePopulationProperties();
+//
+//	test.generateNewGeneration();
+//
+//
+//
+//	unsigned int sizeOfPopulation = test.getPopulationSize();
+//	EXPECT_EQ(sizeOfPopulation, 118);
+//
+//}
+//
+//TEST(testEAOptimizer, testEAOptimizer_optimize){
+//
+//	Bounds testBounds(2);
+//	testBounds.setBounds(0.0,512.0);
+//	EAOptimizer test;
+//	test.setBounds(testBounds);
+//
+//
+//	test.setObjectiveFunction(Eggholder);
+//	test.setDimension(2);
+//	test.setInitialPopulationSize(50);
+//	test.setNumberOfNewIndividualsInAGeneration(10);
+//	test.setNumberOfDeathsInAGeneration(10);
+//	test.setMutationProbability(0.1);
+//	test.setNumberOfGenerations(50);
+//	test.setDisplayOff();
+//	test.setMaximumNumberOfGeneratedIndividuals(1000);
+//
+//	test.optimize();
+//
+//	double objectiveFunctionValueOptimized = test.getBestObjectiveFunction();
+//
+//	ASSERT_LT(objectiveFunctionValueOptimized, -500.0);
+//
+//}
+//
+///* Using this class, we test the derived class functionality based on the base class "EAOptimizer" */
+//class EggholderOptimizer : public EAOptimizer{
+//
+//private:
+//
+//	double calculateObjectiveFunctionInternal(vec input){
+//
+//		return Eggholder(input);
+//
+//	}
+//
+//
+//public:
+//
+//
+//
+//
+//};
+//
+//TEST(testEAOptimizer, testEAOptimizer_optimizeWithDerivedClass){
+//
+//	Bounds testBounds(2);
+//	testBounds.setBounds(0.0,512.0);
+//	EggholderOptimizer test;
+//
+//
+//	test.setBounds(testBounds);
+//
+//	test.setDimension(2);
+//	test.setInitialPopulationSize(50);
+//	test.setNumberOfNewIndividualsInAGeneration(10);
+//	test.setNumberOfDeathsInAGeneration(10);
+//	test.setMutationProbability(0.1);
+//	test.setNumberOfGenerations(50);
+//	test.setDisplayOff();
+//	test.setMaximumNumberOfGeneratedIndividuals(1000);
+//
+//	test.optimize();
+//
+//
+//	double objectiveFunctionValueOptimized = test.getBestObjectiveFunction();
+//
+//	ASSERT_LT(objectiveFunctionValueOptimized, -500.0);
+//
+//
+//}
+//
+//TEST(testEAOptimizer, testEAOptimizer_optimizeWithDerivedClassParallel){
+//
+//	Bounds testBounds(2);
+//	testBounds.setBounds(0.0,512.0);
+//	EggholderOptimizer test;
+//
+//
+//	test.setBounds(testBounds);
+//
+//	test.setDimension(2);
+//	test.setInitialPopulationSize(500);
+//	test.setNumberOfNewIndividualsInAGeneration(500);
+//	test.setNumberOfDeathsInAGeneration(100);
+//	test.setMutationProbability(0.1);
+//	test.setNumberOfGenerations(50);
+//	test.setDisplayOff();
+//	test.setMaximumNumberOfGeneratedIndividuals(1000000);
+//	test.setNumberOfThreads(4);
+//
+//	test.optimize();
+//
+//
+//	double objectiveFunctionValueOptimized = test.getBestObjectiveFunction();
+//
+//	ASSERT_LT(objectiveFunctionValueOptimized, -500.0);
+//
+//
+//}
 
 
 
