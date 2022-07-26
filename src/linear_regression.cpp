@@ -113,7 +113,10 @@ void LinearModel::setWeights(vec w){
 
 void LinearModel::train(void){
 
+	assert(ifNormalized);
+
 	output.printMessage("Finding the weights of the linear model...");
+
 
 	if(ifInitialized == false){
 
@@ -264,6 +267,7 @@ vec LinearModel::interpolateAll(mat X) const{
 
 void LinearModel::printSurrogateModel(void) const{
 
+	data.print();
 
 	cout<<"Regression weights:\n";
 	trans(weights).print();

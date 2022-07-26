@@ -72,6 +72,12 @@ void SurrogateModel::setName(std::string nameInput){
 }
 
 
+void SurrogateModel::setNumberOfThreads(unsigned int n){
+
+	numberOfThreads = n;
+
+}
+
 
 void SurrogateModel::setGradientsOn(void){
 
@@ -94,6 +100,23 @@ bool SurrogateModel::areGradientsOn(void) const{
 
 }
 
+void SurrogateModel::setWriteWarmStartFileOn(std::string filename){
+
+	assert(isNotEmpty(filename));
+
+	filenameForWriteWarmStart = filename;
+	ifWriteWarmStartFile = true;
+
+}
+
+
+void SurrogateModel::setReadWarmStartFileOn(std::string filename){
+
+	assert(isNotEmpty(filename));
+	filenameForWarmStartModelTraining = filename;
+	ifReadWarmStartFile = true;
+
+}
 
 void SurrogateModel::setDisplayOn(void){
 
@@ -173,7 +196,7 @@ std::string SurrogateModel::getNameOfHyperParametersFile(void) const{
 
 std::string SurrogateModel::getNameOfInputFile(void) const{
 
-	return this->filenameDataInput;
+	return filenameDataInput;
 
 }
 
@@ -212,17 +235,25 @@ vec SurrogateModel::gety(void) const{
 
 void SurrogateModel::readData(void){
 
-
+	assert(isNotEmpty(filenameDataInput));
 	data.readData(filenameDataInput);
 
 	ifDataIsRead = true;
 
 }
 
+void SurrogateModel::printData(void) const{
+
+	data.print();
+
+}
+
 void SurrogateModel::readDataTest(void){
 
-	data.readDataTest(filenameDataInputTest);
+	assert(isNotEmpty(filenameDataInputTest));
 
+	data.readDataTest(filenameDataInputTest);
+	ifHasTestData = true;
 }
 
 
@@ -232,155 +263,92 @@ void SurrogateModel::normalizeData(void){
 	assert(ifDataIsRead);
 
 	data.normalizeSampleInputMatrix();
-
 	ifNormalized = true;
-
 }
 
 void SurrogateModel::normalizeDataTest(void){
 
-
 	data.normalizeSampleInputMatrixTest();
-
-
+	ifNormalizedTestData = true;
 }
 
 
 void SurrogateModel::updateAuxilliaryFields(void){
 
-
-
-
 }
 
+
+vec SurrogateModel::interpolateVector(mat X) const{
+
+	assert(X.max() <= 1.0/data.getDimension());
+	assert(X.min() >= 0.0);
+
+	unsigned int N = X.n_rows;
+	vec results(N);
+
+	for(unsigned int i=0; i<N; i++){
+
+		rowvec xp = X.row(i);
+		results(i) = interpolate(xp);
+
+	}
+
+	return results;
+}
 
 
 double SurrogateModel::calculateInSampleError(void) const{
 
 	assert(ifInitialized);
 
-	double meanSquaredError = 0.0;
-	vec y = data.getOutputVector();
 
-	for(unsigned int i=0;i<data.getNumberOfSamples(); i++){
+	vec fTildeValues = interpolateVector(data.getInputMatrix());
+	vec fExact = data.getOutputVector();
+	vec diff = fTildeValues - fExact;
 
-		rowvec xp = data.getRowX(i);
+	double L2normDiff = norm(diff,2);
+	double squaredError = L2normDiff*L2normDiff;
 
-		rowvec x  = data.getRowXRaw(i);
-
-#if 0
-		printf("\nData point = %d\n", i+1);
-		printf("Interpolation at x:\n");
-		x.print();
-		printf("xnorm:\n");
-		xp.print();
-#endif
-		double functionValueSurrogate = interpolate(xp);
-
-		double functionValueExact = y(i);
-
-		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
-
-		meanSquaredError+= squaredError;
-#if 0
-		printf("func_val (exact) = %15.10f, func_val (approx) = %15.10f, squared error = %15.10f\n", functionValueExact,functionValueSurrogate,squaredError);
-#endif
-
-
-	}
-
-	meanSquaredError = meanSquaredError/data.getNumberOfSamples();
-
-
-	return meanSquaredError;
-
+	return squaredError/data.getNumberOfSamples();
 
 }
 
-void SurrogateModel::calculateOutSampleError(void){
 
-	assert(ifInitialized);
+
+double SurrogateModel::calculateOutSampleError(void){
+
 	assert(ifHasTestData);
-	unsigned int numberOfEntries = data.getDimension() + 3;
+	assert(data.ifTestDataHasFunctionValues);
 
-	testResults = zeros<mat>(NTest, numberOfEntries);
+	tryOnTestData();
 
+	vec squaredErrors = testResults.col(data.getDimension()+2);
 
-
-
-	for(unsigned int i=0;i<NTest;i++){
-
-		rowvec xp = XTest.row(i);
-
-		rowvec x  = XTestraw.row(i);
-
-
-		double functionValueSurrogate = interpolate(xp);
-
-		double functionValueExact = yTest(i);
-
-		double squaredError = (functionValueExact-functionValueSurrogate)*(functionValueExact-functionValueSurrogate);
-
-
-		rowvec sample(numberOfEntries);
-		copyRowVector(sample,x);
-		sample(data.getDimension()) =   functionValueExact;
-		sample(data.getDimension()+1) = functionValueSurrogate;
-		sample(data.getDimension()+2) = squaredError;
-
-		testResults.row(i) = sample;
-	}
-
-
+	return mean(squaredErrors);
 
 }
-
-
-double SurrogateModel::getOutSampleErrorMSE(void) const{
-
-	assert(testResults.n_rows > 0);
-
-	vec squaredError = testResults.col(data.getDimension()+2);
-
-
-	return mean(squaredError);
-
-
-
-}
-
-
 
 void SurrogateModel::saveTestResults(void) const{
 
+	assert(isNotEmpty(filenameTestResults));
 	field<std::string> header(testResults.n_cols);
 
-	for(unsigned int i=0; i<data.getDimension(); i++){
+	unsigned int dim = data.getDimension();
+
+	for(unsigned int i=0; i<dim; i++){
 
 		header(i) ="x"+std::to_string(i+1);
 
 	}
 
-
-	header(data.getDimension())   = "True value";
-	header(data.getDimension()+1) = "Estimated value";
-	header(data.getDimension()+2) = "Squared Error";
+	header(dim)   = "Estimated value";
+	header(dim+1) = "True value";
+	header(dim+2) = "Squared Error";
 
 	testResults.save( csv_name(filenameTestResults, header) );
 
 
 }
-
-void SurrogateModel::visualizeTestResults(void) const{
-
-	std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_Test_Results.py "+ name;
-
-	executePythonScript(python_command);
-
-}
-
-
-
 
 
 void SurrogateModel::printSurrogateModel(void) const{
@@ -388,9 +356,6 @@ void SurrogateModel::printSurrogateModel(void) const{
 	data.print();
 
 }
-
-
-
 
 
 rowvec SurrogateModel::getRowX(unsigned int index) const{
@@ -412,30 +377,67 @@ void SurrogateModel::setNameOfInputFileTest(string filename){
 
 	assert(isNotEmpty(filename));
 	filenameDataInputTest = filename;
+}
 
+void SurrogateModel::setNameOfOutputFileTest(string filename){
+
+	assert(isNotEmpty(filename));
+	filenameTestResults = filename;
 
 }
 
-void SurrogateModel::tryOnTestData(void) const{
+
+void SurrogateModel::tryOnTestData(void){
+
+	assert(ifNormalizedTestData);
 
 	output.printMessage("Trying surrogate model on test data...");
 
 	unsigned int dim = data.getDimension();
-	unsigned int numberOfEntries = dim + 1;
+	unsigned int numberOfEntries;
+
+	if(data.ifTestDataHasFunctionValues){
+
+		numberOfEntries = dim + 3;
+	}
+	else{
+
+		numberOfEntries = dim + 1;
+	}
+
 	unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
 
 	mat results(numberOfTestSamples,numberOfEntries);
+
+	vec fExact;
+	if(data.ifTestDataHasFunctionValues){
+
+		fExact = data.getOutputVectorTest();
+	}
+
 
 	for(unsigned int i=0; i<numberOfTestSamples; i++){
 
 		rowvec xp = data.getRowXTest(i);
 		rowvec x  = data.getRowXRawTest(i);
 
-		double fTilde = interpolate(xp);
+		output.printMessage("x",x);
 
-		rowvec sample(numberOfEntries);
-		copyRowVector(sample,x);
-		sample(dim) =  fTilde;
+		double fTilde = interpolate(xp);
+		output.printMessage("fTilde = ",fTilde);
+
+		rowvec sample = x.head(dim);
+		addOneElement(sample,fTilde);
+
+		if(data.ifTestDataHasFunctionValues){
+
+			addOneElement(sample,fExact(i));
+			double squaredError = pow((fExact(i) - fTilde),2.0);
+			addOneElement(sample,squaredError);
+
+			output.printMessage("fExact = ",fExact(i));
+		}
+
 
 		results.row(i) = sample;
 
@@ -444,9 +446,11 @@ void SurrogateModel::tryOnTestData(void) const{
 
 	output.printMessage("Saving surrogate test results in the file: surrogateTest.csv");
 
-	saveMatToCVSFile(results,"surrogateTest.csv");
+	saveMatToCVSFile(results,  "surrogateTest.csv");
 
 	output.printMessage("Surrogate test results", results);
+
+	testResults = results;
 
 
 

@@ -72,7 +72,7 @@ private:
 	void updateWithNewData(void);
 	void updateModelParams(void);
 
-	Correlationfunction correlationfunction;
+	CorrelationFunction correlationfunction;
 
 	double computeCorrelation(rowvec x_i, rowvec x_j, vec theta) const;
 	double computedR_dxj(rowvec x_i, rowvec x_j,int k) const;

@@ -49,10 +49,6 @@ protected:
 	unsigned int NTest = 0;
 
 
-	vec yTest;
-	mat XTestraw;
-	mat XTest;
-
 	std::string name;
 
 
@@ -60,9 +56,9 @@ protected:
 
 	std::string filenameDataInput;
 	std::string filenameDataInputTest;
-
-
 	std::string filenameTestResults;
+	std::string filenameForWarmStartModelTraining;
+	std::string filenameForWriteWarmStart;
 
 	bool ifMinimize = true;
 	bool ifMaximize = false;
@@ -75,6 +71,10 @@ protected:
 	OutputDevice output;
 
 	bool ifHasGradientData = false;
+	bool ifWriteWarmStartFile = false;
+	bool ifReadWarmStartFile = false;
+
+	unsigned int numberOfThreads = 1;
 
 
 public:
@@ -84,8 +84,11 @@ public:
 	bool ifNormalized = false;
 
 
-	bool ifHasTestData = false;
+	bool ifModelTrainingIsDone = false;
 
+
+	bool ifHasTestData = false;
+	bool ifNormalizedTestData = false;
 
 	mat testResults;
 
@@ -103,11 +106,18 @@ public:
 	virtual void readData(void);
 	virtual void normalizeData(void);
 
+	void printData(void) const;
+
 	void checkRawData(void) const;
 
 	void setBoxConstraints(vec xmin, vec xmax);
 	void setBoxConstraints(double xmin, double xmax);
 	void setBoxConstraints(Bounds boxConstraintsInput);
+
+	void setNumberOfThreads(unsigned int);
+
+	void setWriteWarmStartFileOn(std::string);
+	void setReadWarmStartFileOn(std::string);
 
 	void setBoxConstraintsFromData(void);
 
@@ -131,6 +141,7 @@ public:
 
 
 	void setNameOfInputFileTest(string filename);
+	void setNameOfOutputFileTest(string filename);
 
 	virtual void setNameOfInputFile(string filename) = 0;
 	virtual void setNameOfHyperParametersFile(string filename) = 0;
@@ -149,20 +160,19 @@ public:
 	virtual void addNewSampleToData(rowvec newsample) = 0;
 
 
-	void tryOnTestData(void) const;
+	vec interpolateVector(mat X) const;
+
+	void tryOnTestData(void);
 
 	double calculateInSampleError(void) const;
-	void calculateOutSampleError(void);
-	double getOutSampleErrorMSE(void) const;
+	double calculateOutSampleError(void);
+
 	void saveTestResults(void) const;
 
 	mat getX(void) const;
 	vec gety(void) const;
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
-
-
-	void visualizeTestResults(void) const;
 
 
 

@@ -41,7 +41,7 @@
 
 void printScalarValueWithName(std::string name, int value) {
 
-    std::cout<<name<<" = "<<value<<"\n";
+	std::cout<<name<<" = "<<value<<"\n";
 
 }
 void printScalarValueWithName(std::string name, double value) {
@@ -62,6 +62,30 @@ void abortIfHasNan(rowvec &v){
 		std::cout<<"ERROR: NaN in a rowvector!\n";
 		abort();
 
+	}
+
+
+}
+
+void copyVector(vec &a,vec b){
+
+	assert(a.size() >= b.size());
+
+	for(unsigned int i=0; i<b.size(); i++){
+
+		a(i) = b(i);
+	}
+
+
+}
+
+void copyVector(vec &a,vec b, unsigned int indx){
+
+	assert(a.size() >= b.size() + indx);
+
+	for(unsigned int i=indx; i<b.size() + indx; i++){
+
+		a(i) = b(i-indx);
 	}
 
 
@@ -90,6 +114,62 @@ void copyRowVector(rowvec &a,rowvec b, unsigned int indx){
 
 
 }
+
+vec convertToVector(rowvec &in){
+
+	vec out(in.size());
+
+	for(unsigned int i=0;i<in.size();i++){
+
+		out(i) = in(i);
+	}
+	return out;
+
+}
+
+
+rowvec convertToRowVector(vec &in){
+	rowvec out(in.size());
+
+	for(unsigned int i=0;i<in.size();i++){
+
+		out(i) = in(i);
+	}
+	return out;
+
+}
+
+
+void addOneElement(rowvec &in, double val){
+
+	in.resize(in.size()+1);
+	in(in.size()-1) = val;
+
+}
+
+void addOneElement(vec &in, double val){
+
+	in.resize(in.size()+1);
+	in(in.size()-1) = val;
+
+}
+
+
+void joinMatricesByColumns(mat& A, const mat& B){
+
+	assert(A.n_rows == B.n_rows);
+	A.insert_cols(A.n_cols, B);
+
+}
+
+void joinMatricesByRows(mat& A, const mat& B){
+
+	assert(A.n_cols == B.n_cols);
+	A.insert_rows(A.n_rows, B);
+
+}
+
+
 
 void appendRowVectorToCSVData(rowvec v, std::string fileName){
 

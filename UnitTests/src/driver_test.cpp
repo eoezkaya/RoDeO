@@ -312,6 +312,7 @@ TEST(testDriver, testrunSurrogateModelTestOrdinaryKriging){
 	mat results;
 	results.load("surrogateTest.csv", csv_ascii);
 
+
 	ASSERT_EQ(results.n_cols, dim+1);
 	ASSERT_EQ(results.n_rows, N);
 
@@ -320,6 +321,7 @@ TEST(testDriver, testrunSurrogateModelTestOrdinaryKriging){
 	remove("surrogateTest.csv");
 	remove("trainingData.csv");
 	remove("testDataInput.csv");
+
 
 }
 

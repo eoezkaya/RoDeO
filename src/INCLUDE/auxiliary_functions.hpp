@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -62,6 +62,10 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
 
 bool checkValue(double value, double expected, double tolerance);
 bool checkValue(double value, double expected);
+bool isBetween(double number, double a, double b);
+
+
+
 bool checkMatrix(mat values, mat expected, double tolerance);
 bool checkMatrix(mat values, mat expected);
 

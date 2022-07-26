@@ -52,18 +52,21 @@ private:
 
 	bool ifDataHasGradients = false;
 	bool ifDataIsNormalized = false;
+	bool ifDataIsRead = false;
+	bool ifTestDataIsRead = false;
+
 
 	mat rawData;
 	mat X;
 	mat Xraw;
-
 	mat gradient;
-
 	vec y;
 
 
 	mat XrawTest;
 	mat XTest;
+	vec yTest;
+
 
 	OutputDevice outputToScreen;
 	Bounds boxConstraints;
@@ -71,7 +74,11 @@ private:
 
 public:
 
+	bool ifTestDataHasFunctionValues = false;
+
 	SurrogateModelData();
+
+	void reset(void);
 
 
 	void setDisplayOn(void);
@@ -92,6 +99,7 @@ public:
 	void normalizeSampleInputMatrixTest(void);
 
 	bool isDataNormalized(void) const;
+	bool isDataRead(void) const;
 
 
 	unsigned int getNumberOfSamples(void) const;
@@ -113,6 +121,9 @@ public:
 	rowvec getRowXRawTest(unsigned int index) const;
 
 	vec getOutputVector(void) const;
+	void setOutputVector(vec);
+
+	vec getOutputVectorTest(void) const;
 	double getMinimumOutputVector(void) const;
 	double getMaximumOutputVector(void) const;
 

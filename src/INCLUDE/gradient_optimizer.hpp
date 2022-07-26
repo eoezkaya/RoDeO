@@ -56,11 +56,9 @@ class GradientOptimizer : public GeneralPurposeOptimizer{
 
 private:
 
-
-	std::string optimizationType = "minimization";
 	std::string LineSearchMethod = "backtracking_line_search";
 	std::string finiteDifferenceMethod;
-	bool ifOptimizationTypeMinimization = true;
+
 	bool ifInitialPointIsSet = false;
 
 	bool ifGradientFunctionIsSet = false;

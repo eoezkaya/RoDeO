@@ -53,6 +53,8 @@ public:
 	Bounds(unsigned int);
 	Bounds(vec , vec);
 
+	void reset(void);
+
 	unsigned int getDimension(void) const;
 	void setDimension(unsigned int);
 

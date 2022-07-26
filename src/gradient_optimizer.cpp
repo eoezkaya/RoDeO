@@ -47,22 +47,6 @@ GradientOptimizer::GradientOptimizer(){
 }
 
 
-bool GradientOptimizer::isOptimizationTypeMinimization(void) const{
-
-	if(optimizationType == "minimization") return true;
-	else return false;
-
-
-}
-
-
-bool GradientOptimizer::isOptimizationTypeMaximization(void)const {
-
-	if(optimizationType == "maximization") return true;
-	else return false;
-
-
-}
 
 
 bool  GradientOptimizer::isInitialPointSet(void) const{

@@ -40,7 +40,7 @@ TEST(testMatrixVectorOperations, testabortIfHasNan){
 	unsigned int dim = 5;
 	rowvec testVector = zeros<rowvec>(dim);
 
-//	testVector(0) = sqrt(-1);
+	//	testVector(0) = sqrt(-1);
 
 	abortIfHasNan(testVector);
 
@@ -124,6 +124,85 @@ TEST(testMatrixVectorOperations, testfindInterval){
 
 	index = findInterval(-1.9, discreteValues);
 	EXPECT_EQ(index,-1);
+
+}
+TEST(testMatrixVectorOperations, testconvertToVector){
+
+	rowvec testRowVector(10,fill::randu);
+
+	vec testVector = convertToVector(testRowVector);
+	ASSERT_TRUE(testVector.size() == testRowVector.size());
+
+	double error  = fabs(testRowVector(5) - testVector(5));
+
+	ASSERT_LT(error, 10E-10);
+
+
+}
+TEST(testMatrixVectorOperations, testconvertToRowVector){
+
+	vec testVector(10,fill::randu);
+
+	rowvec testRowVector = convertToRowVector(testVector);
+	ASSERT_TRUE(testVector.size() == testRowVector.size());
+
+	double error  = fabs(testRowVector(5) - testVector(5));
+
+	ASSERT_LT(error, 10E-10);
+
+
+}
+TEST(testMatrixVectorOperations, testaddOneElement){
+
+	vec testVector(10,fill::randu);
+	double val = testVector(5);
+
+	double someValue = 1.987;
+	addOneElement(testVector, someValue);
+	ASSERT_TRUE(testVector.size() == 11);
+	double error  = fabs(testVector(5) - val);
+	ASSERT_LT(error, 10E-10);
+	error  = fabs(testVector(10) - someValue);
+	ASSERT_LT(error, 10E-10);
+
+	vec testRowVector(10,fill::randu);
+	val = testRowVector(5);
+	addOneElement(testRowVector, someValue);
+	ASSERT_TRUE(testRowVector.size() == 11);
+
+	error  = fabs(testRowVector(5) - val);
+	ASSERT_LT(error, 10E-10);
+	error  = fabs(testRowVector(10) - someValue);
+	ASSERT_LT(error, 10E-10);
+
+
+}
+
+TEST(testMatrixVectorOperations, testjoinMatricesByColumns){
+
+	mat A(4,2,fill::randu);
+	mat B(4,5,fill::randu);
+
+	joinMatricesByColumns(A,B);
+
+	ASSERT_TRUE(A.n_cols == 7);
+	double error = fabs(B(1,2) - A(1,4));
+	EXPECT_LT(error,10E-10);
+
+
+}
+
+TEST(testMatrixVectorOperations, testjoinMatricesByRows){
+
+	mat A(4,6,fill::randu);
+	mat B(3,6,fill::randu);
+
+	joinMatricesByRows(A,B);
+
+	ASSERT_TRUE(A.n_rows == 7);
+	double error = fabs(B(1,2) - A(5,2));
+	EXPECT_LT(error,10E-10);
+
 
 }
 

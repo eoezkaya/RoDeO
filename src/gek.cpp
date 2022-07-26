@@ -242,10 +242,6 @@ void GEKModel::train(void){
 
 	auxModelForTraining.train();
 
-	GEK_weights = auxModelForTraining.getTheta();
-#if 1
-	printVector(GEK_weights,"GEK_weights");
-#endif
 
 	updateAuxilliaryFields();
 

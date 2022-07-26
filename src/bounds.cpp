@@ -59,6 +59,14 @@ Bounds::Bounds(vec lb, vec ub){
 
 }
 
+void Bounds::reset(void){
+
+	lowerBounds.reset();
+	upperBounds.reset();
+	dimension = 0;
+	ifBoundsAreSet = false;
+
+}
 
 unsigned int Bounds::getDimension(void) const{
 
@@ -170,8 +178,8 @@ bool Bounds::isPointWithinBounds(const vec &inputVector) const{
 
 void Bounds::print(void) const{
 
-	printVector(this->lowerBounds,"Lower bounds");
-	printVector(this->upperBounds,"Upper bounds");
+	printVector(lowerBounds,"Lower bounds");
+	printVector(upperBounds,"Upper bounds");
 
 }
 

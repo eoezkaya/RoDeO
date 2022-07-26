@@ -39,259 +39,182 @@ using std::string;
 #define TEST_SURROGATE_MODEL_DATA
 #ifdef TEST_SURROGATE_MODEL_DATA
 
+class SurrogateModelDataTest : public ::testing::Test {
+protected:
+	void SetUp() override {
 
-TEST(testSurrogateModelData, testConstructor){
 
-	SurrogateModelData dataTest;
-	ASSERT_EQ(dataTest.getNumberOfSamples(),0);
-	ASSERT_EQ(dataTest.getDimension(),0);
+	}
+
+	void TearDown() override {
+
+		remove("testData.csv");
+
+	}
+
+	SurrogateModelData testData;
+	mat trainingData;
+	unsigned int N = 100;
+	unsigned int dim = 10;
+
+public:
+	void readRandomTrainingData(void);
+	void readRandomTrainingDataWithGradients(void);
+
+
+};
+
+
+void SurrogateModelDataTest::readRandomTrainingData(void){
+
+	mat testDataMatrix(N,dim+1,fill::randu);
+	trainingData = testDataMatrix;
+
+	string fileNameDataInput = "testData.csv";
+	saveMatToCVSFile(trainingData,fileNameDataInput);
+
+	//	dataTest.setDisplayOn();
+	testData.readData(fileNameDataInput);
 
 }
 
-TEST(testSurrogateModelData, testreadData){
+void SurrogateModelDataTest::readRandomTrainingDataWithGradients(void){
 
-	unsigned int N = 100;
-	unsigned dim = 10;
-	mat testData(N,dim+1,fill::randu);
+	mat testDataMatrix(N,2*dim+1,fill::randu);
+	trainingData = testDataMatrix;
 
 	string fileNameDataInput = "testData.csv";
-	saveMatToCVSFile(testData,fileNameDataInput);
+	saveMatToCVSFile(trainingData,fileNameDataInput);
 
-	SurrogateModelData dataTest;
+	//	dataTest.setDisplayOn();
+	testData.readData(fileNameDataInput);
 
-//	dataTest.setDisplayOn();
-	dataTest.readData(fileNameDataInput);
-	mat rawData = dataTest.getRawData();
+}
 
-	bool result = isEqual(rawData,testData, 10E-6);
+
+TEST_F(SurrogateModelDataTest, testIfConstructorWorks) {
+
+	ASSERT_EQ(testData.getNumberOfSamples(),0);
+	ASSERT_EQ(testData.getDimension(),0);
+	ASSERT_FALSE(testData.isDataRead());
+
+}
+
+TEST_F(SurrogateModelDataTest, testreadData) {
+
+	readRandomTrainingData();
+	mat rawData = testData.getRawData();
+
+	bool result = isEqual(rawData,trainingData, 10E-6);
 
 	ASSERT_EQ(result,true);
-
-}
-
-
-TEST(testSurrogateModelData, testassignDimension){
-
-	unsigned int N = 100;
-	unsigned dim = 10;
-	mat testData(N,dim+1,fill::randu);
-
-	string fileNameDataInput = "testData.csv";
-	saveMatToCVSFile(testData,fileNameDataInput);
-
-	SurrogateModelData dataTest;
-
-	//	dataTest.setDisplayOn();
-	dataTest.readData(fileNameDataInput);
-	dataTest.assignDimensionFromData();
-
-	unsigned int dimGet = dataTest.getDimension();
-	ASSERT_EQ(dimGet,dim);
-
-}
-
-TEST(testSurrogateModelData, testassignDimensionWithGradient){
-
-	unsigned int N = 100;
-	unsigned dim = 10;
-	mat testDataWithGradient(N,2*dim+1,fill::randu);
-
-	string fileNameDataInput = "testData.csv";
-	saveMatToCVSFile(testDataWithGradient,fileNameDataInput);
-
-	SurrogateModelData dataTest;
-
-	//	dataTest.setDisplayOn();
-	dataTest.setGradientsOn();
-	dataTest.readData(fileNameDataInput);
-	dataTest.assignDimensionFromData();
-
-	unsigned int dimGet = dataTest.getDimension();
-	ASSERT_EQ(dimGet,dim);
+	ASSERT_TRUE(testData.isDataRead());
 
 
 }
 
-TEST(testSurrogateModelData, testassignSampleInputMatrix){
 
-	unsigned int N = 100;
-	unsigned dim = 10;
-	mat testDataWithGradient(N,2*dim+1,fill::randu);
+TEST_F(SurrogateModelDataTest, testassignDimension) {
 
-	string fileNameDataInput = "testData.csv";
-	saveMatToCVSFile(testDataWithGradient,fileNameDataInput);
+	readRandomTrainingData();
+	testData.assignDimensionFromData();
 
-	SurrogateModelData dataTest;
+	unsigned int dim = testData.getDimension();
+	ASSERT_EQ(dim,10);
 
-	//	dataTest.setDisplayOn();
-	dataTest.setGradientsOn();
-	dataTest.readData(fileNameDataInput);
-	dataTest.assignDimensionFromData();
+}
 
+TEST_F(SurrogateModelDataTest, testassignDimensionIfDataHasGradients) {
 
-	dataTest.assignSampleInputMatrix();
-	rowvec x = dataTest.getRowX(7);
+	testData.setGradientsOn();
+	readRandomTrainingDataWithGradients();
+	testData.assignDimensionFromData();
 
+	unsigned int dim = testData.getDimension();
+	ASSERT_EQ(dim,10);
 
-	for(unsigned int i=0; i<dataTest.getDimension(); i++){
+}
 
-		double error = fabs(x(i)- testDataWithGradient(7,i));
+TEST_F(SurrogateModelDataTest, testassignSampleInputMatrix) {
+
+	testData.setGradientsOn();
+	readRandomTrainingDataWithGradients();
+	testData.assignDimensionFromData();
+
+	testData.assignSampleInputMatrix();
+	rowvec x = testData.getRowX(7);
+
+	for(unsigned int i=0; i<testData.getDimension(); i++){
+
+		double error = fabs(x(i)- trainingData(7,i));
 		EXPECT_LT(error, 10E-10 );
 	}
 
+}
+
+TEST_F(SurrogateModelDataTest, testassignSampleOutputVector) {
+
+	testData.setGradientsOn();
+	readRandomTrainingDataWithGradients();
+	testData.assignDimensionFromData();
+	testData.assignSampleOutputVector();
+
+	vec y = testData.getOutputVector();
+
+	for(unsigned int i=0; i<N; i++){
+
+		double error = fabs(y(i)- trainingData(i,dim));
+		EXPECT_LT(error, 10E-10 );
+	}
 
 }
 
-TEST(testSurrogateModelData, testsetBoxConstraints){
+TEST_F(SurrogateModelDataTest, testnormalizeSampleInputMatrix) {
 
-	unsigned int dim = 5;
-	SurrogateModelData dataTest;
-
-	vec lb(dim, fill::zeros);
-	vec ub(dim, fill::ones);
-	Bounds boxConstraints(lb,ub);
-	dataTest.setBoxConstraints(boxConstraints);
-
-
-}
-
-TEST(testSurrogateModelData, testsetBoxConstraintsFromData){
-
-	unsigned int dim = 5;
-	unsigned int N = 100;
-
-	mat testData(N,dim+1, fill::randu);
-
-	testData = 10*testData;
-	testData(5,2) = 14.0;
-
-	saveMatToCVSFile(testData,"testData.csv");
-
-	SurrogateModelData dataTest;
-	dataTest.readData("testData.csv");
-
-	dataTest.setBoxConstraintsFromData();
-
-	Bounds boundsGet = dataTest.getBoxConstraints();
-
-	double upperBound = boundsGet.getUpperBound(2);
-
-	ASSERT_EQ(upperBound, 14.0);
-
-	remove("testData.csv");
-
-}
-
-
-
-TEST(testSurrogateModelData, testisDataNormalized){
-
-	SurrogateModelData dataTest;
-	ASSERT_FALSE(dataTest.isDataNormalized());
-}
-
-
-
-TEST(testSurrogateModelData, testnormalizeSampleInputMatrix){
-
-	unsigned int N = 100;
-	unsigned dim = 10;
-	mat testDataWithGradient(N,2*dim+1,fill::randu);
-
-	testDataWithGradient = 10.0*testDataWithGradient;
-
-	string fileNameDataInput = "testData.csv";
-	saveMatToCVSFile(testDataWithGradient,fileNameDataInput);
-
-	SurrogateModelData dataTest;
-
-	//	dataTest.setDisplayOn();
-	dataTest.setGradientsOn();
-	dataTest.readData(fileNameDataInput);
-	dataTest.assignDimensionFromData();
-	dataTest.assignSampleInputMatrix();
+	testData.setGradientsOn();
+	readRandomTrainingDataWithGradients();
+	testData.assignDimensionFromData();
+	testData.assignSampleOutputVector();
 
 	vec lb(dim, fill::zeros);
 	vec ub(dim, fill::ones);
 	ub.fill(10.0);
 	Bounds boxConstraints(lb,ub);
-	dataTest.setBoxConstraints(boxConstraints);
+	testData.setBoxConstraints(boxConstraints);
 
-	dataTest.normalizeSampleInputMatrix();
+	testData.normalizeSampleInputMatrix();
 
-	ASSERT_TRUE(dataTest.isDataNormalized());
+	ASSERT_TRUE(testData.isDataNormalized());
 
 	unsigned int someRowIndex = 7;
-	rowvec x = dataTest.getRowX(someRowIndex);
+	rowvec x = testData.getRowX(someRowIndex);
 
-	for(unsigned int i=0; i<dataTest.getDimension(); i++){
-		double normalizedValue = testDataWithGradient(someRowIndex,i)/100.0;
+	for(unsigned int i=0; i<testData.getDimension(); i++){
+		double normalizedValue = trainingData(someRowIndex,i)/100.0;
 		double error = fabs(normalizedValue- x(i));
 		EXPECT_LT(error, 10E-10 );
 	}
 
-	remove("testData.csv");
 
 }
 
-TEST(testSurrogateModelData, testassignSampleOutputVector){
-
-	unsigned int N = 100;
-	unsigned dim = 10;
-	mat testDataWithGradient(N,2*dim+1,fill::randu);
-
-	testDataWithGradient = 10.0*testDataWithGradient;
-
-	string fileNameDataInput = "testData.csv";
-	saveMatToCVSFile(testDataWithGradient,fileNameDataInput);
-
-	SurrogateModelData dataTest;
-
-	//	dataTest.setDisplayOn();
-	dataTest.setGradientsOn();
-	dataTest.readData(fileNameDataInput);
-	dataTest.assignDimensionFromData();
-	dataTest.assignSampleOutputVector();
-
-	vec y = dataTest.getOutputVector();
-
-	for(unsigned int i=0; i<N; i++){
-
-		double error = fabs(y(i)- testDataWithGradient(i,dim));
-		EXPECT_LT(error, 10E-10 );
-	}
-
-	remove("testData.csv");
-
-}
+TEST_F(SurrogateModelDataTest, testassignGradientMatrix) {
 
 
-TEST(testSurrogateModelData, testassignGradientMatrix){
+	testData.setGradientsOn();
+	readRandomTrainingDataWithGradients();
+	testData.assignDimensionFromData();
+	testData.assignSampleOutputVector();
+	testData.assignGradientMatrix();
 
-	unsigned int N = 100;
-	unsigned dim = 10;
-	mat testDataWithGradient(N,2*dim+1,fill::randu);
+	mat gradient = testData.getGradientMatrix();
 
-
-	string fileNameDataInput = "testData.csv";
-	saveMatToCVSFile(testDataWithGradient,fileNameDataInput);
-
-	SurrogateModelData dataTest;
-
-//	dataTest.setDisplayOn();
-	dataTest.setGradientsOn();
-	dataTest.readData(fileNameDataInput);
-	dataTest.assignDimensionFromData();
-	dataTest.assignGradientMatrix();
-
-	mat gradient = dataTest.getGradientMatrix();
-
-	bool result = isEqual(gradient, testDataWithGradient.submat(0,dim+1,N-1, 2*dim), 10E-8);
+	bool result = isEqual(gradient, trainingData.submat(0,dim+1,N-1, 2*dim), 10E-8);
 	ASSERT_TRUE(result);
 
-
-	remove("testData.csv");
 }
+
+
 
 
 

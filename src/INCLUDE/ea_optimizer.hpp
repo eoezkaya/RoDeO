@@ -42,6 +42,9 @@ using namespace arma;
 typedef double (*EAObjectiveFunction)(vec);
 
 
+
+
+
 class EAIndividual {
 
 
@@ -81,11 +84,28 @@ public:
 	void initializeRandom(void);
 
 	void print(void) const;
+	void printLess(void) const;
 	EAIndividual(unsigned int);
 	EAIndividual();
 
 
 } ;
+
+
+
+class EAOutput : public OutputDevice{
+
+private:
+
+
+public:
+
+	void printSolution(EAIndividual &) const;
+
+
+};
+
+
 
 class EAPopulation{
 
@@ -124,6 +144,7 @@ public:
 
 
 	int getIndividualOrderInPopulationById(unsigned int id) const;
+	unsigned int  getIndividualIdInPopulationByOrder(unsigned int order) const;
 
 	void print(void) const;
 
@@ -134,11 +155,16 @@ public:
 	void updatePopulationProperties(void);
 
 	EAIndividual pickUpARandomIndividualForReproduction(void) const;
+	unsigned int pickUpAnIndividualThatWillDie(void) const;
+
+	void reset(void);
+	void writeToFile(std::string) const;
+	void readFromFile(std::string);
 
 };
 
 
-class EAOptimizer2 : public GeneralPurposeOptimizer{
+class EAOptimizer : public GeneralPurposeOptimizer{
 
 private:
 
@@ -155,28 +181,30 @@ private:
 	unsigned int sizeOfInitialPopulation = 0;
 
 	unsigned int totalNumberOfGeneratedIndividuals = 0;
-	unsigned int totalNumberOfGeneratedInviduals = 0;
+
 	unsigned int numberOfNewIndividualsInAGeneration = 0;
 	unsigned int numberOfDeathsInAGeneration = 0;
 	unsigned int numberOfGenerations = 0;
-	unsigned int maximumNumberOfGeneratedIndividuals = 0;
 	unsigned int totalNumberOfMutations = 0;
 	unsigned int totalNumberOfCrossOvers = 0;
 
 
-
+	EAOutput output;
 
 
 	bool ifPopulationIsInitialized = false;
 
 	double improvementFunction = 0.0;
 
-
+	void callObjectiveFunctionForAGroup(std::vector<EAIndividual> &children);
+	void generateAGroupOfIndividualsForReproduction(
+			std::vector<EAIndividual> &children);
+	void checkIfSettingsAreOk(void) const;
 
 public:
 
 
-	EAOptimizer2();
+	EAOptimizer();
 
 	void setMutationProbability(double value);
 	void setInitialPopulationSize(unsigned int);
@@ -187,131 +215,43 @@ public:
 
 	void callObjectiveFunction(EAIndividual &individual);
 
+
 	EAIndividual generateRandomIndividual(void);
 
 	void initializePopulation(void);
+
 	void printPopulation(void) const;
+	void printSettings(void) const;
+
 	unsigned int getPopulationSize(void) const;
 
 	std::pair<EAIndividual, EAIndividual> generateRandomParents(void) const;
 
+	EAIndividual getSolution(void) const;
+	vec getBestDesignVector(void) const;
+	double getBestObjectiveFunctionValue(void) const;
 
-
-
-};
-
-
-class EAOptimizer : public GeneralPurposeOptimizer{
-
-private:
-
-
-
-	std::string polynomialForFitnessDistrubution = "quadratic";
-
-	double populationMinimum = 0.0;
-	double populationMaximum = 0.0;
-
-
-
-	double mutationProbability = 0.0;
-	double mutationProbabilityLastGeneration = 0.0;
-
-
-	std::vector<EAIndividual> population;
-
-	unsigned int idPopulationBest = 0;
-
-	unsigned int sizeOfInitialPopulation = 0;
-	unsigned int sizeOfPopulation = 0;
-	unsigned int totalNumberOfGeneratedIndividuals = 0;
-	unsigned int totalNumberOfGeneratedInviduals = 0;
-	unsigned int numberOfNewIndividualsInAGeneration = 0;
-	unsigned int numberOfDeathsInAGeneration = 0;
-	unsigned int numberOfGenerations = 0;
-	unsigned int maximumNumberOfGeneratedIndividuals = 0;
-	unsigned int totalNumberOfMutations = 0;
-	unsigned int totalNumberOfCrossOvers = 0;
-
-	vec findPolynomialCoefficientsForQuadraticFitnessDistribution(void) const;
-	vec crossOverGenes(unsigned int motherId, unsigned int fatherId);
-	void applyBounds(vec& inputGenes) const;
-	void addNewIndividualsToPopulation();
-
-	void removeIndividualFromPopulation(unsigned int id);
-
-	void addAGroupOfIndividualsToPopulation(std::vector<EAIndividual> individualsToAdd);
-	void addIndividualToPopulation(EAIndividual individualToAdd);
-	void removeIndividualsFromPopulation(void);
-
-	unsigned int getIdOftheIndividual(unsigned int index) const;
-	void findTheBestIndividualInPopulation(void);
-	void printTheBestIndividual(void) const;
-
-
-	bool ifPopulationIsInitialized = false;
-
-	double improvementFunction = 0.0;
-
-	void addToList(std::vector<EAIndividual> &slavePopulation,
-			std::vector<EAIndividual> &groupOfNewIndividualsToAdd);
-
-public:
-
-
-	EAOptimizer();
-
-
-
-	void setMutationProbability(double value);
-	void setInitialPopulationSize(unsigned int);
-	void setNumberOfNewIndividualsInAGeneration(unsigned int);
-	void setNumberOfDeathsInAGeneration(unsigned int);
-	void setNumberOfGenerations(unsigned int number);
-	void setMaximumNumberOfGeneratedIndividuals(unsigned int number);
-
-
-	void callObjectiveFunction(EAIndividual &);
-
-
-
-	unsigned int  getIndividualLocation(unsigned int id) const;
-
-	EAIndividual generateRandomIndividual(void);
-	EAIndividual generateIndividualByReproduction(std::pair<unsigned int, unsigned int> indicesParents);
-
-	void initializePopulation(void);
-	void printPopulation(void) const;
-
-	unsigned int getPopulationSize(void) const;
-
-	vec getPopulationFitnessValues(void) const;
-	vec getPopulationObjectiveFunctionValues(void) const;
-	vec getPopulationReproductionProbabilities(void) const;
-	vec getPopulationDeathProbabilities(void) const;
-	void updatePopulationMinAndMax(void);
-
-
-	void updatePopulationProperties(void);
-	void updatePopulationFitnessValues(void);
-	void updatePopulationReproductionProbabilities(void);
-	void updatePopulationDeathProbabilities(void);
-
-	unsigned int pickUpARandomIndividual(void) const;
-	unsigned int pickUpAnIndividualThatWillDie() const;
-
-	std::pair<unsigned int, unsigned int> generateRandomParents(void) const;
-	void generateNewGeneration(void);
-
+	void applyBoundsIfNecessary(EAIndividual& inputGenes) const;
 	void applyMutation(vec& inputGenes);
 
-	void checkIfSettingsAreOk(void) const;
+	EAIndividual crossOver(std::pair<EAIndividual, EAIndividual> parents);
+	EAIndividual generateIndividualByReproduction(std::pair<EAIndividual, EAIndividual> parents);
+	void addNewIndividualsToPopulation(void);
+	void removeIndividualsFromPopulation(void);
+	void generateANewGeneration(void);
 
+	void printSolution(void);
 	void optimize(void);
 
-	vec getBestDesignvector(void) const;
+	void setDisplayOn(void);
+	void setDimension(unsigned int value);
+	void setWarmStartOn(void);
+	void setWarmStartOff(void);
 
-	double getBestObjectiveFunction(void) const;
+	void resetPopulation(void);
+	void writeWarmRestartFile(void);
+	void readWarmRestartFile(void);
+
 
 };
 

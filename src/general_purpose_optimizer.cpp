@@ -205,3 +205,9 @@ double GeneralPurposeOptimizer::calculateObjectiveFunctionInternal(vec& x){
 
 }
 
+void GeneralPurposeOptimizer::writeWarmRestartFile(void){
+
+	assert(false);
+
+}
+

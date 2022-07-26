@@ -38,7 +38,7 @@
 #include "design.hpp"
 #include "linear_solver.hpp"
 #include "ea_optimizer.hpp"
-
+#include "correlation_functions.hpp"
 using namespace arma;
 
 
@@ -47,10 +47,10 @@ class KrigingModel : public SurrogateModel{
 
 private:
 
-	vec theta;
-	vec gamma;
+	/* Auxiliary vectors */
 	vec R_inv_ys_min_beta;
 	vec R_inv_I;
+	vec R_inv_ys;
 	vec vectorOfOnes;
 
 
@@ -60,20 +60,18 @@ private:
 	double sigmaSquared = 0.0;
 
 	bool ifUsesLinearRegression = false;
-	double epsilonKriging = 10E-12;
+	bool ifCorrelationFunctionIsInitialized = false;
 
 	double genErrorKriging;
 
 	LinearModel linearModel;
 
-	unsigned int numberOfThreadsUsedForTraining = 1;
+	ExponentialCorrelationFunction correlationFunction;
+
 
 
 	void updateWithNewData(void);
 	void updateModelParams(void);
-	mat computeCorrelationMatrix(void);
-	vec computeCorrelationVector(rowvec x) const;
-	double computeCorrelation(rowvec x_i, rowvec x_j) const;
 
 
 public:
@@ -81,11 +79,12 @@ public:
 	KrigingModel();
 	KrigingModel(std::string name);
 
-	void setNameOfInputFile(std::string filename);
-	void setNameOfHyperParametersFile(std::string filename);
-	void setNumberOfTrainingIterations(unsigned int);
-	void setnumberOfThreadsUsedForTraining(unsigned int);
+	void setNameOfInputFile(std::string);
+	void setNameOfHyperParametersFile(std::string);
 
+
+
+	void setNumberOfTrainingIterations(unsigned int);
 
 
 	void initializeSurrogateModel(void);
@@ -94,7 +93,7 @@ public:
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
 	void train(void);
-	void train2(void);
+
 	double interpolateWithGradients(rowvec x) const ;
 	double interpolate(rowvec x) const ;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
@@ -111,13 +110,7 @@ public:
 	void setLinearRegressionOn(void);
 	void setLinearRegressionOff(void);
 
-
-	vec getTheta(void) const;
-	vec getGamma(void) const;
 	mat getCorrelationMatrix(void) const;
-	double getEpsilonKriging(void) const;
-	void setTheta(vec theta);
-	void setGamma(vec gamma);
 
 	void resetDataObjects(void);
 	void resizeDataObjects(void);
@@ -125,6 +118,7 @@ public:
 
 	void updateModelWithNewData(void);
 	void updateAuxilliaryFields(void);
+	void checkAuxilliaryFields(void) const;
 
 	double calculateLikelihoodFunction(vec);
 
@@ -136,7 +130,7 @@ class KrigingHyperParameterOptimizer : public EAOptimizer{
 
 private:
 
-	double calculateObjectiveFunctionInternal(vec input);
+	double calculateObjectiveFunctionInternal(vec& input);
 	KrigingModel  KrigingModelForCalculations;
 
 
@@ -151,42 +145,7 @@ public:
 };
 
 
-class EAdesign {
-public:
-	double fitness;             
-	double objective_val;       
-	vec theta;
-	vec gamma;	
-	double crossover_probability;
-	double death_probability;
-	//	double log_regularization_parameter;
-	unsigned int id;
 
-	void print(void);
-	EAdesign(int dimension);
-	int calculate_fitness(double epsilon, mat &X,vec &ys);
-
-} ;
-
-
-
-int calculate_fitness(EAdesign &new_born,
-		double &reg_param,
-		mat &R,
-		mat &U,
-		mat &L,
-		mat &X,
-		vec &ys,
-		vec &I);
-
-
-
-void pickup_random_pair(std::vector<EAdesign> population, int &mother,int &father);
-void crossover_kriging(EAdesign &father, EAdesign &mother, EAdesign &child);
-void update_population_properties(std::vector<EAdesign> &population);
-
-
-//int train_kriging_response_surface(KrigingModel &model);
 
 
 

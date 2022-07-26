@@ -1417,8 +1417,6 @@ void RoDeODriver::runSurrogateModelTest(void){
 	}
 
 
-
-
 	surrogateTest.performSurrogateModelTest();
 
 

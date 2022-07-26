@@ -65,7 +65,8 @@ protected:
 	bool ifFilenameOptimizationHistoryIsSet = false;
 	bool ifFilenameWarmStartIsSet = false;
 	bool ifFilenameOptimizationResultIsSet = false;
-
+	bool ifWarmStart = false;
+	bool ifSaveWarmStartFile = false;
 
 
 	unsigned int numberOfThreads = 1;
@@ -112,6 +113,7 @@ public:
 
 	virtual void optimize(void);
 	virtual double calculateObjectiveFunctionInternal(vec &);
+	virtual void writeWarmRestartFile(void);
 
 	double callObjectiveFunction(vec &);
 

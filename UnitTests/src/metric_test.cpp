@@ -33,179 +33,233 @@
 #include "test_functions.hpp"
 #include<gtest/gtest.h>
 
+double lowDimensionalTestFunction(rowvec x){
 
-TEST(testMetric, test_WeightedL1NormOptimizerConstructor){
-
-	WeightedL1NormOptimizer testOptimizer;
-
-	unsigned int dim = testOptimizer.getDimension();
-
-	ASSERT_EQ(dim, 0);
+	return x(0)*x(0) + 0.1 * x(1)*x(1);
 
 }
-TEST(testMetric, test_initializeWeightedL1NormObject){
+
+mat generateDataUsinglowDimensionalTestFunction(unsigned int N){
+
+	mat X(N,5,fill::randu);
+	mat output(N,6);
+	for(unsigned int i=0; i<N; i++){
+
+		rowvec xp = X.row(i);
+		double f = lowDimensionalTestFunction(xp);
+		addOneElement(xp,f);
+		output.row(i) = xp;
+	}
+
+
+	return output;
+}
+
+
+
+class MetricTest : public ::testing::Test {
+protected:
+	void SetUp() override {
+
+		unsigned int dim = 5;
+		testNorm.initialize(dim);
+
+
+	}
+
+	//  void TearDown() override {}
+
+	WeightedL1Norm testNorm;
+
+
+};
+
+TEST_F(MetricTest, testinitialize){
+
+	ASSERT_FALSE(testNorm.isNumberOfTrainingIterationsSet());
+	ASSERT_FALSE(testNorm.isTrainingDataSet());
+	ASSERT_FALSE(testNorm.isValidationDataSet());
+
+	vec w = testNorm.getWeights();
+
+	double error = fabs(w(0) - 1.0/5) + fabs(w(1) - 1.0/5) + fabs(w(2) - 1.0/5) + fabs(w(3) - 1.0/5) + fabs(w(4) - 1.0/5);
+
+	EXPECT_LT(error,10E-10);
+	ASSERT_TRUE(testNorm.getDimension() == 5);
+
+}
+
+
+TEST_F(MetricTest, testsetTrainingData){
 
 	unsigned int N = 100;
 	unsigned int dim = 5;
-	WeightedL1NormOptimizer testOptimizer;
-	WeightedL1Norm normTest(dim);
-
 	mat testData(N,dim+1, fill::randu);
-	normTest.setTrainingData(testData);
+	testNorm.setTrainingData(testData);
 
-	mat testValidationData(N,dim+1, fill::randu);
-	normTest.setValidationData(testValidationData);
-
-	testOptimizer.initializeWeightedL1NormObject(normTest);
-
-	ASSERT_TRUE(testOptimizer.isWeightedL1NormForCalculationsSet());
+	assert(testNorm.isTrainingDataSet());
 
 }
 
-
-TEST(testMetric, testinitalize){
-
-	WeightedL1Norm normTest;
-
-	normTest.initialize(5);
-
-	unsigned int dim = normTest.getDimension();
-
-	ASSERT_EQ(dim, 5);
-
-}
-
-
-TEST(testMetric, testfindNearestNeighborL1){
-
-	mat X(100,5, fill::randu);
-
-	rowvec xp(5,fill::randu);
-	xp+=0.000001;
-
-	X.row(11) = xp;
-	unsigned int indx = findNearestNeighborL1(xp, X);
-
-	ASSERT_EQ(indx, 11);
-
-}
-
-TEST(testMetric, testcalculateL1norm){
-
-	rowvec xp(4); xp(0) = -1; xp(1) = 1; xp(2) = -2; xp(3) = 2;
-
-	double normL1 = calculateL1norm(xp);
-	double error = fabs(normL1-6.0);
-	EXPECT_LT(error, 10E-10);
-
-}
-
-
-TEST(testMetric, testinterpolateByNearestNeighbour){
+TEST_F(MetricTest, testsetValidationData){
 
 	unsigned int N = 100;
-	unsigned int dim = 4;
-	unsigned int indexToTest = 3;
-
+	unsigned int dim = 5;
 	mat testData(N,dim+1, fill::randu);
-	mat X = testData.submat(0,0,N-1,dim-1);
+	testNorm.setValidationData(testData);
 
-	vec w(dim, fill::randu);
-	WeightedL1Norm normTest(w);
-	rowvec xp = X.row(indexToTest);
-	xp+= 0.0001;
+	assert(testNorm.isValidationDataSet());
 
-	normTest.setTrainingData(testData);
+}
 
-	double y = normTest.interpolateByNearestNeighbour(xp);
-	double error = fabs(y-testData(indexToTest,dim));
-	EXPECT_LT(error, 10E-10);
+TEST_F(MetricTest, testcalculateNorm){
+
+	rowvec x(5);
+	x(0) = 1.0; x(1) = -2.0; x(2) = 3.0; x(3) = -4.0; x(4) = 5.0;
+	double norm = testNorm.calculateNorm(x);
+
+	double check = 0.2*15;
+	double error = fabs(norm-check);
+	EXPECT_LT(error,10E-10);
 
 
 }
 
-TEST(testMetric, testcalculateMeanSquaredErrorOnData){
+TEST_F(MetricTest, testfindNearestNeighbor){
 
-	unsigned int Ntraining   = 1000;
-	unsigned int Nvalidation = 20;
-	mat dataTraining(Ntraining,3);
-	mat dataValidation(Nvalidation,3);
+	unsigned int N = 100;
+	unsigned int dim = 5;
+	mat testData(N,dim+1, fill::randu);
 
+	rowvec randomRow(dim+1,fill::randu);
 
-	for(unsigned int i=0; i<Ntraining; i++){
+	testData.row(17) = randomRow;
 
-		rowvec x(3);
-		double xp[2];
-		x(0) = generateRandomDouble(-6.0,6.0);
-		x(1) = generateRandomDouble(-6.0,6.0);
-		xp[0] = x(0);
-		xp[1] = x(1);
-		x(2) = Himmelblau(xp);
-		dataTraining.row(i) = x;
-	}
+	testNorm.setTrainingData(testData);
+	rowvec xp(dim);
+	xp = randomRow.head(dim);
+	xp +=0.000001;
 
-	for(unsigned int i=0; i<Nvalidation; i++){
+	int index = testNorm.findNearestNeighbor(xp);
 
-		rowvec x(3);
-		double xp[2];
-		x(0) = generateRandomDouble(-6.0,6.0);
-		x(1) = generateRandomDouble(-6.0,6.0);
-		xp[0] = x(0);
-		xp[1] = x(1);
-		x(2) = Himmelblau(xp);
-		dataValidation.row(i) = x;
-	}
-	vec w(2, fill::ones);
+	ASSERT_TRUE(index == 17);
+}
 
 
-	WeightedL1Norm normTest(w);
+TEST_F(MetricTest, testinterpolateByNearestNeighbour){
 
-	normTest.setTrainingData(dataTraining);
-	normTest.setValidationData(dataValidation);
+	unsigned int N = 100;
+	unsigned int dim = 5;
+	mat testData(N,dim+1, fill::randu);
 
-	double MSE = normTest.calculateMeanSquaredErrorOnData();
+	rowvec randomRow(dim+1,fill::randu);
 
-	EXPECT_LT(MSE, 10000);
+	testData.row(17) = randomRow;
+
+	testNorm.setTrainingData(testData);
+	rowvec xp(dim);
+	xp = randomRow.head(dim);
+	xp +=0.000001;
+
+	double value = testNorm.interpolateByNearestNeighbor(xp);
+	double error = fabs(value - randomRow(dim));
+	EXPECT_LT(error,10E-10);
+}
+
+
+TEST_F(MetricTest, testcalculateMeanL1ErrorOnData){
+
+	unsigned int N = 100;
+	unsigned int dim = 5;
+	mat testData(N,dim+1, fill::randu);
+
+	rowvec randomRow1(dim+1,fill::randu);
+	rowvec randomRow2(dim+1,fill::randu);
+
+	testData.row(17) = randomRow1;
+	testData.row(22) = randomRow2;
+
+	testNorm.setTrainingData(testData);
+	rowvec xp(dim);
+
+	mat validationData(2,dim+1);
+	validationData.row(0) = randomRow1 + 0.0001;
+	validationData.row(1) = randomRow2 + 0.0001;
+
+	testNorm.setValidationData(validationData);
+
+	double L1error = testNorm.calculateMeanL1ErrorOnData();
+	double L1errorExpected = 0.0001;
+	double error = fabs(L1error - L1errorExpected);
+
+	EXPECT_LT(error, 10E-08);
+
+
 
 }
 
 
-TEST(testMetric, testfindOptimalWeight){
+
+TEST_F(MetricTest, testinitializeWeightedL1NormObject){
+
+	WeightedL1NormOptimizer testOptimizer;
+
+	unsigned int N = 100;
+	unsigned int dim = 5;
+	mat testData(N,dim+1, fill::randu);
+	mat validationData(N,dim+1, fill::randu);
+	testNorm.setTrainingData(testData);
+	testNorm.setValidationData(validationData);
+
+	testOptimizer.initializeWeightedL1NormObject(testNorm);
+
+}
+
+
+
+TEST_F(MetricTest, testfindOptimalWeights){
+
 
 	unsigned int numberOfTrainingSamples   = 100;
 	unsigned int numberOfValidationSamples = 100;
 	unsigned int dim = 5;
-	mat trainingData(numberOfTrainingSamples,dim+1, fill::randu);
-	mat validationData(numberOfValidationSamples,dim+1, fill::randu);
-
-	/* we have a simple function y=f(x_1,x_2,x_3,x_4, ...) = x_1^2 + x_2^2 */
-	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
-
-		trainingData(i,dim) = trainingData(i,0)* trainingData(i,0) +  trainingData(i,1)* trainingData(i,1);
-
-	}
-	for(unsigned int i=0; i<numberOfValidationSamples; i++ ){
-
-		validationData(i,dim) = validationData(i,0)* validationData(i,0) + validationData(i,1)* validationData(i,1);
-
-	}
 
 
-	WeightedL1Norm normTest(dim);
-	normTest.setTrainingData(trainingData);
-	normTest.setValidationData(validationData);
-
-	normTest.ifDisplay = false;
-	normTest.findOptimalWeights();
+	mat trainingData = generateDataUsinglowDimensionalTestFunction(numberOfTrainingSamples);
+	mat validationData = generateDataUsinglowDimensionalTestFunction(numberOfValidationSamples );
 
 
-	vec w = normTest.getWeights();
+	testNorm.setTrainingData(trainingData);
+	testNorm.setValidationData(validationData);
 
-	EXPECT_GT(w(0), 1.0/dim);
-	EXPECT_GT(w(1), 1.0/dim);
+	testNorm.findOptimalWeights();
 
+	vec weights = testNorm.getWeights();
+	EXPECT_TRUE(weights(0) > 0.5);
 
 }
+TEST_F(MetricTest, testfindOptimalWeightsParallel){
+
+
+	unsigned int numberOfTrainingSamples   = 100;
+	unsigned int numberOfValidationSamples = 100;
+	unsigned int dim = 5;
+	mat trainingData = generateDataUsinglowDimensionalTestFunction(numberOfTrainingSamples);
+	mat validationData = generateDataUsinglowDimensionalTestFunction(numberOfValidationSamples );
+
+
+	testNorm.setTrainingData(trainingData);
+	testNorm.setValidationData(validationData);
+	testNorm.setNumberOfThreads(2);
+
+	testNorm.findOptimalWeights();
+	vec weights = testNorm.getWeights();
+	EXPECT_TRUE(weights(0) > 0.5);
+
+}
+
+
+
 
 
 

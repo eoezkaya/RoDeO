@@ -81,20 +81,20 @@ protected:
 };
 
 
-TEST_F(SGEKModelTest, testIfConstructorWorks) {
-
-	ASSERT_TRUE(testModel.ifDataIsRead);
-	ASSERT_TRUE(testModel.ifInitialized);
-	ASSERT_TRUE(testModel.ifNormalized);
-	ASSERT_FALSE(testModel.ifHasTestData);
-	ASSERT_FALSE(testModel.areGradientsOn());
-
-	ASSERT_TRUE(testModel.getDimension() == 2);
-	std::string filenameDataInput = testModel.getNameOfInputFile();
-	ASSERT_TRUE(filenameDataInput == "Eggholder.csv");
-
-
-}
+//TEST_F(SGEKModelTest, testIfConstructorWorks) {
+//
+//	ASSERT_TRUE(testModel.ifDataIsRead);
+//	ASSERT_TRUE(testModel.ifInitialized);
+//	ASSERT_TRUE(testModel.ifNormalized);
+//	ASSERT_FALSE(testModel.ifHasTestData);
+//	ASSERT_FALSE(testModel.areGradientsOn());
+//
+//	ASSERT_TRUE(testModel.getDimension() == 2);
+//	std::string filenameDataInput = testModel.getNameOfInputFile();
+//	ASSERT_TRUE(filenameDataInput == "Eggholder.csv");
+//
+//
+//}
 
 #endif
 

@@ -129,6 +129,23 @@ bool checkValue(double value, double expected, double tolerance){
 
 }
 
+
+bool isBetween(double number, double a, double b){
+
+	if(b>a){
+
+		if(number >= a && number <= b) return true;
+	}
+	else{
+
+		if(number >= b && number <= a) return true;
+	}
+
+
+	return false;
+
+}
+
 bool checkValue(double value, double expected){
 
 	double tolerance = 0.0;

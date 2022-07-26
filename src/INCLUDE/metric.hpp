@@ -39,18 +39,25 @@ using namespace arma;
 class WeightedL1Norm{
 
 private:
-	unsigned int dim = 0;
+	unsigned int dimension = 0;
 	vec weights;
 	mat trainingData;
+	mat inputTrainingData;
 	mat validationData;
+	mat inputValidationData;
+	vec outputTrainingData;
+	vec outputValidationData;
 
 	unsigned int nTrainingIterations = 0;
+	unsigned int numberOfThreads = 1;
 	bool ifTrainingDataIsSet = false;
 	bool ifValidationDataIsSet = false;
 	bool ifNumberOfTrainingIterationsIsSet = false;
 
 	void initializeNumberOfTrainingIterations();
-	void setDimensionIfNotSet();
+
+
+	OutputDevice output;
 
 public:
 
@@ -67,19 +74,23 @@ public:
 	void setTrainingData(mat);
 	void setValidationData(mat);
 	void setNumberOfTrainingIterations(unsigned int);
+	void setNumberOfThreads(unsigned int);
 
 	bool isTrainingDataSet(void) const;
 	bool isValidationDataSet(void) const;
 	bool isNumberOfTrainingIterationsSet(void) const;
 
+	void setDimension(unsigned int dim);
 	unsigned int getDimension(void) const;
 	vec getWeights(void) const;
 	void setWeights(vec wIn);
 
 	double calculateNorm(const rowvec &) const;
 	void findOptimalWeights();
+	void findOptimalWeightsGradientBased(vec);
 
-	double interpolateByNearestNeighbour(rowvec) const;
+	double interpolateByNearestNeighbor(rowvec) const;
+	int findNearestNeighbor(const arma::rowvec &x) const;
 	double calculateMeanSquaredErrorOnData(void) const;
 	double calculateMeanL1ErrorOnData(void) const;
 	void generateRandomWeights(void);
@@ -93,7 +104,7 @@ class WeightedL1NormOptimizer : public EAOptimizer{
 
 private:
 
-	double calculateObjectiveFunctionInternal(vec input);
+	double calculateObjectiveFunctionInternal(vec& input);
 	WeightedL1Norm  weightedL1NormForCalculations;
 
 	bool ifWeightedL1NormForCalculationsIsSet = false;
@@ -106,10 +117,7 @@ public:
 	void initializeWeightedL1NormObject(WeightedL1Norm);
 
 
-
 };
-
-
 
 
 

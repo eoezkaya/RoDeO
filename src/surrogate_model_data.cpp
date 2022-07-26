@@ -37,8 +37,23 @@
 
 
 
-SurrogateModelData::SurrogateModelData(){
+SurrogateModelData::SurrogateModelData(){}
 
+
+void SurrogateModelData::reset(void){
+
+	X.reset();
+	XTest.reset();
+	Xraw.reset();
+	XrawTest.reset();
+	dimension = 0;
+	gradient.reset();
+	ifDataHasGradients = false;
+	ifDataIsNormalized = false;
+	ifDataIsRead = false;
+	numberOfSamples = 0;
+	numberOfTestSamples = 0;
+	boxConstraints.reset();
 
 }
 
@@ -68,6 +83,12 @@ void SurrogateModelData::setDimension(unsigned int value){
 
 }
 
+
+bool SurrogateModelData::isDataRead(void) const{
+
+	return ifDataIsRead;
+
+}
 
 mat SurrogateModelData::getRawData(void) const{
 
@@ -136,12 +157,15 @@ void SurrogateModelData::readData(string inputFilename){
 	assignSampleOutputVector();
 	assignGradientMatrix();
 
+	ifDataIsRead = true;
+
 
 }
 
 void SurrogateModelData::readDataTest(string inputFilename){
 
 	assert(isNotEmpty(inputFilename));
+	assert(dimension>0);
 
 	outputToScreen.printMessage("Loading test data from the file: " + inputFilename);
 
@@ -162,7 +186,19 @@ void SurrogateModelData::readDataTest(string inputFilename){
 	outputToScreen.printMessage("Number of test samples = ", numberOfTestSamples);
 
 
-	XTest = XrawTest;
+	if(XrawTest.n_cols == dimension +1){
+
+		yTest = XrawTest.col(dimension);
+		XTest = XrawTest.submat(0,0,numberOfTestSamples-1, dimension-1);
+		ifTestDataHasFunctionValues = true;
+	}
+	else{
+
+		XTest = XrawTest;
+	}
+
+
+	ifTestDataIsRead = true;
 
 
 }
@@ -288,6 +324,23 @@ vec SurrogateModelData::getOutputVector(void) const{
 
 }
 
+vec SurrogateModelData::getOutputVectorTest(void) const{
+
+	assert(ifTestDataIsRead);
+	return XrawTest.col(dimension);
+
+}
+
+
+void SurrogateModelData::setOutputVector(vec yIn){
+
+	assert(yIn.size() == numberOfSamples);
+	y = yIn;
+
+
+}
+
+
 mat SurrogateModelData::getInputMatrix(void) const{
 
 	return X;
@@ -311,9 +364,6 @@ mat SurrogateModelData::getGradientMatrix(void) const{
 
 }
 
-
-
-
 void SurrogateModelData::normalizeSampleInputMatrix(void){
 
 	assert(X.n_rows ==  numberOfSamples);
@@ -328,23 +378,17 @@ void SurrogateModelData::normalizeSampleInputMatrix(void){
 	vec xmax = boxConstraints.getUpperBounds();
 	vec deltax = xmax - xmin;
 
-
 	for(unsigned int i=0; i<numberOfSamples;i++){
-
 		for(unsigned int j=0; j<dimension;j++){
 
 			XNormalized(i,j) = (X(i,j) - xmin(j))/deltax(j);
-
-
 		}
-
 	}
 
 	X = (1.0/dimension)*XNormalized;
 
+
 	ifDataIsNormalized = true;
-
-
 }
 
 
@@ -445,28 +489,14 @@ void SurrogateModelData::print(void) const{
 
 	}
 
+	if(ifTestDataIsRead){
+
+		printMatrix(XrawTest,"raw data for testing");
+
+		printMatrix(XTest, "sample input matrix for testing");
+
+	}
+
 }
 
 
-//void SurrogateModel::checkRawData(void) const{
-//
-//	for(unsigned int i=0; i<numberOfSamples; i++){
-//
-//		rowvec sample1 = rawData.row(i);
-//
-//		for(unsigned int j=i+1; j<numberOfSamples; j++){
-//
-//			rowvec sample2 = rawData.row(j);
-//
-//			if(checkifTooCLose(sample1, sample2)) {
-//
-//				printf("ERROR: Two samples in the training data are too close to each other!\n");
-//
-//				abort();
-//			}
-//		}
-//	}
-//
-//
-//
-//}

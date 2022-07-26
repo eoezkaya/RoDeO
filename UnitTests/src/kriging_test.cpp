@@ -36,18 +36,7 @@
 #include<gtest/gtest.h>
 
 
-mat generate2DEggholderTestDataForKrigingModel(unsigned int N){
 
-	TestFunction testFunctionEggholder("Eggholder",2);
-
-	testFunctionEggholder.setFunctionPointer(Eggholder);
-
-	testFunctionEggholder.setBoxConstraints(0,200.0);
-	mat samples = testFunctionEggholder.generateRandomSamples(N);
-	saveMatToCVSFile(samples,"Eggholder.csv");
-
-	return samples;
-}
 
 
 class KrigingModelTest : public ::testing::Test {
@@ -56,13 +45,13 @@ protected:
 
 
 		unsigned int N = 100;
-		generate2DEggholderTestDataForKrigingModel(N);
-		testModel.setName("Eggholder");
-		testModel.setNameOfInputFile("Eggholder.csv");
-		testModel.readData();
-		testModel.setBoxConstraints(0.0, 200.0);
-		testModel.normalizeData();
-		testModel.initializeSurrogateModel();
+		generate2DEggholderDataForKrigingModel(N);
+		testModel2D.setName("Eggholder");
+		testModel2D.setNameOfInputFile("Eggholder.csv");
+		testModel2D.readData();
+		testModel2D.setBoxConstraints(0.0, 200.0);
+		testModel2D.normalizeData();
+		testModel2D.initializeSurrogateModel();
 
 		N = 10;
 		mat testData1D(N,2);
@@ -98,27 +87,86 @@ protected:
 		testModel1D.initializeSurrogateModel();
 
 
+	}
+
+	void TearDown() override {
+
+		remove("testdata1D.csv");
+		remove("Eggholder.csv");
+		remove("EggholderTest.csv");
+		remove("LinearTF.csv");
+		remove("LinearTFTest.csv");
 
 	}
 
-	//  void TearDown() override {}
 
-	KrigingModel testModel;
+	void generate2DEggholderDataForKrigingModel(unsigned int N){
+
+		TestFunction testFunctionEggholder("Eggholder",2);
+
+		testFunctionEggholder.setFunctionPointer(Eggholder);
+
+		testFunctionEggholder.setBoxConstraints(0,200.0);
+		trainingDataEggholder = testFunctionEggholder.generateRandomSamples(N);
+		saveMatToCVSFile(trainingDataEggholder,"Eggholder.csv");
+		testDataEggholder = testFunctionEggholder.generateRandomSamples(N);
+		saveMatToCVSFile(testDataEggholder,"EggholderTest.csv");
+
+
+	}
+
+	void generate2DLinearTestFunctionDataForKrigingModel(unsigned int N){
+
+		TestFunction testFunctionLinear("LinearTF1",2);
+
+		testFunctionLinear.setFunctionPointer(LinearTF1);
+
+		testFunctionLinear.setBoxConstraints(-10.0,10.0);
+		trainingDataLinearTestFunction = testFunctionLinear.generateRandomSamples(N);
+		saveMatToCVSFile(trainingDataLinearTestFunction,"LinearTF.csv");
+		testDataLinearTestFunction = testFunctionLinear.generateRandomSamples(N);
+		saveMatToCVSFile(testDataLinearTestFunction,"LinearTFTest.csv");
+
+
+	}
+
+
+
+	KrigingModel testModel2D;
+	KrigingModel testModel2DLinear;
 	KrigingModel testModel1D;
 	KrigingHyperParameterOptimizer testOptimizer;
+	mat trainingDataEggholder;
+	mat testDataEggholder;
+	mat trainingDataLinearTestFunction;
+	mat testDataLinearTestFunction;
 };
+
+
+TEST_F(KrigingModelTest, updateModelWithNewData) {
+
+
+	generate2DEggholderDataForKrigingModel(101);
+	testModel2D.updateModelWithNewData();
+
+	unsigned int N = testModel2D.getNumberOfSamples();
+
+	ASSERT_TRUE(N == 101);
+
+}
 
 TEST_F(KrigingModelTest, testIfConstructorWorks) {
 
-	ASSERT_TRUE(testModel.ifDataIsRead);
-	ASSERT_TRUE(testModel.ifInitialized);
-	ASSERT_TRUE(testModel.ifNormalized);
-	ASSERT_FALSE(testModel.ifHasTestData);
-	ASSERT_FALSE(testModel.areGradientsOn());
+	ASSERT_TRUE(testModel2D.ifDataIsRead);
+	ASSERT_TRUE(testModel2D.ifInitialized);
+	ASSERT_TRUE(testModel2D.ifNormalized);
+	ASSERT_FALSE(testModel2D.ifHasTestData);
+	ASSERT_FALSE(testModel2D.areGradientsOn());
 
-	ASSERT_TRUE(testModel.getDimension() == 2);
-	std::string filenameDataInput = testModel.getNameOfInputFile();
+	ASSERT_TRUE(testModel2D.getDimension() == 2);
+	std::string filenameDataInput = testModel2D.getNameOfInputFile();
 	ASSERT_TRUE(filenameDataInput == "Eggholder.csv");
+
 
 
 }
@@ -130,12 +178,31 @@ TEST_F(KrigingModelTest, testcalculateLikelihood) {
 	vec hyperParameters(2);
 	hyperParameters(0) = 5.0;
 	hyperParameters(1) = 2.0;
+
 	double L = testModel1D.calculateLikelihoodFunction(hyperParameters);
 
-	double error = fabs(L - -24.202852114659308);
+	double resultFromForresterCode = -24.202852114659308;
+	double error = fabs(L - resultFromForresterCode);
 
 	ASSERT_LT(error,0.01);
 
+
+}
+
+
+TEST_F(KrigingModelTest, testInSampleErrorWithoutTraining) {
+
+	vec xSample(1);
+	xSample(0) = 0.25;
+	testModel1D.setEpsilon(10E-6);
+	testModel1D.updateAuxilliaryFields();
+
+	double fTilde = testModel1D.interpolate(xSample);
+
+	double resultFromForresterCode = -0.141583407517970;
+	double error = fabs(fTilde - resultFromForresterCode);
+
+	ASSERT_LT(error, 10E-6);
 
 
 }
@@ -147,7 +214,7 @@ TEST_F(KrigingModelTest, testKrigingOptimizerinitializeKrigingModelObject) {
 
 	KrigingHyperParameterOptimizer testOptimizer;
 
-	testOptimizer.initializeKrigingModelObject(testModel);
+	testOptimizer.initializeKrigingModelObject(testModel2D);
 	ASSERT_TRUE(testOptimizer.ifModelObjectIsSet);
 
 }
@@ -163,10 +230,10 @@ TEST_F(KrigingModelTest, testKrigingOptimizertestKrigingOptimizerOptimize) {
 	hyperParameters(dim-1) = 0.1;
 	hyperParameters(dim) = 0.5;
 	hyperParameters(dim+1) = 1.5;
-	double L = testModel.calculateLikelihoodFunction(hyperParameters);
+	double L = testModel2D.calculateLikelihoodFunction(hyperParameters);
 
 	KrigingHyperParameterOptimizer testOptimizer;
-	testOptimizer.initializeKrigingModelObject(testModel);
+	testOptimizer.initializeKrigingModelObject(testModel2D);
 
 	testOptimizer.setDimension(2*dim);
 	Bounds boxConstraints(2*dim);
@@ -180,118 +247,132 @@ TEST_F(KrigingModelTest, testKrigingOptimizertestKrigingOptimizerOptimize) {
 	testOptimizer.setMutationProbability(0.1);
 	testOptimizer.setMaximumNumberOfGeneratedIndividuals(100000*2*dim);
 	testOptimizer.setNumberOfGenerations(5);
-//	testOptimizer.setDisplayOn();
+	//	testOptimizer.setDisplayOn();
 
 
 	testOptimizer.optimize();
 
-	vec optimizedHyperParameters = testOptimizer.getBestDesignvector();
+	EAIndividual solution = testOptimizer.getSolution();
 
-	double Loptimized = testModel.calculateLikelihoodFunction(optimizedHyperParameters);
+	vec optimizedHyperParameters = solution.getGenes();
+
+	double Loptimized = testModel2D.calculateLikelihoodFunction(optimizedHyperParameters);
 
 	ASSERT_TRUE(Loptimized>L);
 
+
 }
+
+
+
 
 TEST_F(KrigingModelTest, testKrigingTrain) {
 
-//	testModel.setnumberOfThreadsUsedForTraining(4);
-	testModel.train2();
 
-	abort();
+	unsigned int dim = 2;
+
+	vec hyperParameters(2*dim);
+	hyperParameters(0) = 10.0;
+	hyperParameters(dim-1) = 0.1;
+	hyperParameters(dim) = 0.5;
+	hyperParameters(dim+1) = 1.5;
+	double L = testModel2D.calculateLikelihoodFunction(hyperParameters);
+
+	testModel2D.setNumberOfThreads(4);
+	testModel2D.setWriteWarmStartFileOn("warmStartFile.csv");
+
+	testModel2D.train();
+
+	ASSERT_TRUE(testModel2D.ifModelTrainingIsDone);
+	remove("warmStartFile.csv");
+
+}
+
+TEST_F(KrigingModelTest, testKrigingTrainWithWarmStart) {
+
+
+
+	testModel2D.setNumberOfTrainingIterations(1000);
+	testModel2D.setNumberOfThreads(4);
+	testModel2D.setWriteWarmStartFileOn("warmStartFile.csv");
+	testModel2D.train();
+	testModel2D.setReadWarmStartFileOn("warmStartFile.csv");
+	testModel2D.train();
+	ASSERT_TRUE(testModel2D.ifModelTrainingIsDone);
+	remove("warmStartFile.csv");
+}
+
+
+
+TEST_F(KrigingModelTest, testOutandInSampleErrorAfterTraining) {
+
+	testModel2D.train();
+
+	double errorInSample = testModel2D.calculateInSampleError();
+
+	EXPECT_LT(errorInSample,10E-06);
+
+	testModel2D.setNameOfInputFileTest("EggholderTest.csv");
+	testModel2D.readDataTest();
+	testModel2D.normalizeDataTest();
+	testModel2D.setNameOfOutputFileTest("EggholderTestResults.csv");
+
+	double errorOutSample = testModel2D.calculateOutSampleError();
+
+	double RMSE = sqrt(errorOutSample);
+	EXPECT_LT(RMSE,200.0);
+
 }
 
 
 
 
+TEST_F(KrigingModelTest, testSaveLoadHyperParameters) {
+
+	testModel2D.setNumberOfTrainingIterations(100);
+	testModel2D.train();
+//	testModel2D.printHyperParameters();
+
+	testModel2D.saveHyperParameters();
+
+	testModel2D.loadHyperParameters();
 
 
-
-
-
-
-
-TEST(testKriging, testInSampleErrorCloseToZeroWithoutTraining){
-
-
-	mat samples(10,3);
-
-	/* we construct first test data using the function x1*x1 + x2 * x2 */
-	for (unsigned int i=0; i<samples.n_rows; i++){
-		rowvec x(3);
-		x(0) = generateRandomDouble(-1.0,2.0);
-		x(1) = generateRandomDouble(-1.0,2.0);
-
-		x(2) = x(0)*x(0) + x(1)*x(1);
-		samples.row(i) = x;
-
-	}
-
-
-	vec lb(2); lb.fill(-1.0);
-	vec ub(2); ub.fill(2.0);
-	saveMatToCVSFile(samples,"KrigingTest.csv");
-
-	KrigingModel testModel("KrigingTest");
-	testModel.readData();
-	testModel.setBoxConstraints(lb, ub);
-	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
-
-
-
-	rowvec xp(2); xp(0) = samples(0,0); xp(1) = samples(0,1);
-
-	rowvec xpnorm = normalizeRowVector(xp,lb,ub);
-
-	double ftilde = testModel.interpolate(xpnorm);
-
-	double error = fabs(ftilde - samples(0,2));
-	EXPECT_LT(error, 10E-6);
-
+//	testModel2D.printHyperParameters();
 
 }
 
-TEST(testKriging, testInSampleErrorCloseToZeroAfterTraining){
 
 
-	mat samples(10,3);
 
-	/* we construct first test data using the function x1*x1 + x2 * x2 */
-	for (unsigned int i=0; i<samples.n_rows; i++){
-		rowvec x(3);
-		x(0) = generateRandomDouble(-1.0,2.0);
-		x(1) = generateRandomDouble(-1.0,2.0);
+TEST_F(KrigingModelTest, testLinearModel) {
 
-		x(2) = x(0)*x(0) + x(1)*x(1);
-		samples.row(i) = x;
+	generate2DLinearTestFunctionDataForKrigingModel(50);
 
-	}
+	testModel2DLinear.setName("LinearTF");
+	testModel2DLinear.setNameOfInputFile("LinearTF.csv");
+	testModel2DLinear.readData();
+
+	testModel2DLinear.setBoxConstraints(-10.0, 10.0);
+	testModel2DLinear.normalizeData();
+	testModel2DLinear.setLinearRegressionOn();
+	testModel2DLinear.initializeSurrogateModel();
+
+	testModel2DLinear.train();
+	testModel2DLinear.setNameOfInputFileTest("LinearTFTest.csv");
+	testModel2DLinear.readDataTest();
+	testModel2DLinear.normalizeDataTest();
 
 
-	vec lb(2); lb.fill(-1.0);
-	vec ub(2); ub.fill(2.0);
-	saveMatToCVSFile(samples,"KrigingTest.csv");
+	double errorOutSample = testModel2DLinear.calculateOutSampleError();
 
-	KrigingModel testModel("KrigingTest");
-	testModel.readData();
-	testModel.setBoxConstraints(lb, ub);
-	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
+//	testModel2DLinear.printHyperParameters();
 
-	testModel.setNumberOfTrainingIterations(100);
-
-	rowvec xp(2); xp(0) = samples(0,0); xp(1) = samples(0,1);
-
-	rowvec xpnorm = normalizeRowVector(xp,lb,ub);
-
-	double ftilde = testModel.interpolate(xpnorm);
-
-	double error = fabs(ftilde - samples(0,2));
-	EXPECT_LT(error, 10E-6);
-
+	double RMSE = sqrt(errorOutSample);
+	EXPECT_LT(RMSE,0.001);
 
 }
+
 
 
 
