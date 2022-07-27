@@ -350,7 +350,7 @@ void AggregationModel::train(void){
 	krigingModel.train();
 
 
-	printHyperParameters();
+//	printHyperParameters();
 
 
 	determineOptimalL1NormWeights();

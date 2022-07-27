@@ -347,7 +347,7 @@ void CorrelationFunction::corrgaussian_gekriging(mat &X, vec theta){
 
 	correlationMatrix = correlationMatrix + correlationMatrix.t()-diagmat(correlationMatrix);
 
-	correlationMatrix.print();
+//	correlationMatrix.print();
 
 }
 
@@ -731,7 +731,7 @@ void CorrelationFunctionBase::computeCorrelationMatrixDot(void){
 			computeCorrelationMatrix();
 
 			correlationMatrixDot = correlationMatrix;
-			correlationMatrixDot.print();
+//			correlationMatrixDot.print();
 
 			for(unsigned int j=0; j<dim; j++){
 
@@ -741,7 +741,7 @@ void CorrelationFunctionBase::computeCorrelationMatrixDot(void){
 
 			}
 
-			correlationMatrixDot.print("correlationMatrixDot");
+//			correlationMatrixDot.print("correlationMatrixDot");
 
 
 		}
@@ -760,7 +760,7 @@ void CorrelationFunctionBase::computeCorrelationMatrixDot(void){
 
 			joinMatricesByRows(correlationMatrixDot,Rdot);
 
-			correlationMatrixDot.print("correlationMatrixDot");
+//			correlationMatrixDot.print("correlationMatrixDot");
 
 		}
 

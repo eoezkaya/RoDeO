@@ -159,6 +159,9 @@ void KrigingModel::printHyperParameters(void) const{
 	unsigned int dim = data.getDimension();
 
 	std::cout<<"Hyperparameters of the Kriging model = \n";
+	std::cout<<"here\n";
+
+
 	vec hyperParameters = correlationFunction.getHyperParameters();
 	vec theta = hyperParameters.head(dim);
 	vec gamma = hyperParameters.tail(dim);

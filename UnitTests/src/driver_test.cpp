@@ -323,6 +323,7 @@ TEST(testDriver, testrunSurrogateModelTestOrdinaryKriging){
 	remove("testDataInput.csv");
 
 
+
 }
 
 
@@ -528,7 +529,7 @@ TEST(testDriver, testrunDoE1){
 	double resultExpected = Himmelblau(x);
 	double err = fabs(resultExpected- firstRowOfResults(2));
 
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 
 
 
@@ -567,12 +568,12 @@ TEST(testDriver, testrunDoE2){
 	x[1] = firstRowOfResults(1);
 	double resultExpected = HimmelblauAdj(x,xb);
 	double err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 
 	double errSensitivity1 = fabs(xb[0]- firstRowOfResults(3));
 	double errSensitivity2 = fabs(xb[1]- firstRowOfResults(4));
-	EXPECT_LT(errSensitivity1,10E-08);
-	EXPECT_LT(errSensitivity2,10E-08);
+	EXPECT_LT(errSensitivity1,10E-07);
+	EXPECT_LT(errSensitivity2,10E-07);
 
 
 	remove("himmelblauDoETest2");
@@ -616,7 +617,7 @@ TEST(testDriver, testrunDoE3){
 
 	resultExpected = x[0]*x[0]+ x[1]*x[1];
 	err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 
 	mat resultsConstraint2;
 	resultsConstraint2.load("Constraint2.csv",csv_ascii);
@@ -626,7 +627,7 @@ TEST(testDriver, testrunDoE3){
 
 	resultExpected = x[0]+ x[1];
 	err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 
 
 	remove("himmelblauDoETest3");
@@ -666,12 +667,12 @@ TEST(testDriver, testrunDoE4){
 	x[1] = firstRowOfResults(1);
 	double resultExpected = HimmelblauAdj(x,xb);
 	double err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 
 	double errSensitivity1 = fabs(xb[0]- firstRowOfResults(3));
 	double errSensitivity2 = fabs(xb[1]- firstRowOfResults(4));
-	EXPECT_LT(errSensitivity1,10E-08);
-	EXPECT_LT(errSensitivity2,10E-08);
+	EXPECT_LT(errSensitivity1,10E-07);
+	EXPECT_LT(errSensitivity2,10E-07);
 
 	mat resultsConstraint1;
 	resultsConstraint1.load("Constraint1.csv",csv_ascii);
@@ -680,7 +681,7 @@ TEST(testDriver, testrunDoE4){
 
 	resultExpected = x[0]*x[0]+ x[1]*x[1];
 	err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 
 	mat resultsConstraint2;
 	resultsConstraint2.load("Constraint2.csv",csv_ascii);
@@ -689,7 +690,7 @@ TEST(testDriver, testrunDoE4){
 
 	resultExpected = x[0]+ x[1];
 	err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 
 
 	remove("himmelblauDoETest4");
@@ -732,8 +733,8 @@ TEST(testDriver, testrunDoE5){
 
 	double errSensitivity1 = fabs(xb[0]- firstRowOfResults(3));
 	double errSensitivity2 = fabs(xb[1]- firstRowOfResults(4));
-	EXPECT_LT(errSensitivity1,10E-08);
-	EXPECT_LT(errSensitivity2,10E-08);
+	EXPECT_LT(errSensitivity1,10E-07);
+	EXPECT_LT(errSensitivity2,10E-07);
 
 	mat resultsConstraint1;
 	resultsConstraint1.load("Constraint1.csv",csv_ascii);
@@ -747,8 +748,8 @@ TEST(testDriver, testrunDoE5){
 
 	errSensitivity1 = fabs(2.0*x[0]- firstRowOfResults(3));
 	errSensitivity2 = fabs(2.0*x[1]- firstRowOfResults(4));
-	EXPECT_LT(errSensitivity1,10E-08);
-	EXPECT_LT(errSensitivity2,10E-08);
+	EXPECT_LT(errSensitivity1,10E-07);
+	EXPECT_LT(errSensitivity2,10E-07);
 
 	mat resultsConstraint2;
 	resultsConstraint2.load("Constraint2.csv",csv_ascii);
@@ -758,7 +759,7 @@ TEST(testDriver, testrunDoE5){
 
 	resultExpected = x[0]+ x[1];
 	err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 
 
 	remove("himmelblauDoETest5");
@@ -796,7 +797,7 @@ TEST(testDriver, testrunDoE6){
 	x[1] = firstRowOfResults(1);
 	double resultExpected = HimmelblauAdj(x,xb);
 	double err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 
 	mat resultsConstraint1;
 	resultsConstraint1.load("Constraint1.csv",csv_ascii);
@@ -806,7 +807,7 @@ TEST(testDriver, testrunDoE6){
 
 	resultExpected = x[0]*x[0]+ x[1]*x[1];
 	err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 	mat resultsConstraint2;
 	resultsConstraint2.load("Constraint2.csv",csv_ascii);
 
@@ -815,7 +816,7 @@ TEST(testDriver, testrunDoE6){
 
 	resultExpected = x[0]+ x[1];
 	err = fabs(resultExpected- firstRowOfResults(2));
-	EXPECT_LT(err,10E-08);
+	EXPECT_LT(err,10E-07);
 	remove("himmelblauDoETest6");
 	remove("himmelblauDoETestConstraint1");
 

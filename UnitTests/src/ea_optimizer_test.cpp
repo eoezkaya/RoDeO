@@ -684,7 +684,7 @@ TEST_F(EAOptimizerTest, testoptimizeWithWarmStart){
 	testOptimizer.setNumberOfGenerations(3);
 	testOptimizer.setMaximumNumberOfGeneratedIndividuals(2000);
 	testOptimizer.setFilenameWarmStart("EggholderWarmStart.csv");
-	testOptimizer.setDisplayOn();
+//	testOptimizer.setDisplayOn();
 
 	testOptimizer.optimize();
 

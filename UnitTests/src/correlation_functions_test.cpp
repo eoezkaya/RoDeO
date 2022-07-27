@@ -147,16 +147,11 @@ TEST_F(CorrelationFunctionsTest, testGEK_compute_dCorrelationMatrixdxi){
 	testCorrelationFunctionGEK.setInputSampleMatrix(testInput);
 	mat dPsidx0 = testCorrelationFunctionGEK.compute_dCorrelationMatrixdxi(0);
 
-	dPsidx0.print();
 
-	std::cout<<"\n\n";
 
 
 	testCorrelationFunctionGEK.computeCorrelationMatrixDotForrester();
 	mat Rdot = testCorrelationFunctionGEK.getCorrelationMatrixDot();
-
-	 Rdot.print();
-	std::cout<<"\n\n";
 
 	testCorrelationFunction2.corrgaussian_gekriging(testInput, theta);
 
