@@ -77,6 +77,9 @@ protected:
 	unsigned int numberOfThreads = 1;
 
 
+
+
+
 public:
 
 	bool ifInitialized = false;

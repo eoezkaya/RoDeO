@@ -307,6 +307,17 @@ void ObjectiveFunction::setParameterBounds(vec lb, vec ub){
 }
 
 
+void ObjectiveFunction::setParameterBounds(Bounds bounds){
+
+	assert(dim == bounds.getDimension());
+	lowerBounds = bounds.getLowerBounds();
+	upperBounds = bounds.getUpperBounds();
+
+	ifParameterBoundsAreSet = true;
+
+
+}
+
 
 KrigingModel ObjectiveFunction::getSurrogateModel(void) const{
 

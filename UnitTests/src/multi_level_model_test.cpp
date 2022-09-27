@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-202 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -35,35 +35,144 @@
 #include<gtest/gtest.h>
 
 
-TEST(testMultiLevelModel, testConstructor){
 
-	MultiLevelModel testModel("MLtestModel");
+class MultiLevelModelTest : public ::testing::Test {
+protected:
+	void SetUp() override {
+
+		system("mkdir MultiLevelModelTest");
+		chdir("./MultiLevelModelTest");
+
+		testModel.setName("MLtestModel");
+
+		generateHimmelblauDataMultiFidelity("highFidelityTrainingData.csv","lowFidelityTrainingData.csv",nSamplesHiFi,nSamplesLowFi);
+		testModel.setinputFileNameHighFidelityData("highFidelityTrainingData.csv");
+		testModel.setinputFileNameLowFidelityData("lowFidelityTrainingData.csv");
+
+		testModelWithShuffledData.setName("MLtestModel");
+		generateHimmelblauDataMultiFidelityWithShuffle("highFidelityTrainingDataShuffled.csv","lowFidelityTrainingDataShuffled.csv",nSamplesHiFi,nSamplesLowFi);
+		testModelWithShuffledData.setinputFileNameHighFidelityData("highFidelityTrainingDataShuffled.csv");
+		testModelWithShuffledData.setinputFileNameLowFidelityData("lowFidelityTrainingDataShuffled.csv");
+
+		lowerBounds = zeros<vec>(dim);
+		upperBounds = zeros<vec>(dim);
+		lowerBounds.fill(-6.0);
+		upperBounds.fill(6.0);
+
+
+		testModel.setBoxConstraints(lowerBounds,upperBounds);
+		testModelWithShuffledData.setBoxConstraints(lowerBounds,upperBounds);
+
+
+
+	}
+
+	void TearDown() override {
+
+		chdir("../");
+		system("rm MultiLevelModelTest -r");
+
+
+	}
+
+
+	MultiLevelModel testModel;
+	MultiLevelModel testModelWithShuffledData;
+	unsigned int dim = 2;
+	vec lowerBounds;
+	vec upperBounds;
+	unsigned int nSamplesLowFi = 200;
+	unsigned int nSamplesHiFi  = 50;
+
+};
+
+
+TEST_F(MultiLevelModelTest, testMLModelInitialSettings) {
+
 	ASSERT_FALSE(testModel.ifDataIsRead);
+	ASSERT_FALSE(testModel.ifErrorDataIsSet);
+	ASSERT_FALSE(testModelWithShuffledData.ifDataIsRead);
+	ASSERT_FALSE(testModelWithShuffledData.ifErrorDataIsSet);
 	ASSERT_FALSE(testModel.ifInitialized);
+	ASSERT_FALSE(testModelWithShuffledData.ifInitialized);
+
+
+}
+
+
+
+TEST_F(MultiLevelModelTest, testAddNewSampleToData){
+
+	testModel.initializeSurrogateModel();
+	//	testModel.setNumberOfTrainingIterations(1000);
+	//	testModel.setNumberOfMaximumIterationsForGammaTraining(10);
+	//	testModel.train();
+
+	rowvec newLowFiSample(dim+1);
+	vec x(dim);
+	x(0) = generateRandomDouble(lowerBounds(0),upperBounds(0) );
+	x(1) = generateRandomDouble(lowerBounds(1),upperBounds(1) );
+
+	double f = HimmelblauLowFi(x);
+	newLowFiSample(0) = x(0);
+	newLowFiSample(1) = x(1);
+	newLowFiSample(2) = f;
+
+	testModel.addNewSampleToData(newLowFiSample);
+
+	ASSERT_EQ(testModel.getNumberOfLowFiSamples(),201);
+
+
+}
+
+TEST_F(MultiLevelModelTest, testAddNewHiFiSampleToData){
+
+	testModel.initializeSurrogateModel();
+	//	testModel.setNumberOfTrainingIterations(1000);
+	//	testModel.setNumberOfMaximumIterationsForGammaTraining(10);
+	//	testModel.train();
+
+	rowvec newHiFiSample(dim+1);
+	rowvec newLowFiSample(dim+1);
+	vec x(dim);
+	x(0) = generateRandomDouble(lowerBounds(0),upperBounds(0) );
+	x(1) = generateRandomDouble(lowerBounds(1),upperBounds(1) );
+
+	double f = HimmelblauLowFi(x);
+	newLowFiSample(0) = x(0);
+	newLowFiSample(1) = x(1);
+	newLowFiSample(2) = f;
+
+	f = Himmelblau(x);
+	newHiFiSample(0) = x(0);
+	newHiFiSample(1) = x(1);
+	newHiFiSample(2) = f;
+
+
+	testModel.addNewSampleToData(newLowFiSample);
+	testModel.addNewHiFiSampleToData(newHiFiSample);
+
+	ASSERT_EQ(testModel.getNumberOfHiFiSamples(),51);
+
 
 }
 
 
 
 
-TEST(testMultiLevelModel, testfindIndexHiFiToLowFiData){
+TEST_F(MultiLevelModelTest, testReadData){
 
-	mat testHifiData(10,9,fill::randu);
-	mat testLofiData(20,9,fill::randu);
+	testModel.bindLowFidelityModel();
+	testModel.bindErrorModel();
+	testModel.readData();
+	ASSERT_TRUE(testModel.ifDataIsRead);
 
-	for(unsigned int i=0; i<10; i++){
+}
 
-		testLofiData.row(i+10) = testHifiData.row(i);
-	}
 
-	testLofiData = shuffle(testLofiData);
+TEST_F(MultiLevelModelTest, testfindIndexHiFiToLowFiData){
 
-	testHifiData.save("HiFiData.csv", csv_ascii);
-	testLofiData.save("LoFiData.csv", csv_ascii);
 
-	MultiLevelModel testModel("MLtestModel");
-	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
-	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
 
 	testModel.bindLowFidelityModel();
 	testModel.bindErrorModel();
@@ -82,32 +191,15 @@ TEST(testMultiLevelModel, testfindIndexHiFiToLowFiData){
 
 	rowvec dx = dataLowFi.row(index) - dataHiFi.row(2);
 
-	for(unsigned int i=0; i<9; i++){
+	for(unsigned int i=0; i<dim; i++){
 
 		EXPECT_LT(dx(i),10E-10);
 	}
 
-
 }
 
-TEST(testMultiLevelModel, prepareErrorData){
-	mat testHifiData(5,3,fill::randu);
-	mat testLofiData(7,3,fill::randu);
-	for(unsigned int i=0; i<5; i++){
 
-		testLofiData.row(i+2) = testHifiData.row(i);
-	}
-
-	testLofiData(6,2) += 0.213;
-
-	testHifiData.save("HiFiData.csv", csv_ascii);
-	testLofiData.save("LoFiData.csv", csv_ascii);
-
-	MultiLevelModel testModel("MLtestModel");
-//	testModel.setDisplayOn();
-
-	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
-	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
+TEST_F(MultiLevelModelTest, testPrepareErrorData){
 
 	testModel.bindLowFidelityModel();
 	testModel.bindErrorModel();
@@ -123,161 +215,58 @@ TEST(testMultiLevelModel, prepareErrorData){
 	mat dataHiFi = testModel.getRawDataHighFidelity();
 	mat dataError = testModel.getRawDataError();
 
-
-	double difference = fabs( dataError(4,2) - (dataHiFi(4,2) -dataLowFi(6,2) ));
-
-	EXPECT_LT(difference, 10E-08);
-	ASSERT_TRUE(testModel.ifErrorDataIsSet);
-
-
-}
-
-TEST(testMultiLevelModel, prepareErrorDataWithShuffle){
-	mat testHifiData(50,5,fill::randu);
-	mat testLofiData(70,5,fill::randu);
-	for(unsigned int i=0; i<50; i++){
-
-		testLofiData.row(i+20) = testHifiData.row(i);
-	}
-
-	vec randomVec(70,fill::randu);
-	testLofiData.col(4) = randomVec;
-	testLofiData = shuffle(testLofiData);
-
-
-	testHifiData.save("HiFiData.csv", csv_ascii);
-	testLofiData.save("LoFiData.csv", csv_ascii);
-
-	MultiLevelModel testModel("MLtestModel");
-	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
-	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
-
-	testModel.bindLowFidelityModel();
-	testModel.bindErrorModel();
-
-
-	testModel.readHighFidelityData();
-	testModel.readLowFidelityData();
-	testModel.setDimensionsHiFiandLowFiModels();
-
-	testModel.prepareErrorData();
-
-	mat dataLowFi = testModel.getRawDataLowFidelity();
-	mat dataHiFi = testModel.getRawDataHighFidelity();
-	mat dataError = testModel.getRawDataError();
-
-	unsigned int index = testModel.findIndexHiFiToLowFiData(2);
-
-
-	double difference = fabs( dataError(2,4) - (dataHiFi(2,4) -dataLowFi(index,4) ));
+	double difference = fabs( dataError(4,2) - (dataHiFi(4,2) - dataLowFi(4,2) ));
 
 	EXPECT_LT(difference, 10E-08);
 	ASSERT_TRUE(testModel.ifErrorDataIsSet);
 
 
-
 }
 
+TEST_F(MultiLevelModelTest, testPrepareErrorDataWithShuffle){
 
 
-
-TEST(testMultiLevelModel, testReadData){
-
-
-
-	mat testHifiData(100,9,fill::randu);
-	mat testLofiData(200,9,fill::randu);
-
-	for(unsigned int i=0; i<100; i++){
-
-		testLofiData.row(i+100) = testHifiData.row(i);
-	}
-
-	vec lb(8);
-	vec ub(8);
-
-	lb.fill(0.0);
-	ub.fill(1.0);
-
-	testHifiData.save("HiFiData.csv", csv_ascii);
-	testLofiData.save("LoFiData.csv", csv_ascii);
-
-	MultiLevelModel testModel("MLtestModel");
-	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
-	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
+	testModelWithShuffledData.bindLowFidelityModel();
+	testModelWithShuffledData.bindErrorModel();
 
 
+	testModelWithShuffledData.readHighFidelityData();
+	testModelWithShuffledData.readLowFidelityData();
+	testModelWithShuffledData.setDimensionsHiFiandLowFiModels();
 
-	testModel.bindLowFidelityModel();
-	testModel.bindErrorModel();
+	testModelWithShuffledData.prepareErrorData();
 
-	//	testModel.ifDisplay = true;
+	mat dataLowFi = testModelWithShuffledData.getRawDataLowFidelity();
+	mat dataHiFi = testModelWithShuffledData.getRawDataHighFidelity();
+	mat dataError = testModelWithShuffledData.getRawDataError();
 
-	testModel.setBoxConstraints(lb,ub);
-	testModel.readData();
-	ASSERT_TRUE(testModel.ifDataIsRead);
+	unsigned int someIndexInData = 2;
+	unsigned int index = testModelWithShuffledData.findIndexHiFiToLowFiData(someIndexInData);
 
 
-}
+	double difference = fabs( dataError(someIndexInData,dim) - (dataHiFi(someIndexInData,dim) -dataLowFi(index,dim) ));
 
-TEST(testMultiLevelModel, testSetParameterBounds){
-
-	mat testHifiData(100,9,fill::randu);
-	mat testLofiData(200,9,fill::randu);
-
-	for(unsigned int i=0; i<100; i++){
-
-		testLofiData.row(i+100) = testHifiData.row(i);
-	}
-
-	testHifiData.save("HiFiData.csv", csv_ascii);
-	testLofiData.save("LoFiData.csv", csv_ascii);
-
-	MultiLevelModel testModel("MLtestModel");
-	testModel.setinputFileNameHighFidelityData("HiFiData.csv");
-	testModel.setinputFileNameLowFidelityData("LoFiData.csv");
-
-	vec lb(8); lb.fill(-2);
-	vec ub(8); ub.fill(2);
-
-	testModel.bindLowFidelityModel();
-	testModel.bindErrorModel();
-
-	testModel.setBoxConstraints(lb,ub);
+	EXPECT_LT(difference, 10E-08);
+	ASSERT_TRUE(testModelWithShuffledData.ifErrorDataIsSet);
 
 
 
 }
 
 
-TEST(testMultiLevelModel, testfindNearestNeighbourLowFidelity){
+TEST_F(MultiLevelModelTest, testfindNearestNeighbourLowFidelity){
 
-	unsigned int nSamplesLowFi = 200;
-	unsigned int nSamplesHiFi  = 50;
-	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
-
-
-	MultiLevelModel testModel("MLtestModel2");
-//	testModel.setDisplayOn();
-
-	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
-	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
 	mat samplesLowFi;
-	samplesLowFi.load("lowFidelityTestData.csv",csv_ascii);
+	samplesLowFi.load("lowFidelityTrainingData.csv",csv_ascii);
 
 	unsigned int someIndex = 14;
 	rowvec x = samplesLowFi.row(someIndex);
-	rowvec xp(2); xp(0) = x(0) + 0.001;  xp(1) = x(1)-0.001;
+	rowvec xp(dim); xp(0) = x(0) + 0.001;  xp(1) = x(1)-0.001;
 
-	xp = normalizeRowVector(xp, lb, ub);
+	xp = normalizeRowVector(xp, lowerBounds, upperBounds);
 
 	unsigned int indx = testModel.findNearestNeighbourLowFidelity(xp);
 
@@ -286,118 +275,68 @@ TEST(testMultiLevelModel, testfindNearestNeighbourLowFidelity){
 
 }
 
-TEST(testMultiLevelModel, testfindNearestL1DistanceToALowFidelitySample){
 
-	int nSamplesLowFi = 200;
-	int nSamplesHiFi  = 50;
-	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
+TEST_F(MultiLevelModelTest, testfindNearestL1DistanceToALowFidelitySample){
 
-
-	MultiLevelModel testModel("MLtestModel2");
-	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
-	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
-
-
 	mat samplesLowFi;
-	samplesLowFi.load("lowFidelityTestData.csv",csv_ascii);
+	samplesLowFi.load("lowFidelityTrainingData.csv",csv_ascii);
 
 	rowvec x = samplesLowFi.row(14);
-	rowvec xp(2); xp(0) = x(0);  xp(1) = x(1);
+	rowvec xp(dim); xp(0) = x(0);  xp(1) = x(1);
 
-	xp = normalizeRowVector(xp, lb, ub);
+	xp = normalizeRowVector(xp, lowerBounds, upperBounds);
 	xp(0) += 0.0001;
 	xp(1) -= 0.0001;
 
 	double dist = testModel.findNearestL1DistanceToALowFidelitySample(xp);
-
-#if 0
-	std::cout<<"dist = "<<dist<<"\n";
-#endif
-
 	EXPECT_LT(fabs(dist-0.0002),10E-08 );
-
 
 }
 
 
 
-TEST(testMultiLevelModel, testfindNearestNeighbourHighFidelity){
+TEST_F(MultiLevelModelTest, testfindNearestNeighbourHighFidelity){
 
-	int nSamplesLowFi = 200;
-	int nSamplesHiFi  = 50;
-	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
-
-
-	MultiLevelModel testModel("MLtestModel2");
-	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
-	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
 	mat samples;
-	samples.load("highFidelityTestData.csv",csv_ascii);
+	samples.load("highFidelityTrainingData.csv",csv_ascii);
 
-	rowvec x = samples.row(14);
+	unsigned int someIndex = 14;
+	rowvec x = samples.row(someIndex);
 	rowvec xp(2); xp(0) = x(0) + 0.001;  xp(1) = x(1)-0.001;
 
-	xp = normalizeRowVector(xp, lb, ub);
+	xp = normalizeRowVector(xp, lowerBounds, upperBounds);
 
 	unsigned int indx = testModel.findNearestNeighbourHighFidelity(xp);
 
-	EXPECT_EQ(indx, 14);
+	EXPECT_EQ(indx, someIndex);
 
 
 }
 
+TEST_F(MultiLevelModelTest, testtrainLowFidelityModel){
 
-TEST(testMultiLevelModel, testtrainLowFidelityModel){
-
-
-	int nSamplesLowFi = 200;
-	int nSamplesHiFi  = 50;
-	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
-
-
-	MultiLevelModel testModel("MLtestModel2");
-	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
-	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
-
-
 	testModel.setNumberOfTrainingIterations(1000);
 	testModel.trainLowFidelityModel();
 
 	mat samplesLowFi;
-	samplesLowFi.load("lowFidelityTestData.csv",csv_ascii);
+	samplesLowFi.load("lowFidelityTrainingData.csv",csv_ascii);
 
 
 	double SE = 0.0;
 	for(int i=0; i<nSamplesLowFi; i++){
 
 		rowvec x = samplesLowFi.row(i);
-		double xp[2]; xp[0] = x(0)+0.1; xp[1] = x(1)+0.1;
-		rowvec xIn(2);
-		xIn(0) = x(0) + 0.1;
-		xIn(1) = x(1) + 0.1;
+		rowvec xIn(dim);
+		xIn(0) = x(0) + 0.01;
+		xIn(1) = x(1) + 0.01;
 
-		double f = Himmelblau(xIn.memptr());
-		xIn = normalizeRowVector(xIn, lb, ub);
+		double f = HimmelblauLowFi(xIn.memptr());
+		xIn = normalizeRowVector(xIn, lowerBounds, upperBounds);
 
 		double ftilde = testModel.interpolateLowFi(xIn);
 
@@ -423,21 +362,15 @@ TEST(testMultiLevelModel, testtrainLowFidelityModel){
 
 }
 
+TEST_F(MultiLevelModelTest, testtrainLowFidelityModelWithGradient){
 
 
-TEST(testMultiLevelModel, testtrainLowFidelityModelWithGradient){
 
-	int nSamplesLowFi = 200;
-	int nSamplesHiFi  = 50;
-
-	generateHimmelblauDataMultiFidelityWithGradients("highFidelityTestDataWithGradient.csv","lowFidelityTestDataWithGradient.csv",nSamplesHiFi ,nSamplesLowFi);
+	generateHimmelblauDataMultiFidelityWithGradients("highFidelityTrainingDataWithGradient.csv","lowFidelityTrainingDataWithGradient.csv",nSamplesHiFi ,nSamplesLowFi);
 
 
-	MultiLevelModel testModel("MLtestModelWithGradients");
-//	testModel.setDisplayOn();
-
-	testModel.setinputFileNameHighFidelityData("highFidelityTestDataWithGradient.csv");
-	testModel.setinputFileNameLowFidelityData("lowFidelityTestDataWithGradient.csv");
+	testModel.setinputFileNameHighFidelityData("highFidelityTrainingDataWithGradient.csv");
+	testModel.setinputFileNameLowFidelityData("lowFidelityTrainingDataWithGradient.csv");
 
 
 	testModel.setGradientsOn();
@@ -445,30 +378,27 @@ TEST(testMultiLevelModel, testtrainLowFidelityModelWithGradient){
 	testModel.setGradientsOnHiFi();
 
 
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
 	testModel.setNumberOfTrainingIterations(1000);
+	testModel.setNumberOfMaximumIterationsForGammaTraining(10);
 	testModel.trainLowFidelityModel();
 
 
 	double SE = 0.0;
-	for(int i=0; i<100; i++){
+	for(int i=0; i<nSamplesLowFi; i++){
 
-		rowvec x(2);
-		x = generateRandomRowVector(lb,ub);
-		double xp[2]; xp[0] = x(0); xp[1] = x(1);
+		rowvec x(dim);
+
+		x = generateRandomRowVector(lowerBounds,upperBounds);
+
 		rowvec xIn(2);
 		xIn(0) = x(0);
 		xIn(1) = x(1);
 
-		double f = Himmelblau(xIn.memptr());
-		xIn = normalizeRowVector(xIn, lb, ub);
+		double f = HimmelblauLowFi(xIn.memptr());
+		xIn = normalizeRowVector(xIn, lowerBounds, upperBounds);
 
 		double ftilde = testModel.interpolateLowFi(xIn);
 
@@ -492,29 +422,13 @@ TEST(testMultiLevelModel, testtrainLowFidelityModelWithGradient){
 
 }
 
-TEST(testMultiLevelModel, testtrainErrorModel){
+TEST_F(MultiLevelModelTest, testTrainErrorModel){
 
-	unsigned int numberOfHiFiSamples = 50;
-	unsigned int numberOfLowFiSamples = 200;
-
-
-	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",numberOfHiFiSamples,numberOfLowFiSamples);
-
-
-	MultiLevelModel testModel("MLtestModel");
-
-	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
-	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
-
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 
 	testModel.setNumberOfTrainingIterations(1000);
+	testModel.setNumberOfMaximumIterationsForGammaTraining(10);
 	testModel.trainErrorModel();
 
 	mat samplesError;
@@ -522,7 +436,7 @@ TEST(testMultiLevelModel, testtrainErrorModel){
 
 
 	double squaredError = 0.0;
-	for(int i=0; i<numberOfHiFiSamples; i++){
+	for(int i=0; i<nSamplesHiFi; i++){
 
 		rowvec x = samplesError.row(i);
 		double xp[2]; xp[0] = x(0)+0.1; xp[1] = x(1)+0.1;
@@ -530,9 +444,9 @@ TEST(testMultiLevelModel, testtrainErrorModel){
 		xIn(0) = x(0)+0.1;
 		xIn(1) = x(1)+0.1;
 
-		xIn = normalizeRowVector(xIn, lb, ub);
+		xIn = normalizeRowVector(xIn, lowerBounds, upperBounds);
 		double ftilde = testModel.interpolateError(xIn);
-		double f = -Waves2D(xp)*10.0;
+		double f = -Waves2D(xp)*50.0;
 		squaredError+= (f-ftilde)*(f-ftilde);
 
 #if 0
@@ -544,7 +458,7 @@ TEST(testMultiLevelModel, testtrainErrorModel){
 	}
 
 
-	double MSE = squaredError/numberOfHiFiSamples;
+	double MSE = squaredError/nSamplesHiFi;
 
 #if 0
 	std::cout<<"MSE = "<<MSE<<"\n";
@@ -554,49 +468,27 @@ TEST(testMultiLevelModel, testtrainErrorModel){
 
 }
 
-TEST(testMultiLevelModel, testdetermineGammaBasedOnData){
 
-	int nSamplesLowFi = 200;
-	int nSamplesHiFi  = 50;
-	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
+TEST_F(MultiLevelModelTest, testDetermineGammaBasedOnData){
 
-
-	MultiLevelModel testModel("MLtestModel");
-	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
-	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
-
+	testModel.setNumberOfMaximumIterationsForGammaTraining(100);
 	testModel.determineGammaBasedOnData();
+	double gamma = testModel.getGamma();
 
-
+	EXPECT_GT(gamma,-0.1);
+	EXPECT_LT(gamma,10.1);
 
 }
 
 
 
-TEST(testMultiLevelModel, testInterpolate){
+TEST_F(MultiLevelModelTest, testInterpolate){
 
-	int nSamplesLowFi = 200;
-	int nSamplesHiFi  = 50;
-	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
-
-
-	MultiLevelModel testModel("MLtestModel2");
-	testModel.setinputFileNameHighFidelityData("highFidelityTestData.csv");
-	testModel.setinputFileNameLowFidelityData("lowFidelityTestData.csv");
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	testModel.setBoxConstraints(lb,ub);
 	testModel.initializeSurrogateModel();
 
 	testModel.setNumberOfTrainingIterations(1000);
+
 
 	testModel.train();
 
@@ -604,14 +496,13 @@ TEST(testMultiLevelModel, testInterpolate){
 	for(int i=0; i<100; i++){
 
 		rowvec x(2);
-		x = generateRandomRowVector(lb,ub);
-		double xp[2]; xp[0] = x(0); xp[1] = x(1);
+		x = generateRandomRowVector(lowerBounds, upperBounds);
 		rowvec xIn(2);
 		xIn(0) = x(0);
 		xIn(1) = x(1);
 
 		double f = Himmelblau(xIn.memptr());
-		xIn = normalizeRowVector(xIn, lb, ub);
+		xIn = normalizeRowVector(xIn, lowerBounds, upperBounds);
 
 		double ftilde = testModel.interpolate(xIn);
 
@@ -636,6 +527,154 @@ TEST(testMultiLevelModel, testInterpolate){
 
 }
 
+
+
+TEST_F(MultiLevelModelTest, testInterpolateWithVariance){
+
+	testModel.initializeSurrogateModel();
+
+	testModel.setNumberOfTrainingIterations(500);
+
+	testModel.train();
+
+	mat XLowFi = testModel.getRawDataLowFidelity();
+	mat XHiFi = testModel.getRawDataHighFidelity();
+
+	unsigned int someIndex = 3;
+	unsigned int index = testModel.findIndexHiFiToLowFiData(someIndex);
+
+	rowvec sampleLF = XLowFi.row(index);
+	rowvec sampleHF = XHiFi.row(someIndex);
+
+	sampleLF.print();
+	sampleHF.print();
+
+	double f = sampleHF(dim);
+
+	rowvec xp(dim); xp(0) = sampleHF(0); xp(1) = sampleHF(1);
+
+	xp = normalizeRowVector(xp, lowerBounds, upperBounds);
+
+	double ftilde = 0.0;
+	double ssqr   = 10.0;
+
+	testModel.interpolateWithVariance(xp, &ftilde, &ssqr);
+
+	printScalar(ftilde);
+	printScalar(f);
+	printScalar(ssqr);
+
+	double errorInf = fabs(f-ftilde);
+
+	EXPECT_LT(errorInf,10E-06);
+	EXPECT_LT(ssqr,10E-06);
+
+
+}
+
+TEST_F(MultiLevelModelTest, testCalculateExpectedImprovement){
+
+
+	testModel.initializeSurrogateModel();
+	testModel.setNumberOfTrainingIterations(1000);
+	testModel.train();
+
+
+	mat XLowFi = testModel.getRawDataLowFidelity();
+	mat XHiFi = testModel.getRawDataHighFidelity();
+
+	double fmin = LARGE;
+	unsigned int minIndex = -1;
+	rowvec minSample;
+	for(unsigned int i=0; i<XHiFi.n_rows; i++){
+
+		rowvec sampleHF = XHiFi.row(i);
+
+
+		if(sampleHF(dim) < fmin){
+
+			fmin = sampleHF(dim);
+			minIndex = i;
+			minSample = sampleHF;
+		}
+
+	}
+
+	rowvec xp(dim); xp(0) = minSample(0); xp(1) = minSample(1);
+	xp = normalizeRowVector(xp, lowerBounds, upperBounds);
+
+	xp += 0.01;
+
+	CDesignExpectedImprovement testDesign(xp);
+
+	testModel.calculateExpectedImprovement(testDesign);
+
+	EXPECT_GT(testDesign.valueExpectedImprovement, 10E-5);
+
+}
+
+
+TEST(MultiLevelModelTestNACA0012, testMLModel){
+
+	chdir("./MultiLevelModelTestNACA0012");
+
+	MultiLevelModel testModel;
+	testModel.setName("MLtestModel");
+
+	testModel.setinputFileNameHighFidelityData("CD_HiFi.csv");
+	testModel.setinputFileNameLowFidelityData("CD_LowFi.csv");
+
+	unsigned int dim = 38;
+
+	vec lowerBounds = zeros<vec>(dim);
+	vec upperBounds = zeros<vec>(dim);
+	lowerBounds.fill(-0.00001);
+	upperBounds.fill(0.00001);
+
+	mat CLValidation;
+
+	CLValidation.load("CD.csv", csv_ascii);
+
+	mat X = CLValidation.submat(0,0,99,dim-1);
+	vec CL = CLValidation.col(dim);
+
+	CL.print();
+
+	mat Xnormalized = normalizeMatrix(X,lowerBounds,upperBounds);
+	Xnormalized = Xnormalized*(1.0/dim);
+	Xnormalized.print();
+
+
+	mat results(100, 3);
+
+	testModel.setDisplayOn();
+	testModel.setBoxConstraints(lowerBounds,upperBounds);
+	testModel.initializeSurrogateModel();
+	testModel.setNumberOfThreads(4);
+	testModel.train();
+
+	double SE = 0.0;
+	for(unsigned int i=0; i<100; i++){
+
+		rowvec xp= Xnormalized.row(i);
+
+		double ftilde = testModel.interpolate(xp);
+		double f = CL(i);
+		results(i,0)  = ftilde;
+		results(i,1)  = f;
+		results(i,2)  = (f - ftilde) * (f - ftilde);
+		SE += (f - ftilde) * (f - ftilde);
+
+	}
+
+	SE = SE/100;
+
+	results.save("results.csv", csv_ascii);
+	printScalar(SE);
+
+
+
+}
 
 
 

@@ -32,13 +32,68 @@
 
 #include "optimization.hpp"
 #include "matrix_vector_operations.hpp"
+#include "auxiliary_functions.hpp"
+#include "test_functions.hpp"
 #include "design.hpp"
 #include<gtest/gtest.h>
 
 
-#define TESTOPTIMIZATION
+TEST(testOptimizer, testMLOptimization){
 
-#ifdef TESTOPTIMIZATION
+	chdir("./testMultiLevelOptimization");
+	compileWithCpp("himmelblauHighFidelity.cpp", "himmelblauHighFidelity");
+	compileWithCpp("himmelblauLowFidelity.cpp",  "himmelblauLowFidelity");
+
+
+	Bounds boxConstraints(2);
+    boxConstraints.setBounds(-6.0,6.0);
+
+	unsigned int NhiFi = 100;
+
+	generateHimmelblauDataMultiFidelity("HimmelblauHiFiData.csv", "HimmelblauLowFiData.csv", 50, 100);
+
+
+	std::string studyName = "testOptimizerMultiLevel";
+	Optimizer testStudy(studyName, 2);
+
+	testStudy.setMaximumNumberOfIterations(10);
+	testStudy.setMaximumNumberOfIterationsLowFidelity(100);
+
+
+
+	testStudy.setBoxConstraints(boxConstraints);
+
+
+	ObjectiveFunction objFunTest("testObjectiveFunctionMLSurrogate",2);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
+
+	ObjectiveFunctionDefinition testObjectiveFunctionDef("testObjectiveFunctionMLSurrogate");
+	testObjectiveFunctionDef.outputFilename      = "HimmelblauHiFiData.csv";
+	testObjectiveFunctionDef.outputFilenameLowFi = "HimmelblauLowFiData.csv";
+	testObjectiveFunctionDef.ifMultiLevel = true;
+
+
+	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
+
+	testStudy.addObjectFunction(objFunTest);
+
+	testStudy.setDisplayOn();
+
+	testStudy.EfficientGlobalOptimization();
+
+	chdir("../");
+
+	abort();
+}
+
+
+
+
+
+
+
 
 
 
@@ -135,5 +190,8 @@ TEST(testOptimizer, testMaximizeEIGradientBased){
 
 
 }
-#endif
+
+
+
+
 

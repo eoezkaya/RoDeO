@@ -154,12 +154,14 @@ void KrigingModel::initializeSurrogateModel(void){
 
 }
 
+
+
+
 void KrigingModel::printHyperParameters(void) const{
 
 	unsigned int dim = data.getDimension();
 
 	std::cout<<"Hyperparameters of the Kriging model = \n";
-	std::cout<<"here\n";
 
 
 	vec hyperParameters = correlationFunction.getHyperParameters();
@@ -517,7 +519,27 @@ void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double
 
 	R_inv_r = linearSystemCorrelationMatrix.solveLinearSystem(r);
 
-	*sSqrOutput = sigmaSquared*( 1.0 - dot(r,R_inv_r)+ ( pow( (dot(r,R_inv_I) -1.0 ),2.0)) / (dot(vectorOfOnes,R_inv_I) ) );
+	double dotRTRinvR = dot(r,R_inv_r);
+	double dotRTRinvI = dot(r,R_inv_I);
+	double dotITRinvI = dot(vectorOfOnes,R_inv_I);
+
+	double term1 = pow( (dotRTRinvI - 1.0 ),2.0)/dotITRinvI;
+
+	if(fabs(dotRTRinvI - 1.0) < 10E-10) {
+
+		term1 = 0.0;
+	}
+
+	double term2 = 1.0 - dotRTRinvR;
+
+	if(fabs(dotRTRinvR - 1.0) < 10E-10) {
+
+		term2 = 0.0;
+	}
+
+	double term3 = term2 + term1;
+
+	*sSqrOutput = sigmaSquared* term3;
 
 }
 
@@ -602,7 +624,16 @@ void KrigingModel::train(void){
 		parameterOptimizer.setInitialPopulationSize(2*dim*100);
 		parameterOptimizer.setMutationProbability(0.1);
 		parameterOptimizer.setMaximumNumberOfGeneratedIndividuals(numberOfTrainingIterations);
-		parameterOptimizer.setNumberOfGenerations(5);
+
+		unsigned int numberOfGenerations = numberOfTrainingIterations/(200.0*dim);
+
+		if(numberOfGenerations == 0){
+
+			numberOfGenerations = 1;
+		}
+		parameterOptimizer.setNumberOfGenerations(numberOfGenerations);
+
+		parameterOptimizer.setDisplayOn();
 
 		if(ifReadWarmStartFile){
 

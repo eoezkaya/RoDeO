@@ -704,19 +704,19 @@ void EAOptimizer::callObjectiveFunction(EAIndividual &individual){
 EAIndividual  EAOptimizer::generateRandomIndividual(void){
 
 
-	this->output.printMessage("Random invidual = ");
+//	this->output.printMessage("Random invidual = ");
 
 	assert(parameterBounds.areBoundsSet());
 	EAIndividual newIndividual(dimension);
 
 	vec randomGenes = parameterBounds.generateVectorWithinBounds();
-	output.printMessage("x", randomGenes);
+//	output.printMessage("x", randomGenes);
 	newIndividual.initializeGenes(randomGenes);
 	newIndividual.setId(totalNumberOfGeneratedIndividuals);
 	totalNumberOfGeneratedIndividuals++;
 
 	callObjectiveFunction(newIndividual);
-	output.printMessage("f(x) = ", newIndividual.getObjectiveFunctionValue());
+//	output.printMessage("f(x) = ", newIndividual.getObjectiveFunctionValue());
 
 
 	return newIndividual;
@@ -730,6 +730,8 @@ void EAOptimizer::initializePopulation(void){
 	assert(areBoundsSet());
 
 
+	output.printMessage("Size of initial population = ",sizeOfInitialPopulation);
+
 #pragma omp parallel
 	{
 
@@ -739,6 +741,10 @@ void EAOptimizer::initializePopulation(void){
 		for (unsigned int i = 0; i < sizeOfInitialPopulation; ++i)
 		{
 
+			if(i%100 == 0) {
+
+				output.printMessage("Iteration = ",i);
+			}
 			EAIndividual generatedIndividual = generateRandomIndividual();
 			slavePopulation.push_back(generatedIndividual);
 		}

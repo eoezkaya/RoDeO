@@ -331,14 +331,14 @@ TEST_F(KrigingModelTest, testSaveLoadHyperParameters) {
 
 	testModel2D.setNumberOfTrainingIterations(100);
 	testModel2D.train();
-//	testModel2D.printHyperParameters();
+	//	testModel2D.printHyperParameters();
 
 	testModel2D.saveHyperParameters();
 
 	testModel2D.loadHyperParameters();
 
 
-//	testModel2D.printHyperParameters();
+	//	testModel2D.printHyperParameters();
 
 }
 
@@ -366,7 +366,7 @@ TEST_F(KrigingModelTest, testLinearModel) {
 
 	double errorOutSample = testModel2DLinear.calculateOutSampleError();
 
-//	testModel2DLinear.printHyperParameters();
+	//	testModel2DLinear.printHyperParameters();
 
 	double RMSE = sqrt(errorOutSample);
 	EXPECT_LT(RMSE,0.001);
@@ -374,5 +374,76 @@ TEST_F(KrigingModelTest, testLinearModel) {
 }
 
 
+
+TEST(KrigingModelTestNACA0012, testKriging){
+
+	chdir("./MultiLevelModelTestNACA0012");
+
+	KrigingModel testModel;
+
+
+
+	unsigned int dim = 38;
+
+	vec lowerBounds = zeros<vec>(dim);
+	vec upperBounds = zeros<vec>(dim);
+	lowerBounds.fill(-0.00001);
+	upperBounds.fill(0.00001);
+
+	mat CLValidation;
+
+	CLValidation.load("CD.csv", csv_ascii);
+
+	mat X = CLValidation.submat(0,0,99,dim-1);
+	vec CL = CLValidation.col(dim);
+
+	CL.print();
+
+	mat Xnormalized = normalizeMatrix(X,lowerBounds,upperBounds);
+	Xnormalized = Xnormalized*(1.0/dim);
+	Xnormalized.print();
+
+
+	mat results(100, 3);
+
+	testModel.setDisplayOn();
+	testModel.setNumberOfThreads(4);
+
+	testModel.setName("KrigingtestModel");
+	testModel.setNameOfInputFile("CD_HiFi.csv");
+	testModel.readData();
+
+	testModel.setBoxConstraints(lowerBounds,upperBounds);
+	testModel.normalizeData();
+	testModel.setLinearRegressionOn();
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+
+
+
+
+	double SE = 0.0;
+	for(unsigned int i=0; i<100; i++){
+
+		rowvec xp= Xnormalized.row(i);
+
+		double ftilde = testModel.interpolate(xp);
+		double f = CL(i);
+		results(i,0)  = ftilde;
+		results(i,1)  = f;
+		results(i,2)  = (f - ftilde) * (f - ftilde);
+		SE += (f - ftilde) * (f - ftilde);
+
+	}
+
+	SE = SE/100;
+
+	results.save("results.csv", csv_ascii);
+	printScalar(SE);
+
+
+
+}
 
 

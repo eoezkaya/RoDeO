@@ -40,6 +40,8 @@
 using std::string;
 
 
+/* Hyperparameters of the MultiLevelModel =  Hyperparameters of the lowFi Model + Hyperparameters of the error Model + gamma */
+
 class MultiLevelModel : public SurrogateModel {
 
 private:
@@ -126,7 +128,12 @@ public:
 	void setDisplayOn(void);
 	void setDisplayOff(void);
 
+	void setGamma(double);
+	double getGamma(void) const;
+	void setNumberOfMaximumIterationsForGammaTraining(unsigned int value);
 
+	unsigned int getNumberOfLowFiSamples(void) const;
+	unsigned int getNumberOfHiFiSamples(void) const;
 
 	void train(void);
 	void trainLowFidelityModel(void);
@@ -134,6 +141,8 @@ public:
 
 
 	void determineGammaBasedOnData(void);
+
+
 
 	double interpolate(rowvec x) const ;
 	double interpolateLowFi(rowvec x) const;
@@ -143,6 +152,7 @@ public:
 
 	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
 	void addNewSampleToData(rowvec newsample);
+	void addNewHiFiSampleToData(rowvec newsample);
 
 	void readHighFidelityData(void);
 	void readLowFidelityData(void);
@@ -167,6 +177,10 @@ public:
 
 	double findNearestL1DistanceToALowFidelitySample(rowvec x) const;
 	double findNearestL1DistanceToAHighFidelitySample(rowvec x) const;
+
+
+	void setNumberOfThreads(unsigned int);
+
 
 
 };

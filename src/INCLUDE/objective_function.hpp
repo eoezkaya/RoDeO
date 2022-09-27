@@ -185,6 +185,7 @@ public:
 
 
 	void setParameterBounds(vec , vec );
+	void setParameterBounds(Bounds );
 
 	void setNumberOfTrainingIterationsForSurrogateModel(unsigned int);
 

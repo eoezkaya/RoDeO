@@ -95,6 +95,9 @@ public:
 	unsigned int dimension = 0;
 	unsigned int numberOfConstraints = 0;
 	unsigned int maxNumberOfSamples = 0;
+
+	unsigned int maxNumberOfSamplesLowFidelity = 0;
+
 	unsigned int howOftenTrainModels = 10; /* train surrogates in every 10 iteration */
 
 
@@ -127,11 +130,15 @@ public:
 	void cleanDoEFiles(void) const;
 	void setProblemType(std::string);
 	void setMaximumNumberOfIterations(unsigned int );
+	void setMaximumNumberOfIterationsLowFidelity(unsigned int);
+
 	void setMaximumNumberOfIterationsForEIMaximization(unsigned int);
 
 	void setBoxConstraints(std::string filename="BoxConstraints.csv");
 	void setBoxConstraints(double lb, double ub);
 	void setBoxConstraints(vec lb, vec ub);
+	void setBoxConstraints(Bounds boxConstraints);
+
 	void setFileNameDesignVector(std::string filename);
 
 	void setDisplayOn(void);

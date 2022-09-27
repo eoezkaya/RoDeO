@@ -166,6 +166,15 @@ void Optimizer::setMaximumNumberOfIterations(unsigned int maxIterations){
 
 }
 
+void Optimizer::setMaximumNumberOfIterationsLowFidelity(unsigned int maxIterations){
+
+	maxNumberOfSamplesLowFidelity =  maxIterations;
+
+
+}
+
+
+
 void Optimizer::setMaximumNumberOfIterationsForEIMaximization(unsigned int maxIterations){
 
 	iterMaxEILoop = maxIterations;
@@ -251,6 +260,16 @@ void Optimizer::setBoxConstraints(vec lb, vec ub){
 	ifBoxConstraintsSet = true;
 
 }
+
+
+void Optimizer::setBoxConstraints(Bounds boxConstraints){
+
+	lowerBounds = boxConstraints.getLowerBounds();
+	upperBounds = boxConstraints.getUpperBounds();
+	ifBoxConstraintsSet = true;
+}
+
+
 
 
 void Optimizer::setDisplayOn(void){
@@ -476,6 +495,8 @@ void Optimizer::visualizeOptimizationHistory(void) const{
 
 
 void Optimizer::initializeSurrogates(void){
+
+	assert(ifObjectFunctionIsSpecied);
 
 	displayMessage("Initializing surrogate model for the objective function...\n");
 

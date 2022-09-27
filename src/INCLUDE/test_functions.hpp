@@ -219,11 +219,15 @@ double Shubert(double *x);
 double ShubertAdj(double *x, double *xb);
 
 double Himmelblau(double *x);
+double HimmelblauLowFi(double *x);
 double HimmelblauAdj(double *x, double *xb);
 double Himmelblau(vec x);
+double HimmelblauLowFi(vec x);
 vec HimmelblauGradient(vec x);
 
 void generateHimmelblauDataMultiFidelity(std::string, std::string, unsigned int, unsigned int);
+void generateHimmelblauDataMultiFidelityWithShuffle(std::string , std::string, unsigned int, unsigned int);
+
 void generateHimmelblauDataMultiFidelityWithGradients(std::string, std::string, unsigned int, unsigned int);
 
 
