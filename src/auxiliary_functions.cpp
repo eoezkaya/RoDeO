@@ -518,7 +518,7 @@ bool isAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list){
  * @return -1 if no, position in the list if yes
  *
  */
-int is_in_the_list(unsigned int entry, uvec &list){
+int isIntheList(unsigned int entry, uvec &list){
 
 	int flag=-1;
 
@@ -693,135 +693,8 @@ void generate_validation_set(int *indices, int size, int N){
 
 }
 
-/** randomly generates the indices of a validation set
- *
- * @param[in]  N:  dimension of the data set
- * @param[out] indices (arma::uvec)
- *
- */
-void generate_validation_set(uvec &indices, int N){
-
-	int size = indices.size();
-	int number_of_indices_generated=0;
-	int random_int;
-	int flag;
-
-#if 0
-	printf("size of the validation set = %d\n",size);
-	printf("size of the data set = %d\n",N);
-#endif
-
-	if(size <=0 || size>N){
-
-		printf("Error: Size of the validation set is wrong");
-		exit(-1);
-	}
-
-	indices.fill(-1);
 
 
-	while(number_of_indices_generated < size){
-
-		while(1){
-
-			/* generate a random index */
-			random_int = rand() % N;
-			/* check if it is already in the list */
-			flag= is_in_the_list(random_int, indices);
-
-			if(flag == -1){
-
-				indices[number_of_indices_generated]= random_int;
-				number_of_indices_generated++;
-				break;
-
-			}
-
-
-		}
-
-	}
-
-	indices = sort(indices);
-
-
-}
-
-
-/** generates a modified data set by removing validation points
- *
- * @param[in] X
- * @param[in] y
- * @param[in] indices
- * @param[out] Xmod
- * @param[out] ymod
- * @param[out] map
- */
-void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod, uvec &map){
-
-
-	int added_rows=0;
-	for(unsigned int j=0; j<X.n_rows; j++){ /* for each row in the data matrix */
-
-		/* if j is not a validation point */
-		if ( is_in_the_list(int(j), indices) == -1){
-
-#if 0
-			printf("%dth point is not a validation point\n",j);
-#endif
-			Xmod.row(added_rows)=X.row(j);
-			ymod(added_rows)    =y(j);
-			map(added_rows) = j;
-			added_rows++;
-
-
-		}
-
-
-	}
-#if 0
-	printf("data set map\n");
-	map.print();
-#endif
-
-
-
-
-}
-
-/** generates a modified data set by removing validation points
- *
- * @param[in] X
- * @param[in] y
- * @param[in] indices
- * @param[out] Xmod
- * @param[out] ymod
- */
-
-void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod){
-
-
-	int added_rows=0;
-	for(unsigned int j=0; j<X.n_rows; j++){ /* for each row in the data matrix */
-
-		/* if j is not a validation point */
-		if ( is_in_the_list(int(j), indices) == -1){
-
-#if 0
-			printf("%dth point is not a validation point\n",j);
-#endif
-			Xmod.row(added_rows)=X.row(j);
-			ymod(added_rows)    =y(j);
-			added_rows++;
-
-		}
-
-
-	}
-
-	exit(1);
-
-}
 
 bool checkifTooCLose(const rowvec &v1, const rowvec &v2, double tol){
 

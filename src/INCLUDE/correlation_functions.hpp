@@ -182,17 +182,25 @@ private:
 
 public:
 
-
-	void setTheta(vec);
+	void initialize(void);
 
 	void setHyperParameters(vec);
+	vec getHyperParameters(void) const;
+
 	double computeCorrelation(const rowvec &, const rowvec &) const;
 	bool checkIfParametersAreSetProperly(void) const;
 
-
+	double computeCorrelationDot(const rowvec &x_i, const rowvec &x_j, const rowvec &diffDirection) const;
+	double computeCorrelationDotDot(const rowvec &x_i, const rowvec &x_j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const;
 	double compute_dR_dxi(const rowvec &xi, const rowvec &xj, unsigned int k) const;
 	double compute_dR_dxj(const rowvec &xi, const rowvec &xj, unsigned int k) const;
 	double compute_d2R_dxl_dxk(const rowvec &, const rowvec &, unsigned int ,unsigned int) const;
+
+	double computeCorrelation(unsigned int i, unsigned int j) const;
+	double computeCorrelationDot(unsigned int i, unsigned int j, const rowvec &diffDirection) const;
+	double computeCorrelationDotDot(unsigned int i, unsigned int j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const;
+
+
 
 	void computeCorrelationMatrixDotForrester(void);
 

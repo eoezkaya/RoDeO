@@ -324,7 +324,6 @@ void printVector(std::vector<bool> v){
 
 }
 
-
 void printVector(std::vector<double> v){
 
 
@@ -334,9 +333,22 @@ void printVector(std::vector<double> v){
 
 	std::cout << v[v.size()-1] << "\n";
 
-
 }
 
+vec makeUnitVector(vec x){
+
+	double normX = norm(x,2);
+	vec result = x/normX;
+	return result;
+}
+
+rowvec makeUnitVector(rowvec x){
+
+	double normX = norm(x,2);
+	rowvec result = x/normX;
+	return result;
+
+}
 
 
 vec normalizeColumnVector(vec x, double xmin, double xmax){
@@ -374,6 +386,59 @@ rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax){
 	}
 	return xp;
 }
+
+
+uvec findIndicesKMax(const vec &v, unsigned int k){
+
+	unsigned int dim = v.size();
+	assert(dim >= k);
+	uvec indices(k, fill::zeros);
+	vec  values(k, fill::zeros);
+	values.fill(-LARGE);
+
+	for(unsigned int i=0; i<dim; i++){
+
+		double maxThreshold = min(values);
+		unsigned int maxThresholdIndex = index_min(values);
+
+		if(v(i) >= maxThreshold){
+
+			values(maxThresholdIndex) = v(i);
+			indices(maxThresholdIndex) = i;
+		}
+
+	}
+
+	return indices;
+
+}
+
+uvec findIndicesKMin(const vec &v, unsigned int k){
+
+	unsigned int dim = v.size();
+	assert(dim >= k);
+	uvec indices(k, fill::zeros);
+	vec  values(k, fill::zeros);
+	values.fill(LARGE);
+
+	for(unsigned int i=0; i<dim; i++){
+
+		double minThreshold = max(values);
+		unsigned int minThresholdIndex = index_max(values);
+
+		if(v(i) <= minThreshold){
+
+			values(minThresholdIndex) = v(i);
+			indices(minThresholdIndex) = i;
+		}
+
+	}
+
+	return indices;
+
+}
+
+
 
 mat normalizeMatrix(mat matrixIn){
 

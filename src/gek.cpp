@@ -61,17 +61,6 @@ int population_overall_max_tread_id_GEK = -1;
 GEKModel::GEKModel():SurrogateModel(){}
 
 
-GEKModel::GEKModel(std::string nameInput):SurrogateModel(nameInput){
-
-	modelID = GRADIENT_ENHANCED_KRIGING;
-	setName(nameInput);
-	setNameOfHyperParametersFile(nameInput);
-
-	maxNumberOfTrainingIterations = 10000;
-
-
-}
-
 
 void GEKModel::setNameOfInputFile(std::string filename){
 
@@ -105,7 +94,6 @@ void GEKModel::initializeSurrogateModel(void){
 
 	printf("Initializing settings for the GEK model...\n");
 
-	modelID = GRADIENT_ENHANCED_KRIGING;
 	ifHasGradientData = true;
 
 	readData();
@@ -233,7 +221,7 @@ void GEKModel::train(void){
 
 	}
 
-	KrigingModel auxModelForTraining(name);
+	KrigingModel auxModelForTraining;
 	auxModelForTraining.setGradientsOn();
 
 	auxModelForTraining.initializeSurrogateModel();
@@ -612,3 +600,12 @@ void GEKModel::addNewSampleToData(rowvec newsample){
 
 
 }
+
+void GEKModel::addNewLowFidelitySampleToData(rowvec newsample){
+
+
+	assert(false);
+
+}
+
+

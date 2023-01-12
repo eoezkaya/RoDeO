@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -172,7 +172,7 @@ void generateKRandomIntegers(uvec &numbers, unsigned int N, unsigned int k){
 #if 0
 		printf("random number = %d\n",r);
 #endif
-		if (is_in_the_list(r, numbers) == -1 ){
+		if (isIntheList(r, numbers) == -1 ){
 
 			numbers(numbersGenerated) = r;
 			numbersGenerated++;

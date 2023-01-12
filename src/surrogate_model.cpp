@@ -48,20 +48,7 @@ using namespace arma;
 
 
 
-SurrogateModel::SurrogateModel(){
-
-
-}
-
-SurrogateModel::SurrogateModel(std::string nameInput){
-
-
-	setName(nameInput);
-
-	filenameDataInput = name +".csv";
-	filenameTestResults = name + "_TestResults.csv";
-
-}
+SurrogateModel::SurrogateModel(){}
 
 void SurrogateModel::setName(std::string nameInput){
 
@@ -133,22 +120,6 @@ void SurrogateModel::setDisplayOff(void){
 }
 
 
-void SurrogateModel::setMinimizeOn(void){
-
-	ifMinimize = true;
-	ifMaximize = false;
-
-}
-
-void SurrogateModel::setMaximizeOn(void){
-
-	ifMinimize = false;
-	ifMaximize = true;
-
-}
-
-
-
 void SurrogateModel::setBoxConstraints(Bounds boxConstraintsInput){
 
 	assert(boxConstraintsInput.areBoundsSet());
@@ -166,6 +137,7 @@ void SurrogateModel::setBoxConstraints(vec xmin, vec xmax){
 	Bounds boxConstraints(xmin,xmax);
 	setBoxConstraints(boxConstraints);
 
+
 }
 
 void SurrogateModel::setBoxConstraints(double xmin, double xmax){
@@ -174,6 +146,8 @@ void SurrogateModel::setBoxConstraints(double xmin, double xmax){
 	boxConstraints.setBounds(xmin,xmax);
 
 	setBoxConstraints(boxConstraints);
+
+
 }
 
 
@@ -254,15 +228,14 @@ void SurrogateModel::readDataTest(void){
 
 	data.readDataTest(filenameDataInputTest);
 	ifHasTestData = true;
+	ifTestDataIsRead = true;
 }
-
-
 
 void SurrogateModel::normalizeData(void){
 
 	assert(ifDataIsRead);
 
-	data.normalizeSampleInputMatrix();
+	data.normalize();
 	ifNormalized = true;
 }
 
@@ -270,8 +243,8 @@ void SurrogateModel::normalizeDataTest(void){
 
 	data.normalizeSampleInputMatrixTest();
 	ifNormalizedTestData = true;
-}
 
+}
 
 void SurrogateModel::updateAuxilliaryFields(void){
 
@@ -390,6 +363,8 @@ void SurrogateModel::setNameOfOutputFileTest(string filename){
 void SurrogateModel::tryOnTestData(void){
 
 	assert(ifNormalizedTestData);
+	assert(isNotEmpty(filenameTestResults));
+
 
 	output.printMessage("Trying surrogate model on test data...");
 
@@ -444,11 +419,6 @@ void SurrogateModel::tryOnTestData(void){
 
 	}
 
-	output.printMessage("Saving surrogate test results in the file: surrogateTest.csv");
-
-	saveMatToCVSFile(results,  "surrogateTest.csv");
-
-	output.printMessage("Surrogate test results", results);
 
 	testResults = results;
 

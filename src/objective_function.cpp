@@ -107,8 +107,7 @@ void ObjectiveFunctionDefinition::print(void) const{
 
 
 
-ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int dimension)
-: surrogateModel(objectiveFunName),surrogateModelGradient(objectiveFunName),surrogateModelML(objectiveFunName){
+ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int dimension){
 
 
 	dim = dimension;
@@ -133,8 +132,8 @@ void ObjectiveFunction::bindSurrogateModel(void){
 	if(ifMultilevel){
 
 		output.printMessage("Binding the surrogate model with the Multi-Level modeĺ...");
-		surrogateModelML.setinputFileNameHighFidelityData(fileNameInputRead);
-		surrogateModelML.setinputFileNameLowFidelityData(fileNameInputReadLowFi);
+		surrogateModelML.setinputFileNameHighFidelityData(fileNameTrainingDataForSurrogateHighFidelity);
+		surrogateModelML.setinputFileNameLowFidelityData(fileNameTrainingDataForSurrogateLowFidelity);
 		surrogate = &surrogateModelML;
 
 	}
@@ -142,7 +141,7 @@ void ObjectiveFunction::bindSurrogateModel(void){
 	else if(ifGradientAvailable == false){
 
 		surrogateModel.setNameOfInputFile(fileNameTrainingDataForSurrogate);
-		if(ifMaximization) surrogateModel.setMaximizeOn();
+
 		output.printMessage("Binding the surrogate model with the Kriging modeĺ...");
 		surrogate = &surrogateModel;
 
@@ -190,13 +189,15 @@ void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition de
 
 	if(definition.ifMultiLevel){
 
+
 		ifMultilevel = definition.ifMultiLevel;
 		executableNameLowFi = definition.executableNameLowFi;
 		fileNameInputReadLowFi = definition.outputFilenameLowFi;
 		executablePathLowFi = definition.pathLowFi;
 		readMarkerLowFi = definition.markerLowFi;
 		readMarkerAdjointLowFi = definition.markerForGradientLowFi;
-
+		fileNameTrainingDataForSurrogateHighFidelity = definition.nameHighFidelityTrainingData;
+		fileNameTrainingDataForSurrogateLowFidelity = definition.nameLowFidelityTrainingData;
 
 	}
 
@@ -515,8 +516,31 @@ void ObjectiveFunction::addDesignToData(Design &d){
 
 	surrogate->addNewSampleToData(newsample);
 
+
 }
 
+
+void ObjectiveFunction::addLowFidelityDesignToData(Design &d){
+
+	rowvec newsample;
+
+	if(ifGradientAvailable){
+
+		newsample = d.constructSampleObjectiveFunctionWithGradient();
+
+
+	}
+	else{
+
+		newsample = d.constructSampleObjectiveFunction();
+
+	}
+
+
+	surrogate->addNewLowFidelitySampleToData(newsample);
+
+
+}
 
 void ObjectiveFunction::readOutputWithoutMarkers(Design &outputDesignBuffer) const{
 
@@ -673,6 +697,20 @@ void ObjectiveFunction::evaluate(Design &d){
 		cout<<"ERROR: Cannot evaluate the objective function. Check settings!\n";
 		abort();
 	}
+
+
+}
+
+
+
+void ObjectiveFunction::evaluateLowFidelity(Design &d){
+
+	std::string runCommand = getExecutionCommandLowFi();
+
+#if 0
+	cout<<"calling a system command\n";
+#endif
+	system(runCommand.c_str());
 
 
 }

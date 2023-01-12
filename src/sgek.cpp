@@ -48,25 +48,9 @@
 
 using namespace arma;
 
-/* global variables */
 
-//int total_number_of_function_evals_GEK;
-//double population_overall_max_GEK = -10E14;
-//int population_overall_max_tread_id_GEK = -1;
 
 SGEKModel::SGEKModel():SurrogateModel(){}
-
-
-SGEKModel::SGEKModel(std::string nameInput):SurrogateModel(nameInput){
-
-	modelID = SLICED_GRADIENT_ENHANCED_KRIGING;
-	setName(nameInput);
-	setNameOfHyperParametersFile(nameInput);
-
-	maxNumberOfTrainingIterations = 10000;
-
-
-}
 
 
 void SGEKModel::setNameOfInputFile(std::string filename){
@@ -99,7 +83,6 @@ void SGEKModel::initializeSurrogateModel(void){
 
 	printf("Initializing settings for the SGEK model...\n");
 
-	modelID = SLICED_GRADIENT_ENHANCED_KRIGING;
 	ifHasGradientData = true;
 
 	readData();                 // Modified by Kai
@@ -1262,3 +1245,11 @@ double SGEKModel::getLikelihood(void) const{
 
 
 }
+
+void SGEKModel::addNewLowFidelitySampleToData(rowvec newsample){
+
+
+	assert(false);
+
+}
+

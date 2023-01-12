@@ -152,7 +152,7 @@ public:
 
 	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
 	void addNewSampleToData(rowvec newsample);
-	void addNewHiFiSampleToData(rowvec newsample);
+	void addNewLowFidelitySampleToData(rowvec newsample);
 
 	void readHighFidelityData(void);
 	void readLowFidelityData(void);

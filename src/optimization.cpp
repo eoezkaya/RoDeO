@@ -74,7 +74,7 @@ Optimizer::Optimizer(std::string nameTestcase, int numberOfOptimizationParams, s
 	upperBoundsForEIMaximization.fill(1.0/dimension);
 
 
-	iterMaxEILoop = dimension*100000;
+	iterMaxEILoop = dimension*10000;
 
 
 	setProblemType(problemType);
@@ -802,6 +802,30 @@ void Optimizer::findTheGlobalOptimalDesign(void){
 
 }
 
+void Optimizer::findTheGlobalOptimalDesignMultiFidelity(void){
+
+	displayMessage("Finding the global design...\n");
+
+
+	double bestObjectiveFunctionValue = LARGE;
+	for (auto it = begin (highFidelityDesigns); it != end (highFidelityDesigns); ++it) {
+
+		double J = it->objectiveFunctionValue;
+
+		if(J < bestObjectiveFunctionValue){
+
+			bestObjectiveFunctionValue = J;
+
+			globalOptimalDesign = *it;
+
+		}
+
+
+	}
+
+	displayMessage("Finding the global design is done...\n");
+
+}
 
 
 /* These designs (there can be more than one) are found by maximizing the expected
@@ -1067,6 +1091,15 @@ void Optimizer::clearOptimizationHistoryFile(void) const{
 }
 
 
+void Optimizer::setHowOftenTrainModels(unsigned int value){
+
+
+	howOftenTrainModels = value;
+
+
+}
+
+
 void Optimizer::EfficientGlobalOptimization(void){
 
 
@@ -1202,6 +1235,195 @@ void Optimizer::EfficientGlobalOptimization(void){
 	} /* end of the optimization loop */
 
 }
+
+
+void Optimizer::EfficientGlobalOptimization2(void){
+
+
+	mat dataHighFidelity;
+
+	dataHighFidelity.load("HimmelblauHiFiData.csv", csv_ascii);
+
+	vec JHiFi = dataHighFidelity.col(2);
+
+
+
+	checkIfSettingsAreOK();
+
+
+	if(!isHistoryFileInitialized){
+
+		clearOptimizationHistoryFile();
+		prepareOptimizationHistoryFile();
+
+	}
+
+	/* main loop for optimization */
+	unsigned int simulationCount = 0;
+	unsigned int iterOpt=0;
+
+	initializeSurrogates();
+
+	while(1){
+
+		iterOpt++;
+#if 0
+		printf("Optimization Iteration = %d\n",iterOpt);
+#endif
+
+		if(simulationCount%howOftenTrainModels == 0) {
+
+			trainSurrogates();
+		}
+
+//		if(iterOpt%10 == 0){
+//
+//			zoomInDesignSpace();
+//
+//		}
+
+		findTheMostPromisingDesign();
+
+		CDesignExpectedImprovement optimizedDesignGradientBased = MaximizeEIGradientBased(theMostPromisingDesigns.at(0));
+
+#if 0
+		optimizedDesignGradientBased.print();
+#endif
+
+
+		rowvec best_dvNorm = optimizedDesignGradientBased.dv;
+		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds, upperBounds);
+		double estimatedBestdv = objFun.interpolate(best_dvNorm);
+
+#if 0
+		printf("The most promising design (not normalized):\n");
+		best_dv.print();
+		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
+
+#endif
+
+
+		roundDiscreteParameters(best_dv);
+
+
+		Design currentBestDesign(best_dv);
+		currentBestDesign.setNumberOfConstraints(numberOfConstraints);
+		currentBestDesign.saveDesignVector(designVectorFileName);
+
+
+		/* now make a simulation for the most promising design */
+
+		if(!objFun.checkIfGradientAvailable()) {
+
+			objFun.evaluateLowFidelity(currentBestDesign);
+
+		}
+		else{
+
+			objFun.evaluateAdjoint(currentBestDesign);
+
+		}
+
+		objFun.readEvaluateOutput(currentBestDesign);
+		objFun.addLowFidelityDesignToData(currentBestDesign);
+
+
+		std::cout<<"Low fidelity design\n";
+		currentBestDesign.print();
+
+
+		computeConstraintsandPenaltyTerm(currentBestDesign);
+
+		calculateImprovementValue(currentBestDesign);
+
+		if(currentBestDesign.checkIfHasNan()){
+
+			cout<<"ERROR: NaN while reading external executable outputs!\n";
+			abort();
+
+		}
+#if 0
+		currentBestDesign.print();
+#endif
+
+		addConstraintValuesToData(currentBestDesign);
+		lowFidelityDesigns.push_back(currentBestDesign);
+
+		rowvec v1 = currentBestDesign.designParameters;
+		rowvec v2 = normalizeRowVector(v1, lowerBounds,upperBounds);
+
+		double fv2 = objFun.interpolate(v2);
+		std::cout<<"HiFi estimate = "<<fv2<<"\n";
+
+		vec P = { 0.1, 0.50, 0.75 };
+
+		printVector(JHiFi);
+
+		vec Q = quantile(JHiFi, P);
+
+
+		Q.print("Q");
+
+
+
+		if( fv2  < Q(0)) {
+
+
+			objFun.evaluate(currentBestDesign);
+			objFun.readEvaluateOutput(currentBestDesign);
+			objFun.addDesignToData(currentBestDesign);
+
+			std::cout<<"High fidelity design\n";
+			currentBestDesign.print();
+
+			highFidelityDesigns.push_back(currentBestDesign);
+
+			addOneElement(JHiFi,currentBestDesign.objectiveFunctionValue );
+
+
+		}
+
+
+		findTheGlobalOptimalDesignMultiFidelity();
+
+
+		globalOptimalDesign.saveToAFile(globalOptimumDesignFileName);
+
+
+		simulationCount ++;
+
+		/* terminate optimization */
+		if(simulationCount >= maxNumberOfSamples){
+
+
+			if(ifDisplay){
+
+				printf("number of simulations > max_number_of_samples! Optimization is terminating...\n");
+
+				std::cout<<"##########################################\n";
+				std::cout<<"Global best design = \n";
+				globalOptimalDesign.print();
+				std::cout<<"\n\n";
+
+			}
+
+			if(ifVisualize){
+
+				visualizeOptimizationHistory();
+			}
+
+			break;
+		}
+
+	} /* end of the optimization loop */
+
+}
+
+
+
+
+
+
 void Optimizer::cleanDoEFiles(void) const{
 
 	std::string fileNameObjectiveFunction = objFun.getName()+".csv";

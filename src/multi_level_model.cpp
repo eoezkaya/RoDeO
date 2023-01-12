@@ -49,15 +49,6 @@ MultiLevelModel::MultiLevelModel(){
 }
 
 
-MultiLevelModel::MultiLevelModel(string nameInput):SurrogateModel(nameInput){
-
-
-	setName(nameInput);
-
-	setNameOfHyperParametersFile(name);
-
-}
-
 
 
 void MultiLevelModel::setNameOfInputFile(string filename){
@@ -815,9 +806,6 @@ void MultiLevelModel::calculateExpectedImprovement(CDesignExpectedImprovement &d
 
 	interpolateWithVariance(designCalculated.dv,&ftilde,&ssqr);
 
-	printScalar(ftilde);
-	printScalar(ssqr);
-
 	double	sigma = sqrt(ssqr)	;
 
 	double expectedImprovementValue = 0.0;
@@ -828,15 +816,7 @@ void MultiLevelModel::calculateExpectedImprovement(CDesignExpectedImprovement &d
 		double ymax = data.getMaximumOutputVector();
 
 		double improvement = 0.0;
-
-		if(ifMinimize){
-
-			improvement = ymin - ftilde;
-		}
-		if(ifMaximize){
-
-			improvement = ftilde - ymax;
-		}
+		improvement = ymin - ftilde;
 
 		double	Z = (improvement)/sigma;
 #if 0
@@ -917,19 +897,21 @@ unsigned int MultiLevelModel::getNumberOfHiFiSamples(void) const{
 
 void MultiLevelModel::addNewSampleToData(rowvec newsample){
 
-	assert(isNotEmpty(inputFileNameLowFidelityData));
-	appendRowVectorToCSVData(newsample, inputFileNameLowFidelityData);
+
+	assert(isNotEmpty(inputFileNameHighFidelityData));
+	appendRowVectorToCSVData(newsample, inputFileNameHighFidelityData);
 	initializeSurrogateModel();
+
 
 
 }
 
 
-void MultiLevelModel::addNewHiFiSampleToData(rowvec newsample){
+void MultiLevelModel::addNewLowFidelitySampleToData(rowvec newsample){
 
 
-	assert(isNotEmpty(inputFileNameHighFidelityData));
-	appendRowVectorToCSVData(newsample, inputFileNameHighFidelityData);
+	assert(isNotEmpty(inputFileNameLowFidelityData));
+	appendRowVectorToCSVData(newsample, inputFileNameLowFidelityData);
 	initializeSurrogateModel();
 
 }

@@ -69,9 +69,9 @@ private:
 
 	bool ifFunctionIsNoisy = false;
 	bool ifBoxConstraintsSet = false;
-	bool ifGradientsAvailable = false;
 
 	bool ifFunctionPointerIsSet = false;
+	bool ifFunctionPointerAdjIsSet = false;
 
 	bool ifVisualize = false;
 	bool ifDisplayResults = false;
@@ -95,6 +95,7 @@ public:
 
 	void evaluate(Design &d) const;
 	void evaluateAdjoint(Design &d) const;
+	void evaluateTangent(Design &d) const;
 
 	short int numberOfSamplesUsedForVisualization = 100;
 
@@ -109,6 +110,8 @@ public:
 
     void generateTestSamples(void);
     void generateTrainingSamples(void);
+    void generateTrainingSamplesWithAdjoints(void);
+    void generateTrainingSamplesWithTangents(void);
 
     mat getTrainingSamplesInput(void) const;
     mat getTestSamplesInput(void) const;
@@ -123,8 +126,6 @@ public:
     void setNoiseLevel(double);
     void setVisualizationOn(void);
     void setVisualizationOff(void);
-    void setGradientsOn(void);
-    void setGradientsOff(void);
 
     void setDisplayOn(void);
     void setDisplayOff(void);
@@ -169,6 +170,9 @@ public:
 
 double LinearTF1(double *x);
 double LinearTF1Adj(double *x, double *xb);
+
+double testFunction1D(double *x);
+double testFunction1DAdj(double *x, double *xb);
 
 void generateEggholderData(std::string filename, unsigned int nSamples);
 void generateEggholderDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi);

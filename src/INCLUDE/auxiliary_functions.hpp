@@ -113,7 +113,7 @@ int is_in_the_list(int entry, int *list, int list_size);
 int is_in_the_list(int entry, std::vector<int> &list);
 bool isAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list);
 bool isNotAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list);
-int is_in_the_list(unsigned int entry, uvec &list);
+int isIntheList(unsigned int entry, uvec &list);
 
 
 bool ifIsInTheList(const std::vector<std::string> &vec, std::string item);

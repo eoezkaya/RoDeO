@@ -52,16 +52,6 @@ using namespace arma;
 KrigingModel::KrigingModel():SurrogateModel(){}
 
 
-KrigingModel::KrigingModel(std::string nameInput):SurrogateModel(nameInput),linearModel(nameInput){
-
-	assert(isNotEmpty(nameInput));
-	modelID = ORDINARY_KRIGING;
-
-	setNameOfHyperParametersFile(name);
-
-
-}
-
 
 void KrigingModel::setNameOfInputFile(std::string filename){
 
@@ -78,14 +68,9 @@ void KrigingModel::setNumberOfTrainingIterations(unsigned int nIters){
 
 }
 
-void KrigingModel::setNameOfHyperParametersFile(std::string label){
+void KrigingModel::setNameOfHyperParametersFile(std::string filename){
 
-	assert(isNotEmpty(label));
-
-	string filename = label + "_kriging_hyperparemeters.csv";
-
-	output.printMessage("Name of the hyperparameter file is set as: ", filename);
-
+	assert(isNotEmpty(filename));
 	hyperparameters_filename = filename;
 
 }
@@ -180,6 +165,25 @@ void KrigingModel::printHyperParameters(void) const{
 	}
 
 }
+
+void KrigingModel::setHyperParameters(vec parameters){
+
+
+	assert(parameters.size() != 0);
+	correlationFunction.setHyperParameters(parameters);
+
+
+}
+
+vec KrigingModel::getHyperParameters(void) const{
+
+	return correlationFunction.getHyperParameters();
+
+
+}
+
+
+
 void KrigingModel::saveHyperParameters(void) const{
 
 
@@ -248,13 +252,12 @@ void KrigingModel::setEpsilon(double value){
 void KrigingModel::setLinearRegressionOn(void){
 
 	ifUsesLinearRegression  = true;
-	modelID = UNIVERSAL_KRIGING;
 
 }
 void KrigingModel::setLinearRegressionOff(void){
 
 	ifUsesLinearRegression  = false;
-	modelID = ORDINARY_KRIGING;
+
 }
 
 
@@ -267,6 +270,8 @@ void KrigingModel::setLinearRegressionOff(void){
 
 void KrigingModel::addNewSampleToData(rowvec newsample){
 
+	unsigned int dim = data.getDimension();
+	assert(newsample.size() == dim+1);
 
 	/* avoid points that are too close to each other */
 
@@ -287,6 +292,13 @@ void KrigingModel::addNewSampleToData(rowvec newsample){
 		std::cout<<"WARNING: The new sample is too close to a sample in the training data, it is discarded!\n";
 
 	}
+
+}
+
+
+void KrigingModel::addNewLowFidelitySampleToData(rowvec newsample){
+
+	assert(false);
 
 }
 
@@ -345,16 +357,17 @@ void KrigingModel::resizeDataObjects(void){
 
 void KrigingModel::checkAuxilliaryFields(void) const{
 
-	mat R = linearSystemCorrelationMatrix.getMatrix();
+	mat R = correlationFunction.getCorrelationMatrix();
+
 	vec ys = data.getOutputVector();
 
 	vec ys_min_betaI = ys - beta0*vectorOfOnes;
 
-	vec residual1 = ys - R*R_inv_ys;
-	printVector(residual1,"residual (ys - R * R^-1 ys)");
+//	vec residual1 = ys - R*R_inv_ys;
+//	printVector(residual1,"residual (ys - R * R^-1 ys)");
 
 	vec residual2 = ys_min_betaI - R*R_inv_ys_min_beta;
-	printVector(residual2,"residual (ys - R * R^-1 (ys-beta0I) )");
+	printVector(residual2,"residual (ys-betaI - R * R^-1 (ys-beta0I) )");
 
 
 	vec residual3 = vectorOfOnes - R*R_inv_I;
@@ -362,6 +375,79 @@ void KrigingModel::checkAuxilliaryFields(void) const{
 
 
 }
+
+/* slower but more reliable method */
+void KrigingModel::updateAuxilliaryFieldsWithSVDMethod(void){
+
+	assert(ifDataIsRead);
+
+	unsigned int N = data.getNumberOfSamples();
+
+
+	correlationFunction.computeCorrelationMatrix();
+	mat R = correlationFunction.getCorrelationMatrix();
+
+
+	linearSystemCorrelationMatrixSVD.setMatrix(R);
+
+	/* SVD decomposition R = U Sigma VT */
+
+	linearSystemCorrelationMatrixSVD.factorize();
+
+
+	R_inv_ys = zeros<vec>(N);
+	R_inv_I = zeros<vec>(N);
+	R_inv_ys_min_beta = zeros<vec>(N);
+	beta0 = 0.0;
+	sigmaSquared = 0.0;
+
+	vec ys = data.getOutputVector();
+	double maxYValue = data.getMaximumOutputVector();
+	double minYValue = data.getMinimumOutputVector();
+
+
+	bool ifBeta0IsBetweenMinAndMax = false;
+
+	double thresholdValue = 10E-14;
+	linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
+	while(!ifBeta0IsBetweenMinAndMax){
+
+		R_inv_ys = linearSystemCorrelationMatrixSVD.solveLinearSystem(ys);
+		R_inv_I  = linearSystemCorrelationMatrixSVD.solveLinearSystem(vectorOfOnes);
+
+		beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
+
+		if(isBetween(beta0,minYValue, maxYValue)) ifBeta0IsBetweenMinAndMax = true;
+
+		thresholdValue = thresholdValue*10;
+		linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
+
+	}
+
+		thresholdValue = 10E-14;
+		linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
+
+		vec ys_min_betaI = ys - beta0*vectorOfOnes;
+
+		/* solve R x = ys-beta0*I */
+
+		R_inv_ys_min_beta = linearSystemCorrelationMatrixSVD.solveLinearSystem( ys_min_betaI);
+
+		sigmaSquared = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
+
+
+
+#if 0
+
+	checkAuxilliaryFields();
+
+#endif
+
+}
+
+
+
+
 
 void KrigingModel::updateAuxilliaryFields(void){
 
@@ -379,6 +465,7 @@ void KrigingModel::updateAuxilliaryFields(void){
 	/* Cholesky decomposition R = L L^T */
 
 	linearSystemCorrelationMatrix.factorize();
+
 
 	R_inv_ys = zeros<vec>(N);
 	R_inv_I = zeros<vec>(N);
@@ -472,15 +559,7 @@ void KrigingModel::calculateExpectedImprovement(CDesignExpectedImprovement &curr
 		double ymax = data.getMaximumOutputVector();
 
 		double improvement = 0.0;
-
-		if(ifMinimize){
-
-			improvement = ymin - ftilde;
-		}
-		if(ifMaximize){
-
-			improvement = ftilde - ymax;
-		}
+		improvement = ymin - ftilde;
 
 		double	Z = (improvement)/sigma;
 #if 0
@@ -633,7 +712,6 @@ void KrigingModel::train(void){
 		}
 		parameterOptimizer.setNumberOfGenerations(numberOfGenerations);
 
-		parameterOptimizer.setDisplayOn();
 
 		if(ifReadWarmStartFile){
 

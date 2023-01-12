@@ -94,6 +94,7 @@ public:
 	unsigned int findNearestNeighbor(const rowvec &) const;
 	void addNewSampleToData(rowvec);
 	void updateModelWithNewData(void);
+	void addNewLowFidelitySampleToData(rowvec newsample);
 
 
 };

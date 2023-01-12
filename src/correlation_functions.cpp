@@ -347,7 +347,7 @@ void CorrelationFunction::corrgaussian_gekriging(mat &X, vec theta){
 
 	correlationMatrix = correlationMatrix + correlationMatrix.t()-diagmat(correlationMatrix);
 
-//	correlationMatrix.print();
+	//	correlationMatrix.print();
 
 }
 
@@ -731,17 +731,17 @@ void CorrelationFunctionBase::computeCorrelationMatrixDot(void){
 			computeCorrelationMatrix();
 
 			correlationMatrixDot = correlationMatrix;
-//			correlationMatrixDot.print();
+			//			correlationMatrixDot.print();
 
 			for(unsigned int j=0; j<dim; j++){
 
-			mat Rdot = compute_dCorrelationMatrixdxj(j);
+				mat Rdot = compute_dCorrelationMatrixdxj(j);
 
-			joinMatricesByColumns(correlationMatrixDot,Rdot);
+				joinMatricesByColumns(correlationMatrixDot,Rdot);
 
 			}
 
-//			correlationMatrixDot.print("correlationMatrixDot");
+			//			correlationMatrixDot.print("correlationMatrixDot");
 
 
 		}
@@ -760,7 +760,7 @@ void CorrelationFunctionBase::computeCorrelationMatrixDot(void){
 
 			joinMatricesByRows(correlationMatrixDot,Rdot);
 
-//			correlationMatrixDot.print("correlationMatrixDot");
+			//			correlationMatrixDot.print("correlationMatrixDot");
 
 		}
 
@@ -988,6 +988,13 @@ bool  BiQuadraticSplineCorrelationFunction::checkIfParametersAreSetProperly(void
 }
 
 
+void GaussianCorrelationFunctionForGEK::initialize(void){
+
+	assert(dim>0);
+	vec thetaInit(dim); thetaInit.fill(1.0);
+	theta = thetaInit;
+
+}
 
 void GaussianCorrelationFunctionForGEK::setHyperParameters(vec input){
 
@@ -996,6 +1003,13 @@ void GaussianCorrelationFunctionForGEK::setHyperParameters(vec input){
 
 
 }
+
+
+vec GaussianCorrelationFunctionForGEK::getHyperParameters(void) const{
+
+	return theta;
+}
+
 
 
 bool GaussianCorrelationFunctionForGEK::checkIfParametersAreSetProperly(void) const{
@@ -1017,11 +1031,119 @@ double GaussianCorrelationFunctionForGEK::computeCorrelation(const rowvec &x_i, 
 		sum += theta(k) * pow(fabs(x_i(k) - x_j(k)), 2.0);
 	}
 
-	double correlation = exp(-sum);
+	return exp(-sum);
+}
+
+/* basis function centered at xi and evaluated at xj */
+double GaussianCorrelationFunctionForGEK::computeCorrelation(unsigned int i, unsigned int j) const {
+
+	assert(isInputSampleMatrixSet());
+	rowvec xi = X.row(i);
+	rowvec xj = X.row(j);
+	double sum = 0.0;
+	for (unsigned int k = 0; k < dim; k++) {
+
+		sum += theta(k) * pow(fabs(xi(k) - xj(k)), 2.0);
+	}
 
 	return exp(-sum);
 }
 
+
+/* derivative of the basis function centered at xi and evaluated at xj */
+
+double GaussianCorrelationFunctionForGEK::computeCorrelationDot(unsigned int i, unsigned int j, const rowvec &diffDirection) const {
+
+	assert(isInputSampleMatrixSet());
+	rowvec xi = X.row(i);
+	rowvec xj = X.row(j);
+
+	double sumd = 0.0;
+	double sum  = 0.0;
+	for (unsigned int k = 0; k < dim; k++) {
+
+		sumd += -2.0*theta(k) * (xi(k) - xj(k))*diffDirection(k);
+		sum  += theta(k) * pow(fabs(xi(k) - xj(k)), 2.0);
+	}
+
+	double correlation = exp(-sum);
+
+	return -1.0*exp(-sum)*sumd;
+
+}
+
+double GaussianCorrelationFunctionForGEK::computeCorrelationDot(const rowvec &x_i, const rowvec &x_j, const rowvec &diffDirection) const {
+
+	double sumd = 0.0;
+	double sum  = 0.0;
+	for (unsigned int k = 0; k < dim; k++) {
+
+		sumd += -2.0*theta(k) * (x_i(k) - x_j(k))*diffDirection(k);
+		sum  += theta(k) * pow(fabs(x_i(k) - x_j(k)), 2.0);
+	}
+
+	double correlation = exp(-sum);
+
+	return -1.0*exp(-sum)*sumd;
+
+}
+
+
+
+
+
+double GaussianCorrelationFunctionForGEK::computeCorrelationDotDot(unsigned int i, unsigned int j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const{
+
+	assert(isInputSampleMatrixSet());
+	rowvec xi = X.row(i);
+	rowvec xj = X.row(j);
+
+	double td = 0.0;
+	double t = 0.0;
+	double td0 = 0.0;
+	double tdd = 0.0;
+	double temp;
+	for (unsigned int i = 0; i < dim; i++) {
+		temp = 2.0*theta(i)*firstDiffDirection(i);
+		tdd = tdd + temp*secondDiffDirection(i);
+		td = td - temp*(xi(i)-xj(i));
+		td0 = td0 - theta(i)*2.0*(xi(i)-xj(i))*secondDiffDirection(i);
+		t += theta(i)*(xi(i)-xj(i))*(xi(i)-xj(i));
+
+	}
+	temp = exp(-t);
+	double resultd = -(temp*td);
+	double resultdd = -(temp*tdd-td*exp(-t)*td0);
+
+	return resultdd;
+
+}
+
+
+
+
+double GaussianCorrelationFunctionForGEK::computeCorrelationDotDot(const rowvec &xi, const rowvec &xj, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const{
+
+	double td = 0.0;
+	double t = 0.0;
+	double td0 = 0.0;
+	double tdd = 0.0;
+	double temp;
+	for (unsigned int i = 0; i < dim; i++) {
+		temp = 2.0*theta(i)*firstDiffDirection(i);
+		tdd = tdd + temp*secondDiffDirection(i);
+		td = td - temp*(xi(i)-xj(i));
+		td0 = td0 - theta(i)*2.0*(xi(i)-xj(i))*secondDiffDirection(i);
+		t += theta(i)*(xi(i)-xj(i))*(xi(i)-xj(i));
+
+	}
+	temp = exp(-t);
+	double resultd = -(temp*td);
+	double resultdd = -(temp*tdd-td*exp(-t)*td0);
+
+	return resultdd;
+
+}
 
 double GaussianCorrelationFunctionForGEK::compute_dR_dxi(const rowvec &xi, const rowvec &xj, unsigned int k) const{
 

@@ -44,16 +44,11 @@ using std::string;
 
 class SurrogateModelData{
 
-private:
+protected:
 
 	unsigned int numberOfSamples = 0;
 	unsigned int numberOfTestSamples = 0;
 	unsigned int dimension = 0;
-
-	bool ifDataHasGradients = false;
-	bool ifDataIsNormalized = false;
-	bool ifDataIsRead = false;
-	bool ifTestDataIsRead = false;
 
 
 	mat rawData;
@@ -62,11 +57,14 @@ private:
 	mat gradient;
 	vec y;
 
+	vec directionalDerivatives;
+	mat differentiationDirections;
 
 	mat XrawTest;
 	mat XTest;
 	vec yTest;
 
+	double scalingFactorOutput = 1.0;
 
 	OutputDevice outputToScreen;
 	Bounds boxConstraints;
@@ -75,6 +73,11 @@ private:
 public:
 
 	bool ifTestDataHasFunctionValues = false;
+	bool ifDataHasGradients = false;
+	bool ifDataHasDirectionalDerivatives = false;
+	bool ifDataIsNormalized = false;
+	bool ifDataIsRead = false;
+	bool ifTestDataIsRead = false;
 
 	SurrogateModelData();
 
@@ -85,6 +88,11 @@ public:
 	void setDisplayOff(void);
 	void setGradientsOn(void);
 	void setGradientsOff(void);
+	void setDirectionalDerivativesOn(void);
+	void setDirectionalDerivativesOff(void);
+
+
+
 	void setBoxConstraints(Bounds);
 	void setBoxConstraintsFromData(void);
 	Bounds getBoxConstraints(void) const;
@@ -94,9 +102,15 @@ public:
 	void assignSampleInputMatrix(void);
 	void assignSampleOutputVector(void);
 	void assignGradientMatrix(void);
+	void assignDifferentiationDirectionMatrix(void);
+	void assignDirectionalDerivativesVector(void);
 
+	void normalize(void);
 	void normalizeSampleInputMatrix(void);
 	void normalizeSampleInputMatrixTest(void);
+	void normalizeDerivativesMatrix(void);
+	void normalizeGradientMatrix(void);
+	void normalizeOutputVector(void);
 
 	bool isDataNormalized(void) const;
 	bool isDataRead(void) const;
@@ -114,6 +128,7 @@ public:
 	rowvec getRowXTest(unsigned int index) const;
 	rowvec getRowRawData(unsigned int index) const;
 	rowvec getRowGradient(unsigned int index) const;
+	rowvec getRowDifferentiationDirection(unsigned int index) const;
 
 	mat getInputMatrix(void) const;
 
@@ -122,15 +137,16 @@ public:
 
 	vec getOutputVector(void) const;
 	void setOutputVector(vec);
-
 	vec getOutputVectorTest(void) const;
 	double getMinimumOutputVector(void) const;
 	double getMaximumOutputVector(void) const;
 
 	mat getGradientMatrix(void) const;
+	vec getDirectionalDerivativesVector(void) const;
+
+	double getScalingFactorForOutput(void) const;
 
 	void readData(string);
-
 	void readDataTest(string);
 
 

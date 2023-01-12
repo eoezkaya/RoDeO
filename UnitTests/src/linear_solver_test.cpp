@@ -138,17 +138,119 @@ TEST_F(CholeskySystemTest, testcalculateLogDeterminant){
 	double detTest = test.calculateLogDeterminant();
 	mat A = test.getMatrix();
 
-
 	double detCheck  = log_det_sympd(A);
-
-
 	double error = fabs(detTest-detCheck);
 
 	ASSERT_LT(error, 10E-6);
+}
+
+
+class SVDSystemTest : public ::testing::Test {
+protected:
+	void SetUp() override {
+
+		A = generateRandomCorrelationMatrix(50);
+		test.setMatrix(A);
+
+
+	}
+
+	mat generateRandomCorrelationMatrix(unsigned int dim){
+
+		vec X(dim,fill::randu);
+		mat R(dim,dim, fill::zeros);
+		for(unsigned int i=0; i<dim; i++){
+
+			for(unsigned int j=0; j<dim; j++){
+
+				double dist  = (X[i] - X[j])*(X[i] - X[j]);
+				R(i,j) = exp(-dist);
+
+			}
+
+		}
+
+		return R;
+
+	}
+
+
+	//  void TearDown() override {}
+
+	SVDSystem test;
+	mat A;
+};
+
+TEST_F(SVDSystemTest, DoesConstructorWorks) {
+
+	EXPECT_FALSE(test.ifFactorizationIsDone);
+	EXPECT_TRUE(test.ifMatrixIsSet);
 
 }
 
 
+TEST_F(SVDSystemTest, testSVDfactorize){
+
+	test.factorize();
+	EXPECT_TRUE(test.ifFactorizationIsDone);
+
+}
+
+TEST_F(SVDSystemTest, testSVDsolveLinearSystem){
+
+	test.factorize();
+	vec xExact(50,fill::randu);
+	vec rhs = A*xExact;
+
+	vec x = test.solveLinearSystem(rhs);
+
+	vec r = A*x-rhs;
+
+//	r.print("res");
+	double normResidual = norm(r,2);
+//	printScalar(normResidual);
 
 
+	EXPECT_LT(normResidual,10E-8);
 
+
+}
+
+TEST_F(SVDSystemTest, testSVDsolveLinearSystemRectangularMatrix){
+
+	unsigned int m = 50;
+	unsigned int n = 30;
+	mat A(m, n, fill::randu);
+
+	test.setMatrix(A);
+	test.factorize();
+	vec xExact(n,fill::randu);
+	vec rhs = A*xExact;
+
+	vec x = test.solveLinearSystem(rhs);
+
+	vec r = A*x-rhs;
+
+	double normResidual = norm(r,2);
+//	printScalar(normResidual);
+
+	EXPECT_LT(normResidual,10E-8);
+
+
+}
+
+TEST_F(SVDSystemTest, testcalculateLogDeterminant){
+
+	unsigned int n = 50;
+	mat M(n, n, fill::randu);
+	mat MTM = trans(M)*M;
+	test.setMatrix(MTM);
+	test.factorize();
+
+	double detTest = test.calculateLogAbsDeterminant();
+
+	double detCheck  = log_det_sympd(MTM);
+	double error = fabs(detTest-detCheck);
+
+	ASSERT_LT(error, 10E-6);
+}

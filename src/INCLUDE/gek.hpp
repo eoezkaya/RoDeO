@@ -95,6 +95,7 @@ public:
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
 	void addNewSampleToData(rowvec newsample);
+	void addNewLowFidelitySampleToData(rowvec newsample);
 
 
 	double calculateExpectedImprovement(rowvec xp);

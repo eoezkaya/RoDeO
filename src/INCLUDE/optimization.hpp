@@ -59,6 +59,9 @@ private:
 
 	mat optimizationHistory;
 
+	std::vector<Design> lowFidelityDesigns;
+	std::vector<Design> highFidelityDesigns;
+
 
 	std::vector<ConstraintFunction> constraintFunctions;
 	ObjectiveFunction objFun;
@@ -121,7 +124,9 @@ public:
 	void print(void) const;
 	void printConstraints(void) const;
 	void visualizeOptimizationHistory(void) const;
+
 	void EfficientGlobalOptimization(void);
+	void EfficientGlobalOptimization2(void);
 
 	void initializeSurrogates(void);
 	void trainSurrogates(void);
@@ -143,6 +148,8 @@ public:
 
 	void setDisplayOn(void);
 	void setDisplayOff(void);
+
+	void setHowOftenTrainModels(unsigned int value);
 
 
 	void zoomInDesignSpace(void);
@@ -171,6 +178,7 @@ public:
 
 
 	void findTheGlobalOptimalDesign(void);
+	void findTheGlobalOptimalDesignMultiFidelity(void);
 
 
 	void updateOptimizationHistory(Design d);

@@ -33,7 +33,9 @@
 
 #include<gtest/gtest.h>
 #include "surrogate_model_data.hpp"
+#include "bounds.hpp"
 #include "matrix_vector_operations.hpp"
+#include "auxiliary_functions.hpp"
 using std::string;
 
 #define TEST_SURROGATE_MODEL_DATA
@@ -48,103 +50,155 @@ protected:
 
 	void TearDown() override {
 
-		remove("testData.csv");
+
+
 
 	}
 
-	SurrogateModelData testData;
+	SurrogateModelData testSurrogateModelData;
 	mat trainingData;
-	unsigned int N = 100;
-	unsigned int dim = 10;
+	mat testData;
+
 
 public:
-	void readRandomTrainingData(void);
-	void readRandomTrainingDataWithGradients(void);
+	void generateAndReadRandomTrainingData(unsigned int, unsigned int);
+	void generateAndReadRandomTrainingDataWithGradients(unsigned int, unsigned int);
+	void generateAndReadRandomTrainingDataWithDirectionalDerivatives(unsigned int, unsigned int);
+
+	void generateAndReadRandomTestData(unsigned int, unsigned int);
+
+
 
 
 };
 
 
-void SurrogateModelDataTest::readRandomTrainingData(void){
+void SurrogateModelDataTest::generateAndReadRandomTrainingData(unsigned int N=100, unsigned int dim=5){
 
 	mat testDataMatrix(N,dim+1,fill::randu);
 	trainingData = testDataMatrix;
 
-	string fileNameDataInput = "testData.csv";
+	string fileNameDataInput = "trainingData.csv";
 	saveMatToCVSFile(trainingData,fileNameDataInput);
 
 	//	dataTest.setDisplayOn();
-	testData.readData(fileNameDataInput);
+	testSurrogateModelData.readData(fileNameDataInput);
+
+	remove(fileNameDataInput.c_str());
 
 }
 
-void SurrogateModelDataTest::readRandomTrainingDataWithGradients(void){
+void SurrogateModelDataTest::generateAndReadRandomTrainingDataWithGradients(unsigned int N=100, unsigned int dim=5){
 
 	mat testDataMatrix(N,2*dim+1,fill::randu);
 	trainingData = testDataMatrix;
 
-	string fileNameDataInput = "testData.csv";
+	string fileNameDataInput = "trainingDataWithGradients.csv";;
 	saveMatToCVSFile(trainingData,fileNameDataInput);
 
 	//	dataTest.setDisplayOn();
-	testData.readData(fileNameDataInput);
-
+	testSurrogateModelData.setGradientsOn();
+	testSurrogateModelData.readData(fileNameDataInput);
+	remove(fileNameDataInput.c_str());
 }
+
+void SurrogateModelDataTest::generateAndReadRandomTrainingDataWithDirectionalDerivatives(unsigned int N=100, unsigned int dim=5){
+
+	mat testDataMatrix(N,2*dim+2,fill::randu);
+	testDataMatrix = testDataMatrix*15.0;
+	trainingData = testDataMatrix;
+
+	string fileNameDataInput = "trainingDataWithDirectionalDerivatives.csv";;
+	saveMatToCVSFile(trainingData,fileNameDataInput);
+
+	//	dataTest.setDisplayOn();
+	testSurrogateModelData.setDirectionalDerivativesOn();
+	testSurrogateModelData.readData(fileNameDataInput);
+	remove(fileNameDataInput.c_str());
+}
+
+
+
+void SurrogateModelDataTest::generateAndReadRandomTestData(unsigned int N = 100,unsigned int dim = 5){
+
+	mat testDataMatrix(N,dim+1,fill::randu);
+	testData = testDataMatrix;
+
+	string fileNameDataInput = "testData.csv";
+	saveMatToCVSFile(testDataMatrix,fileNameDataInput);
+
+	//	dataTest.setDisplayOn();
+	testSurrogateModelData.readDataTest(fileNameDataInput);
+	remove(fileNameDataInput.c_str());
+}
+
 
 
 TEST_F(SurrogateModelDataTest, testIfConstructorWorks) {
 
-	ASSERT_EQ(testData.getNumberOfSamples(),0);
-	ASSERT_EQ(testData.getDimension(),0);
-	ASSERT_FALSE(testData.isDataRead());
+	ASSERT_EQ(testSurrogateModelData.getNumberOfSamples(),0);
+	ASSERT_EQ(testSurrogateModelData.getDimension(),0);
+	ASSERT_FALSE(testSurrogateModelData.isDataRead());
 
 }
 
 TEST_F(SurrogateModelDataTest, testreadData) {
 
-	readRandomTrainingData();
-	mat rawData = testData.getRawData();
+	generateAndReadRandomTrainingData();
+	mat rawData = testSurrogateModelData.getRawData();
 
 	bool result = isEqual(rawData,trainingData, 10E-6);
 
 	ASSERT_EQ(result,true);
-	ASSERT_TRUE(testData.isDataRead());
-
+	ASSERT_TRUE(testSurrogateModelData.isDataRead());
 
 }
 
 
 TEST_F(SurrogateModelDataTest, testassignDimension) {
 
-	readRandomTrainingData();
-	testData.assignDimensionFromData();
+	generateAndReadRandomTrainingData();
+	testSurrogateModelData.assignDimensionFromData();
 
-	unsigned int dim = testData.getDimension();
-	ASSERT_EQ(dim,10);
+	unsigned int dim = testSurrogateModelData.getDimension();
+	ASSERT_EQ(dim,5);
 
 }
 
 TEST_F(SurrogateModelDataTest, testassignDimensionIfDataHasGradients) {
 
-	testData.setGradientsOn();
-	readRandomTrainingDataWithGradients();
-	testData.assignDimensionFromData();
+	testSurrogateModelData.setGradientsOn();
+	generateAndReadRandomTrainingDataWithGradients();
+	testSurrogateModelData.assignDimensionFromData();
 
-	unsigned int dim = testData.getDimension();
-	ASSERT_EQ(dim,10);
+	unsigned int dim = testSurrogateModelData.getDimension();
+	ASSERT_EQ(dim,5);
 
 }
 
+TEST_F(SurrogateModelDataTest, testassignDimensionIfDataHasDirectionalDerivatives) {
+
+	testSurrogateModelData.setDirectionalDerivativesOn();
+	generateAndReadRandomTrainingDataWithDirectionalDerivatives();
+	testSurrogateModelData.assignDimensionFromData();
+
+	unsigned int dim = testSurrogateModelData.getDimension();
+	ASSERT_EQ(dim,5);
+
+}
+
+
+
 TEST_F(SurrogateModelDataTest, testassignSampleInputMatrix) {
 
-	testData.setGradientsOn();
-	readRandomTrainingDataWithGradients();
-	testData.assignDimensionFromData();
+	testSurrogateModelData.setGradientsOn();
+	generateAndReadRandomTrainingDataWithGradients();
+	testSurrogateModelData.assignDimensionFromData();
 
-	testData.assignSampleInputMatrix();
-	rowvec x = testData.getRowX(7);
+	testSurrogateModelData.assignSampleInputMatrix();
+	rowvec x = testSurrogateModelData.getRowX(7);
 
-	for(unsigned int i=0; i<testData.getDimension(); i++){
+	for(unsigned int i=0; i<testSurrogateModelData.getDimension(); i++){
 
 		double error = fabs(x(i)- trainingData(7,i));
 		EXPECT_LT(error, 10E-10 );
@@ -154,14 +208,15 @@ TEST_F(SurrogateModelDataTest, testassignSampleInputMatrix) {
 
 TEST_F(SurrogateModelDataTest, testassignSampleOutputVector) {
 
-	testData.setGradientsOn();
-	readRandomTrainingDataWithGradients();
-	testData.assignDimensionFromData();
-	testData.assignSampleOutputVector();
+	unsigned int dim = 5;
+	testSurrogateModelData.setGradientsOn();
+	generateAndReadRandomTrainingDataWithGradients();
+	testSurrogateModelData.assignDimensionFromData();
+	testSurrogateModelData.assignSampleOutputVector();
 
-	vec y = testData.getOutputVector();
+	vec y = testSurrogateModelData.getOutputVector();
 
-	for(unsigned int i=0; i<N; i++){
+	for(unsigned int i=0; i<100; i++){
 
 		double error = fabs(y(i)- trainingData(i,dim));
 		EXPECT_LT(error, 10E-10 );
@@ -171,26 +226,26 @@ TEST_F(SurrogateModelDataTest, testassignSampleOutputVector) {
 
 TEST_F(SurrogateModelDataTest, testnormalizeSampleInputMatrix) {
 
-	testData.setGradientsOn();
-	readRandomTrainingDataWithGradients();
-	testData.assignDimensionFromData();
-	testData.assignSampleOutputVector();
+	testSurrogateModelData.setGradientsOn();
+	generateAndReadRandomTrainingDataWithGradients();
+	testSurrogateModelData.assignDimensionFromData();
+	testSurrogateModelData.assignSampleOutputVector();
 
-	vec lb(dim, fill::zeros);
-	vec ub(dim, fill::ones);
+	vec lb(5, fill::zeros);
+	vec ub(5, fill::ones);
 	ub.fill(10.0);
 	Bounds boxConstraints(lb,ub);
-	testData.setBoxConstraints(boxConstraints);
+	testSurrogateModelData.setBoxConstraints(boxConstraints);
 
-	testData.normalizeSampleInputMatrix();
+	testSurrogateModelData.normalizeSampleInputMatrix();
 
-	ASSERT_TRUE(testData.isDataNormalized());
+	ASSERT_TRUE(testSurrogateModelData.isDataNormalized());
 
 	unsigned int someRowIndex = 7;
-	rowvec x = testData.getRowX(someRowIndex);
+	rowvec x = testSurrogateModelData.getRowX(someRowIndex);
 
-	for(unsigned int i=0; i<testData.getDimension(); i++){
-		double normalizedValue = trainingData(someRowIndex,i)/100.0;
+	for(unsigned int i=0; i<testSurrogateModelData.getDimension(); i++){
+		double normalizedValue = trainingData(someRowIndex,i)/50.0;
 		double error = fabs(normalizedValue- x(i));
 		EXPECT_LT(error, 10E-10 );
 	}
@@ -200,24 +255,62 @@ TEST_F(SurrogateModelDataTest, testnormalizeSampleInputMatrix) {
 
 TEST_F(SurrogateModelDataTest, testassignGradientMatrix) {
 
+	unsigned int dim = 6;
+	unsigned int N = 22;
+	testSurrogateModelData.setGradientsOn();
+	generateAndReadRandomTrainingDataWithGradients(N,dim);
+	testSurrogateModelData.assignDimensionFromData();
+	testSurrogateModelData.assignSampleOutputVector();
+	testSurrogateModelData.assignGradientMatrix();
 
-	testData.setGradientsOn();
-	readRandomTrainingDataWithGradients();
-	testData.assignDimensionFromData();
-	testData.assignSampleOutputVector();
-	testData.assignGradientMatrix();
-
-	mat gradient = testData.getGradientMatrix();
+	mat gradient = testSurrogateModelData.getGradientMatrix();
 
 	bool result = isEqual(gradient, trainingData.submat(0,dim+1,N-1, 2*dim), 10E-8);
 	ASSERT_TRUE(result);
 
 }
 
+TEST_F(SurrogateModelDataTest, testreadDataTest) {
+
+	unsigned int dim = 3;
+	unsigned int N = 23;
+	testSurrogateModelData.setDimension(dim);
+	generateAndReadRandomTestData(N, dim);
+	ASSERT_TRUE(testSurrogateModelData.ifTestDataIsRead);
+
+	unsigned int numberOfTestSamples = testSurrogateModelData.getNumberOfSamplesTest();
+
+	ASSERT_TRUE(numberOfTestSamples == N);
+
+}
+
+TEST_F(SurrogateModelDataTest, testreadDataTestWithDirectionalDerivatives) {
+
+	unsigned int dim = 4;
+	unsigned int N = 10;
+	testSurrogateModelData.setDimension(dim);
+	generateAndReadRandomTrainingDataWithDirectionalDerivatives(N, dim);
+
+	ASSERT_TRUE(testSurrogateModelData.ifDataIsRead);
+
+}
+
+TEST_F(SurrogateModelDataTest, testnormalizeData) {
+
+	unsigned int dim = 3;
+	unsigned int N = 4;
+	testSurrogateModelData.setDimension(dim);
+	generateAndReadRandomTrainingDataWithDirectionalDerivatives(N, dim);
+	ASSERT_TRUE(testSurrogateModelData.ifDataIsRead);
+
+	Bounds boxConstraints(dim);
+	boxConstraints.setBounds(0.0,15.0);
+	testSurrogateModelData.setBoxConstraints(boxConstraints);
+	testSurrogateModelData.normalize();
 
 
-
-
+	ASSERT_TRUE(testSurrogateModelData.ifDataIsNormalized);
+}
 
 
 #endif

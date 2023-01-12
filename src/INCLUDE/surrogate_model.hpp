@@ -41,6 +41,8 @@ using namespace arma;
 using std::string;
 
 
+
+
 class SurrogateModel{
 
 protected:
@@ -48,21 +50,13 @@ protected:
 
 	unsigned int NTest = 0;
 
-
 	std::string name;
-
-
 	std::string hyperparameters_filename;
-
 	std::string filenameDataInput;
 	std::string filenameDataInputTest;
-	std::string filenameTestResults;
+	std::string filenameTestResults = "surrogateTestResults.csv";
 	std::string filenameForWarmStartModelTraining;
 	std::string filenameForWriteWarmStart;
-
-	bool ifMinimize = true;
-	bool ifMaximize = false;
-
 
 	unsigned int numberOfHyperParameters  = 0;
 	unsigned int numberOfTrainingIterations  = 10000;
@@ -84,22 +78,16 @@ public:
 
 	bool ifInitialized = false;
 	bool ifDataIsRead = false;
+	bool ifTestDataIsRead = false;
 	bool ifNormalized = false;
-
-
 	bool ifModelTrainingIsDone = false;
-
-
 	bool ifHasTestData = false;
 	bool ifNormalizedTestData = false;
 
+
 	mat testResults;
 
-	SURROGATE_MODEL modelID;
-
-
 	SurrogateModel();
-	SurrogateModel(std::string name);
 
 	void setName(std::string);
 
@@ -131,9 +119,6 @@ public:
 	virtual void setDisplayOn(void);
 	virtual void setDisplayOff(void);
 
-	virtual void setMinimizeOn(void);
-	virtual void setMaximizeOn(void);
-
 	string getNameOfHyperParametersFile(void) const;
 	string getNameOfInputFile(void) const;
 
@@ -161,6 +146,7 @@ public:
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
 	virtual void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const = 0;
 	virtual void addNewSampleToData(rowvec newsample) = 0;
+	virtual void addNewLowFidelitySampleToData(rowvec newsample) = 0;
 
 
 	vec interpolateVector(mat X) const;

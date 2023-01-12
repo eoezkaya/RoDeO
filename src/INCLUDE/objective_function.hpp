@@ -63,6 +63,8 @@ public:
 	std::string markerForGradientLowFi;
 
 
+	std::string nameLowFidelityTrainingData;
+	std::string nameHighFidelityTrainingData;
 
 	bool ifMultiLevel = false;
 	bool ifGradient = false;
@@ -109,6 +111,9 @@ protected:
 	std::string readMarkerAdjointLowFi;
 
 	std::string fileNameTrainingDataForSurrogate;
+
+	std::string fileNameTrainingDataForSurrogateHighFidelity;
+	std::string fileNameTrainingDataForSurrogateLowFidelity;
 
 
 	bool ifMarkerIsSet = false;
@@ -231,10 +236,12 @@ public:
 	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
 
 	void evaluate(Design &d);
+	void evaluateLowFidelity(Design &d);
 	void evaluateAdjoint(Design &d);
 	void readEvaluateOutput(Design &d);
 
 	void addDesignToData(Design &d);
+	void addLowFidelityDesignToData(Design &d);
 
 	bool checkIfGradientAvailable(void) const;
 	double interpolate(rowvec x) const;

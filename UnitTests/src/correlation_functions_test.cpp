@@ -30,6 +30,7 @@
  */
 
 #include "correlation_functions.hpp"
+#include "auxiliary_functions.hpp"
 #include<gtest/gtest.h>
 
 mat generateDataMatrixForTestingCorrelationFunctions(unsigned int N, unsigned int d){
@@ -175,6 +176,78 @@ TEST_F(CorrelationFunctionsTest, testcomputeCorrelationMatrixDot){
 
 }
 
+class GaussianCorrelationFunctionsTest : public ::testing::Test {
+protected:
+	void SetUp() override {
 
 
+		testCorrelationFunction.setDimension(3);
+
+	}
+
+	//  void TearDown() override {}
+
+
+	GaussianCorrelationFunctionForGEK testCorrelationFunction;
+
+
+
+};
+
+TEST_F(GaussianCorrelationFunctionsTest, testSetInputMatrix){
+
+	ASSERT_FALSE(testCorrelationFunction.isInputSampleMatrixSet());
+	mat dataMatrix = generateDataMatrixForTestingCorrelationFunctions(10,3);
+	testCorrelationFunction.setInputSampleMatrix(dataMatrix);
+	ASSERT_TRUE(testCorrelationFunction.isInputSampleMatrixSet());
+}
+
+TEST_F(GaussianCorrelationFunctionsTest, testComputeCorrelation){
+
+	testCorrelationFunction.initialize();
+	rowvec x1(3,fill::randu);
+	rowvec x2(3,fill::randu);
+
+	double R = testCorrelationFunction.computeCorrelation(x1,x2);
+
+	double Rexpected = exp(- ((x1(0)-x2(0))*(x1(0)-x2(0)) + (x1(1)-x2(1))*(x1(1)-x2(1)) + (x1(2)-x2(2))*(x1(2)-x2(2)) ));
+	double error = fabs(Rexpected - R);
+	EXPECT_LT(error,10E-10);
+
+}
+
+TEST_F(GaussianCorrelationFunctionsTest, testComputeCorrelationDot){
+
+	testCorrelationFunction.initialize();
+	rowvec x1(3,fill::randu);
+	rowvec x2(3,fill::randu);
+	rowvec diffDirection(3,fill::randu);
+
+	double R0 = testCorrelationFunction.computeCorrelation(x1,x2);
+	double Rdot = testCorrelationFunction.computeCorrelationDot(x1, x2, diffDirection);
+	rowvec x2pert = x2 + 0.0001*diffDirection;
+	double Rplus = testCorrelationFunction.computeCorrelation(x1,x2pert);
+	double fdValue = (Rplus-R0)/0.0001;
+	double error = fabs(fdValue - Rdot);
+	EXPECT_LT(error,10E-4);
+
+}
+
+TEST_F(GaussianCorrelationFunctionsTest, testComputeCorrelationDotDot){
+
+	testCorrelationFunction.initialize();
+	rowvec x1(3,fill::randu);
+	rowvec x2(3,fill::randu);
+	rowvec firstdiffDirection(3,fill::randu);
+	rowvec seconddiffDirection(3,fill::randu);
+
+	double Rdot0 = testCorrelationFunction.computeCorrelationDot(x1,x2, firstdiffDirection);
+	double Rdotdot = testCorrelationFunction.computeCorrelationDotDot(x1, x2, firstdiffDirection,seconddiffDirection);
+	rowvec x2pert = x2 + 0.0001*seconddiffDirection;
+	double Rdotplus = testCorrelationFunction.computeCorrelationDot(x1,x2pert,firstdiffDirection);
+	double fdValue = (Rdotplus-Rdot0)/0.0001;
+	double error = fabs(fdValue - Rdotdot);
+	EXPECT_LT(error,10E-4);
+
+}
 

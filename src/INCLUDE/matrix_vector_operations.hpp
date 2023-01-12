@@ -61,6 +61,10 @@ void printScalarValueWithName(std::string name, double value);
 void printScalarValueWithName(std::string name, unsigned int value);
 
 
+vec    makeUnitVector(vec x);
+rowvec makeUnitVector(rowvec x);
+
+
 vec normalizeColumnVector(vec x, double xmin, double xmax);
 
 rowvec normalizeRowVector(rowvec x, vec xmin, vec xmax);
@@ -72,6 +76,10 @@ void copyVector(vec &a,vec b);
 void copyVector(vec &a,vec b, unsigned int);
 void addOneElement(rowvec &in, double val);
 void addOneElement(vec &in, double val);
+
+
+uvec findIndicesKMax(const vec &v, unsigned int k);
+uvec findIndicesKMin(const vec &v, unsigned int k);
 
 
 void joinMatricesByColumns(mat& A, const mat& B);

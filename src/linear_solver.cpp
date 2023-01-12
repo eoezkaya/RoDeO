@@ -28,7 +28,7 @@
  *
  *
  */
-
+#include "auxiliary_functions.hpp"
 #include "linear_solver.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -226,3 +226,95 @@ vec CholeskySystem::solveLinearSystem(vec rhs) const{
 
 	return x;
 }
+
+
+
+
+void SVDSystem::setMatrix(mat input){
+
+	assert(input.n_rows!=0);
+	assert(input.n_cols!=0);
+	numberOfCols = input.n_cols;
+	numberOfRows = input.n_rows;
+
+	A = input;
+	ifMatrixIsSet = true;
+}
+
+void SVDSystem::factorize(void){
+
+	assert(ifMatrixIsSet);
+
+	svd(U,sigma,V,A);
+
+	ifFactorizationIsDone = true;
+
+}
+
+vec SVDSystem::solveLinearSystem(vec &rhs) const{
+
+	assert(ifFactorizationIsDone);
+
+	vec solution(numberOfCols, fill::zeros);
+
+	vec sigmaCut(sigma.size());
+//	sigma.print("sigma");
+
+
+	int numberOfActiveSingularValues = 0;
+	for(unsigned int i=0; i<sigma.size();i++){
+
+		if(sigma(i) < thresholdForSingularValues){
+
+			sigmaCut(i) = 0.0;
+
+		}
+		else{
+
+			sigmaCut(i) = 1.0/sigma(i);
+			numberOfActiveSingularValues++;
+		}
+
+	}
+
+//	sigmaCut.print("sigmaCut");
+
+
+	for(unsigned int i=0; i<numberOfActiveSingularValues; i++){
+
+		solution += dot(U.col(i),rhs)*sigmaCut(i)*V.col(i);
+
+	}
+
+	return solution;
+}
+
+
+void SVDSystem::setThresholdForSingularValues(double value) {
+
+	assert(value<1.0);
+	assert(value>0.0);
+	thresholdForSingularValues = value;
+
+
+}
+
+
+double SVDSystem::calculateLogAbsDeterminant(void) const{
+
+	assert(ifFactorizationIsDone);
+	double Absdeterminant = 1.0;
+
+	for(unsigned int i=0; i<sigma.size();i++){
+
+
+		Absdeterminant = Absdeterminant*sigma(i);
+
+		}
+
+
+	return log(Absdeterminant);
+
+
+}
+

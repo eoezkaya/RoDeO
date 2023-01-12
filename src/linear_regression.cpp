@@ -37,15 +37,15 @@
 using namespace arma;
 
 
-LinearModel::LinearModel(std::string nameInput):SurrogateModel(nameInput){
-
-	modelID = LINEAR_REGRESSION;
-
-
-	setNameOfHyperParametersFile(nameInput);
-
-
-}
+//LinearModel::LinearModel(std::string nameInput):SurrogateModel(nameInput){
+//
+//	modelID = LINEAR_REGRESSION;
+//
+//
+//	setNameOfHyperParametersFile(nameInput);
+//
+//
+//}
 
 LinearModel::LinearModel():SurrogateModel(){
 
@@ -286,6 +286,13 @@ void LinearModel::addNewSampleToData(rowvec newsample){
 
 
 
+
+}
+
+void LinearModel::addNewLowFidelitySampleToData(rowvec newsample){
+
+
+	assert(false);
 
 }
 

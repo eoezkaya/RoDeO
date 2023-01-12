@@ -118,7 +118,7 @@ TEST_F(MultiLevelModelTest, testAddNewSampleToData){
 	newLowFiSample(1) = x(1);
 	newLowFiSample(2) = f;
 
-	testModel.addNewSampleToData(newLowFiSample);
+	testModel.addNewLowFidelitySampleToData(newLowFiSample);
 
 	ASSERT_EQ(testModel.getNumberOfLowFiSamples(),201);
 
@@ -149,8 +149,8 @@ TEST_F(MultiLevelModelTest, testAddNewHiFiSampleToData){
 	newHiFiSample(2) = f;
 
 
-	testModel.addNewSampleToData(newLowFiSample);
-	testModel.addNewHiFiSampleToData(newHiFiSample);
+	testModel.addNewLowFidelitySampleToData(newLowFiSample);
+	testModel.addNewSampleToData(newHiFiSample);
 
 	ASSERT_EQ(testModel.getNumberOfHiFiSamples(),51);
 
@@ -614,26 +614,27 @@ TEST_F(MultiLevelModelTest, testCalculateExpectedImprovement){
 }
 
 
-TEST(MultiLevelModelTestNACA0012, testMLModel){
 
-	chdir("./MultiLevelModelTestNACA0012");
+TEST(MultiLevelModelTestRAE2822, testMLModel){
+
+	chdir("./MultiLevelModelTestRAE2822");
 
 	MultiLevelModel testModel;
 	testModel.setName("MLtestModel");
 
-	testModel.setinputFileNameHighFidelityData("CD_HiFi.csv");
-	testModel.setinputFileNameLowFidelityData("CD_LowFi.csv");
+	testModel.setinputFileNameHighFidelityData("CL_HiFi.csv");
+	testModel.setinputFileNameLowFidelityData("CL_LowFi.csv");
 
 	unsigned int dim = 38;
 
 	vec lowerBounds = zeros<vec>(dim);
 	vec upperBounds = zeros<vec>(dim);
-	lowerBounds.fill(-0.00001);
-	upperBounds.fill(0.00001);
+	lowerBounds.fill(-0.000001);
+	upperBounds.fill(0.000001);
 
 	mat CLValidation;
 
-	CLValidation.load("CD.csv", csv_ascii);
+	CLValidation.load("CL.csv", csv_ascii);
 
 	mat X = CLValidation.submat(0,0,99,dim-1);
 	vec CL = CLValidation.col(dim);
@@ -675,6 +676,72 @@ TEST(MultiLevelModelTestNACA0012, testMLModel){
 
 
 }
+
+
+//
+//
+//
+//TEST(MultiLevelModelTestNACA0012, testMLModel){
+//
+//	chdir("./MultiLevelModelTestNACA0012");
+//
+//	MultiLevelModel testModel;
+//	testModel.setName("MLtestModel");
+//
+//	testModel.setinputFileNameHighFidelityData("CD_HiFi.csv");
+//	testModel.setinputFileNameLowFidelityData("CD_LowFi.csv");
+//
+//	unsigned int dim = 38;
+//
+//	vec lowerBounds = zeros<vec>(dim);
+//	vec upperBounds = zeros<vec>(dim);
+//	lowerBounds.fill(-0.00001);
+//	upperBounds.fill(0.00001);
+//
+//	mat CLValidation;
+//
+//	CLValidation.load("CD.csv", csv_ascii);
+//
+//	mat X = CLValidation.submat(0,0,99,dim-1);
+//	vec CL = CLValidation.col(dim);
+//
+//	CL.print();
+//
+//	mat Xnormalized = normalizeMatrix(X,lowerBounds,upperBounds);
+//	Xnormalized = Xnormalized*(1.0/dim);
+//	Xnormalized.print();
+//
+//
+//	mat results(100, 3);
+//
+//	testModel.setDisplayOn();
+//	testModel.setBoxConstraints(lowerBounds,upperBounds);
+//	testModel.initializeSurrogateModel();
+//	testModel.setNumberOfThreads(4);
+//	testModel.train();
+//
+//	double SE = 0.0;
+//	for(unsigned int i=0; i<100; i++){
+//
+//		rowvec xp= Xnormalized.row(i);
+//
+//		double ftilde = testModel.interpolate(xp);
+//		double f = CL(i);
+//		results(i,0)  = ftilde;
+//		results(i,1)  = f;
+//		results(i,2)  = (f - ftilde) * (f - ftilde);
+//		SE += (f - ftilde) * (f - ftilde);
+//
+//	}
+//
+//	SE = SE/100;
+//
+//	results.save("results.csv", csv_ascii);
+//	printScalar(SE);
+//
+//
+//
+//}
 
 
 

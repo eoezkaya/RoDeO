@@ -56,7 +56,7 @@ TEST(testOptimizer, testMLOptimization){
 	std::string studyName = "testOptimizerMultiLevel";
 	Optimizer testStudy(studyName, 2);
 
-	testStudy.setMaximumNumberOfIterations(10);
+	testStudy.setMaximumNumberOfIterations(100);
 	testStudy.setMaximumNumberOfIterationsLowFidelity(100);
 
 
@@ -70,18 +70,26 @@ TEST(testOptimizer, testMLOptimization){
 	objFunTest.setParameterBounds(boxConstraints);
 
 	ObjectiveFunctionDefinition testObjectiveFunctionDef("testObjectiveFunctionMLSurrogate");
-	testObjectiveFunctionDef.outputFilename      = "HimmelblauHiFiData.csv";
-	testObjectiveFunctionDef.outputFilenameLowFi = "HimmelblauLowFiData.csv";
+	testObjectiveFunctionDef.outputFilename      = "objFunVal.dat";
+	testObjectiveFunctionDef.outputFilenameLowFi = "objFunVal.dat";
 	testObjectiveFunctionDef.ifMultiLevel = true;
+	testObjectiveFunctionDef.designVectorFilename = "dv.dat";
+	testObjectiveFunctionDef.executableName = "himmelblauHighFidelity";
+	testObjectiveFunctionDef.executableNameLowFi = "himmelblauLowFidelity";
+	testObjectiveFunctionDef.nameHighFidelityTrainingData = "HimmelblauHiFiData.csv";
+	testObjectiveFunctionDef.nameLowFidelityTrainingData  = "HimmelblauLowFiData.csv";
 
 
 	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
 
 	testStudy.addObjectFunction(objFunTest);
+	testStudy.setFileNameDesignVector("dv.dat");
 
 	testStudy.setDisplayOn();
 
-	testStudy.EfficientGlobalOptimization();
+	testStudy.setHowOftenTrainModels(1000);
+
+	testStudy.EfficientGlobalOptimization2();
 
 	chdir("../");
 

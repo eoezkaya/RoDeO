@@ -46,25 +46,10 @@ using std::cout;
 
 AggregationModel::AggregationModel():SurrogateModel(){
 
-	modelID = AGGREGATION;
-
 	setGradientsOn();
-
 
 }
 
-
-AggregationModel::AggregationModel(std::string name):SurrogateModel(name),krigingModel(name) {
-
-	modelID = AGGREGATION;
-
-	setNameOfHyperParametersFile(name);
-	krigingModel.setNameOfHyperParametersFile(name);
-
-	setGradientsOn();
-
-
-}
 
 void AggregationModel::setNameOfInputFile(std::string filename){
 
@@ -564,6 +549,14 @@ void AggregationModel::addNewSampleToData(rowvec newSample){
 	}
 
 }
+
+void AggregationModel::addNewLowFidelitySampleToData(rowvec newsample){
+
+
+	assert(false);
+
+}
+
 
 void AggregationModel::updateModelWithNewData(void){
 

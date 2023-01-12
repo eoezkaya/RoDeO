@@ -30,9 +30,13 @@
  */
 #include<math.h>
 #include "matrix_vector_operations.hpp"
+#include "auxiliary_functions.hpp"
 #include "bounds.hpp"
 #include "random_functions.hpp"
 #include<gtest/gtest.h>
+
+
+
 
 
 TEST(testMatrixVectorOperations, testabortIfHasNan){
@@ -203,6 +207,56 @@ TEST(testMatrixVectorOperations, testjoinMatricesByRows){
 	double error = fabs(B(1,2) - A(5,2));
 	EXPECT_LT(error,10E-10);
 
+
+}
+
+TEST(testMatrixVectorOperations, testMakeUnitVector){
+
+	vec v(10,fill::randu);
+	v = v*5;
+	vec w = makeUnitVector(v);
+	double normw = norm(w,2);
+	EXPECT_LT(fabs(normw-1.0),10E-10);
+}
+
+TEST(testMatrixVectorOperations, testMakeUnitRowVector){
+
+	rowvec v(10,fill::randu);
+	v = v*5;
+	rowvec w = makeUnitVector(v);
+
+	double normw = norm(w,2);
+	EXPECT_LT(fabs(normw-1.0),10E-10);
+
+}
+
+
+TEST(testMatrixVectorOperations, testFindIndicesKMax){
+
+	vec v(6);
+	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
+
+	uvec kBest = findIndicesKMax(v,3);
+
+	ASSERT_FALSE(isIntheList(2, kBest) == -1);
+	ASSERT_FALSE(isIntheList(3, kBest) == -1);
+	ASSERT_FALSE(isIntheList(4, kBest) == -1);
+	ASSERT_TRUE(isIntheList(0, kBest) == -1);
+
+}
+
+
+TEST(testMatrixVectorOperations, testFindIndicesKMin){
+
+	vec v(6);
+	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
+
+	uvec kBest = findIndicesKMin(v,3);
+
+	ASSERT_FALSE(isIntheList(1, kBest) == -1);
+	ASSERT_FALSE(isIntheList(0, kBest) == -1);
+	ASSERT_FALSE(isIntheList(5, kBest) == -1);
+	ASSERT_TRUE(isIntheList(4, kBest) == -1);
 
 }
 

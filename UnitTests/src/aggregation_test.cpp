@@ -52,7 +52,7 @@ TEST(testAggrregationModel, testfindNearestNeighbor){
 	saveMatToCVSFile(samples,"AggregationTest.csv");
 
 
-	AggregationModel testModel("AggregationTest");
+	AggregationModel testModel;
 
 	testModel.readData();
 	Bounds boxConstraints(dim);
@@ -99,7 +99,7 @@ TEST(testAggrregationModel, testinterpolateWithLinearFunction){
 
 
 	saveMatToCVSFile(samples,"AggregationTest.csv");
-	AggregationModel testModel("AggregationTest");
+	AggregationModel testModel;
 
 	testModel.readData();
 
@@ -146,7 +146,7 @@ TEST(testAggrregationModel, determineOptimalL1NormWeights){
 	saveMatToCVSFile(samples,"AggregationTest.csv");
 
 
-	AggregationModel testModel("AggregationTest");
+	AggregationModel testModel;
 
 
 

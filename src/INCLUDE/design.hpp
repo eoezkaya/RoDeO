@@ -139,7 +139,9 @@ public:
 	rowvec designParameters;
 	rowvec constraintTrueValues;
 	rowvec gradient;
+	rowvec tangentDirection;
 	double trueValue = 0;
+	double tangentValue = 0.0;
 	double objectiveFunctionValue = 0.0;
 	double improvementValue = 0.0;
 	std::vector<rowvec> constraintGradients;

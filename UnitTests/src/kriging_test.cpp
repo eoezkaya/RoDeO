@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -44,13 +44,18 @@ protected:
 	void SetUp() override {
 
 
-		unsigned int N = 100;
+		unsigned int N = 200;
 		generate2DEggholderDataForKrigingModel(N);
 		testModel2D.setName("Eggholder");
 		testModel2D.setNameOfInputFile("Eggholder.csv");
 		testModel2D.readData();
 		testModel2D.setBoxConstraints(0.0, 200.0);
 		testModel2D.normalizeData();
+		testModel2D.setNameOfInputFileTest("EggholderTest.csv");
+		testModel2D.readDataTest();
+		testModel2D.normalizeDataTest();
+
+
 		testModel2D.initializeSurrogateModel();
 
 		N = 10;
@@ -96,6 +101,7 @@ protected:
 		remove("EggholderTest.csv");
 		remove("LinearTF.csv");
 		remove("LinearTFTest.csv");
+
 
 	}
 
@@ -143,6 +149,35 @@ protected:
 };
 
 
+TEST_F(KrigingModelTest, updateAuxilliaryFieldsWithSVDMethod) {
+
+	vec hyperParameters(4);
+	hyperParameters(0) = 10.0;
+	hyperParameters(1) = 10.0;
+	hyperParameters(2) = 2.0;
+	hyperParameters(3) = 2.0;
+
+	testModel2D.setHyperParameters(hyperParameters);
+
+	testModel2D.updateAuxilliaryFieldsWithSVDMethod();
+
+	testModel2D.tryOnTestData();
+
+	mat results;
+	results.load("surrogateTestResults.csv", csv_ascii);
+
+	vec squaredError = results.col(4);
+
+	double normL2error = norm(squaredError,1);
+	normL2error = normL2error/squaredError.size();
+
+	EXPECT_LT(normL2error, 10E4);
+
+	remove("surrogateTestResults.csv");
+}
+
+
+
 TEST_F(KrigingModelTest, updateModelWithNewData) {
 
 
@@ -160,7 +195,7 @@ TEST_F(KrigingModelTest, testIfConstructorWorks) {
 	ASSERT_TRUE(testModel2D.ifDataIsRead);
 	ASSERT_TRUE(testModel2D.ifInitialized);
 	ASSERT_TRUE(testModel2D.ifNormalized);
-	ASSERT_FALSE(testModel2D.ifHasTestData);
+	ASSERT_TRUE(testModel2D.ifHasTestData);
 	ASSERT_FALSE(testModel2D.areGradientsOn());
 
 	ASSERT_TRUE(testModel2D.getDimension() == 2);
@@ -168,12 +203,11 @@ TEST_F(KrigingModelTest, testIfConstructorWorks) {
 	ASSERT_TRUE(filenameDataInput == "Eggholder.csv");
 
 
-
 }
 
 
 
-TEST_F(KrigingModelTest, testcalculateLikelihood) {
+TEST_F(KrigingModelTest, calculateLikelihood) {
 
 	vec hyperParameters(2);
 	hyperParameters(0) = 5.0;
@@ -190,7 +224,7 @@ TEST_F(KrigingModelTest, testcalculateLikelihood) {
 }
 
 
-TEST_F(KrigingModelTest, testInSampleErrorWithoutTraining) {
+TEST_F(KrigingModelTest, inSampleErrorWithoutTraining) {
 
 	vec xSample(1);
 	xSample(0) = 0.25;
@@ -266,7 +300,7 @@ TEST_F(KrigingModelTest, testKrigingOptimizertestKrigingOptimizerOptimize) {
 
 
 
-TEST_F(KrigingModelTest, testKrigingTrain) {
+TEST_F(KrigingModelTest, train) {
 
 
 	unsigned int dim = 2;
@@ -288,7 +322,7 @@ TEST_F(KrigingModelTest, testKrigingTrain) {
 
 }
 
-TEST_F(KrigingModelTest, testKrigingTrainWithWarmStart) {
+TEST_F(KrigingModelTest, trainWithWarmStart) {
 
 
 
@@ -304,7 +338,7 @@ TEST_F(KrigingModelTest, testKrigingTrainWithWarmStart) {
 
 
 
-TEST_F(KrigingModelTest, testOutandInSampleErrorAfterTraining) {
+TEST_F(KrigingModelTest, calculateOutSampleError) {
 
 	testModel2D.train();
 
@@ -327,7 +361,7 @@ TEST_F(KrigingModelTest, testOutandInSampleErrorAfterTraining) {
 
 
 
-TEST_F(KrigingModelTest, testSaveLoadHyperParameters) {
+TEST_F(KrigingModelTest, saveAndLoadHyperParameters) {
 
 	testModel2D.setNumberOfTrainingIterations(100);
 	testModel2D.train();
@@ -345,7 +379,7 @@ TEST_F(KrigingModelTest, testSaveLoadHyperParameters) {
 
 
 
-TEST_F(KrigingModelTest, testLinearModel) {
+TEST_F(KrigingModelTest, linearModel) {
 
 	generate2DLinearTestFunctionDataForKrigingModel(50);
 
@@ -375,75 +409,6 @@ TEST_F(KrigingModelTest, testLinearModel) {
 
 
 
-TEST(KrigingModelTestNACA0012, testKriging){
 
-	chdir("./MultiLevelModelTestNACA0012");
-
-	KrigingModel testModel;
-
-
-
-	unsigned int dim = 38;
-
-	vec lowerBounds = zeros<vec>(dim);
-	vec upperBounds = zeros<vec>(dim);
-	lowerBounds.fill(-0.00001);
-	upperBounds.fill(0.00001);
-
-	mat CLValidation;
-
-	CLValidation.load("CD.csv", csv_ascii);
-
-	mat X = CLValidation.submat(0,0,99,dim-1);
-	vec CL = CLValidation.col(dim);
-
-	CL.print();
-
-	mat Xnormalized = normalizeMatrix(X,lowerBounds,upperBounds);
-	Xnormalized = Xnormalized*(1.0/dim);
-	Xnormalized.print();
-
-
-	mat results(100, 3);
-
-	testModel.setDisplayOn();
-	testModel.setNumberOfThreads(4);
-
-	testModel.setName("KrigingtestModel");
-	testModel.setNameOfInputFile("CD_HiFi.csv");
-	testModel.readData();
-
-	testModel.setBoxConstraints(lowerBounds,upperBounds);
-	testModel.normalizeData();
-	testModel.setLinearRegressionOn();
-	testModel.initializeSurrogateModel();
-
-	testModel.train();
-
-
-
-
-	double SE = 0.0;
-	for(unsigned int i=0; i<100; i++){
-
-		rowvec xp= Xnormalized.row(i);
-
-		double ftilde = testModel.interpolate(xp);
-		double f = CL(i);
-		results(i,0)  = ftilde;
-		results(i,1)  = f;
-		results(i,2)  = (f - ftilde) * (f - ftilde);
-		SE += (f - ftilde) * (f - ftilde);
-
-	}
-
-	SE = SE/100;
-
-	results.save("results.csv", csv_ascii);
-	printScalar(SE);
-
-
-
-}
 
 

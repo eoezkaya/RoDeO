@@ -33,6 +33,7 @@
 #include <cassert>
 #include "design.hpp"
 #include "matrix_vector_operations.hpp"
+#include "auxiliary_functions.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -291,6 +292,7 @@ void Design::saveDesignVectorAsCSVFile(std::string fileName) const{
 
 void Design::saveDesignVector(std::string fileName) const{
 
+	assert(isNotEmpty(fileName));
 	std::ofstream designVectorFile (fileName);
 	designVectorFile.precision(10);
 	if (designVectorFile.is_open())

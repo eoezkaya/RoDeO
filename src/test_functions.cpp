@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -89,18 +89,6 @@ void TestFunction::setVisualizationOff(void){
 	ifVisualize = false;
 
 }
-
-void TestFunction::setGradientsOn(void){
-
-	ifGradientsAvailable = true;
-
-}
-void TestFunction::setGradientsOff(void){
-
-	ifGradientsAvailable = false;
-
-}
-
 
 
 void TestFunction::setDisplayOn(void){
@@ -343,8 +331,8 @@ void TestFunction::setFunctionPointer(double (*testFunction)(double *)){
 void TestFunction::setFunctionPointer(double (*testFunctionAdjoint)(double *, double *)){
 
 	adj_ptr = testFunctionAdjoint;
-	ifFunctionPointerIsSet = true;
-	ifGradientsAvailable = true;
+	ifFunctionPointerAdjIsSet = true;
+
 
 }
 
@@ -363,16 +351,25 @@ void TestFunction::evaluate(Design &d) const{
 
 }
 
+
 void TestFunction::evaluateAdjoint(Design &d) const{
 
-	assert(ifFunctionPointerIsSet);
-	assert(ifGradientsAvailable);
+	assert(ifFunctionPointerAdjIsSet);
 
 	rowvec x= d.designParameters;
 	rowvec xb(dimension);
 	double functionValue =  adj_ptr(x.memptr(), xb.memptr());
 	d.trueValue = functionValue;
 	d.gradient = xb;
+
+
+}
+
+
+void TestFunction::evaluateTangent(Design &d) const{
+
+	evaluateAdjoint(d);
+	d.tangentValue = dot(d.tangentDirection, d.gradient);
 
 
 }
@@ -403,6 +400,8 @@ void TestFunction::generateSamplesInputTestData(void){
 
 	testSamplesInput = samplesTest.getSamples();
 
+	testSamplesInput = sort(testSamplesInput);
+
 
 
 }
@@ -412,105 +411,121 @@ void TestFunction::generateSamplesInputTestData(void){
 void TestFunction::generateTrainingSamples(void){
 
 
-	assert(!ifTrainingDataFileExists);
+	assert(isNotEmpty(filenameTrainingData));
 	assert(trainingSamplesInput.n_rows>0);
 
 	unsigned int nColsSampleMatrix;
 
-	if(ifGradientsAvailable){
-
-		nColsSampleMatrix = 2*dimension +1;
-
-	}
-	else{
-
-		nColsSampleMatrix = dimension +1;
-	}
-
+	nColsSampleMatrix = dimension +1;
 
 	trainingSamples.set_size(numberOfTrainingSamples,nColsSampleMatrix);
-
 
 	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
 
 		rowvec dv = trainingSamplesInput.row(i);
 		Design d(dv);
 
-		if(ifGradientsAvailable){
+		evaluate(d);
+		rowvec sample(dimension +1);
+		copyRowVector(sample,dv);
+		sample(dimension) = d.trueValue;
+		trainingSamples.row(i) = sample;
 
-			evaluateAdjoint(d);
-			rowvec sample(2*dimension +1);
-			copyRowVector(sample,dv);
-			sample(dimension) = d.trueValue;
-			copyRowVector(sample,d.gradient,dimension+1);
-			trainingSamples.row(i) = sample;
-
-		}
-		else{
-
-			evaluate(d);
-			rowvec sample(dimension +1);
-			copyRowVector(sample,dv);
-			sample(dimension) = d.trueValue;
-			trainingSamples.row(i) = sample;
-		}
 
 	}
 
 
+	saveMatToCVSFile(trainingSamples, filenameTrainingData);
+}
+
+
+void TestFunction::generateTrainingSamplesWithAdjoints(void){
+
+
+	assert(isNotEmpty(filenameTrainingData));
+	assert(trainingSamplesInput.n_rows>0);
+
+	unsigned int nColsSampleMatrix;
+	nColsSampleMatrix = 2*dimension +1;
+	trainingSamples.set_size(numberOfTrainingSamples,nColsSampleMatrix);
+
+	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
+
+		rowvec dv = trainingSamplesInput.row(i);
+		Design d(dv);
+		evaluateAdjoint(d);
+		rowvec sample(2*dimension +1);
+		copyRowVector(sample,dv);
+		sample(dimension) = d.trueValue;
+		copyRowVector(sample,d.gradient,dimension+1);
+		trainingSamples.row(i) = sample;
+	}
 	saveMatToCVSFile(trainingSamples, fileNameSurrogateModelData);
 }
 
-void TestFunction::generateTestSamples(void){
-
-	assert(!ifTestDataFileExists);
-	assert(testSamplesInput.n_rows>0);
-
-	testSamples.set_size(numberOfTestSamples,dimension+1);
-
-	if(ifGradientsAvailable){
-
-		for(unsigned int i=0; i<numberOfTestSamples; i++){
-
-			rowvec dv = testSamplesInput.row(i);
-			Design d(dv);
-
-			evaluateAdjoint(d);
-			rowvec sample(dimension +1);
-			copyRowVector(sample,dv);
-			sample(dimension) = d.trueValue;
-			testSamples.row(i) = sample;
 
 
-		}
+void TestFunction::generateTrainingSamplesWithTangents(void){
 
 
-	}
+	assert(isNotEmpty(filenameTrainingData));
+	assert(trainingSamplesInput.n_rows>0);
 
-	else{
-		for(unsigned int i=0; i<numberOfTestSamples; i++){
+	unsigned int nColsSampleMatrix;
+	nColsSampleMatrix = 2*dimension + 2;
 
-			rowvec dv = testSamplesInput.row(i);
-			Design d(dv);
+	trainingSamples.set_size(numberOfTrainingSamples,nColsSampleMatrix);
 
-			evaluate(d);
-			rowvec sample(dimension +1);
-			copyRowVector(sample,dv);
-			sample(dimension) = d.trueValue;
-			testSamples.row(i) = sample;
+	mat trainingSamplesTangentDirections(numberOfTrainingSamples,dimension);
+	trainingSamplesTangentDirections.randu();
 
 
-		}
+
+	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
+
+		rowvec dv = trainingSamplesInput.row(i);
+		Design d(dv);
+		rowvec dir = trainingSamplesTangentDirections.row(i);
+		dir = makeUnitVector(dir);
+		d.tangentDirection = dir;
+		evaluateTangent(d);
+		rowvec sample(2*dimension + 2);
+		copyRowVector(sample,dv);
+		sample(dimension)   = d.trueValue;
+		sample(dimension+1) = d.tangentValue;
+		copyRowVector(sample,d.tangentDirection,dimension+2);
+		trainingSamples.row(i) = sample;
 
 	}
 
+	saveMatToCVSFile(trainingSamples, filenameTrainingData);
 }
 
 
+void TestFunction::generateTestSamples(void){
+
+	assert(isNotEmpty(filenameTestData));
+	generateSamplesInputTestData();
+
+	testSamples.set_size(numberOfTestSamples,dimension+1);
+
+	for(unsigned int i=0; i<numberOfTestSamples; i++){
+
+		rowvec dv = testSamplesInput.row(i);
+		Design d(dv);
+
+		evaluate(d);
+		rowvec sample(dimension +1);
+		copyRowVector(sample,dv);
+		sample(dimension) = d.trueValue;
+		testSamples.row(i) = sample;
 
 
+	}
 
+	saveMatToCVSFile(testSamples, filenameTestData);
 
+}
 
 mat TestFunction::getTrainingSamplesInput(void) const{
 
@@ -807,7 +822,32 @@ double Herbie2DAdj(double *x, double *xb) {
 
 }
 
+double testFunction1D(double *x){
 
+	double c1,c2,c3,c4,c5;
+	c1 = 1.0;
+	c2 = 5.0;
+	c3 = 5.0;
+	c4 = 2.0;
+	c5 = 4.0;
+	return exp(-c1*x[0]) + sin(c2*x[0]) + cos(c3*x[0]) + c4*x[0] + c5;
+
+
+
+}
+
+double testFunction1DAdj(double *x, double *xb) {
+
+	double c1,c2,c3,c4,c5;
+	c1 = 1.0;
+	c2 = 5.0;
+	c3 = 5.0;
+	c4 = 2.0;
+	c5 = 4.0;
+	xb[0] = -c1*exp(-c1*x[0]) + c2*cos(c2*x[0]) - c3*sin(c3*x[0]) + c4;
+	return exp(-c1*x[0]) + sin(c2*x[0]) + cos(c3*x[0]) + c4*x[0] + c5;
+
+}
 
 
 double LinearTF1(double *x){

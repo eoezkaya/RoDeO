@@ -55,6 +55,7 @@ private:
 
 
 	CholeskySystem linearSystemCorrelationMatrix;
+	SVDSystem      linearSystemCorrelationMatrixSVD;
 
 	double beta0 = 0.0;
 	double sigmaSquared = 0.0;
@@ -92,6 +93,9 @@ public:
 	void printHyperParameters(void) const;
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
+	void setHyperParameters(vec);
+	vec getHyperParameters(void) const;
+
 	void train(void);
 
 	double interpolateWithGradients(rowvec x) const ;
@@ -101,6 +105,7 @@ public:
 
 	void calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const;
 	void addNewSampleToData(rowvec newsample);
+	void addNewLowFidelitySampleToData(rowvec newsample);
 
 	double getyMin(void) const;
 
@@ -118,6 +123,7 @@ public:
 
 	void updateModelWithNewData(void);
 	void updateAuxilliaryFields(void);
+	void updateAuxilliaryFieldsWithSVDMethod(void);
 	void checkAuxilliaryFields(void) const;
 
 	double calculateLikelihoodFunction(vec);

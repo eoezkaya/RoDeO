@@ -37,6 +37,40 @@
 
 using namespace arma;
 
+
+
+class SVDSystem{
+
+private:
+
+	unsigned int numberOfRows = 0;
+	unsigned int numberOfCols = 0;
+	mat A;
+	mat U;
+	vec sigma;
+	mat V;
+
+
+	double thresholdForSingularValues = 1E-12;
+
+public:
+
+	bool ifFactorizationIsDone = false;
+	bool ifMatrixIsSet = false;
+
+	SVDSystem(){};
+
+	void setMatrix(mat);
+	void factorize();
+	vec solveLinearSystem(vec &rhs) const;
+	double calculateLogAbsDeterminant(void) const;
+	void setThresholdForSingularValues(double value);
+
+
+};
+
+
+
 class CholeskySystem{
 
 private:

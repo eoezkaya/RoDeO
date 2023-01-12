@@ -48,6 +48,8 @@ void SurrogateModelData::reset(void){
 	XrawTest.reset();
 	dimension = 0;
 	gradient.reset();
+	differentiationDirections.reset();
+	directionalDerivatives.reset();
 	ifDataHasGradients = false;
 	ifDataIsNormalized = false;
 	ifDataIsRead = false;
@@ -124,11 +126,23 @@ void SurrogateModelData::setGradientsOff(void){
 
 }
 
+void SurrogateModelData::setDirectionalDerivativesOn(void){
+
+	ifDataHasDirectionalDerivatives = true;
+
+}
+
+void SurrogateModelData::setDirectionalDerivativesOff(void){
+
+	ifDataHasDirectionalDerivatives = false;
+
+}
 
 
 void SurrogateModelData::readData(string inputFilename){
 
 	assert(isNotEmpty(inputFilename));
+	assert(!(ifDataHasDirectionalDerivatives == true && this->ifDataHasGradients == true));
 
 	outputToScreen.printMessage("Loading data from the file: " + inputFilename);
 
@@ -155,7 +169,11 @@ void SurrogateModelData::readData(string inputFilename){
 
 	assignSampleInputMatrix();
 	assignSampleOutputVector();
+
 	assignGradientMatrix();
+
+	assignDirectionalDerivativesVector();
+	assignDifferentiationDirectionMatrix();
 
 	ifDataIsRead = true;
 
@@ -170,6 +188,7 @@ void SurrogateModelData::readDataTest(string inputFilename){
 	outputToScreen.printMessage("Loading test data from the file: " + inputFilename);
 
 	bool status = XrawTest.load(inputFilename.c_str(), csv_ascii);
+
 
 	if(status == true)
 	{
@@ -192,9 +211,17 @@ void SurrogateModelData::readDataTest(string inputFilename){
 		XTest = XrawTest.submat(0,0,numberOfTestSamples-1, dimension-1);
 		ifTestDataHasFunctionValues = true;
 	}
-	else{
+
+	if(XrawTest.n_cols == dimension){
+
 
 		XTest = XrawTest;
+	}
+
+	if(XrawTest.n_cols < dimension || XrawTest.n_cols> dimension+1){
+
+		outputToScreen.printErrorMessageAndAbort("Problem with data the test data (cvs ascii format), too many or too few columns in file: " + inputFilename);
+
 	}
 
 
@@ -215,7 +242,13 @@ void SurrogateModelData::assignDimensionFromData(void){
 		dimensionOfTrainingData = (rawData.n_cols-1)/2;
 	}
 
+	else if(ifDataHasDirectionalDerivatives){
+
+		dimensionOfTrainingData =  (rawData.n_cols-2)/2;
+	}
+
 	else{
+
 
 		dimensionOfTrainingData =  rawData.n_cols-1;
 	}
@@ -269,9 +302,193 @@ void SurrogateModelData::assignGradientMatrix(void){
 }
 
 
+void SurrogateModelData::assignDirectionalDerivativesVector(void){
+
+	assert(dimension>0);
+
+	if(ifDataHasDirectionalDerivatives){
+
+		directionalDerivatives = rawData.col(dimension+1);
+
+
+	}
+
+}
+
+
+void SurrogateModelData::assignDifferentiationDirectionMatrix(void){
+
+	assert(dimension>0);
+	assert(numberOfSamples>0);
+
+	if(ifDataHasDirectionalDerivatives){
+
+		differentiationDirections = rawData.submat(0, dimension+2,numberOfSamples-1,  2*dimension+1);
+	}
+
+
+}
+
+void SurrogateModelData::normalize(void){
+
+	assert(ifDataIsRead);
+	assert(boxConstraints.areBoundsSet());
+
+	normalizeSampleInputMatrix();
+	normalizeDerivativesMatrix();
+
+	ifDataIsNormalized = true;
+}
+
+
+void SurrogateModelData::normalizeSampleInputMatrix(void){
+
+	assert(X.n_rows ==  numberOfSamples);
+	assert(X.n_cols ==  dimension);
+	assert(boxConstraints.getDimension() == dimension);
+	assert(boxConstraints.areBoundsSet());
+
+	outputToScreen.printMessage("Normalizing and scaling the sample input matrix...");
+
+	mat XNormalized = X;
+	vec xmin = boxConstraints.getLowerBounds();
+	vec xmax = boxConstraints.getUpperBounds();
+	vec deltax = xmax - xmin;
+
+	for(unsigned int i=0; i<numberOfSamples;i++){
+		for(unsigned int j=0; j<dimension;j++){
+
+			XNormalized(i,j) = (X(i,j) - xmin(j))/deltax(j);
+		}
+	}
+
+	X = (1.0/dimension)*XNormalized;
+
+
+	ifDataIsNormalized = true;
+}
+
+
+void SurrogateModelData::normalizeSampleInputMatrixTest(void){
+
+	assert(boxConstraints.areBoundsSet());
+
+
+	outputToScreen.printMessage("Normalizing and scaling the sample input matrix for test...");
+
+	mat XNormalized = XTest;
+	vec xmin = boxConstraints.getLowerBounds();
+	vec xmax = boxConstraints.getUpperBounds();
+	vec deltax = xmax - xmin;
+
+
+	for(unsigned int i=0; i<numberOfTestSamples;i++){
+
+		for(unsigned int j=0; j<dimension;j++){
+
+			XNormalized(i,j) = (XTest(i,j) - xmin(j))/deltax(j);
+
+
+		}
+
+	}
+
+	XTest = (1.0/dimension)*XNormalized;
+
+
+}
+
+void SurrogateModelData::normalizeDerivativesMatrix(void){
+
+	if(ifDataHasDirectionalDerivatives){
+
+		assert(ifDataIsRead);
+		assert(boxConstraints.areBoundsSet());
+
+		vec lb = boxConstraints.getLowerBounds();
+		vec ub = boxConstraints.getUpperBounds();
+		double scalingFactor = (ub(0) - lb(0))*dimension;
+		assert(scalingFactor > 0.0);
+		directionalDerivatives = scalingFactor * directionalDerivatives;
+
+
+	}
+
+}
+
+
+void SurrogateModelData::normalizeGradientMatrix(void){
+
+	if(ifDataHasGradients){
+
+
+		assert(ifDataIsRead);
+		assert(boxConstraints.areBoundsSet());
+
+		for(unsigned int i=0; i<dimension; i++){
+
+			vec lb = boxConstraints.getLowerBounds();
+			vec ub = boxConstraints.getUpperBounds();
+			double scalingFactor = ub(i) - lb(i);
+			assert(scalingFactor > 0.0);
+			gradient.row(i) = scalingFactor * gradient.row(i);
+
+
+
+		}
+
+
+	}
+
+}
+
+
+
+void SurrogateModelData::normalizeOutputVector(void){
+	assert(ifDataIsRead);
+	assert(numberOfSamples>0);
+	vec y = getOutputVector();
+
+	double absMax = 0.0;
+
+	for(unsigned int i=0; i<numberOfSamples; i++){
+
+		if(fabs(y(i)) > absMax ) absMax = fabs(y(i));
+
+	}
+
+	scalingFactorOutput = 1.0/absMax;
+
+	y = y*scalingFactorOutput;
+	setOutputVector(y);
+
+}
+
+
+double SurrogateModelData::getScalingFactorForOutput(void) const{
+
+	return scalingFactorOutput;
+}
+
+
+
 rowvec SurrogateModelData::getRowGradient(unsigned int index) const{
 
 	return gradient.row(index);
+
+}
+
+vec SurrogateModelData::getDirectionalDerivativesVector(void) const{
+
+	return directionalDerivatives;
+
+
+}
+
+
+rowvec SurrogateModelData::getRowDifferentiationDirection(unsigned int index) const{
+
+	return differentiationDirections.row(index);
 
 }
 
@@ -364,62 +581,7 @@ mat SurrogateModelData::getGradientMatrix(void) const{
 
 }
 
-void SurrogateModelData::normalizeSampleInputMatrix(void){
 
-	assert(X.n_rows ==  numberOfSamples);
-	assert(X.n_cols ==  dimension);
-	assert(boxConstraints.getDimension() == dimension);
-	assert(boxConstraints.areBoundsSet());
-
-	outputToScreen.printMessage("Normalizing and scaling the sample input matrix...");
-
-	mat XNormalized = X;
-	vec xmin = boxConstraints.getLowerBounds();
-	vec xmax = boxConstraints.getUpperBounds();
-	vec deltax = xmax - xmin;
-
-	for(unsigned int i=0; i<numberOfSamples;i++){
-		for(unsigned int j=0; j<dimension;j++){
-
-			XNormalized(i,j) = (X(i,j) - xmin(j))/deltax(j);
-		}
-	}
-
-	X = (1.0/dimension)*XNormalized;
-
-
-	ifDataIsNormalized = true;
-}
-
-
-void SurrogateModelData::normalizeSampleInputMatrixTest(void){
-
-	assert(boxConstraints.areBoundsSet());
-
-
-	outputToScreen.printMessage("Normalizing and scaling the sample input matrix for test...");
-
-	mat XNormalized = XTest;
-	vec xmin = boxConstraints.getLowerBounds();
-	vec xmax = boxConstraints.getUpperBounds();
-	vec deltax = xmax - xmin;
-
-
-	for(unsigned int i=0; i<numberOfTestSamples;i++){
-
-		for(unsigned int j=0; j<dimension;j++){
-
-			XNormalized(i,j) = (XTest(i,j) - xmin(j))/deltax(j);
-
-
-		}
-
-	}
-
-	XTest = (1.0/dimension)*XNormalized;
-
-
-}
 
 
 
@@ -481,11 +643,20 @@ void SurrogateModelData::print(void) const{
 
 	printMatrix(rawData,"raw data");
 	printMatrix(X,"sample input matrix");
-	printVector(y,"sample input vector");
+	printVector(y,"sample output vector");
+
+	printScalar(scalingFactorOutput);
 
 	if(ifDataHasGradients){
 
 		printMatrix(gradient,"sample gradient matrix");
+
+	}
+
+	if(ifDataHasDirectionalDerivatives){
+
+		printVector(directionalDerivatives, "directional derivatives");
+		printMatrix(differentiationDirections, "differentiation directions");
 
 	}
 
@@ -498,5 +669,11 @@ void SurrogateModelData::print(void) const{
 	}
 
 }
+
+
+
+
+
+
 
 
