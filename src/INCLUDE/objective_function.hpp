@@ -34,6 +34,7 @@
 #include <fstream>
 #include <armadillo>
 #include "kriging_training.hpp"
+#include "tgek.hpp"
 #include "aggregation_model.hpp"
 #include "surrogate_model.hpp"
 #include "multi_level_method.hpp"
@@ -52,29 +53,29 @@ public:
 	std::string executableName;
 	std::string path;
 	std::string outputFilename;
-	std::string marker;
-	std::string markerForGradient;
 
 	/* These are required only for multi-level option */
 	std::string executableNameLowFi;
 	std::string pathLowFi;
 	std::string outputFilenameLowFi;
-	std::string markerLowFi;
-	std::string markerForGradientLowFi;
-
 
 	std::string nameLowFidelityTrainingData;
 	std::string nameHighFidelityTrainingData;
 
 	bool ifMultiLevel = false;
 	bool ifGradient = false;
+	bool ifTangent  = false;
 	bool ifGradientLowFi = false;
+	bool ifTangentLowFi = false;
 	bool ifDefined = false;
 
 
 
-	ObjectiveFunctionDefinition(std::string);
+	ObjectiveFunctionDefinition(std::string name);
 	ObjectiveFunctionDefinition();
+	bool checkIfDefinitionIsOk(void) const;
+	unsigned int identifyCase(void) const;
+
 	void print(void) const;
 
 
@@ -88,11 +89,15 @@ private:
 
 
 
+
 protected:
 
 
 	double (*objectiveFunPtr)(double *);
 	double (*objectiveFunAdjPtr)(double *,double *);
+
+
+	std::string evaluationMode;
 
 	std::string name;
 	std::string fileNameDesignVector;
@@ -103,6 +108,7 @@ protected:
 	std::string fileNameInputRead;
 	std::string readMarker;
 	std::string readMarkerAdjoint;
+	std::string readMarkerTangent;
 
 	std::string executableNameLowFi;
 	std::string executablePathLowFi;
@@ -110,17 +116,18 @@ protected:
 	std::string readMarkerLowFi;
 	std::string readMarkerAdjointLowFi;
 
-	std::string fileNameTrainingDataForSurrogate;
+//	std::string fileNameTrainingDataForSurrogate;
+//
+//	std::string fileNameTrainingDataForSurrogateHighFidelity;
+//	std::string fileNameTrainingDataForSurrogateLowFidelity;
 
-	std::string fileNameTrainingDataForSurrogateHighFidelity;
-	std::string fileNameTrainingDataForSurrogateLowFidelity;
+
+	ObjectiveFunctionDefinition definition;
 
 
 	bool ifMarkerIsSet = false;
 	bool ifAdjointMarkerIsSet = false;
-
-	bool ifMinimization = true;
-	bool ifMaximization = false;
+	bool ifTangentMarkerIsSet = false;
 
 
 	vec upperBounds;
@@ -130,6 +137,8 @@ protected:
 	KrigingModel surrogateModel;
 	AggregationModel surrogateModelGradient;
 	MultiLevelModel surrogateModelML;
+	TGEKModel       surrogateModelWithTangents;
+
 
 	SurrogateModel *surrogate;
 
@@ -139,14 +148,7 @@ protected:
 
 
 	unsigned int dim = 0;
-	bool ifDoErequired = true;
-	bool ifWarmStart = false;
-	bool ifGradientAvailable = false;
-	bool ifFunctionPointerIsSet = false;
-	bool ifInitialized = false;
-	bool ifParameterBoundsAreSet = false;
-	bool ifMultilevel = false;
-	bool ifDefinitionIsSet = false;
+
 
 	void readOutputWithoutMarkers(Design &outputDesignBuffer) const;
 
@@ -155,14 +157,28 @@ protected:
 
 
 
-
-
-
 public:
+
+
 
 
 	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
+
+	bool ifDoErequired = true;
+	bool ifWarmStart = false;
+	bool ifGradientAvailable = false;
+	bool ifFunctionPointerIsSet = false;
+	bool ifInitialized = false;
+	bool ifParameterBoundsAreSet = false;
+	bool ifMultilevel = false;
+	bool ifDefinitionIsSet = false;
+	bool ifUseTangentEnhancedKriging = false;
+	bool ifSurrogateModelIsDefined = false;
+
+
+	void setEvaluationMode(std::string);
+
 
 	void bindSurrogateModel(void);
 
@@ -177,6 +193,7 @@ public:
 	KrigingModel     getSurrogateModel(void) const;
 	AggregationModel getSurrogateModelGradient(void) const;
 	MultiLevelModel  getSurrogateModelML(void) const;
+	TGEKModel        getSurrogateModelTangent(void) const;
 
 
 	void setGradientOn(void);
@@ -185,19 +202,13 @@ public:
 	void setDisplayOn(void);
 	void setDisplayOff(void);
 
-	void setMinimizationOn(void);
-	void setMaximizationOn(void);
-
-
 	void setParameterBounds(vec , vec );
 	void setParameterBounds(Bounds );
 
 	void setNumberOfTrainingIterationsForSurrogateModel(unsigned int);
 
-	unsigned int getDimension(void) const{
-
-		return dim;
-	}
+	void setDimension(unsigned int dimension);
+	unsigned int getDimension(void) const;
 
 	std::string getName(void) const{
 
@@ -211,6 +222,7 @@ public:
 	}
 
 	void setFileNameReadInput(std::string fileName);
+	void setFileNameReadInputLowFidelity(std::string fileName);
 
 	void saveDoEData(std::vector<rowvec>) const;
 	void setExecutablePath(std::string);
@@ -218,12 +230,17 @@ public:
 	void setFileNameDesignVector(std::string);
 
 
+
+	double getValueAtMarker(std::string, std::string, size_t = 0) const;
+	rowvec getMarkerValuesVector(std::string, std::string, size_t = 0) const;
+
+
 	void setReadMarker(std::string marker);
 	std::string getReadMarker(void) const;
 
 	size_t isMarkerFound(const std::string &marker, const std::string &inputStr) const;
 
-	double getMarkerValue(const std::string &inputStr, size_t foundMarker) const;
+	double getMarkerValue(std::string inputStr, size_t foundMarker) const;
 	rowvec getMarkerAdjointValues(const std::string &inputStr, size_t foundMarkerPosition) const;
 
 	void setReadMarkerAdjoint(std::string marker);
@@ -234,6 +251,21 @@ public:
 
 
 	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
+
+
+	void evaluateDesign(Design &d);
+	void evaluateObjectiveFunction(void);
+
+
+	void writeDesignVariablesToFile(Design &d) const;
+
+
+	rowvec readOutput(unsigned int) const;
+	void readOutputDesign(Design &) const;
+
+
+
+
 
 	void evaluate(Design &d);
 	void evaluateLowFidelity(Design &d);
@@ -248,6 +280,12 @@ public:
 	void print(void) const;
 	std::string getExecutionCommand(void) const;
 	std::string getExecutionCommandLowFi(void) const;
+
+
+
+
+
+
 
 
 };

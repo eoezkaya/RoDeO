@@ -38,6 +38,30 @@
 #include<gtest/gtest.h>
 
 
+TEST(testOptimizer, testTangentEnhancedOptimization){
+
+	chdir("./testTangentEnhancedOptimization");
+	compileWithCpp("himmelblauWithTangent.cpp", "himmelblauWithTangent");
+
+	Bounds boxConstraints(2);
+	boxConstraints.setBounds(-6.0,6.0);
+
+	std::string studyName = "testOptimizerTangentEnhanced";
+	Optimizer testStudy(studyName, 2);
+	testStudy.setBoxConstraints(boxConstraints);
+	testStudy.setMaximumNumberOfIterations(100);
+
+
+
+
+
+
+
+	abort();
+}
+
+
+
 TEST(testOptimizer, testMLOptimization){
 
 	chdir("./testMultiLevelOptimization");

@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -33,183 +33,244 @@
 #include "objective_function.hpp"
 #include "optimization.hpp"
 #include "matrix_vector_operations.hpp"
-#include "test_functions.hpp"
+#include "standard_test_functions.hpp"
+#include "auxiliary_functions.hpp"
 
 #define TEST_OBJECTIVE_FUNCTION
 #ifdef TEST_OBJECTIVE_FUNCTION
 
-TEST(testObjectiveFunction, testinitializeSurrogate){
 
-	mat samples(100,5,fill::randu);
-	saveMatToCVSFile(samples,"testObjectiveFunction.csv");
-	vec lb(4); lb.fill(0.0);
-	vec ub(4); ub.fill(1.0);
+class ObjectiveFunctionTest : public ::testing::Test {
+protected:
+	void SetUp() override {
 
-	ObjectiveFunction objFunTest("testObjectiveFunction",4);
-	objFunTest.setParameterBounds(lb,ub);
+		filenameTrainingData = himmelblauFunction.function.filenameTrainingData;
+		filenameTrainingDataLowFi = himmelblauFunction.function.filenameTrainingDataLowFidelity;
+		filenameTrainingDataHiFi  = himmelblauFunction.function.filenameTrainingDataHighFidelity;
 
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
-	testObjectiveFunctionDef.outputFilename = "testObjectiveFunction.csv";
+		objFunTest.setDimension(2);
+		vec lb(2); lb.fill(-6.0);
+		vec ub(2); ub.fill(6.0);
 
-	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
+		objFunTest.setParameterBounds(lb,ub);
 
+		definition.designVectorFilename = "dv.dat";
+		definition.executableName = "himmelblau";
+		definition.outputFilename = "objFunVal.dat";
+		definition.name= "himmelblau";
+		definition.nameHighFidelityTrainingData = filenameTrainingData;
+
+	}
+
+	void TearDown() override {
+
+
+
+	}
+
+	ObjectiveFunction objFunTest;
+	HimmelblauFunction himmelblauFunction;
+	ObjectiveFunctionDefinition definition;
+	mat trainingData;
+	mat trainingDataLowFi;
+
+	std::string filenameTrainingData;
+	std::string filenameTrainingDataLowFi;
+	std::string filenameTrainingDataHiFi;
+
+
+
+	void setDefinitionForCase1(void){}
+
+	void setDefinitionForCase2(void){
+
+		definition.ifGradient = true;
+	}
+	void setDefinitionForCase3(void){
+
+		definition.ifTangent  = true;
+	}
+
+	void setDefinitionForCase4(void){
+		definition.ifMultiLevel = true;
+		definition.executableNameLowFi = "himmelblauLowFi";
+		definition.outputFilenameLowFi = "objFunValLowFi.dat";
+		definition.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
+	}
+
+
+};
+
+TEST_F(ObjectiveFunctionTest, testConstructor) {
+
+	ASSERT_FALSE(objFunTest.ifGradientAvailable);
+	ASSERT_FALSE(objFunTest.ifInitialized);
+	ASSERT_FALSE(objFunTest.ifSurrogateModelIsDefined);
+	ASSERT_TRUE(objFunTest.getDimension() == 2);
+	ASSERT_TRUE(objFunTest.ifParameterBoundsAreSet);
+
+}
+
+
+TEST_F(ObjectiveFunctionTest, testObjectiveFunctionDefinition) {
+
+	setDefinitionForCase1();
+	bool ifOk = definition.checkIfDefinitionIsOk();
+
+	ASSERT_TRUE(ifOk);
+
+}
+
+
+TEST_F(ObjectiveFunctionTest, bindSurrogateModelCase1) {
+
+	setDefinitionForCase1();
+	objFunTest.setParametersByDefinition(definition);
+	//	objFunTest.setDisplayOn();
+	objFunTest.bindSurrogateModel();
+	ASSERT_TRUE(objFunTest.ifSurrogateModelIsDefined);
+}
+
+TEST_F(ObjectiveFunctionTest, bindSurrogateModelCase2) {
+
+	setDefinitionForCase2();
+	objFunTest.setParametersByDefinition(definition);
+	//	objFunTest.setDisplayOn();
+	objFunTest.bindSurrogateModel();
+	ASSERT_TRUE(objFunTest.ifSurrogateModelIsDefined);
+}
+
+TEST_F(ObjectiveFunctionTest, bindSurrogateModelCase3) {
+
+	setDefinitionForCase3();
+	objFunTest.setParametersByDefinition(definition);
+	//	objFunTest.setDisplayOn();
+	objFunTest.bindSurrogateModel();
+	ASSERT_TRUE(objFunTest.ifSurrogateModelIsDefined);
+}
+
+TEST_F(ObjectiveFunctionTest, initializeSurrogateCase1) {
+
+	himmelblauFunction.function.generateTrainingSamples();
+	trainingData = himmelblauFunction.function.trainingSamples;
+
+	setDefinitionForCase1();
+	objFunTest.setParametersByDefinition(definition);
 	objFunTest.initializeSurrogate();
-
-
 	KrigingModel testModel = objFunTest.getSurrogateModel();
 
 	mat rawData = testModel.getRawData();
 
-
-	bool ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
-	ASSERT_TRUE(ifrawDataIsConsistent);
-	samples(0,0) += 1000;
-	ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
-	ASSERT_FALSE(ifrawDataIsConsistent);
-
+	bool ifDataIsConsistent = isEqual(rawData, trainingData, 10E-8);
+	ASSERT_TRUE(ifDataIsConsistent);
 	/* check dimension */
-	ASSERT_EQ(testModel.getDimension(), 4);
+	ASSERT_EQ(testModel.getDimension(), 2);
 	ASSERT_FALSE(testModel.areGradientsOn());
 	ASSERT_TRUE(testModel.ifDataIsRead);
 
-
-	remove("ObjectiveFunctionTest.csv");
-
-
-
+	remove(filenameTrainingData.c_str());
 }
 
-TEST(testObjectiveFunction, testinitializeSurrogateWithAdjoint){
 
-	unsigned int N = 100;
-	unsigned dim = 2;
+TEST_F(ObjectiveFunctionTest, initializeSurrogateCase2) {
 
-	mat samples(N,2*dim+1,fill::randu);
-	saveMatToCVSFile(samples,"testObjectiveFunction.csv");
-	vec lowerBounds(dim); lowerBounds.fill(0.0);
-	vec upperBounds(dim); upperBounds.fill(1.0);
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+	trainingData = himmelblauFunction.function.trainingSamples;
 
-	ObjectiveFunction objFunTest("testObjectiveFunction",2);
-	objFunTest.setParameterBounds(lowerBounds,upperBounds);
-
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
-	testObjectiveFunctionDef.outputFilename = "testObjectiveFunction.csv";
-	testObjectiveFunctionDef.ifGradient = true;
-	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
-
-
+	setDefinitionForCase2();
+	objFunTest.setParametersByDefinition(definition);
 	objFunTest.initializeSurrogate();
 	AggregationModel testModel = objFunTest.getSurrogateModelGradient();
+
 	mat rawData = testModel.getRawData();
 
-	bool ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
-	ASSERT_TRUE(ifrawDataIsConsistent);
-	samples(0,0) += 1000;
-	ifrawDataIsConsistent = isEqual(samples, rawData, 10E-10);
-	ASSERT_FALSE(ifrawDataIsConsistent);
-
-
-	ASSERT_EQ(testModel.getDimension(), dim);
+	bool ifDataIsConsistent = isEqual(rawData, trainingData, 10E-8);
+	ASSERT_TRUE(ifDataIsConsistent);
+	/* check dimension */
+	ASSERT_EQ(testModel.getDimension(), 2);
 	ASSERT_TRUE(testModel.areGradientsOn());
 	ASSERT_TRUE(testModel.ifDataIsRead);
 
-
-	remove("ObjectiveFunctionTest.csv");
+	remove(filenameTrainingData.c_str());
 }
 
+TEST_F(ObjectiveFunctionTest, initializeSurrogateCase3) {
 
-TEST(testObjectiveFunction, testinitializeSurrogateWithML){
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+	trainingData = himmelblauFunction.function.trainingSamples;
 
-	unsigned int nSamplesLowFi = 200;
-	unsigned int nSamplesHiFi  = 50;
-	unsigned int dim = 2;
+	setDefinitionForCase3();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.initializeSurrogate();
+	TGEKModel testModel = objFunTest.getSurrogateModelTangent();
 
-	generateHimmelblauDataMultiFidelity("highFidelityTestData.csv","lowFidelityTestData.csv",nSamplesHiFi,nSamplesLowFi);
+	mat rawData = testModel.getRawData();
 
+	bool ifDataIsConsistent = isEqual(rawData, trainingData, 10E-8);
+	ASSERT_TRUE(ifDataIsConsistent);
+	/* check dimension */
+	ASSERT_EQ(testModel.getDimension(), 2);
+	ASSERT_FALSE(testModel.areGradientsOn());
+	ASSERT_TRUE(testModel.ifDataIsRead);
 
-	vec lowerBounds(dim); lowerBounds.fill(-6.0);
-	vec upperBounds(dim); upperBounds.fill(6.0);
+	remove(filenameTrainingData.c_str());
+}
 
+TEST_F(ObjectiveFunctionTest, initializeSurrogateCase4) {
 
-	ObjectiveFunction objFunTest("testObjectiveFunctionMLSurrogate",2);
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+	trainingData = himmelblauFunction.function.trainingSamples;
+	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
 
-//	objFunTest.setDisplayOn();
-	objFunTest.setParameterBounds(lowerBounds,upperBounds);
-
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("testObjectiveFunctionMLSurrogate");
-	testObjectiveFunctionDef.outputFilename      = "highFidelityTestData.csv";
-	testObjectiveFunctionDef.outputFilenameLowFi = "lowFidelityTestData.csv";
-	testObjectiveFunctionDef.ifMultiLevel = true;
-
-
-	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
-
+	setDefinitionForCase4();
+	objFunTest.setParametersByDefinition(definition);
 	objFunTest.initializeSurrogate();
 
-	MultiLevelModel getTestModel = objFunTest.getSurrogateModelML();
+	MultiLevelModel testModel = objFunTest.getSurrogateModelML();
 
-	ASSERT_EQ(getTestModel.getDimension(), dim);
-
-
-}
+	unsigned int NSamplesHiFi  = testModel.getNumberOfHiFiSamples();
+	unsigned int NSamplesLowFi = testModel.getNumberOfLowFiSamples();
 
 
-TEST(testObjectiveFunction, isMarkerFound){
 
-	unsigned dim = 2;
-	std::string marker = "Objective_function";
-	ObjectiveFunction objFunTest("testObjectiveFunction",2);
+	mat errorData = testModel.getRawDataError();
+	mat lowFiData = testModel.getRawDataLowFidelity();
 
-	size_t found = objFunTest.isMarkerFound(marker,"Objective_function = 3.1");
+	ASSERT_EQ(NSamplesHiFi, himmelblauFunction.function.numberOfTrainingSamples);
+	ASSERT_EQ(NSamplesLowFi, himmelblauFunction.function.numberOfTrainingSamplesLowFi);
 
-	ASSERT_TRUE(found != std::string::npos);
 
-	found = objFunTest.isMarkerFound(marker,"some irrelevant string");
+	bool ifDataIsConsistent = isEqual(lowFiData, trainingDataLowFi, 10E-8);
 
-	ASSERT_TRUE(found == std::string::npos);
 
-	found = objFunTest.isMarkerFound(marker,"SomeObjective_function = 3.1");
-
-	ASSERT_TRUE(found == std::string::npos);
-
+	remove(filenameTrainingDataHiFi.c_str());
+	remove(filenameTrainingDataLowFi.c_str());
 
 
 }
 
 
-TEST(testObjectiveFunction, getMarkerValue){
+TEST_F(ObjectiveFunctionTest, readOutput){
 
-	unsigned dim = 2;
-	ObjectiveFunction objFunTest("testObjectiveFunction",2);
+	std::ofstream readOutputTestFile;
+	readOutputTestFile.open ("readOutputTestFile.txt");
+	readOutputTestFile << "2.144 56.12 77 0\n";
+	readOutputTestFile.close();
 
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
-	testObjectiveFunctionDef.marker = "Objective_function";
-	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
-	double value = objFunTest.getMarkerValue("Objective_function = 3.1", 0);
-	EXPECT_EQ(value,3.1);
+	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
+	rowvec result = objFunTest.readOutput(4);
 
-}
+	EXPECT_EQ(result(0), 2.144);
+	EXPECT_EQ(result(3), 0);
 
-TEST(testObjectiveFunction, getMarkerAdjointValues){
 
-	unsigned dim = 2;
-	ObjectiveFunction objFunTest("testObjectiveFunction",2);
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
-	testObjectiveFunctionDef.markerForGradient = "gradient";
-	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
-	rowvec gradient = objFunTest.getMarkerAdjointValues("gradient = 3.1, 2.7", 0);
-	EXPECT_EQ(gradient(0),3.1);
-	EXPECT_EQ(gradient(1),2.7);
+	remove("readOutputTestFile.txt");
 
 }
 
+TEST_F(ObjectiveFunctionTest, readOutputDesign){
 
-
-TEST(testObjectiveFunction, readEvaluateOutputWithoutMarker){
-
-	ObjectiveFunction objFunTest("testObjFun",4);
-
-	Design d(4);
+	Design d(2);
 
 	std::ofstream readOutputTestFile;
 	readOutputTestFile.open ("readOutputTestFile.txt");
@@ -217,180 +278,296 @@ TEST(testObjectiveFunction, readEvaluateOutputWithoutMarker){
 	readOutputTestFile.close();
 
 	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-	objFunTest.readEvaluateOutput(d);
-	ASSERT_EQ(d.trueValue,2.144);
-	ASSERT_EQ(d.objectiveFunctionValue,2.144);
+	objFunTest.setEvaluationMode("primal");
+	objFunTest.readOutputDesign(d);
+	EXPECT_EQ(d.trueValue, 2.144);
+	EXPECT_EQ(d.objectiveFunctionValue, 2.144);
+
 	remove("readOutputTestFile.txt");
 
 }
 
-TEST(testObjectiveFunction, readEvaluateOutputWithoutMarkerWithAdjoint){
+TEST_F(ObjectiveFunctionTest, readOutputDesignAdjoint){
 
-	ObjectiveFunction objFunTest("testObjFun",4);
-
-	Design d(4);
+	Design d(2);
 
 	std::ofstream readOutputTestFile;
 	readOutputTestFile.open ("readOutputTestFile.txt");
-	readOutputTestFile << "2.144 1 2 3 4\n";
+	readOutputTestFile << "2.144 3.2 89.1\n";
 	readOutputTestFile.close();
 
 	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-	objFunTest.setGradientOn();
-	objFunTest.readEvaluateOutput(d);
-	ASSERT_EQ(d.trueValue,2.144);
-	ASSERT_EQ(d.objectiveFunctionValue,2.144);
-	ASSERT_EQ(d.gradient(0),1);
-	ASSERT_EQ(d.gradient(1),2);
-	ASSERT_EQ(d.gradient(2),3);
-	ASSERT_EQ(d.gradient(3),4);
+	objFunTest.setEvaluationMode("adjoint");
+	objFunTest.readOutputDesign(d);
+	EXPECT_EQ(d.trueValue, 2.144);
+	EXPECT_EQ(d.objectiveFunctionValue, 2.144);
+	rowvec gradient = d.gradient;
+	EXPECT_EQ(gradient(0), 3.2);
+	EXPECT_EQ(gradient(1), 89.1);
+
 	remove("readOutputTestFile.txt");
 
 }
 
+TEST_F(ObjectiveFunctionTest, readOutputDesignTangent){
 
-TEST(testaObjectiveFunction, readEvaluateOutputWithOneMarker){
-
-	ObjectiveFunction objFunTest("testObjFun",4);
-
-	Design d(4);
+	Design d(2);
 
 	std::ofstream readOutputTestFile;
 	readOutputTestFile.open ("readOutputTestFile.txt");
-	readOutputTestFile << "myObjective = 2.144\n";
+	readOutputTestFile << "2.144 -12.11\n";
 	readOutputTestFile.close();
 
 	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-	objFunTest.setReadMarker("myObjective");
-	objFunTest.readEvaluateOutput(d);
-
-	ASSERT_EQ(d.trueValue,2.144);
-	ASSERT_EQ(d.objectiveFunctionValue,2.144);
+	objFunTest.setEvaluationMode("tangent");
+	objFunTest.readOutputDesign(d);
+	EXPECT_EQ(d.trueValue, 2.144);
+	EXPECT_EQ(d.objectiveFunctionValue, 2.144);
+	EXPECT_EQ(d.tangentValue, -12.11);
 	remove("readOutputTestFile.txt");
 
 }
 
+TEST_F(ObjectiveFunctionTest, writeDesignVariablesToFile){
 
-TEST(testaObjectiveFunction, readEvaluateOutputWithOneMarkerWithAdjoint){
+	Design d(2);
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
 
-	ObjectiveFunction objFunTest("testObjFun",4);
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("primal");
+	objFunTest.writeDesignVariablesToFile(d);
 
-	Design d(4);
+	rowvec dv(2);
+	std::ifstream inputFileStream(definition.designVectorFilename, ios::in);
+	inputFileStream >> dv(0);
+	inputFileStream >> dv(1);
 
-	std::ofstream readOutputTestFile;
-	readOutputTestFile.open ("readOutputTestFile.txt");
-	readOutputTestFile << "myObjective = 2.144\ngradient = 1,2,3,4\n";
-	readOutputTestFile.close();
+	EXPECT_EQ(dv(0), 2.1);
+	EXPECT_EQ(dv(1), -1.9);
 
-	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-	objFunTest.setReadMarker("myObjective");
-	objFunTest.setReadMarkerAdjoint("gradient");
-	objFunTest.setGradientOn();
-	objFunTest.readEvaluateOutput(d);
-
-	ASSERT_EQ(d.trueValue,2.144);
-	ASSERT_EQ(d.objectiveFunctionValue,2.144);
-	ASSERT_EQ(d.gradient(0),1);
-	ASSERT_EQ(d.gradient(1),2);
-	ASSERT_EQ(d.gradient(2),3);
-	ASSERT_EQ(d.gradient(3),4);
-	remove("readOutputTestFile.txt");
-
-}
-
-TEST(testaObjectiveFunction, readEvaluateOutputWithTwoMarkers){
-
-	ObjectiveFunction objFunTest("testObjFun",4);
-
-	Design d(4);
-
-	std::ofstream readOutputTestFile;
-	readOutputTestFile.open ("readOutputTestFile.txt");
-	readOutputTestFile << "myObjective = 2.144\ngradient = 1.0, 2.0, 3.0,   4.0";
-	readOutputTestFile.close();
-
-	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-	objFunTest.setReadMarker("myObjective");
-	objFunTest.setReadMarkerAdjoint("gradient");
-	objFunTest.setGradientOn();
-	objFunTest.readEvaluateOutput(d);
-
-	ASSERT_EQ(d.trueValue,2.144);
-	ASSERT_EQ(d.objectiveFunctionValue,2.144);
-	ASSERT_EQ(d.gradient(0),1);
-	ASSERT_EQ(d.gradient(1),2);
-	ASSERT_EQ(d.gradient(2),3);
-	ASSERT_EQ(d.gradient(3),4);
-	remove("readOutputTestFile.txt");
-
+	remove(definition.designVectorFilename.c_str());
 }
 
 
 
-TEST(testObjectiveFunction, testreadEvaluateOutputAdjoint){
+TEST_F(ObjectiveFunctionTest, evaluateDesign){
 
-	ObjectiveFunction objFunTest("testObjFun",4);
+	Design d(2);
 
-	Design d(4);
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
 
-	std::ofstream readOutputTestFile;
-	readOutputTestFile.open ("readOutputTestFile.txt");
-	readOutputTestFile << "2.144 2.944 -1.2 18.1 9.2\n";
-	readOutputTestFile.close();
+	compileWithCpp("himmelblau.cpp", definition.executableName);
 
-	objFunTest.setGradientOn();
-	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-	objFunTest.readEvaluateOutput(d);
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("primal");
+	objFunTest.evaluateDesign(d);
 
-	ASSERT_EQ(d.trueValue,2.144);
-	ASSERT_EQ(d.objectiveFunctionValue,2.144);
-	ASSERT_EQ(d.gradient(0),2.944);
-	ASSERT_EQ(d.gradient(1),-1.2);
-	ASSERT_EQ(d.gradient(2),18.1);
-	ASSERT_EQ(d.gradient(3),9.2);
-	remove("readOutputTestFile.txt");
+	EXPECT_EQ(d.trueValue,  73.74420);
+
+	remove(definition.designVectorFilename.c_str());
+	remove(definition.outputFilename.c_str());
+	remove(definition.executableName.c_str());
+
+
 
 }
 
-TEST(testObjectiveFunction, calculateExpectedImprovement){
+TEST_F(ObjectiveFunctionTest, evaluateDesignAdjoint){
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+
+	compileWithCpp("himmelblauAdjoint.cpp", definition.executableName);
+
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("adjoint");
+	objFunTest.evaluateDesign(d);
+
+	EXPECT_EQ(d.trueValue,  73.74420);
+	EXPECT_EQ(d.gradient(0),  -73.896);
+	EXPECT_EQ(d.gradient(1),  -7.176);
+
+	remove(definition.designVectorFilename.c_str());
+	remove(definition.outputFilename.c_str());
+	remove(definition.executableName.c_str());
 
 
-	mat samples(100,3);
 
-	/* we construct first test data using the function x1*x1 + x2 * x2 */
-	for (unsigned int i=0; i<samples.n_rows; i++){
-		rowvec x(3);
-		x(0) = generateRandomDouble(0.0,1.0);
-		x(1) = generateRandomDouble(0.0,1.0);
+}
 
-		x(2) = x(0)*x(0) + x(1)*x(1);
-		samples.row(i) = x;
+TEST_F(ObjectiveFunctionTest, evaluateDesignTangent){
 
-	}
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	rowvec diffDirection(2);
+	diffDirection(0) = 1.0;
+	diffDirection(1) = 0.0;
+	d.tangentDirection = diffDirection;
+
+	compileWithCpp("himmelblauTangent.cpp", definition.executableName);
+
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("tangent");
+	objFunTest.evaluateDesign(d);
+
+	EXPECT_EQ(d.trueValue,  73.74420);
+	EXPECT_EQ(d.tangentValue,  -73.896);
 
 
-	vec lb(2); lb.fill(0.0);
-	vec ub(2); ub.fill(1.0);
-	saveMatToCVSFile(samples,"EITest.csv");
-
-	ObjectiveFunction objFunTest("EITest",2);
-	objFunTest.setParameterBounds(lb,ub);
+	remove(definition.designVectorFilename.c_str());
+	remove(definition.outputFilename.c_str());
+	remove(definition.executableName.c_str());
 
 
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
-	testObjectiveFunctionDef.outputFilename = "EITest.csv";
-	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
 
-	objFunTest.bindSurrogateModel();
+}
+
+TEST_F(ObjectiveFunctionTest, addDesignToData){
+
+
+	himmelblauFunction.function.generateTrainingSamples();
+	trainingData = himmelblauFunction.function.trainingSamples;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValue = 2.4;
+
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("primal");
 	objFunTest.initializeSurrogate();
+	objFunTest.addDesignToData(d);
 
-	CDesignExpectedImprovement testDesign(2,1);
-	testDesign.generateRandomDesignVector();
+	mat newData;
+	newData.load(filenameTrainingData, csv_ascii);
 
-	objFunTest.calculateExpectedImprovement(testDesign);
-	EXPECT_GE(testDesign.valueExpectedImprovement, 0.0);
+	ASSERT_TRUE(newData.n_rows == trainingData.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.4);
+
+	remove(filenameTrainingData.c_str());
+
 
 }
+
+TEST_F(ObjectiveFunctionTest, addDesignToDataTangent){
+
+
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+	trainingData = himmelblauFunction.function.trainingSamples;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	rowvec diffDirection(2);
+	diffDirection(0) = 1.0;
+	diffDirection(1) = 0.0;
+	d.tangentDirection = diffDirection;
+	d.trueValue = 2.4;
+	d.tangentValue = 0.67;
+
+	setDefinitionForCase3();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("tangent");
+	objFunTest.initializeSurrogate();
+	objFunTest.addDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingData, csv_ascii);
+
+	ASSERT_TRUE(newData.n_rows == trainingData.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.4);
+
+	remove(filenameTrainingData.c_str());
+
+}
+
+TEST_F(ObjectiveFunctionTest, addDesignToDataAdjoint){
+
+
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+	trainingData = himmelblauFunction.function.trainingSamples;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValue = 2.4;
+	rowvec gradient(2);
+	gradient(0) = 89.1;
+	gradient(1) = -100.9;
+	d.gradient = gradient;
+
+	setDefinitionForCase2();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("adjoint");
+	objFunTest.initializeSurrogate();
+	objFunTest.addDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingData, csv_ascii);
+
+	ASSERT_TRUE(newData.n_rows == trainingData.n_rows+1);
+	ASSERT_TRUE(newData.n_cols == 5);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.4);
+
+	remove(filenameTrainingData.c_str());
+
+}
+
+
+
+TEST_F(ObjectiveFunctionTest, trainSurrogate){
+
+	himmelblauFunction.function.generateTrainingSamples();
+	trainingData = himmelblauFunction.function.trainingSamples;
+
+	setDefinitionForCase1();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.initializeSurrogate();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.initializeSurrogate();
+	objFunTest.setNumberOfTrainingIterationsForSurrogateModel(1000);
+
+	objFunTest.trainSurrogate();
+
+}
+
+
+
 
 #endif
 

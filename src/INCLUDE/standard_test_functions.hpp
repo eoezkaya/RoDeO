@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -32,52 +32,53 @@
 #define STANDARD_TEST_FUNCTIONS_HPP
 
 #include <armadillo>
-#include "bounds.hpp"
-
-using namespace arma;
-
-class StandardTestFunction{
+#include "test_functions.hpp"
 
 
-protected:
-
-	unsigned int dimension = 0;
-	Bounds boxConstraints;
-
-	mat samples;
+class HimmelblauFunction{
 
 
 public:
 
-	virtual double evaluate(rowvec) const = 0;
-	virtual rowvec evaluateGradient(rowvec) const;
-
-	unsigned int getDimension(void) const;
-
-	Bounds getBoxConstraints(void) const;
-
-	mat getSamples(void) const;
-
-	void setBoxConstraints(double, double);
-	void setBoxConstraints(Bounds);
-
-	void generateSamples(unsigned int);
-	void generateSamplesWithGradient(unsigned int);
-
-};
-
-class HimmelblauFunction: public StandardTestFunction{
-
-
-public:
+	TestFunction function;
 
 	HimmelblauFunction();
+	HimmelblauFunction(double, double);
 
-	double evaluate(rowvec) const;
-	void evaluateGradient(rowvec, rowvec) const;
 
 
 };
+
+
+class LinearTestFunction1{
+
+
+public:
+
+	TestFunction function;
+
+	LinearTestFunction1();
+	LinearTestFunction1(double, double);
+
+
+
+};
+
+
+class NonLinear1DTestFunction1{
+
+
+public:
+
+	TestFunction function;
+
+	NonLinear1DTestFunction1();
+	NonLinear1DTestFunction1(double, double);
+
+
+
+};
+
 
 
 #endif

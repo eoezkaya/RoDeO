@@ -2,12 +2,8 @@
 #include<math.h>
 
 double Himmelblau(double *x) {
-
 	return pow( (x[0]*x[0]+x[1]-11.0), 2.0 ) + pow( (x[0]+x[1]*x[1]-7.0), 2.0 );
-
 }
-
-
 int main(void){
 
 double x[2];

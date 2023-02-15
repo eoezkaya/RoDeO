@@ -363,8 +363,7 @@ void KrigingModel::checkAuxilliaryFields(void) const{
 
 	vec ys_min_betaI = ys - beta0*vectorOfOnes;
 
-//	vec residual1 = ys - R*R_inv_ys;
-//	printVector(residual1,"residual (ys - R * R^-1 ys)");
+
 
 	vec residual2 = ys_min_betaI - R*R_inv_ys_min_beta;
 	printVector(residual2,"residual (ys-betaI - R * R^-1 (ys-beta0I) )");
@@ -377,73 +376,85 @@ void KrigingModel::checkAuxilliaryFields(void) const{
 }
 
 /* slower but more reliable method */
-void KrigingModel::updateAuxilliaryFieldsWithSVDMethod(void){
-
-	assert(ifDataIsRead);
-
-	unsigned int N = data.getNumberOfSamples();
-
-
-	correlationFunction.computeCorrelationMatrix();
-	mat R = correlationFunction.getCorrelationMatrix();
-
-
-	linearSystemCorrelationMatrixSVD.setMatrix(R);
-
-	/* SVD decomposition R = U Sigma VT */
-
-	linearSystemCorrelationMatrixSVD.factorize();
-
-
-	R_inv_ys = zeros<vec>(N);
-	R_inv_I = zeros<vec>(N);
-	R_inv_ys_min_beta = zeros<vec>(N);
-	beta0 = 0.0;
-	sigmaSquared = 0.0;
-
-	vec ys = data.getOutputVector();
-	double maxYValue = data.getMaximumOutputVector();
-	double minYValue = data.getMinimumOutputVector();
-
-
-	bool ifBeta0IsBetweenMinAndMax = false;
-
-	double thresholdValue = 10E-14;
-	linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
-	while(!ifBeta0IsBetweenMinAndMax){
-
-		R_inv_ys = linearSystemCorrelationMatrixSVD.solveLinearSystem(ys);
-		R_inv_I  = linearSystemCorrelationMatrixSVD.solveLinearSystem(vectorOfOnes);
-
-		beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
-
-		if(isBetween(beta0,minYValue, maxYValue)) ifBeta0IsBetweenMinAndMax = true;
-
-		thresholdValue = thresholdValue*10;
-		linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
-
-	}
-
-		thresholdValue = 10E-14;
-		linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
-
-		vec ys_min_betaI = ys - beta0*vectorOfOnes;
-
-		/* solve R x = ys-beta0*I */
-
-		R_inv_ys_min_beta = linearSystemCorrelationMatrixSVD.solveLinearSystem( ys_min_betaI);
-
-		sigmaSquared = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
-
-
-
-#if 0
-
-	checkAuxilliaryFields();
-
-#endif
-
-}
+//void KrigingModel::updateAuxilliaryFields(void){
+//
+//	assert(ifDataIsRead);
+//
+//	unsigned int N = data.getNumberOfSamples();
+//
+//
+//	correlationFunction.computeCorrelationMatrix();
+//	mat R = correlationFunction.getCorrelationMatrix();
+//
+//
+//	linearSystemCorrelationMatrixSVD.setMatrix(R);
+//
+//	/* SVD decomposition R = U Sigma VT */
+//
+//	linearSystemCorrelationMatrixSVD.factorize();
+//
+//
+//	R_inv_ys = zeros<vec>(N);
+//	R_inv_I = zeros<vec>(N);
+//	R_inv_ys_min_beta = zeros<vec>(N);
+//	beta0 = 0.0;
+//	sigmaSquared = 0.0;
+//
+//	vec ys = data.getOutputVector();
+//	double maxYValue = data.getMaximumOutputVector();
+//	double minYValue = data.getMinimumOutputVector();
+//
+//
+//	bool ifBeta0IsBetweenMinAndMax = false;
+//
+//	double thresholdValue = 10E-14;
+//	linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
+//	while(!ifBeta0IsBetweenMinAndMax){
+//
+//		R_inv_ys = linearSystemCorrelationMatrixSVD.solveLinearSystem(ys);
+//		R_inv_I  = linearSystemCorrelationMatrixSVD.solveLinearSystem(vectorOfOnes);
+//
+//		beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
+//
+//		printScalar(beta0);
+//		printScalar(minYValue);
+//		printScalar(maxYValue);
+//
+//		if(isBetween(beta0,minYValue, maxYValue)) {
+//
+//			ifBeta0IsBetweenMinAndMax = true;
+//
+//		}
+//		else{
+//
+//			thresholdValue = thresholdValue*10;
+//			linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
+//		}
+//
+//
+//
+//	}
+//
+//		thresholdValue = 10E-14;
+//		linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
+//
+//		vec ys_min_betaI = ys - beta0*vectorOfOnes;
+//
+//		/* solve R x = ys-beta0*I */
+//
+//		R_inv_ys_min_beta = linearSystemCorrelationMatrixSVD.solveLinearSystem( ys_min_betaI);
+//
+//		sigmaSquared = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
+//
+//
+//
+//#if 0
+//
+//	checkAuxilliaryFields();
+//
+//#endif
+//
+//}
 
 
 

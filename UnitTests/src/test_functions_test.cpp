@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -33,23 +33,23 @@
 #include<gtest/gtest.h>
 
 
-TEST(testTestFunctions, testGenerateSamplesInput){
+TEST(testTestFunctions, GenerateSamplesInput){
 
 	TestFunction testFun("testFunction",2);
 	testFun.setBoxConstraints(0.0, 2.0);
-	testFun.setNumberOfTrainingSamples(100);
-	testFun.setNumberOfTestSamples(10);
+	testFun.numberOfTrainingSamples = 100;
+	testFun.numberOfTestSamples     = 10;
 	testFun.generateSamplesInputTrainingData();
 	testFun.generateSamplesInputTestData();
 
-	mat samplesInput = testFun.getTrainingSamplesInput();
+	mat samplesInput = testFun.trainingSamplesInput;
 
 
 	ASSERT_EQ(samplesInput.n_rows, 100);
 	ASSERT_EQ(samplesInput.n_cols, 2);
 
 
-	samplesInput = testFun.getTestSamplesInput();
+	samplesInput = testFun.testSamplesInput;
 
 	ASSERT_EQ(samplesInput.n_rows, 10);
 	ASSERT_EQ(samplesInput.n_cols, 2);
@@ -57,62 +57,18 @@ TEST(testTestFunctions, testGenerateSamplesInput){
 }
 
 
-TEST(testTestFunctions, testgenerateRandomSamples){
-
-	unsigned int dim = 2;
-	unsigned int N = 100;
-	TestFunction testFun("testFunction",dim);
-	testFun.setBoxConstraints(0.0, 200);
-	testFun.setFunctionPointer(Eggholder);
-
-	mat samples = testFun.generateRandomSamples(N);
 
 
-	ASSERT_TRUE(samples.n_cols == dim+1);
-	ASSERT_TRUE(samples.n_rows == N);
 
-}
-
-TEST(testTestFunctions, testgenerateRandomSamplesWithAdjoint){
-
-	unsigned int dim = 2;
-	unsigned int N = 100;
-	TestFunction testFun("testFunction",dim);
-	testFun.setBoxConstraints(0.0, 200);
-	testFun.setFunctionPointer(EggholderAdj);
-
-	mat samples = testFun.generateRandomSamples(N);
-
-	ASSERT_TRUE(samples.n_cols == dim+1);
-	ASSERT_TRUE(samples.n_rows == N);
-
-}
-
-
-TEST(testTestFunctions, testgenerateRandomSamplesWithGradients){
-
-	unsigned int dim = 2;
-	unsigned int N = 100;
-	TestFunction testFun("testFunction",dim);
-	testFun.setBoxConstraints(0.0, 200);
-	testFun.setFunctionPointer(EggholderAdj);
-
-	mat samples = testFun.generateRandomSamplesWithGradients(100);
-
-	ASSERT_TRUE(samples.n_cols == 2*dim+1);
-	ASSERT_TRUE(samples.n_rows == N);
-
-}
-
-
-TEST(testTestFunctions, testevaluate){
+TEST(testTestFunctions, evaluate){
 
 	TestFunction testFun("testFunction",2);
-	testFun.setFunctionPointer(LinearTF1);
+	testFun.func_ptr = LinearTF1;
 
 	rowvec dv(2); dv(0) = 1.0; dv(1) = 2.0;
 	Design testDesign(dv);
 
+	testFun.evaluationSelect = 1;
 	testFun.evaluate(testDesign);
 	double expectedResult = 2*dv(0)+3*dv(1)+1.5;
 
@@ -120,15 +76,16 @@ TEST(testTestFunctions, testevaluate){
 
 }
 
-TEST(testTestFunctions, testevaluateAdjoint){
+TEST(testTestFunctions, evaluateAdjoint){
 
 	TestFunction testFun("testFunction",2);
-	testFun.setFunctionPointer(LinearTF1Adj);
+	testFun.adj_ptr = LinearTF1Adj;
 
 	rowvec dv(2); dv(0) = 1.0; dv(1) = 2.0;
 	Design testDesign(dv);
 
-	testFun.evaluateAdjoint(testDesign);
+	testFun.evaluationSelect = 2;
+	testFun.evaluate(testDesign);
 	double expectedResult = 2*dv(0)+3*dv(1)+1.5;
 
 	EXPECT_EQ(testDesign.trueValue, expectedResult);
@@ -138,6 +95,288 @@ TEST(testTestFunctions, testevaluateAdjoint){
 }
 
 
+TEST(testTestFunctions, evaluateTangent){
 
+	TestFunction testFun("testFunction",2);
+	testFun.tan_ptr = LinearTF1Tangent;
+
+	rowvec dv(2); dv(0) = 1.0; dv(1) = 2.0;
+	rowvec d(2);  d(0) =  1.0;  d(1) = 1.0;
+	Design testDesign(dv);
+	testDesign.tangentDirection = d;
+
+	testFun.evaluationSelect = 3;
+	testFun.evaluate(testDesign);
+	double expectedResult = 5.0;
+
+	EXPECT_EQ(testDesign.tangentValue, expectedResult );
+
+	expectedResult = 2*dv(0)+3*dv(1)+1.5;
+	EXPECT_EQ(testDesign.trueValue, expectedResult);
+
+
+
+}
+
+TEST(testTestFunctions, generateTestSamples){
+
+	TestFunction testFun("testFunction",2);
+	testFun.func_ptr = LinearTF1;
+	testFun.filenameTestData = "LinearTF1Test.csv";
+	testFun.numberOfTestSamples = 20;
+
+	testFun.setBoxConstraints(-4, 8);
+	testFun.generateTestSamples();
+
+	mat testData = testFun.testSamples;
+	EXPECT_EQ(testData.n_cols, 3 );
+	EXPECT_EQ(testData.n_rows, 20 );
+
+	mat testDataRead;
+	testDataRead.load("LinearTF1Test.csv", csv_ascii);
+
+	EXPECT_TRUE(isEqual(testDataRead,testData, 10E-8));
+
+	remove("LinearTF1Test.csv");
+}
+
+
+
+
+TEST(testTestFunctions, generateTrainingSamples){
+
+	TestFunction testFun("testFunction",2);
+	testFun.func_ptr = LinearTF1;
+	testFun.filenameTrainingData = "LinearTF1.csv";
+	testFun.numberOfTrainingSamples = 20;
+
+	testFun.setBoxConstraints(-4, 8);
+	testFun.generateTrainingSamples();
+
+	mat trainingData = testFun.trainingSamples;
+	EXPECT_EQ(trainingData.n_cols, 3 );
+	EXPECT_EQ(trainingData.n_rows, 20 );
+
+
+	mat trainingDataRead;
+	trainingDataRead.load("LinearTF1.csv", csv_ascii);
+
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingData, 10E-8));
+
+	remove("LinearTF1.csv");
+}
+
+TEST(testTestFunctions, generateTrainingSamplesAdjoint){
+
+	TestFunction testFun("testFunction",2);
+	testFun.adj_ptr = LinearTF1Adj;
+	testFun.filenameTrainingData = "LinearTF1.csv";
+	testFun.numberOfTrainingSamples = 20;
+
+	testFun.setBoxConstraints(-4, 8);
+	testFun.generateTrainingSamplesWithAdjoints();
+
+	mat trainingData = testFun.trainingSamples;
+	EXPECT_EQ(trainingData.n_cols, 5 );
+	EXPECT_EQ(trainingData.n_rows, 20 );
+
+	mat trainingDataRead;
+	trainingDataRead.load("LinearTF1.csv", csv_ascii);
+
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingData, 10E-8));
+
+	remove("LinearTF1.csv");
+}
+
+TEST(testTestFunctions, generateTrainingSamplesTangent){
+
+	TestFunction testFun("testFunction",2);
+	testFun.tan_ptr = LinearTF1Tangent;
+	testFun.filenameTrainingData = "LinearTF1.csv";
+	testFun.numberOfTrainingSamples = 20;
+
+	testFun.setBoxConstraints(-4, 8);
+	testFun.generateTrainingSamplesWithTangents();
+
+	mat trainingData = testFun.trainingSamples;
+	EXPECT_EQ(trainingData.n_cols, 6 );
+	EXPECT_EQ(trainingData.n_rows, 20 );
+
+
+	mat trainingDataRead;
+	trainingDataRead.load("LinearTF1.csv", csv_ascii);
+
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingData, 10E-8));
+
+	remove("LinearTF1.csv");
+}
+
+TEST(testTestFunctions, generateTrainingSamplesMLOnlyWithFunctionalValues){
+
+	TestFunction testFun("testFunction",2);
+	testFun.func_ptr      = LinearTF1;
+	testFun.func_ptrLowFi = LinearTF1LowFidelity;
+	testFun.filenameTrainingDataHighFidelity = "LinearTF1HiFi.csv";
+	testFun.filenameTrainingDataLowFidelity  = "LinearTF1LowFi.csv";
+	testFun.numberOfTrainingSamples = 20;
+	testFun.numberOfTrainingSamplesLowFi = 50;
+
+	testFun.setBoxConstraints(-4, 8);
+	testFun.generateTrainingSamplesMultiFidelity();
+
+	mat trainingData = testFun.trainingSamples;
+	EXPECT_EQ(trainingData.n_cols, 3 );
+	EXPECT_EQ(trainingData.n_rows, 20 );
+
+	mat trainingDataRead;
+	trainingDataRead.load("LinearTF1HiFi.csv", csv_ascii);
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingData, 10E-8));
+
+	mat trainingDataLowFi = testFun.trainingSamplesLowFidelity;
+
+
+	trainingDataRead.load("LinearTF1LowFi.csv", csv_ascii);
+	EXPECT_EQ(trainingDataLowFi.n_cols, 3 );
+	EXPECT_EQ(trainingDataLowFi.n_rows, 50 );
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingDataLowFi, 10E-8));
+
+	remove("LinearTF1HiFi.csv");
+	remove("LinearTF1LowFi.csv");
+}
+
+
+TEST(testTestFunctions, generateTrainingSamplesMLOnlyWithAdjoints){
+
+	TestFunction testFun("testFunction",2);
+	testFun.adj_ptr      = LinearTF1Adj;
+	testFun.adj_ptrLowFi = LinearTF1LowFidelityAdj;
+	testFun.filenameTrainingDataHighFidelity = "LinearTF1HiFi.csv";
+	testFun.filenameTrainingDataLowFidelity  = "LinearTF1LowFi.csv";
+	testFun.numberOfTrainingSamples = 20;
+	testFun.numberOfTrainingSamplesLowFi = 50;
+
+	testFun.setBoxConstraints(-4, 8);
+	testFun.generateTrainingSamplesMultiFidelityWithAdjoint();
+
+	mat trainingData = testFun.trainingSamples;
+	EXPECT_EQ(trainingData.n_cols, 5 );
+	EXPECT_EQ(trainingData.n_rows, 20 );
+
+	mat trainingDataRead;
+	trainingDataRead.load("LinearTF1HiFi.csv", csv_ascii);
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingData, 10E-8));
+
+	mat trainingDataLowFi = testFun.trainingSamplesLowFidelity;
+
+
+	trainingDataRead.load("LinearTF1LowFi.csv", csv_ascii);
+	EXPECT_EQ(trainingDataLowFi.n_cols, 5 );
+	EXPECT_EQ(trainingDataLowFi.n_rows, 50 );
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingDataLowFi, 10E-8));
+
+	remove("LinearTF1HiFi.csv");
+	remove("LinearTF1LowFi.csv");
+}
+
+TEST(testTestFunctions, generateTrainingSamplesMLOnlyWithTangents){
+
+	TestFunction testFun("testFunction",2);
+	testFun.tan_ptr      = LinearTF1Tangent;
+	testFun.tan_ptrLowFi = LinearTF1LowFidelityTangent;
+	testFun.filenameTrainingDataHighFidelity = "LinearTF1HiFi.csv";
+	testFun.filenameTrainingDataLowFidelity  = "LinearTF1LowFi.csv";
+	testFun.numberOfTrainingSamples = 20;
+	testFun.numberOfTrainingSamplesLowFi = 50;
+
+	testFun.setBoxConstraints(-4, 8);
+	testFun.generateTrainingSamplesMultiFidelityWithTangents();
+
+	mat trainingData = testFun.trainingSamples;
+	EXPECT_EQ(trainingData.n_cols, 6 );
+	EXPECT_EQ(trainingData.n_rows, 20 );
+
+	mat trainingDataRead;
+	trainingDataRead.load("LinearTF1HiFi.csv", csv_ascii);
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingData, 10E-8));
+
+	mat trainingDataLowFi = testFun.trainingSamplesLowFidelity;
+
+
+	trainingDataRead.load("LinearTF1LowFi.csv", csv_ascii);
+	EXPECT_EQ(trainingDataLowFi.n_cols, 6 );
+	EXPECT_EQ(trainingDataLowFi.n_rows, 50 );
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingDataLowFi, 10E-8));
+
+	remove("LinearTF1HiFi.csv");
+	remove("LinearTF1LowFi.csv");
+}
+
+
+
+TEST(testTestFunctions, generateTrainingSamplesMLWithLowFiAdjoints){
+
+	TestFunction testFun("testFunction",2);
+	testFun.func_ptr      = LinearTF1;
+	testFun.adj_ptrLowFi  = LinearTF1LowFidelityAdj;
+	testFun.filenameTrainingDataHighFidelity = "LinearTF1HiFi.csv";
+	testFun.filenameTrainingDataLowFidelity  = "LinearTF1LowFi.csv";
+	testFun.numberOfTrainingSamples = 20;
+	testFun.numberOfTrainingSamplesLowFi = 50;
+
+	testFun.setBoxConstraints(-4, 8);
+	testFun.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+
+	mat trainingData = testFun.trainingSamples;
+	EXPECT_EQ(trainingData.n_cols, 3 );
+	EXPECT_EQ(trainingData.n_rows, 20 );
+
+	mat trainingDataRead;
+	trainingDataRead.load("LinearTF1HiFi.csv", csv_ascii);
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingData, 10E-8));
+
+	mat trainingDataLowFi = testFun.trainingSamplesLowFidelity;
+
+
+	trainingDataRead.load("LinearTF1LowFi.csv", csv_ascii);
+	EXPECT_EQ(trainingDataLowFi.n_cols, 5 );
+	EXPECT_EQ(trainingDataLowFi.n_rows, 50 );
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingDataLowFi, 10E-8));
+
+	remove("LinearTF1HiFi.csv");
+	remove("LinearTF1LowFi.csv");
+}
+
+TEST(testTestFunctions, generateTrainingSamplesMLWithLowFiTangents){
+
+	TestFunction testFun("testFunction",2);
+	testFun.func_ptr      = LinearTF1;
+	testFun.tan_ptrLowFi  = LinearTF1LowFidelityTangent;
+	testFun.filenameTrainingDataHighFidelity = "LinearTF1HiFi.csv";
+	testFun.filenameTrainingDataLowFidelity  = "LinearTF1LowFi.csv";
+	testFun.numberOfTrainingSamples = 20;
+	testFun.numberOfTrainingSamplesLowFi = 50;
+
+	testFun.setBoxConstraints(-4, 8);
+	testFun.generateTrainingSamplesMultiFidelityWithLowFiTangents();
+
+	mat trainingData = testFun.trainingSamples;
+	EXPECT_EQ(trainingData.n_cols, 3 );
+	EXPECT_EQ(trainingData.n_rows, 20 );
+
+	mat trainingDataRead;
+	trainingDataRead.load("LinearTF1HiFi.csv", csv_ascii);
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingData, 10E-8));
+
+	mat trainingDataLowFi = testFun.trainingSamplesLowFidelity;
+
+
+	trainingDataRead.load("LinearTF1LowFi.csv", csv_ascii);
+	EXPECT_EQ(trainingDataLowFi.n_cols, 6 );
+	EXPECT_EQ(trainingDataLowFi.n_rows, 50 );
+	EXPECT_TRUE(isEqual(trainingDataRead,trainingDataLowFi, 10E-8));
+
+	remove("LinearTF1HiFi.csv");
+	remove("LinearTF1LowFi.csv");
+}
 
 

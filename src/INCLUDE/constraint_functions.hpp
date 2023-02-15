@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -102,6 +102,7 @@ private:
 
 public:
 
+	ConstraintFunction();
 	ConstraintFunction(std::string, unsigned int);
 	ConstraintFunction(std::string, double (*objFun)(double *), unsigned int);
 
@@ -149,6 +150,50 @@ public:
 
 
 };
+
+
+
+class ConstraintFunction2: public ObjectiveFunction {
+
+
+private:
+
+	std::string inequalityType;
+	double constraintTargetValue;
+	bool ifExplictlyDefined = false;
+	int constraintID = -1;
+
+
+public:
+
+	ConstraintFunction2();
+
+	double (*constraintFunctionPtr)(double *) = NULL;
+
+	void setInequalityType(std::string);
+	std::string getInequalityType(void) const;
+
+	void setInequalityTargetValue(double);
+	double getInequalityTargetValue(void) const;
+
+	bool checkFeasibility(double value) const;
+
+	void setID(int givenID);
+	int getID(void) const;
+
+	void readOutputDesign(Design &d) const;
+
+	void evaluateDesign(Design &d);
+	void addDesignToData(Design &d);
+
+
+};
+
+
+
+
+
+
 
 
 

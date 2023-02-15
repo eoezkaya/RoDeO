@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -93,6 +93,9 @@ void SurrogateModelTester::setSurrogateModel(SURROGATE_MODEL modelType){
 
 	    break;
 
+	  case TANGENT:
+		  surrogateModel = &tangentModel;
+
 	  case AGGREGATION:
 
 		  surrogateModel = &aggregationModel;
@@ -156,40 +159,22 @@ Bounds SurrogateModelTester::getBoxConstraints(void) const{
 
 void SurrogateModelTester::performSurrogateModelTest(void){
 
+	assert(boxConstraints.areBoundsSet());
+
 	outputToScreen.printMessage("Performing surrogate model test...");
-
-
 
 	surrogateModel->readData();
 	surrogateModel->readDataTest();
-
-
-
-	if(boxConstraints.areBoundsSet()){
-
-		surrogateModel->setBoxConstraints(boxConstraints);
-
-	}
-	else{
-
-		surrogateModel->setBoxConstraintsFromData();
-
-	}
-
-
+	surrogateModel->setBoxConstraints(boxConstraints);
 	surrogateModel->normalizeData();
-
 	surrogateModel->normalizeDataTest();
-
-
 	surrogateModel->initializeSurrogateModel();
-
-
-
 	surrogateModel->setNumberOfTrainingIterations(numberOfTrainingIterations);
 	surrogateModel->train();
 
+
 	surrogateModel->tryOnTestData();
+	surrogateModel->saveTestResults();
 
 
 

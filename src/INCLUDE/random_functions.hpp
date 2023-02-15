@@ -50,6 +50,8 @@ vec generateRandomVector(double lb, double ub, unsigned int dim);
 
 void generateRandomVector(vec lb, vec ub, unsigned int dim, double *x);
 
+mat generateRandomMatrix(unsigned int Nrows, vec lb, vec ub);
+
 double generateRandomDoubleFromNormalDist(double xs, double xe, double sigma_factor);
 
 

@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -129,62 +129,64 @@ ConstraintFunction::ConstraintFunction(std::string name, unsigned int dimension)
 }
 
 
+ConstraintFunction::ConstraintFunction(){}
+
 void ConstraintFunction::readEvaluateOutput(Design &d) {
 
-#if 0
-	cout<<"Reading constraint function\n";
-#endif
-
-	assert(d.dimension == dim);
-
-
-	if(ifAdjointMarkerIsSet == true){
-
-
-		if(ifGradientAvailable == false && readMarkerAdjoint != "None"){
-
-			cout << "ERROR: Adjoint marker is set for the constraint function but gradient is not available!\n";
-			cout << "Did you set GRADIENT_AVAILABLE properly?\n";
-			abort();
-
-		}
-
-	}
-
-
-	if(ifGradientAvailable && ifMarkerIsSet){
-
-		if(ifAdjointMarkerIsSet== false){
-
-			std::cout << "ERROR: Adjoint marker not is set for a constraint function!\n";
-			std::cout << "Did you set CONSTRAINT_FUNCTION_GRADIENT_READ_MARKER properly?\n";
-			abort();
-
-		}
-
-
-
-	}
-
-
-	/* input from file without using markers */
-
-	if(checkIfMarkersAreNotSet()){
-
-		readOutputWithoutMarkers(d);
-
-	}
-
-	/* input from file using markers (the values are separated with ',')*/
-	else{
-
-		readOutputWithMarkers(d);
-
-	}
-
-#if 0
-	d.print();
-#endif
+//#if 0
+//	cout<<"Reading constraint function\n";
+//#endif
+//
+//	assert(d.dimension == dim);
+//
+//
+//	if(ifAdjointMarkerIsSet == true){
+//
+//
+//		if(ifGradientAvailable == false && readMarkerAdjoint != "None"){
+//
+//			cout << "ERROR: Adjoint marker is set for the constraint function but gradient is not available!\n";
+//			cout << "Did you set GRADIENT_AVAILABLE properly?\n";
+//			abort();
+//
+//		}
+//
+//	}
+//
+//
+//	if(ifGradientAvailable && ifMarkerIsSet){
+//
+//		if(ifAdjointMarkerIsSet== false){
+//
+//			std::cout << "ERROR: Adjoint marker not is set for a constraint function!\n";
+//			std::cout << "Did you set CONSTRAINT_FUNCTION_GRADIENT_READ_MARKER properly?\n";
+//			abort();
+//
+//		}
+//
+//
+//
+//	}
+//
+//
+//	/* input from file without using markers */
+//
+//	if(checkIfMarkersAreNotSet()){
+//
+//		readOutputWithoutMarkers(d);
+//
+//	}
+//
+//	/* input from file using markers (the values are separated with ',')*/
+//	else{
+//
+//		readOutputWithMarkers(d);
+//
+//	}
+//
+//#if 0
+//	d.print();
+//#endif
 
 }
 
@@ -232,71 +234,71 @@ void ConstraintFunction::readOutputWithoutMarkers(Design &outputDesignBuffer) co
 
 void ConstraintFunction::readOutputWithMarkers(Design &outputDesignBuffer) const{
 
-	assert(isNotEmpty(fileNameInputRead));
-	std::ifstream inputFileStream(fileNameInputRead, ios::in);
-
-	if (!inputFileStream.is_open()) {
-
-		cout << "ERROR: There was a problem opening the input file!\n";
-		abort();
-	}
-
-
-	rowvec constraintGradient = zeros<rowvec>(dim);
-
-
-	bool markerFound = false;
-	bool markerAdjointFound = false;
-
-	for( std::string line; getline( inputFileStream, line ); ){ /* check each line */
-
-		size_t foundMarkerPosition = isMarkerFound(readMarker, line);
-
-		if (foundMarkerPosition != std::string::npos){
-
-			outputDesignBuffer.constraintTrueValues(ID) = getMarkerValue(line, foundMarkerPosition );
-			markerFound = true;
-
-		}
-
-
-		if(ifGradientAvailable){
-
-			/* check for constraint gradient marker */
-			size_t foundMarkerPosition = isMarkerFound(readMarkerAdjoint, line);
-
-			if (foundMarkerPosition != std::string::npos){
-
-				constraintGradient = getMarkerAdjointValues(line, foundMarkerPosition );
-				markerAdjointFound  = true;
-
-			}
-		}
-
-	}
-#if 0
-	printVector(constraintGradient,"constraintGradient");
-#endif
-
-	outputDesignBuffer.constraintGradients.push_back(constraintGradient);
-
-	if(ifGradientAvailable && !markerAdjointFound){
-
-		cout<<"ERROR: No values can be read for the constraint gradient!\n";
-		abort();
-
-
-	}
-
-	if(markerFound == false){
-
-		cout<<"ERROR: No values can be read for the constraint function!\n";
-		abort();
-
-
-	}
-
-	inputFileStream.close();
+//	assert(isNotEmpty(fileNameInputRead));
+//	std::ifstream inputFileStream(fileNameInputRead, ios::in);
+//
+//	if (!inputFileStream.is_open()) {
+//
+//		cout << "ERROR: There was a problem opening the input file!\n";
+//		abort();
+//	}
+//
+//
+//	rowvec constraintGradient = zeros<rowvec>(dim);
+//
+//
+//	bool markerFound = false;
+//	bool markerAdjointFound = false;
+//
+//	for( std::string line; getline( inputFileStream, line ); ){ /* check each line */
+//
+//		size_t foundMarkerPosition = isMarkerFound(readMarker, line);
+//
+//		if (foundMarkerPosition != std::string::npos){
+//
+//			outputDesignBuffer.constraintTrueValues(ID) = getMarkerValue(line, foundMarkerPosition );
+//			markerFound = true;
+//
+//		}
+//
+//
+//		if(ifGradientAvailable){
+//
+//			/* check for constraint gradient marker */
+//			size_t foundMarkerPosition = isMarkerFound(readMarkerAdjoint, line);
+//
+//			if (foundMarkerPosition != std::string::npos){
+//
+//				constraintGradient = getMarkerAdjointValues(line, foundMarkerPosition );
+//				markerAdjointFound  = true;
+//
+//			}
+//		}
+//
+//	}
+//#if 0
+//	printVector(constraintGradient,"constraintGradient");
+//#endif
+//
+//	outputDesignBuffer.constraintGradients.push_back(constraintGradient);
+//
+//	if(ifGradientAvailable && !markerAdjointFound){
+//
+//		cout<<"ERROR: No values can be read for the constraint gradient!\n";
+//		abort();
+//
+//
+//	}
+//
+//	if(markerFound == false){
+//
+//		cout<<"ERROR: No values can be read for the constraint function!\n";
+//		abort();
+//
+//
+//	}
+//
+//	inputFileStream.close();
 
 
 }
@@ -312,10 +314,9 @@ void ConstraintFunction::print(void) const {
 	std::cout << "Executable path: " << executablePath << "\n";
 	std::cout << "Input file name: " << fileNameDesignVector << "\n";
 	std::cout << "Output file name: " << fileNameInputRead << "\n";
-	std::cout << "Read marker: " <<readMarker <<"\n";
+
 	if(ifGradientAvailable){
 		std::cout<<"Uses gradient vector: Yes\n";
-		std::cout << "Read marker for gradient: " <<readMarkerAdjoint <<"\n";
 
 	}
 	else{
@@ -477,19 +478,137 @@ void ConstraintFunction::evaluate(Design &d) {
 
 void ConstraintFunction::addDesignToData(Design &d){
 
-	if(ifGradientAvailable){
 
-		rowvec newsample = d.constructSampleConstraintWithGradient(ID);
+}
 
-		surrogateModelGradient.addNewSampleToData(newsample);
+
+
+ConstraintFunction2::ConstraintFunction2(){}
+
+void ConstraintFunction2::setID(int givenID){
+
+	constraintID = givenID;
+}
+
+int ConstraintFunction2::getID(void) const{
+
+	return constraintID;
+}
+
+void ConstraintFunction2::setInequalityType(std::string type){
+
+	assert(type.compare(">") == 0  || type.compare("<") == 0);
+
+	inequalityType = type;
+
+}
+std::string ConstraintFunction2::getInequalityType(void) const{
+
+	return inequalityType;
+}
+
+void ConstraintFunction2::setInequalityTargetValue(double value){
+
+	constraintTargetValue = value;
+
+}
+double ConstraintFunction2::getInequalityTargetValue(void) const{
+
+	return constraintTargetValue;
+}
+
+
+bool ConstraintFunction2::checkFeasibility(double valueIn) const{
+
+	bool result = false;
+	if (inequalityType.compare("<") == 0) {
+		if (valueIn < constraintTargetValue) {
+			result = true;
+		}
+	}
+	if (inequalityType.compare(">") == 0) {
+		if (valueIn > constraintTargetValue) {
+			result = true;
+		}
+	}
+	return result;
+}
+
+
+void ConstraintFunction2::readOutputDesign(Design &d) const{
+
+	if(evaluationMode.compare("primal") == 0 ){
+
+		rowvec functionalValue(1);
+		functionalValue = readOutput(1);
+		d.constraintTrueValues(getID()) = functionalValue(0);
+	}
+
+	if(evaluationMode.compare("tangent") == 0 ){
+
+		rowvec resultBuffer(2);
+
+		resultBuffer = readOutput(2);
+		d.trueValue = resultBuffer(0);
+		d.objectiveFunctionValue = d.trueValue;
+
+		d.tangentValue = resultBuffer(1);
+
+
 
 	}
-	else{
 
-		rowvec newsample = d.constructSampleConstraint(ID);
+	if(evaluationMode.compare("adjoint") == 0 ){
 
-		surrogateModel.addNewSampleToData(newsample);
+		rowvec resultBuffer(1+dim);
+
+		resultBuffer = readOutput(1+dim);
+		d.constraintTrueValues(getID()) = resultBuffer(0);
+
+		rowvec gradient(dim,fill::zeros);
+
+		for(unsigned int i=0; i<dim; i++){
+
+			gradient(i) = resultBuffer(i+1);
+		}
+
+		d.constraintGradients.push_back(gradient);
+
 	}
+
+}
+
+void ConstraintFunction2::evaluateDesign(Design &d){
+
+	assert(d.designParameters.size() == dim);
+
+	writeDesignVariablesToFile(d);
+	evaluateObjectiveFunction();
+	readOutputDesign(d);
+
+}
+
+void ConstraintFunction2::addDesignToData(Design &d){
+
+	assert((isNotEmpty(definition.nameHighFidelityTrainingData)));
+	assert(ifInitialized);
+	assert(constraintID>=0);
+
+	rowvec newsample;
+
+
+	if(evaluationMode.compare("primal") == 0 ){
+		newsample = d.constructSampleConstraint(constraintID);
+	}
+	if(evaluationMode.compare("tangent") == 0 ){
+		newsample = d.constructSampleConstraintWithTangent(constraintID);
+	}
+	if(evaluationMode.compare("adjoint") == 0 ){
+		newsample = d.constructSampleConstraintWithGradient(constraintID);
+	}
+
+	assert(newsample.size()>0);
+	surrogate->addNewSampleToData(newsample);
 
 
 }

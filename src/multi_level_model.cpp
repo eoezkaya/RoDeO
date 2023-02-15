@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -33,7 +33,6 @@
 #include<cassert>
 #include "multi_level_method.hpp"
 #include "kriging_training.hpp"
-#include "gek.hpp"
 #include "aggregation_model.hpp"
 #include "matrix_vector_operations.hpp"
 #include "Rodeo_globals.hpp"

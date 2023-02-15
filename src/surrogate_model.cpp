@@ -363,8 +363,6 @@ void SurrogateModel::setNameOfOutputFileTest(string filename){
 void SurrogateModel::tryOnTestData(void){
 
 	assert(ifNormalizedTestData);
-	assert(isNotEmpty(filenameTestResults));
-
 
 	output.printMessage("Trying surrogate model on test data...");
 
@@ -421,6 +419,8 @@ void SurrogateModel::tryOnTestData(void){
 
 
 	testResults = results;
+
+
 
 
 

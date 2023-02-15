@@ -44,7 +44,6 @@
 
 #include "optimization.hpp"
 #include "random_functions.hpp"
-#include "gek.hpp"
 #include "lhs.hpp"
 #include "bounds.hpp"
 
@@ -65,102 +64,26 @@ TestFunction::TestFunction(std::string name,int dim):boxConstraints(dim){
 	dimension = dim;
 	function_name = name;
 
-	fileNameSurrogateModelData = function_name + ".csv";
-
 
 }
 
 
 
 
-void TestFunction::setNoiseLevel(double noise){
+void TestFunction::setBoxConstraints(double lb, double ub){
 
-	noiseLevel = noise;
-	ifFunctionIsNoisy = true;
+	assert(dimension>0);
+	Bounds parameterBounds(dimension);
+	parameterBounds.setBounds(lb, ub);
 
-}
-
-void TestFunction::setVisualizationOn(void){
-
-	ifVisualize = true;
-}
-void TestFunction::setVisualizationOff(void){
-
-	ifVisualize = false;
-
-}
-
-
-void TestFunction::setDisplayOn(void){
-
-	ifDisplayResults = true;
-
-}
-void TestFunction::setDisplayOff(void){
-
-	ifDisplayResults = false;
-}
-
-
-
-
-void TestFunction::setBoxConstraints(double lowerBound, double upperBound){
-
-	assert(lowerBound < upperBound);
-	boxConstraints.setBounds(lowerBound, upperBound);
-	ifBoxConstraintsSet = true;
+	boxConstraints = parameterBounds;
 
 
 }
-
-
-
-void TestFunction::setBoxConstraints(vec lowerBound, vec upperBound){
-
-
-	boxConstraints.setBounds(lowerBound, upperBound);
-	assert(boxConstraints.checkIfBoundsAreValid());
-	ifBoxConstraintsSet= true;
-
-}
-
-
-void TestFunction::setNameFilenameTrainingData(std::string filename){
-
-	assert(!filename.empty());
-	filenameTrainingData = filename;
-	ifTrainingDataFileExists = true;
-
-
-}
-
-void TestFunction::setNameFilenameTestData(std::string filename){
-
-	assert(!filename.empty());
-	filenameTestData = filename;
-	ifTestDataFileExists = true;
-
-
-}
-
-
-void TestFunction::setNumberOfTrainingSamples(unsigned int nSamples){
-
-	numberOfTrainingSamples = nSamples;
-
-}
-
-void TestFunction::setNumberOfTestSamples(unsigned int nSamples){
-
-	numberOfTestSamples = nSamples;
-
-}
-
 
 
 void TestFunction::evaluateGlobalExtrema(void) const{
 
-	assert(ifBoxConstraintsSet);
 
 	rowvec maxx(dimension);
 	rowvec minx(dimension);
@@ -217,175 +140,77 @@ void TestFunction::print(void){
 
 }
 
-
-
-void TestFunction::plot(int resolution) const{
-
-	assert(ifBoxConstraintsSet);
-	assert(dimension ==2 || dimension == 1);
-
-	std::string filename= function_name +"_FunctionPlot.csv";
-
-	if(dimension == 1){
-
-
-		const int resolution = 1000;
-		mat visualizationData(resolution,2);
-
-
-		double dx; /* step sizes in x direction */
-		double x;
-		double func_val;
-
-		vec lb = boxConstraints.getLowerBounds();
-		vec ub = boxConstraints.getUpperBounds();
-		dx = (ub(0)-lb(0))/(resolution-1);
-
-		x = lb(0);
-		for(int i=0;i<resolution;i++){
-
-
-			func_val = func_ptr(&x);
-
-			visualizationData(i,0) = x;
-			visualizationData(i,1) = func_val;
-
-			x+= dx;
-
-		}
-
-		visualizationData.save(filename,csv_ascii);
-
-
-		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_1d_function.py "+ function_name;
-
-		FILE* in = popen(python_command.c_str(), "r");
-
-
-		fprintf(in, "\n");
-
-
-
-
-	}
-
-	if(dimension == 2){
-
-
-		const int resolution = 100;
-		mat visualizationData(resolution*resolution,3);
-
-
-		double dx,dy; /* step sizes in x and y directions */
-		double x[2];
-		double func_val;
-		vec lb = boxConstraints.getLowerBounds();
-		vec ub = boxConstraints.getUpperBounds();
-
-		dx = (ub(0)-lb(0))/(resolution-1);
-		dy = (ub(1)-lb(1))/(resolution-1);
-
-		x[0] = lb(0);
-		for(int i=0;i<resolution;i++){
-			x[1] = lb(1);
-			for(int j=0;j<resolution;j++){
-				func_val = func_ptr(x);
-
-				visualizationData(i*resolution+j,0) = x[0];
-				visualizationData(i*resolution+j,1) = x[1];
-				visualizationData(i*resolution+j,2) = func_val;
-
-
-				x[1]+=dy;
-			}
-			x[0]+= dx;
-
-		}
-
-
-		visualizationData.save(filename,csv_ascii);
-
-		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_2d_surface.py "+ function_name;
-		FILE* in = popen(python_command.c_str(), "r");
-
-
-		fprintf(in, "\n");
-
-
-
-	}
-
-
-}
-
-
-
-
-void TestFunction::setFunctionPointer(double (*testFunction)(double *)){
-
-	func_ptr = testFunction;
-	ifFunctionPointerIsSet = true;
-
-}
-
-void TestFunction::setFunctionPointer(double (*testFunctionAdjoint)(double *, double *)){
-
-	adj_ptr = testFunctionAdjoint;
-	ifFunctionPointerAdjIsSet = true;
-
-
-}
-
-
-
-
-
 void TestFunction::evaluate(Design &d) const{
 
-	assert(ifFunctionPointerIsSet);
-
-
 	rowvec x= d.designParameters;
-	double functionValue =  func_ptr(x.memptr());
-	d.trueValue = functionValue;
+	if(evaluationSelect == 1){
+
+		assert(func_ptr!=NULL);
+		d.trueValue = func_ptr(x.memptr());
+
+	}
+
+	if(evaluationSelect == 2){
+
+		assert(adj_ptr!=NULL);
+		d.trueValue = adj_ptr(x.memptr(),d.gradient.memptr());
+
+	}
+
+	if(evaluationSelect == 3){
+
+		assert(tan_ptr!=NULL);
+		double fdot;
+		d.trueValue = tan_ptr(x.memptr(), d.tangentDirection.memptr(), &fdot);
+		d.tangentValue = fdot;
+
+	}
+
+	if(evaluationSelect == 4){
+
+		assert(func_ptrLowFi!=NULL);
+		d.trueValue = func_ptrLowFi(x.memptr());
+
+	}
+	if(evaluationSelect == 5){
+
+		assert(adj_ptrLowFi!=NULL);
+		d.trueValue = adj_ptrLowFi(x.memptr(),d.gradient.memptr());
+
+	}
+	if(evaluationSelect == 6){
+
+		assert(tan_ptrLowFi!=NULL);
+		double fdot;
+		d.trueValue = tan_ptrLowFi(x.memptr(), d.tangentDirection.memptr(), &fdot);
+		d.tangentValue = fdot;
+
+	}
+
 
 }
-
-
-void TestFunction::evaluateAdjoint(Design &d) const{
-
-	assert(ifFunctionPointerAdjIsSet);
-
-	rowvec x= d.designParameters;
-	rowvec xb(dimension);
-	double functionValue =  adj_ptr(x.memptr(), xb.memptr());
-	d.trueValue = functionValue;
-	d.gradient = xb;
-
-
-}
-
-
-void TestFunction::evaluateTangent(Design &d) const{
-
-	evaluateAdjoint(d);
-	d.tangentValue = dot(d.tangentDirection, d.gradient);
-
-
-}
-
 
 
 void TestFunction::generateSamplesInputTrainingData(void){
 
 	assert(numberOfTrainingSamples> 0);
-	assert(ifBoxConstraintsSet);
 	vec lb = boxConstraints.getLowerBounds();
 	vec ub = boxConstraints.getUpperBounds();
 
-	LHSSamples samplesTraining(dimension, lb, ub, numberOfTrainingSamples);
+	unsigned int howManySamples;
+	if(numberOfTrainingSamplesLowFi > 0){
+
+		howManySamples = numberOfTrainingSamplesLowFi;
+	}
+	else{
+
+		howManySamples = numberOfTrainingSamples;
+	}
+
+	LHSSamples samplesTraining(dimension, lb, ub, howManySamples);
 
 	trainingSamplesInput = samplesTraining.getSamples();
+	trainingSamplesInput = shuffle(trainingSamplesInput);
 
 
 }
@@ -393,47 +218,95 @@ void TestFunction::generateSamplesInputTrainingData(void){
 void TestFunction::generateSamplesInputTestData(void){
 
 	assert(numberOfTestSamples> 0);
-	assert(ifBoxConstraintsSet);
 	vec lb = boxConstraints.getLowerBounds();
 	vec ub = boxConstraints.getUpperBounds();
 	LHSSamples samplesTest(dimension, lb, ub, numberOfTestSamples);
 
 	testSamplesInput = samplesTest.getSamples();
 
-	testSamplesInput = sort(testSamplesInput);
+	if(dimension == 1) testSamplesInput = sort(testSamplesInput);
+
+}
+
+mat TestFunction::generateSamplesWithFunctionalValues(mat input, unsigned int N) const{
+
+	assert(input.n_rows >= N);
+
+	mat samples(N, dimension+1, fill::zeros);
+
+	for (unsigned int i = 0; i < N; i++) {
+		rowvec dv = input.row(i);
+		Design d(dv);
+		evaluate(d);
+		rowvec sample(dimension + 1);
+		copyRowVector(sample, dv);
+		sample(dimension) = d.trueValue;
+		samples.row(i) = sample;
+	}
+
+	return samples;
+}
+
+mat TestFunction::generateSamplesWithAdjoints(mat input, unsigned int N) const {
+
+	assert(input.n_rows >= N);
+
+	mat samples(N, 2*dimension+1, fill::zeros);
+
+	for (unsigned int i = 0; i < N; i++) {
+		rowvec dv = input.row(i);
+		Design d(dv);
+		evaluate(d);
+		rowvec sample(2*dimension +1);
+		copyRowVector(sample,dv);
+		sample(dimension) = d.trueValue;
+		copyRowVector(sample,d.gradient,dimension+1);
+		samples.row(i) = sample;
+	}
+
+	return samples;
+}
 
 
+mat TestFunction::generateSamplesWithTangents(mat input, unsigned int N) const{
 
+	assert(input.n_rows >= N);
+
+	mat trainingSamplesTangentDirections(N,dimension);
+	trainingSamplesTangentDirections.randu();
+	mat samples(N, 2*dimension+2, fill::zeros);
+
+	for (unsigned int i = 0; i < N; i++) {
+
+		rowvec dv = input.row(i);
+		Design d(dv);
+		rowvec dir = trainingSamplesTangentDirections.row(i);
+		dir = makeUnitVector(dir);
+		d.tangentDirection = dir;
+		evaluate(d);
+		rowvec sample(2*dimension + 2);
+		copyRowVector(sample,dv);
+		sample(dimension)   = d.trueValue;
+		sample(dimension+1) = d.tangentValue;
+		copyRowVector(sample,d.tangentDirection,dimension+2);
+		samples.row(i) = sample;
+
+	}
+
+	return samples;
 }
 
 
 
 void TestFunction::generateTrainingSamples(void){
 
-
 	assert(isNotEmpty(filenameTrainingData));
-	assert(trainingSamplesInput.n_rows>0);
+	assert(boxConstraints.areBoundsSet());
 
-	unsigned int nColsSampleMatrix;
+	generateSamplesInputTrainingData();
 
-	nColsSampleMatrix = dimension +1;
-
-	trainingSamples.set_size(numberOfTrainingSamples,nColsSampleMatrix);
-
-	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
-
-		rowvec dv = trainingSamplesInput.row(i);
-		Design d(dv);
-
-		evaluate(d);
-		rowvec sample(dimension +1);
-		copyRowVector(sample,dv);
-		sample(dimension) = d.trueValue;
-		trainingSamples.row(i) = sample;
-
-
-	}
-
+	evaluationSelect = 1;
+	trainingSamples = generateSamplesWithFunctionalValues(trainingSamplesInput, numberOfTrainingSamples);
 
 	saveMatToCVSFile(trainingSamples, filenameTrainingData);
 }
@@ -441,306 +314,148 @@ void TestFunction::generateTrainingSamples(void){
 
 void TestFunction::generateTrainingSamplesWithAdjoints(void){
 
-
 	assert(isNotEmpty(filenameTrainingData));
-	assert(trainingSamplesInput.n_rows>0);
+	assert(boxConstraints.areBoundsSet());
 
-	unsigned int nColsSampleMatrix;
-	nColsSampleMatrix = 2*dimension +1;
-	trainingSamples.set_size(numberOfTrainingSamples,nColsSampleMatrix);
-
-	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
-
-		rowvec dv = trainingSamplesInput.row(i);
-		Design d(dv);
-		evaluateAdjoint(d);
-		rowvec sample(2*dimension +1);
-		copyRowVector(sample,dv);
-		sample(dimension) = d.trueValue;
-		copyRowVector(sample,d.gradient,dimension+1);
-		trainingSamples.row(i) = sample;
-	}
-	saveMatToCVSFile(trainingSamples, fileNameSurrogateModelData);
+	generateSamplesInputTrainingData();
+	evaluationSelect = 2;
+	trainingSamples = generateSamplesWithAdjoints(trainingSamplesInput,numberOfTrainingSamples);
+	saveMatToCVSFile(trainingSamples, filenameTrainingData);
 }
 
+
+void TestFunction::generateTrainingSamplesMultiFidelity(void){
+
+	assert(isNotEmpty(filenameTrainingDataHighFidelity));
+	assert(isNotEmpty(filenameTrainingDataLowFidelity));
+	assert(boxConstraints.areBoundsSet());
+	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
+
+	generateSamplesInputTrainingData();
+
+	evaluationSelect = 1;
+	trainingSamples = generateSamplesWithFunctionalValues(trainingSamplesInput,numberOfTrainingSamples);
+	saveMatToCVSFile(trainingSamples, filenameTrainingDataHighFidelity);
+
+	evaluationSelect = 4;
+	trainingSamplesLowFidelity = generateSamplesWithFunctionalValues(trainingSamplesInput,numberOfTrainingSamplesLowFi);
+	saveMatToCVSFile(trainingSamplesLowFidelity, filenameTrainingDataLowFidelity);
+
+}
+
+
+void TestFunction::generateTrainingSamplesMultiFidelityWithAdjoint(void){
+
+	assert(isNotEmpty(filenameTrainingDataHighFidelity));
+	assert(isNotEmpty(filenameTrainingDataLowFidelity));
+	assert(boxConstraints.areBoundsSet());
+	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
+
+
+	generateSamplesInputTrainingData();
+	evaluationSelect = 2;
+	trainingSamples = generateSamplesWithAdjoints(trainingSamplesInput,numberOfTrainingSamples);
+	saveMatToCVSFile(trainingSamples, filenameTrainingDataHighFidelity);
+
+	evaluationSelect = 5;
+	trainingSamplesLowFidelity = generateSamplesWithAdjoints(trainingSamplesInput,numberOfTrainingSamplesLowFi);
+	saveMatToCVSFile(trainingSamplesLowFidelity, filenameTrainingDataLowFidelity);
+
+}
 
 
 void TestFunction::generateTrainingSamplesWithTangents(void){
 
-
+	assert(tan_ptr!=NULL);
 	assert(isNotEmpty(filenameTrainingData));
-	assert(trainingSamplesInput.n_rows>0);
+	assert(boxConstraints.areBoundsSet());
 
-	unsigned int nColsSampleMatrix;
-	nColsSampleMatrix = 2*dimension + 2;
+	generateSamplesInputTrainingData();
 
-	trainingSamples.set_size(numberOfTrainingSamples,nColsSampleMatrix);
-
-	mat trainingSamplesTangentDirections(numberOfTrainingSamples,dimension);
-	trainingSamplesTangentDirections.randu();
-
-
-
-	for(unsigned int i=0; i<numberOfTrainingSamples; i++){
-
-		rowvec dv = trainingSamplesInput.row(i);
-		Design d(dv);
-		rowvec dir = trainingSamplesTangentDirections.row(i);
-		dir = makeUnitVector(dir);
-		d.tangentDirection = dir;
-		evaluateTangent(d);
-		rowvec sample(2*dimension + 2);
-		copyRowVector(sample,dv);
-		sample(dimension)   = d.trueValue;
-		sample(dimension+1) = d.tangentValue;
-		copyRowVector(sample,d.tangentDirection,dimension+2);
-		trainingSamples.row(i) = sample;
-
-	}
-
+	evaluationSelect = 3;
+	trainingSamples = generateSamplesWithTangents(trainingSamplesInput,numberOfTrainingSamples);
 	saveMatToCVSFile(trainingSamples, filenameTrainingData);
 }
+
+void TestFunction::generateTrainingSamplesMultiFidelityWithTangents(void){
+
+	assert(isNotEmpty(filenameTrainingDataHighFidelity));
+	assert(isNotEmpty(filenameTrainingDataLowFidelity));
+	assert(boxConstraints.areBoundsSet());
+	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
+
+
+	generateSamplesInputTrainingData();
+	evaluationSelect = 3;
+
+	trainingSamples = generateSamplesWithTangents(trainingSamplesInput,numberOfTrainingSamples);
+	saveMatToCVSFile(trainingSamples, filenameTrainingDataHighFidelity);
+
+	evaluationSelect = 6;
+	trainingSamplesLowFidelity = generateSamplesWithTangents(trainingSamplesInput,numberOfTrainingSamplesLowFi);
+	saveMatToCVSFile(trainingSamplesLowFidelity, filenameTrainingDataLowFidelity);
+
+}
+
+
+void TestFunction::generateTrainingSamplesMultiFidelityWithLowFiAdjoint(void){
+
+	assert(isNotEmpty(filenameTrainingDataHighFidelity));
+	assert(isNotEmpty(filenameTrainingDataLowFidelity));
+	assert(boxConstraints.areBoundsSet());
+	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
+
+
+	generateSamplesInputTrainingData();
+	evaluationSelect = 1;
+	trainingSamples = this->generateSamplesWithFunctionalValues(trainingSamplesInput,numberOfTrainingSamples);
+	saveMatToCVSFile(trainingSamples, filenameTrainingDataHighFidelity);
+
+	evaluationSelect = 5;
+	trainingSamplesLowFidelity = generateSamplesWithAdjoints(trainingSamplesInput,numberOfTrainingSamplesLowFi);
+	saveMatToCVSFile(trainingSamplesLowFidelity, filenameTrainingDataLowFidelity);
+
+}
+
+void TestFunction::generateTrainingSamplesMultiFidelityWithLowFiTangents(void){
+
+	assert(isNotEmpty(filenameTrainingDataHighFidelity));
+	assert(isNotEmpty(filenameTrainingDataLowFidelity));
+	assert(boxConstraints.areBoundsSet());
+	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
+
+
+	generateSamplesInputTrainingData();
+	evaluationSelect = 1;
+	trainingSamples = generateSamplesWithFunctionalValues(trainingSamplesInput,numberOfTrainingSamples);
+	saveMatToCVSFile(trainingSamples, filenameTrainingDataHighFidelity);
+
+	evaluationSelect = 6;
+	trainingSamplesLowFidelity = generateSamplesWithTangents(trainingSamplesInput,numberOfTrainingSamplesLowFi);
+	saveMatToCVSFile(trainingSamplesLowFidelity, filenameTrainingDataLowFidelity);
+
+}
+
 
 
 void TestFunction::generateTestSamples(void){
 
 	assert(isNotEmpty(filenameTestData));
+
 	generateSamplesInputTestData();
-
-	testSamples.set_size(numberOfTestSamples,dimension+1);
-
-	for(unsigned int i=0; i<numberOfTestSamples; i++){
-
-		rowvec dv = testSamplesInput.row(i);
-		Design d(dv);
-
-		evaluate(d);
-		rowvec sample(dimension +1);
-		copyRowVector(sample,dv);
-		sample(dimension) = d.trueValue;
-		testSamples.row(i) = sample;
-
-
-	}
-
+	testSamples = generateSamplesWithFunctionalValues(testSamplesInput,numberOfTestSamples);
 	saveMatToCVSFile(testSamples, filenameTestData);
 
 }
 
-mat TestFunction::getTrainingSamplesInput(void) const{
 
-	return trainingSamplesInput;
 
-}
 
-mat TestFunction::getTestSamplesInput(void) const{
 
-	return testSamplesInput;
 
-}
-mat TestFunction::getTrainingSamples(void) const{
 
-	return trainingSamples;
 
-}
 
-mat TestFunction::getTestSamples(void) const{
-
-	return testSamples;
-
-}
-
-
-
-mat TestFunction::generateRandomSamples(unsigned int howManySamples){
-
-	assert(boxConstraints.areBoundsSet());
-	assert(ifFunctionPointerIsSet);
-
-	mat sampleMatrix = zeros(howManySamples,dimension+1 );
-
-	double *x  = new double[dimension];
-
-	for(unsigned int i=0; i<howManySamples; i++ ){
-
-		vec xRandom  =  boxConstraints.generateVectorWithinBounds();
-
-
-		for(unsigned int j=0; j<dimension;j++) {
-
-			x[j] =  xRandom(j);
-
-			if(ifFunctionIsNoisy){
-
-				double noiseAdded = noiseLevel*generateRandomDoubleFromNormalDist(-1.0, 1.0, 1.0);
-				x[j] += noiseAdded;
-
-			}
-		}
-
-		double functionValue = 0.0;
-		if(func_ptr != NULL){
-
-			functionValue = func_ptr(x);
-		}
-		else if(adj_ptr != NULL){
-
-			double *xb  = new double[dimension];
-
-			functionValue = adj_ptr(x,xb);
-
-
-			delete[] xb;
-		}
-
-		else{
-
-			abort();
-		}
-
-		for(unsigned int j=0;j<dimension;j++){
-
-			sampleMatrix(i,j) = x[j];
-
-		}
-
-		sampleMatrix(i,dimension) = functionValue;
-
-
-	}
-
-	delete[] x;
-
-	if(dimension == 1){
-
-		sampleMatrix = sort(sampleMatrix);
-	}
-
-	return sampleMatrix;
-
-
-}
-
-
-mat TestFunction::generateRandomSamplesWithGradients(unsigned int howManySamples){
-
-	assert(boxConstraints.areBoundsSet());
-
-	mat sampleMatrix = zeros(howManySamples,2*dimension+1 );
-
-	double *x   = new double[dimension];
-	double *xb  = new double[dimension];
-
-
-
-	for(unsigned int i=0; i<howManySamples; i++ ){
-
-		vec xRandom  =  boxConstraints.generateVectorWithinBounds();
-
-		for(unsigned int j=0; j<dimension;j++) {
-
-			x[j] = xRandom(j);
-		}
-
-		for(unsigned int k=0; k<dimension;k++) xb[k] = 0.0;
-
-		double fVal = adj_ptr(x,xb);
-
-		for(unsigned int j=0;j<dimension;j++){
-
-			sampleMatrix(i,j) = x[j];
-
-		}
-
-		sampleMatrix(i,dimension) = fVal;
-
-
-		for(unsigned int j=dimension+1;j<2*dimension+1;j++){
-
-			sampleMatrix(i,j) = xb[j-dimension-1];
-
-		}
-
-	}
-
-	delete[] x;
-	delete[] xb;
-
-	return sampleMatrix;
-
-
-}
-
-
-//void TestFunction::validateAdjoints(void){
-//
-//	assert(func_ptr == NULL && adj_ptr == NULL);
-//	assert()
-//
-//
-//	if(!ifBoxConstraintsSet){
-//
-//		cout<<"\nERROR: Box constraints are not set!\n";
-//		abort();
-//
-//	}
-//
-//	unsigned int NValidationPoints = 100;
-//	double *x  = new double[dimension];
-//	double *xb  = new double[dimension];
-//
-//	bool passTest = false;
-//
-//	for(unsigned int i=0; i<NValidationPoints; i++ ){
-//
-//		generateRandomVector(lb, ub, dimension, x);
-//
-//
-//		double functionValueFromAdjoint = adj_ptr(x,xb);
-//		double functionValue = func_ptr(x);
-//
-//		passTest= checkValue(functionValueFromAdjoint,functionValue);
-//		if(passTest == false){
-//
-//			cout<<"ERROR: The primal values does not match between function and the adjoint: check your implementations\n";
-//			abort();
-//		}
-//
-//		for(unsigned int j=0; j<dimension; j++ ){
-//
-//			double xsave = x[j];
-//
-//			double epsilon = x[j]*0.0001;
-//			x[j] = xsave - epsilon;
-//
-//			double fmin = func_ptr(x);
-//			x[j] = xsave + epsilon;
-//			double fplus = func_ptr(x);
-//			double fdValue = (fplus-fmin)/(2.0*epsilon);
-//
-//			passTest= checkValue(fdValue,xb[j]);
-//
-//			if(passTest == false){
-//
-//				cout<<"ERROR: The adjoint value does not seem to be correct!\n";
-//				abort();
-//			}
-//
-//			x[j] = xsave;
-//
-//		}
-//
-//
-//
-//
-//	}
-//
-//	delete[] x;
-//	delete[] xb;
-//
-//
-//
-//}
 
 
 
@@ -821,7 +536,7 @@ double Herbie2DAdj(double *x, double *xb) {
 
 
 }
-
+/********************************************************************************/
 double testFunction1D(double *x){
 
 	double c1,c2,c3,c4,c5;
@@ -832,10 +547,7 @@ double testFunction1D(double *x){
 	c5 = 4.0;
 	return exp(-c1*x[0]) + sin(c2*x[0]) + cos(c3*x[0]) + c4*x[0] + c5;
 
-
-
 }
-
 double testFunction1DAdj(double *x, double *xb) {
 
 	double c1,c2,c3,c4,c5;
@@ -846,24 +558,230 @@ double testFunction1DAdj(double *x, double *xb) {
 	c5 = 4.0;
 	xb[0] = -c1*exp(-c1*x[0]) + c2*cos(c2*x[0]) - c3*sin(c3*x[0]) + c4;
 	return exp(-c1*x[0]) + sin(c2*x[0]) + cos(c3*x[0]) + c4*x[0] + c5;
+}
+
+double testFunction1DTangent(double *x, double *xd, double *fdot) {
+	double c1, c2, c3, c4, c5;
+	c1 = 1.0;
+	c2 = 5.0;
+	c3 = 5.0;
+	c4 = 2.0;
+	c5 = 4.0;
+	double f = exp(-c1*x[0]) + sin(c2*x[0]) + cos(c3*x[0]) + c4*x[0] + c5;
+	double fd = (cos(c2*x[0])*c2-exp(-(c1*x[0]))*c1-sin(c3*x[0])*c3+c4)*xd[0];
+	*fdot = fd;
+	return f;
+}
+
+double testFunction1DLowFi(double *x){
+
+	double c1,c2,c3,c4,c5;
+	c1 = 1.12;
+	c2 = 4.96;
+	c3 = 5.1;
+	c4 = 2.3;
+	c5 = 3.89;
+	return exp(-c1*x[0]) + sin(c2*x[0]) + cos(c3*x[0]) + c4*x[0] + c5;
 
 }
 
+double testFunction1DAdjLowFi(double *x, double *xb) {
 
+	double c1,c2,c3,c4,c5;
+	c1 = 1.12;
+	c2 = 4.96;
+	c3 = 5.1;
+	c4 = 2.3;
+	c5 = 3.89;
+	xb[0] = -c1*exp(-c1*x[0]) + c2*cos(c2*x[0]) - c3*sin(c3*x[0]) + c4;
+	return exp(-c1*x[0]) + sin(c2*x[0]) + cos(c3*x[0]) + c4*x[0] + c5;
+}
+
+double testFunction1DTangentLowFi(double *x, double *xd, double *fdot) {
+	double c1, c2, c3, c4, c5;
+	c1 = 1.12;
+	c2 = 4.96;
+	c3 = 5.1;
+	c4 = 2.3;
+	c5 = 3.89;
+	double f = exp(-c1*x[0]) + sin(c2*x[0]) + cos(c3*x[0]) + c4*x[0] + c5;
+	double fd = (cos(c2*x[0])*c2-exp(-(c1*x[0]))*c1-sin(c3*x[0])*c3+c4)*xd[0];
+	*fdot = fd;
+	return f;
+}
+
+
+
+
+/**************************************************************************************/
 double LinearTF1(double *x){
-
 	return 2*x[0]+3*x[1]+1.5;
+}
 
+double LinearTF1LowFidelity(double *x){
+	return 2.2*x[0]+2.9*x[1]+1.2 ;
+}
 
-
+double LinearTF1LowFidelityAdj(double *x, double *xb){
+	xb[0] = xb[0] + 2.2;
+	xb[1] = xb[1] + 2.9;
+	return 2.2*x[0]+2.9*x[1]+1.2;
 }
 
 double LinearTF1Adj(double *x, double *xb) {
-
 	xb[0] = xb[0] + 2.0;
 	xb[1] = xb[1] + 3.0;
 	return 2*x[0]+3*x[1]+1.5;
 }
+double LinearTF1Tangent(double *x, double *xd, double *fdot) {
+	*fdot = 2.0*xd[0] + 3.0*xd[1];
+	return 2*x[0]+3*x[1]+1.5;
+}
+double LinearTF1LowFidelityTangent(double *x, double *xd, double *fdot) {
+	*fdot = 2.2*xd[0] + 2.9*xd[1];
+	return 2.2*x[0]+2.9*x[1]+1.5;
+}
+
+/**************************************************************************************/
+
+
+/* Himmelblau test function
+ *
+ * f(x,y) = (x^2+y-11)^2 + (x+y^2-7)^2
+ * four local minima :
+ * f(3.0,2.0)=0.0
+ * f(2.805118, 3.131312) = 0.0
+ * f(-3.779310, -3.283186) = 0.0
+ * f(3.584428, -1.848126)  = 0.0
+ *
+ *
+ * */
+
+double Himmelblau(double *x){
+
+	double c1 = 1.0;
+	double c2 = 1.0;
+	double c3 = 11.0;
+	double c4 = 1.0;
+	double c5 = 1.0;
+	double c6 = 7.0;
+	return pow( (c1*x[0]*x[0]+c2*x[1]- c3 ), 2.0 ) + pow( (c4 * x[0]+ c5 * x[1]*x[1]- c6), 2.0 );
+
+
+}
+
+
+double HimmelblauTangent(double *x, double *xd, double *fdot) {
+	double c1 = 1.0;
+	double c2 = 1.0;
+	double c3 = 11.0;
+	double c4 = 1.0;
+	double c5 = 1.0;
+	double c6 = 7.0;
+	double f;
+	double fd;
+	double arg1;
+	double arg1d;
+	double arg2;
+	double arg2d;
+	arg1d = c1*2*x[0]*xd[0] + c2*xd[1];
+	arg1 = c1*x[0]*x[0] + c2*x[1] - c3;
+	arg2d = c4*xd[0] + c5*2*x[1]*xd[1];
+	arg2 = c4*x[0] + c5*x[1]*x[1] - c6;
+	fd = 2.0*pow(arg1, 2.0-1)*arg1d + 2.0*pow(arg2, 2.0-1)*arg2d;
+	f = pow(arg1, 2.0) + pow(arg2, 2.0);
+	*fdot = fd;
+	return f;
+}
+
+
+double HimmelblauAdj(double *x, double *xb) {
+	double c1 = 1.0;
+	double c2 = 1.0;
+	double c3 = 11.0;
+	double c4 = 1.0;
+	double c5 = 1.0;
+	double c6 = 7.0;
+	double f = 0.0;
+	double fb = 0.0;
+	double tempb;
+	double tempb0;
+	double Himmelblau;
+	fb = 1.0;
+	tempb = 2.0*pow(c1*(x[0]*x[0])-c3+c2*x[1], 2.0-1)*fb;
+	tempb0 = 2.0*pow(c4*x[0]-c6+c5*(x[1]*x[1]), 2.0-1)*fb;
+	xb[0] = xb[0] + c4*tempb0 + 2*x[0]*c1*tempb;
+	xb[1] = xb[1] + 2*x[1]*c5*tempb0 + c2*tempb;
+	return pow( (c1*x[0]*x[0]+c2*x[1]- c3 ), 2.0 ) + pow( (c4 * x[0]+ c5 * x[1]*x[1]- c6), 2.0 );
+
+}
+
+double HimmelblauAdjLowFi(double *x, double *xb) {
+	double c1 = 1.1;
+	double c2 = 0.9;
+	double c3 = 11.05;
+	double c4 = 1.05;
+	double c5 = 1.08;
+	double c6 = 6.97;
+	double f = 0.0;
+	double fb = 0.0;
+	double tempb;
+	double tempb0;
+	double Himmelblau;
+	fb = 1.0;
+	tempb = 2.0*pow(c1*(x[0]*x[0])-c3+c2*x[1], 2.0-1)*fb;
+	tempb0 = 2.0*pow(c4*x[0]-c6+c5*(x[1]*x[1]), 2.0-1)*fb;
+	xb[0] = xb[0] + c4*tempb0 + 2*x[0]*c1*tempb;
+	xb[1] = xb[1] + 2*x[1]*c5*tempb0 + c2*tempb;
+	return pow( (c1*x[0]*x[0]+c2*x[1]- c3 ), 2.0 ) + pow( (c4 * x[0]+ c5 * x[1]*x[1]- c6), 2.0 );
+
+}
+
+
+double HimmelblauLowFi(double *x){
+
+	double c1 = 1.1;
+	double c2 = 0.9;
+	double c3 = 11.05;
+	double c4 = 1.05;
+	double c5 = 1.08;
+	double c6 = 6.97;
+	return pow( (c1*x[0]*x[0]+c2*x[1]- c3 ), 2.0 ) + pow( (c4 * x[0]+ c5 * x[1]*x[1]- c6), 2.0 );
+
+
+}
+
+double HimmelblauTangentLowFi(double *x, double *xd, double *fdot) {
+	double c1 = 1.1;
+	double c2 = 0.9;
+	double c3 = 11.05;
+	double c4 = 1.05;
+	double c5 = 1.08;
+	double c6 = 6.97;
+	double f;
+	double fd;
+	double arg1;
+	double arg1d;
+	double arg2;
+	double arg2d;
+	arg1d = c1*2*x[0]*xd[0] + c2*xd[1];
+	arg1 = c1*x[0]*x[0] + c2*x[1] - c3;
+	arg2d = c4*xd[0] + c5*2*x[1]*xd[1];
+	arg2 = c4*x[0] + c5*x[1]*x[1] - c6;
+	fd = 2.0*pow(arg1, 2.0-1)*arg1d + 2.0*pow(arg2, 2.0-1)*arg2d;
+	f = pow(arg1, 2.0) + pow(arg2, 2.0);
+	*fdot = fd;
+	return f;
+}
+
+/***********************************************************************************/
+
+
+
+
+
+
+
 
 
 
@@ -1314,31 +1232,7 @@ double Shubertadj(double *x, double *xb) {
 
 
 
-/* Himmelblau test function
- *
- * f(x,y) = (x^2+y-11)^2 + (x+y^2-7)^2
- * four local minima :
- * f(3.0,2.0)=0.0
- * f(2.805118, 3.131312) = 0.0
- * f(-3.779310, -3.283186) = 0.0
- * f(3.584428, -1.848126)  = 0.0
- *
- *
- * */
 
-double Himmelblau(double *x){
-
-	return pow( (x[0]*x[0]+x[1]-11.0), 2.0 ) + pow( (x[0]+x[1]*x[1]-7.0), 2.0 );
-
-
-}
-
-double HimmelblauLowFi(double *x){
-
-	return pow( (x[0]*x[0]+x[1]-11.0), 2.0 ) + pow( (x[0]+x[1]*x[1]-7.0), 2.0 ) + Waves2D(x)*50.0;
-
-
-}
 
 
 double Himmelblau(vec x){
@@ -1354,17 +1248,6 @@ double HimmelblauLowFi(vec x){
 }
 
 
-double HimmelblauAdj(double *x, double *xb) {
-	double tempb;
-	double tempb0;
-	tempb = 2.0*pow(x[0]*x[0]+x[1]-11.0, 2.0-1);
-	tempb0 = 2.0*pow(x[0]+x[1]*x[1]-7.0, 2.0-1);
-	xb[0] = tempb0 + 2*x[0]*tempb;
-	xb[1] = 2*x[1]*tempb0 + tempb;
-
-	return pow( (x[0]*x[0]+x[1]-11.0), 2.0 ) + pow( (x[0]+x[1]*x[1]-7.0), 2.0 );
-
-}
 
 vec HimmelblauGradient(vec x){
 

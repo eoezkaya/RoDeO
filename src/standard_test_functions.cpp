@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -35,150 +35,108 @@
 #include "matrix_vector_operations.hpp"
 #include <cassert>
 
-unsigned int StandardTestFunction::getDimension(void) const{
+HimmelblauFunction::HimmelblauFunction():function("Himmelblau", 2){
 
-	return dimension;
+	function.func_ptr = Himmelblau;
+	function.adj_ptr  = HimmelblauAdj;
+	function.tan_ptr = HimmelblauTangent;
+	function.func_ptrLowFi = HimmelblauLowFi;
+	function.adj_ptrLowFi = HimmelblauAdjLowFi;
+	function.tan_ptrLowFi = HimmelblauTangentLowFi;
 
-}
+	function.setBoxConstraints(-6.0, 6.0);
+	function.filenameTestData = "himmelblauTestData.csv";
+	function.filenameTrainingData = "himmelblauTrainingData.csv";
+	function.filenameTrainingDataLowFidelity = "himmelblauLowFiTrainingData.csv";
+	function.filenameTrainingDataHighFidelity = function.filenameTrainingData;
 
-
-Bounds StandardTestFunction::getBoxConstraints(void) const{
-
-	return boxConstraints;
-}
-
-
-void StandardTestFunction::generateSamples(unsigned int howmanySamples) {
-
-	assert(boxConstraints.areBoundsSet());
-
-	unsigned int sizeOfASample = dimension+1;
-	mat samplesMatrix(howmanySamples,sizeOfASample);
-
-	for(unsigned int i=0; i<howmanySamples; i++){
-
-		rowvec sampleGenerated(sizeOfASample, fill::zeros);
-
-		rowvec x = generateRandomRowVector(boxConstraints.getLowerBounds(), boxConstraints.getUpperBounds());
-		copyRowVector(sampleGenerated,x);
-		sampleGenerated(dimension) = evaluate(x);
-		samplesMatrix.row(i) = sampleGenerated;
-
-
-	}
-
-
-	samples = samplesMatrix;
+	function.numberOfTrainingSamples = 50;
+	function.numberOfTestSamples = 100;
+	function.numberOfTrainingSamplesLowFi = 100;
 
 
 }
 
-void StandardTestFunction::generateSamplesWithGradient(unsigned int howmanySamples) {
+HimmelblauFunction::HimmelblauFunction(double lb, double ub):function("Himmelblau", 2){
 
-	assert(boxConstraints.areBoundsSet());
+	function.func_ptr = Himmelblau;
+	function.adj_ptr  = HimmelblauAdj;
+	function.tan_ptr = HimmelblauTangent;
+	function.func_ptrLowFi = HimmelblauLowFi;
+	function.adj_ptrLowFi = HimmelblauAdjLowFi;
+	function.tan_ptrLowFi = HimmelblauTangentLowFi;
 
-	unsigned int sizeOfASample = 2*dimension+1;
-	mat samplesMatrix(howmanySamples,sizeOfASample);
+	function.filenameTestData = "himmelblauTestData.csv";
+	function.filenameTrainingData = "himmelblauTrainingData.csv";
+	function.filenameTrainingDataLowFidelity = "himmelblauLowFiTrainingData.csv";
+	function.filenameTrainingDataHighFidelity = function.filenameTrainingData;
 
-	for(unsigned int i=0; i<howmanySamples; i++){
+	function.numberOfTrainingSamples = 50;
+	function.numberOfTestSamples = 100;
+	function.numberOfTrainingSamplesLowFi = 100;
 
-		rowvec sampleGenerated(sizeOfASample, fill::zeros);
-
-		rowvec x = generateRandomRowVector(boxConstraints.getLowerBounds(), boxConstraints.getUpperBounds());
-		copyRowVector(sampleGenerated,x);
-		sampleGenerated(dimension) = evaluate(x);
-		rowvec grad = evaluateGradient(x);
-		copyRowVector(sampleGenerated, grad, dimension+1);
-		samplesMatrix.row(i) = sampleGenerated;
-
-	}
-
-	samples = samplesMatrix;
+	function.setBoxConstraints(lb, ub);
 
 }
 
 
+/***********************************************************************************/
 
-mat StandardTestFunction::getSamples(void) const{
+LinearTestFunction1::LinearTestFunction1():function("LinearTestFunction1", 2){
 
-	return samples;
-
-}
-
-
-void StandardTestFunction::setBoxConstraints(double lowerBound, double upperBound) {
-
-	vec lb(dimension);
-	vec ub(dimension);
-
-	lb.fill(lowerBound);
-	ub.fill(upperBound);
-
-	Bounds boxConstraints(lb, ub);
-	setBoxConstraints(boxConstraints);
-
-}
-
-void StandardTestFunction::setBoxConstraints(Bounds boxConstraintsInput) {
-
-	assert(boxConstraintsInput.areBoundsSet());
-	boxConstraints = boxConstraintsInput;
+	function.func_ptr = LinearTF1;
+	function.adj_ptr  = LinearTF1Adj;
+	function.tan_ptr  = LinearTF1Tangent;
+	function.func_ptrLowFi = LinearTF1LowFidelity;
+	function.adj_ptrLowFi  = LinearTF1LowFidelityAdj;
+	function.tan_ptrLowFi  = LinearTF1LowFidelityTangent;
+	function.setBoxConstraints(-3.0, 3.0);
 
 
 }
 
+LinearTestFunction1::LinearTestFunction1(double lb, double ub):function("LinearTestFunction1", 2){
 
-rowvec StandardTestFunction::evaluateGradient(rowvec x) const{
-
-	rowvec gradient(dimension);
-	double epsilon;
-
-	for(unsigned int i=0; i<dimension; i++){
-
-		double xsave = x(i);
-		epsilon = x(i)*0.001;
-		x(i) += epsilon;
-		double yplus  = evaluate(x);
-		x(i) -= 2.0*epsilon;
-		double yminus = evaluate(x);
-		gradient(i) = (yplus- yminus)/(2.0*epsilon);
-
-
-	}
-
-
-	return gradient;
+	function.func_ptr = LinearTF1;
+	function.adj_ptr  = LinearTF1Adj;
+	function.tan_ptr  = LinearTF1Tangent;
+	function.func_ptrLowFi = LinearTF1LowFidelity;
+	function.adj_ptrLowFi  = LinearTF1LowFidelityAdj;
+	function.tan_ptrLowFi  = LinearTF1LowFidelityTangent;
+	function.setBoxConstraints(lb, ub);
 
 }
 
 
-HimmelblauFunction::HimmelblauFunction(){
+/***********************************************************************************/
 
-	dimension = 2;
+NonLinear1DTestFunction1::NonLinear1DTestFunction1():function("NonLinear1DTestFunction1", 1){
 
-}
-
-
-double HimmelblauFunction::evaluate(rowvec x) const{
-
-	assert(x.size() == dimension);
-	return pow( (x[0]*x[0]+x[1]-11.0), 2.0 ) + pow( (x[0]+x[1]*x[1]-7.0), 2.0 );
-
-
-}
-
-void HimmelblauFunction::evaluateGradient(rowvec x, rowvec gradient) const{
-
-	assert(x.size() == gradient.size());
-
-	double tempb;
-	double tempb0;
-	tempb = 2.0*pow(x[0]*x[0]+x[1]-11.0, 2.0-1);
-	tempb0 = 2.0*pow(x[0]+x[1]*x[1]-7.0, 2.0-1);
-	gradient[0] = tempb0 + 2*x[0]*tempb;
-	gradient[1] = 2*x[1]*tempb0 + tempb;
+	function.func_ptr = testFunction1D;
+	function.adj_ptr  = testFunction1DAdj;
+	function.tan_ptr  = testFunction1DTangent;
+	function.func_ptrLowFi = testFunction1DLowFi;
+	function.adj_ptrLowFi  = testFunction1DAdjLowFi;
+	function.tan_ptrLowFi  = testFunction1DTangentLowFi;
+	function.setBoxConstraints(-3.0, 3.0);
 
 
 }
+
+NonLinear1DTestFunction1::NonLinear1DTestFunction1(double lb, double ub):function("NonLinear1DTestFunction1", 1){
+
+	function.func_ptr = testFunction1D;
+	function.adj_ptr  = testFunction1DAdj;
+	function.tan_ptr  = testFunction1DTangent;
+	function.func_ptrLowFi = testFunction1DLowFi;
+	function.adj_ptrLowFi  = testFunction1DAdjLowFi;
+	function.tan_ptrLowFi  = testFunction1DTangentLowFi;
+	function.setBoxConstraints(lb, ub);
+
+}
+
+/***********************************************************************************/
+
+
 
 

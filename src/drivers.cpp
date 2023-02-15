@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -64,11 +64,11 @@ RoDeODriver::RoDeODriver(){
 	configKeysObjectiveFunction.add(ConfigKey("OUTPUT_FILE","stringVector") );
 	configKeysObjectiveFunction.add(ConfigKey("PATH","stringVector") );
 	configKeysObjectiveFunction.add(ConfigKey("GRADIENT","stringVector") );
+	configKeysObjectiveFunction.add(ConfigKey("TANGENT","stringVector") );
 	configKeysObjectiveFunction.add(ConfigKey("EXECUTABLE","stringVector") );
-	configKeysObjectiveFunction.add(ConfigKey("MARKER","stringVector") );
-	configKeysObjectiveFunction.add(ConfigKey("MARKER_FOR_GRADIENT","stringVector") );
+
 	configKeysObjectiveFunction.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
-	configKeysObjectiveFunction.add(ConfigKey("MULTILEVEL_SURROGATE","string") );
+	configKeysObjectiveFunction.add(ConfigKey("MULTILEVEL_MODEL","string") );
 
 	/* Keywords for constraints */
 
@@ -78,11 +78,10 @@ RoDeODriver::RoDeODriver(){
 	configKeysConstraintFunction.add(ConfigKey("OUTPUT_FILE","stringVector") );
 	configKeysConstraintFunction.add(ConfigKey("PATH","stringVector") );
 	configKeysConstraintFunction.add(ConfigKey("GRADIENT","stringVector") );
+	configKeysConstraintFunction.add(ConfigKey("TANGENT","stringVector") );
 	configKeysConstraintFunction.add(ConfigKey("EXECUTABLE","stringVector") );
-	configKeysConstraintFunction.add(ConfigKey("MARKER","stringVector") );
-	configKeysConstraintFunction.add(ConfigKey("MARKER_FOR_GRADIENT","stringVector") );
 	configKeysConstraintFunction.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
-	configKeysConstraintFunction.add(ConfigKey("MULTILEVEL_SURROGATE","string") );
+	configKeysConstraintFunction.add(ConfigKey("MULTILEVEL_MODEL","string") );
 
 
 
@@ -131,7 +130,6 @@ RoDeODriver::RoDeODriver(){
 
 	availableSurrogateModels.push_back("ORDINARY_KRIGING");
 	availableSurrogateModels.push_back("UNIVERSAL_KRIGING");
-	availableSurrogateModels.push_back("GRADIENT_ENHANCED_KRIGING");
 	availableSurrogateModels.push_back("LINEAR_REGRESSION");
 	availableSurrogateModels.push_back("AGGREGATION");
 	availableSurrogateModels.push_back("MULTI_LEVEL");
@@ -401,7 +399,7 @@ void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 
 
 
-	if(type == "Minimization" || type == "Maximization"){
+	if(type == "Optimization" || type == "OPTIMIZATION"){
 
 		checkSettingsForOptimization();
 
@@ -422,7 +420,7 @@ void RoDeODriver::checkIfProblemTypeIsSetProperly(void) const{
 	if(!ifProblemTypeIsValid){
 
 		std::cout<<"ERROR: Problem type is not valid, did you set PROBLEM_TYPE properly?\n";
-		std::cout<<"Valid problem types: MINIMIZATION, MAXIMIZATION, DoE, SURROGATE_TEST\n";
+		std::cout<<"Valid problem types: OPTIMIZATION, DoE, SURROGATE_TEST\n";
 		abort();
 
 	}
@@ -434,7 +432,7 @@ void RoDeODriver::checkIfProblemTypeIsSetProperly(void) const{
 
 bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 
-	if (s == "DoE" || s == "DOE" || s == "MINIMIZATION" || s == "MAXIMIZATION" || s == "SURROGATE_TEST"){
+	if (s == "DoE" || s == "DOE" || s == "OPTIMIZATION" || s == "Optimization" || s == "SURROGATE_TEST" ){
 
 		return true;
 	}
@@ -460,10 +458,7 @@ ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 
 	std::string optimizationType = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
 
-	if(optimizationType == "MAXIMIZATION"){
 
-		objFunc.setMaximizationOn();
-	}
 
 
 
@@ -541,8 +536,6 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 
 	std::string outputFilename;
 	std::string exePath;
-	std::string marker;
-	std::string markerGradient;
 	std::string ifGradient;
 
 
@@ -556,15 +549,9 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 
 	definitionBuffer = configKeysConstraintFunction.getConfigKeyStringValue("DEFINITION");
 	designVectorFilename = configKeysConstraintFunction.getConfigKeyStringValue("DESIGN_VECTOR_FILE");
-
-
-
-
 	executableName = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",0);
 	outputFilename = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",0);
 	exePath = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("PATH",0);
-	marker = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("MARKER",0);
-	markerGradient = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("MARKER_FOR_GRADIENT",0);
 	ifGradient = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",0);
 
 
@@ -573,8 +560,7 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	result.executableName = executableName;
 	result.outputFilename = outputFilename;
 	result.path = exePath;
-	result.marker = marker;
-	result.markerForGradient = markerGradient;
+
 
 	result.ID = numberOfConstraints;
 	numberOfConstraints++;
@@ -642,13 +628,11 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	std::string outputFilename;
 	std::string exePath;
 	std::string gradient;
-	std::string marker;
-	std::string markerGradient;
+	std::string tangent;
 
 	std::string multilevel;
 
 	configKeysObjectiveFunction.parseString(inputString);
-
 
 
 #if 0
@@ -664,11 +648,8 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	executableName = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",0);
 	outputFilename = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",0);
 	exePath = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("PATH",0);
-	marker =  configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("MARKER",0);
-	markerGradient = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("MARKER_FOR_GRADIENT",0);
 	gradient = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",0);
-
-
+	tangent = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("TANGENT",0);
 
 
 	objectiveFunction.name = name;
@@ -677,18 +658,15 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	objectiveFunction.executableName = executableName;
 	objectiveFunction.path = exePath;
 	objectiveFunction.outputFilename = outputFilename;
-	objectiveFunction.marker = marker;
-	objectiveFunction.markerForGradient = markerGradient;
-
-
 
 	if(checkIfOn(gradient)){
-
 		objectiveFunction.ifGradient = true;
-
+	}
+	if(checkIfOn(tangent)){
+		objectiveFunction.ifTangent = true;
 	}
 
-	multilevel = configKeysObjectiveFunction.getConfigKeyStringValue("MULTILEVEL_SURROGATE");
+	multilevel = configKeysObjectiveFunction.getConfigKeyStringValue("MULTILEVEL_MODEL");
 
 	if(checkIfOn(multilevel)){
 
@@ -722,20 +700,9 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 		std::string	markerLowFi =  configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("MARKER",1);
 
-		if(markerLowFi.empty()){
-
-			markerLowFi = marker;
-
-		}
 
 
 		std::string	markerGradientLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("MARKER_FOR_GRADIENT",1);
-
-		if(markerGradientLowFi.empty()){
-
-			markerGradientLowFi = markerGradient;
-
-		}
 
 
 		std::string	gradientLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",1);
@@ -746,19 +713,13 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 		}
 
-
 		objectiveFunction.executableNameLowFi = executableNameLowFi;
 		objectiveFunction.outputFilenameLowFi = outputFilenameLowFi;
 		objectiveFunction.pathLowFi = exePathLowFi;
-		objectiveFunction.markerLowFi = markerLowFi;
-		objectiveFunction.markerForGradientLowFi = markerGradientLowFi;
 
 		if(checkIfOn(gradientLowFi)){
-
 			objectiveFunction.ifGradientLowFi = true;
-
 		}
-
 
 	}
 	objectiveFunction.ifDefined = true;
@@ -813,13 +774,6 @@ void RoDeODriver::extractObjectiveFunctionDefinitionFromString(std::string input
 
 
 	}
-
-
-
-
-
-
-
 
 }
 

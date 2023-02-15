@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -64,6 +64,97 @@ ObjectiveFunctionDefinition::ObjectiveFunctionDefinition(std::string name){
 
 }
 
+unsigned int ObjectiveFunctionDefinition::identifyCase(void) const{
+
+	if(ifMultiLevel == false && ifGradient == false && ifTangent == false) return 1;
+	if(ifMultiLevel == false && ifGradient == true  && ifTangent == false) return 2;
+	if(ifMultiLevel == false && ifGradient == false  && ifTangent == true) return 3;
+
+	if(ifMultiLevel == true && ifGradient == false  && ifTangent == false &&
+			ifGradientLowFi == false && ifTangentLowFi == false
+
+	) return 4;
+
+	if(ifMultiLevel == true && ifGradient == true  && ifTangent == false &&
+			ifGradientLowFi == true && ifTangentLowFi == false
+
+	) return 5;
+	if(ifMultiLevel == true && ifGradient == false  && ifTangent == true &&
+			ifGradientLowFi == false && ifTangentLowFi == true
+
+	) return 6;
+
+	if(ifMultiLevel == true && ifGradient == false  && ifTangent == false &&
+			ifGradientLowFi == true && ifTangentLowFi == false
+
+	) return 7;
+
+
+	else return 0;
+
+}
+
+
+
+
+bool ObjectiveFunctionDefinition::checkIfDefinitionIsOk(void) const{
+
+	unsigned int idCase = identifyCase();
+
+	if(idCase == 0){
+		abortWithErrorMessage("Some problem in the objective function definition");
+
+	}
+	if(name.empty()){
+		abortWithErrorMessage("Name is missing the objective function definition");
+	}
+
+	if(designVectorFilename.empty()){
+
+		abortWithErrorMessage("Design vector filename is missing in the objective function definition");
+	}
+
+	if(executableName.empty()){
+		abortWithErrorMessage("Name of the executable is missing in the objective function definition");
+
+	}
+	if(outputFilename.empty()){
+		abortWithErrorMessage("Name of the output file is missing in the objective function definition");
+	}
+
+	if(nameHighFidelityTrainingData.empty()){
+		abortWithErrorMessage("Name of the training data file is missing in the objective function definition");
+	}
+
+	if(idCase>3){
+
+		if(executableNameLowFi.empty()){
+			abortWithErrorMessage("Name of executable for the low fidelity model is missing in the objective function definition");
+
+		}
+
+		if(nameLowFidelityTrainingData.empty()){
+			abortWithErrorMessage("Name of training data file for the low fidelity model is missing in the objective function definition");
+		}
+
+		if(outputFilenameLowFi.empty()){
+			abortWithErrorMessage("Name of output file for the low fidelity model is missing in the objective function definition");
+		}
+
+		if(nameLowFidelityTrainingData == nameHighFidelityTrainingData){
+
+			abortWithErrorMessage("Name of the training data is same for both low and high fidelity models");
+
+		}
+
+
+	}
+
+
+	return true;
+
+}
+
 
 void ObjectiveFunctionDefinition::print(void) const{
 
@@ -81,13 +172,6 @@ void ObjectiveFunctionDefinition::print(void) const{
 		if(isNotEmpty(path)){
 
 			std::cout<< "Executable path = "<<path<<"\n";
-
-		}
-
-		if(!marker.empty()){
-
-			std::cout<< "Marker = "<<marker<<"\n";
-
 
 		}
 
@@ -113,93 +197,120 @@ ObjectiveFunction::ObjectiveFunction(std::string objectiveFunName, unsigned int 
 	dim = dimension;
 	name = objectiveFunName;
 
-	fileNameTrainingDataForSurrogate = name + ".csv";
-
-
 }
 
 
-ObjectiveFunction::ObjectiveFunction(){
+ObjectiveFunction::ObjectiveFunction(){}
 
+void ObjectiveFunction::setEvaluationMode(std::string mode){
 
+	assert(isNotEmpty(mode));
+
+	evaluationMode = mode;
 }
+
+
+
+
+void ObjectiveFunction::setDimension(unsigned int dimension){
+	dim = dimension;
+}
+unsigned int ObjectiveFunction::getDimension(void) const{
+	return dim;
+}
+
 
 
 void ObjectiveFunction::bindSurrogateModel(void){
 
 	assert(ifDefinitionIsSet);
 
-	if(ifMultilevel){
+	unsigned int idCase = definition.identifyCase();
 
-		output.printMessage("Binding the surrogate model with the Multi-Level modeĺ...");
-		surrogateModelML.setinputFileNameHighFidelityData(fileNameTrainingDataForSurrogateHighFidelity);
-		surrogateModelML.setinputFileNameLowFidelityData(fileNameTrainingDataForSurrogateLowFidelity);
-		surrogate = &surrogateModelML;
-
-	}
-
-	else if(ifGradientAvailable == false){
-
-		surrogateModel.setNameOfInputFile(fileNameTrainingDataForSurrogate);
+	if(idCase == 1){
 
 		output.printMessage("Binding the surrogate model with the Kriging modeĺ...");
+		surrogateModel.setNameOfInputFile(definition.nameHighFidelityTrainingData);
 		surrogate = &surrogateModel;
-
 	}
-	else{
 
-		surrogateModelGradient.setNameOfInputFile(fileNameTrainingDataForSurrogate);
-		output.printMessage("Binding the surrogate model with the Agrregation modeĺ...");
+	if(idCase == 2){
+
+		output.printMessage("Binding the surrogate model with the Aggregation modeĺ...");
+		surrogateModelGradient.setNameOfInputFile(definition.nameHighFidelityTrainingData);
 		surrogate = &surrogateModelGradient;
 	}
 
+	if(idCase == 3){
+		output.printMessage("Binding the surrogate model with the tangent enhanced modeĺ...");
+		surrogateModelWithTangents.setNameOfInputFile(definition.nameHighFidelityTrainingData);
+		surrogate = &surrogateModelWithTangents;
+	}
+
+	if(idCase == 4){
+		output.printMessage("Binding the surrogate model with the Multi-fidelity model...");
+
+		surrogateModelML.setName(definition.name);
+		surrogateModelML.setinputFileNameHighFidelityData(definition.nameHighFidelityTrainingData);
+		surrogateModelML.setinputFileNameLowFidelityData(definition.nameLowFidelityTrainingData);
+		surrogate = &surrogateModelML;
+	}
 
 
 
+	if(idCase == 0){
 
+		abortWithErrorMessage("Something is wrong with the case definition in objective function...");
+	}
+
+	ifSurrogateModelIsDefined = true;
 
 }
 
 
-void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition definition){
-
-	executableName = definition.executableName;
-	executablePath = definition.path;
-	fileNameDesignVector = definition.designVectorFilename;
-	fileNameInputRead = definition.outputFilename;
-	ifGradientAvailable = definition.ifGradient;
+void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition def){
 
 
-	if(isNotEmpty(definition.marker)){
+	assert(def.checkIfDefinitionIsOk());
+	definition = def;
 
-		readMarker = definition.marker;
-		ifMarkerIsSet = true;
-
-	}
-
-
-	if(isNotEmpty(definition.markerForGradient)){
-
-
-		readMarkerAdjoint = definition.markerForGradient;
-		ifAdjointMarkerIsSet = true;
-
-	}
-
-
-	if(definition.ifMultiLevel){
-
-
-		ifMultilevel = definition.ifMultiLevel;
-		executableNameLowFi = definition.executableNameLowFi;
-		fileNameInputReadLowFi = definition.outputFilenameLowFi;
-		executablePathLowFi = definition.pathLowFi;
-		readMarkerLowFi = definition.markerLowFi;
-		readMarkerAdjointLowFi = definition.markerForGradientLowFi;
-		fileNameTrainingDataForSurrogateHighFidelity = definition.nameHighFidelityTrainingData;
-		fileNameTrainingDataForSurrogateLowFidelity = definition.nameLowFidelityTrainingData;
-
-	}
+	//	executableName = definition.executableName;
+	//	executablePath = definition.path;
+	//	fileNameDesignVector = definition.designVectorFilename;
+	//	fileNameInputRead = definition.outputFilename;
+	//	ifGradientAvailable = definition.ifGradient;
+	//
+	//
+	//	if(isNotEmpty(definition.marker)){
+	//
+	//		readMarker = definition.marker;
+	//		ifMarkerIsSet = true;
+	//
+	//	}
+	//
+	//
+	//	if(isNotEmpty(definition.markerForGradient)){
+	//
+	//
+	//		readMarkerAdjoint = definition.markerForGradient;
+	//		ifAdjointMarkerIsSet = true;
+	//
+	//	}
+	//
+	//
+	//	if(definition.ifMultiLevel){
+	//
+	//
+	//		ifMultilevel = definition.ifMultiLevel;
+	//		executableNameLowFi = definition.executableNameLowFi;
+	//		fileNameInputReadLowFi = definition.outputFilenameLowFi;
+	//		executablePathLowFi = definition.pathLowFi;
+	//		readMarkerLowFi = definition.markerLowFi;
+	//		readMarkerAdjointLowFi = definition.markerForGradientLowFi;
+	//		fileNameTrainingDataForSurrogateHighFidelity = definition.nameHighFidelityTrainingData;
+	//		fileNameTrainingDataForSurrogateLowFidelity = definition.nameLowFidelityTrainingData;
+	//
+	//	}
 
 
 	ifDefinitionIsSet = true;
@@ -248,19 +359,6 @@ void ObjectiveFunction::setDisplayOff(void){
 }
 
 
-void ObjectiveFunction::setMinimizationOn(void){
-
-	ifMinimization = true;
-	ifMaximization = false;
-
-}
-void ObjectiveFunction::setMaximizationOn(void){
-
-	ifMinimization = false;
-	ifMaximization = true;
-
-}
-
 
 
 void ObjectiveFunction::setNumberOfTrainingIterationsForSurrogateModel(unsigned int nIter){
@@ -272,9 +370,16 @@ void ObjectiveFunction::setNumberOfTrainingIterationsForSurrogateModel(unsigned 
 void ObjectiveFunction::setFileNameReadInput(std::string fileName){
 
 	assert(!fileName.empty());
-	fileNameInputRead = fileName;
-
+	definition.outputFilename = fileName;
 }
+
+void ObjectiveFunction::setFileNameReadInputLowFidelity(std::string fileName){
+
+	assert(!fileName.empty());
+	definition.outputFilenameLowFi = fileName;
+}
+
+
 
 void ObjectiveFunction::setFileNameDesignVector(std::string fileName){
 
@@ -338,6 +443,14 @@ MultiLevelModel ObjectiveFunction::getSurrogateModelML(void) const{
 
 }
 
+TGEKModel ObjectiveFunction::getSurrogateModelTangent(void) const{
+
+	return surrogateModelWithTangents;
+
+}
+
+
+
 
 void ObjectiveFunction::setReadMarker(std::string marker){
 
@@ -397,11 +510,7 @@ void ObjectiveFunction::initializeSurrogate(void){
 void ObjectiveFunction::trainSurrogate(void){
 
 	assert(ifInitialized);
-
-
 	surrogate->train();
-
-
 }
 
 
@@ -455,17 +564,15 @@ bool ObjectiveFunction::checkIfGradientAvailable(void) const{
 
 std::string ObjectiveFunction::getExecutionCommand(void) const{
 
-	assert(isNotEmpty(executableName));
-
 	std::string runCommand;
 
-	if(isNotEmpty(executablePath)) {
+	if(isNotEmpty(definition.path)) {
 
-		runCommand = executablePath +"/" + executableName;
+		runCommand = definition.path +"/" + definition.executableName;
 	}
 	else{
 
-		runCommand = "./" + executableName;
+		runCommand = "./" + definition.executableName;
 	}
 
 	return runCommand;
@@ -499,21 +606,24 @@ std::string ObjectiveFunction::getExecutionCommandLowFi(void) const{
 
 void ObjectiveFunction::addDesignToData(Design &d){
 
+	assert((isNotEmpty(definition.nameHighFidelityTrainingData)));
+	assert(ifInitialized);
+
 	rowvec newsample;
 
-	if(ifGradientAvailable){
-
-		newsample = d.constructSampleObjectiveFunctionWithGradient();
-
-
-	}
-	else{
-
+	if(evaluationMode.compare("primal") == 0 ){
 		newsample = d.constructSampleObjectiveFunction();
-
+	}
+	if(evaluationMode.compare("tangent") == 0 ){
+		newsample = d.constructSampleObjectiveFunctionWithTangent();
+	}
+	if(evaluationMode.compare("adjoint") == 0 ){
+		newsample = d.constructSampleObjectiveFunctionWithGradient();
 	}
 
 
+
+	assert(newsample.size()>0);
 	surrogate->addNewSampleToData(newsample);
 
 
@@ -542,36 +652,79 @@ void ObjectiveFunction::addLowFidelityDesignToData(Design &d){
 
 }
 
-void ObjectiveFunction::readOutputWithoutMarkers(Design &outputDesignBuffer) const{
 
-	std::ifstream inputFileStream(fileNameInputRead, ios::in);
+rowvec ObjectiveFunction::readOutput(unsigned int howMany) const{
+
+	assert(isNotEmpty(definition.outputFilename));
+
+	rowvec result(howMany,fill::zeros);
+
+	std::ifstream inputFileStream(definition.outputFilename);
 
 	if (!inputFileStream.is_open()) {
-
-		cout << "ERROR: There was a problem opening the input file!\n";
-		abort();
+		abortWithErrorMessage("There was a problem opening the output file!\n");
 	}
 
-	double functionValue;
-	inputFileStream >> functionValue;
+	for(unsigned int i=0; i<howMany;i++){
 
-
-	outputDesignBuffer.trueValue = functionValue;
-	outputDesignBuffer.objectiveFunctionValue = functionValue;
-
-	if(ifGradientAvailable){
-
-		for(unsigned int i=0; i<dim;i++){
-
-			inputFileStream >> outputDesignBuffer.gradient(i);
-
-		}
+		inputFileStream >> result(i);
 
 	}
 
 	inputFileStream.close();
+	return result;
+}
+
+
+void ObjectiveFunction::readOutputDesign(Design &d) const{
+
+	if(evaluationMode.compare("primal") == 0 ){
+
+		rowvec functionalValue(1);
+
+		functionalValue = readOutput(1);
+		d.trueValue = functionalValue(0);
+		d.objectiveFunctionValue = d.trueValue;
+
+	}
+
+	if(evaluationMode.compare("tangent") == 0 ){
+
+		rowvec resultBuffer(2);
+
+		resultBuffer = readOutput(2);
+		d.trueValue = resultBuffer(0);
+		d.objectiveFunctionValue = d.trueValue;
+
+		d.tangentValue = resultBuffer(1);
+
+
+
+	}
+
+	if(evaluationMode.compare("adjoint") == 0 ){
+
+		rowvec resultBuffer(1+dim);
+
+		resultBuffer = readOutput(1+dim);
+		d.trueValue = resultBuffer(0);
+		d.objectiveFunctionValue = d.trueValue;
+
+		rowvec gradient(dim,fill::zeros);
+
+		for(unsigned int i=0; i<dim; i++){
+
+			gradient(i) = resultBuffer(i+1);
+		}
+
+		d.gradient = gradient;
+
+	}
 
 }
+
+
+
 
 void ObjectiveFunction::readEvaluateOutput(Design &d){
 
@@ -608,65 +761,108 @@ void ObjectiveFunction::readEvaluateOutput(Design &d){
 		abort();
 	}
 
-	if(ifMarkerIsSet == false){
-
-		/* If there is not any marker, just reads the functional value (and gradient) from the input file */
-
-		readOutputWithoutMarkers(d);
 
 
-	}
+	for( std::string line; getline( ifile, line ); ){
 
-
-	else{
-
-		for( std::string line; getline( ifile, line ); ){
-
-			size_t found = line.find(readMarker+" ");
+		size_t found = line.find(readMarker+" ");
 
 
 
-			if (found != std::string::npos){
+		if (found != std::string::npos){
 
+			line = removeSpacesFromString(line);
+			line.erase(0,found+1+this->readMarker.size());
+
+			d.trueValue = stod(line);
+			d.objectiveFunctionValue = stod(line);
+
+		}
+
+		if(this->ifGradientAvailable){
+
+
+			size_t found2 = line.find(readMarkerAdjoint+" ");
+
+
+
+			if (found2!=std::string::npos){
 				line = removeSpacesFromString(line);
-				line.erase(0,found+1+this->readMarker.size());
-
-				d.trueValue = stod(line);
-				d.objectiveFunctionValue = stod(line);
-
-			}
-
-			if(this->ifGradientAvailable){
+				line.erase(0,found2+1+readMarkerAdjoint.size());
+				vec values = getDoubleValuesFromString(line,',');
+				assert(values.size() == dim);
 
 
-				size_t found2 = line.find(readMarkerAdjoint+" ");
+				for(unsigned int i=0; i<dim; i++){
 
-
-
-				if (found2!=std::string::npos){
-					line = removeSpacesFromString(line);
-					line.erase(0,found2+1+readMarkerAdjoint.size());
-					vec values = getDoubleValuesFromString(line,',');
-					assert(values.size() == dim);
-
-
-					for(unsigned int i=0; i<dim; i++){
-
-						d.gradient(i) = values(i);
-					}
-
-
+					d.gradient(i) = values(i);
 				}
 
 
 			}
-		}
 
+
+		}
 	}
+
+
 
 	ifile.close();
 
 
+
+}
+
+void ObjectiveFunction::writeDesignVariablesToFile(Design &d) const{
+
+	assert(d.designParameters.size() == dim);
+	assert(isNotEmpty(definition.designVectorFilename));
+
+	std::ofstream outputFileStream(definition.designVectorFilename);
+
+	if (!outputFileStream.is_open()) {
+		abortWithErrorMessage("There was a problem opening the output file!\n");
+	}
+
+	for(unsigned int i=0; i<dim; i++) {
+
+		outputFileStream << d.designParameters(i) << std::endl;
+	}
+
+	if(evaluationMode.compare("tangent") == 0){
+
+		assert(d.tangentDirection.size() == dim);
+		for(unsigned int i=0; i<dim; i++) {
+
+			outputFileStream << d.tangentDirection(i) << std::endl;
+		}
+
+	}
+	outputFileStream.close();
+
+}
+
+
+void ObjectiveFunction::evaluateDesign(Design &d){
+
+	assert(d.designParameters.size() == dim);
+
+	writeDesignVariablesToFile(d);
+	evaluateObjectiveFunction();
+	readOutputDesign(d);
+
+}
+
+
+void ObjectiveFunction::evaluateObjectiveFunction(void){
+
+	assert(isNotEmpty(definition.executableName));
+	assert(isNotEmpty(definition.designVectorFilename));
+
+	std::string runCommand = getExecutionCommand();
+
+	output.printMessage("Calling executable for the objective function:", definition.name);
+	system(runCommand.c_str());
 
 }
 
@@ -799,90 +995,5 @@ void ObjectiveFunction::printSurrogate(void) const{
 	surrogate->printSurrogateModel();
 
 }
-
-bool ObjectiveFunction::checkIfMarkersAreNotSet(void) const{
-
-	if(ifMarkerIsSet == false && ifAdjointMarkerIsSet == false ){
-
-		return true;
-	}
-
-	else return false;
-
-}
-
-
-size_t ObjectiveFunction::isMarkerFound(const std::string &marker, const std::string &inputStr) const{
-
-	assert(isNotEmpty(marker));
-
-	std::string bufferStr(inputStr);
-	bufferStr = removeSpacesFromString(bufferStr);
-	size_t foundMarkerWithEqualitySign = bufferStr.find(marker+"=");
-	size_t foundMarkerWithColonSign    = bufferStr.find(marker+":");
-
-
-
-	if(foundMarkerWithEqualitySign != std::string::npos){
-
-		if(foundMarkerWithEqualitySign == 0) return foundMarkerWithEqualitySign;
-
-		else return std::string::npos;
-	}
-
-	if(foundMarkerWithColonSign != std::string::npos){
-
-		if(foundMarkerWithColonSign == 0) return foundMarkerWithColonSign;
-
-		else return std::string::npos;
-	}
-
-
-	return std::string::npos;
-
-
-}
-
-
-
-double ObjectiveFunction::getMarkerValue(const std::string &inputStr, size_t foundMarkerPosition) const{
-
-
-	double result = 0.0;
-	std::string bufferStr(inputStr);
-
-	bufferStr = removeSpacesFromString(bufferStr);
-	bufferStr.erase(0,foundMarkerPosition+1+readMarker.size());
-
-	return stod(bufferStr);
-
-}
-
-rowvec ObjectiveFunction::getMarkerAdjointValues(const std::string &inputStr, size_t foundMarkerPosition) const{
-
-	rowvec result(dim);
-	std::string bufferStr(inputStr);
-	bufferStr = removeSpacesFromString(bufferStr);
-	bufferStr.erase(0,foundMarkerPosition+1+readMarkerAdjoint.size());
-	vec values = getDoubleValuesFromString(bufferStr,',');
-
-	if(values.size() != dim){
-
-		std::cout<<"ERROR: Array size while reading the gradient does not match with the dimension!\n";
-		abort();
-
-	}
-
-	for(unsigned int i=0; i<dim;i++){
-
-		result(i) = values(i);
-
-	}
-
-	return result;
-
-
-}
-
 
 

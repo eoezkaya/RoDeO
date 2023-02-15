@@ -72,6 +72,9 @@ rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax);
 
 void copyRowVector(rowvec &a,rowvec b);
 void copyRowVector(rowvec &a,rowvec b, unsigned int);
+void copyRowVectorFirstKElements(rowvec &a,const rowvec &b, unsigned int k);
+
+
 void copyVector(vec &a,vec b);
 void copyVector(vec &a,vec b, unsigned int);
 void addOneElement(rowvec &in, double val);

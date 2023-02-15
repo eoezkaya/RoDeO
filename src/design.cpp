@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), Rheinland-Pfälzische Technische Universität
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -46,7 +46,7 @@ Design::Design(rowvec dv){
 	dimension = dv.size();
 	designParameters = dv;
 	gradient = zeros<rowvec>(dimension);
-
+	gradientLowFidelity = zeros<rowvec>(dimension);
 
 }
 
@@ -55,68 +55,232 @@ Design::Design(unsigned int dim){
 	dimension = dim;
 	designParameters = zeros<rowvec>(dimension);
 	gradient = zeros<rowvec>(dimension);
-
-
+	gradientLowFidelity = zeros<rowvec>(dimension);
 }
+
+
+void Design::setDimension(unsigned int dim){
+
+	dimension = dim;
+	designParameters = zeros<rowvec>(dimension);
+	gradient = zeros<rowvec>(dimension);
+	gradientLowFidelity = zeros<rowvec>(dimension);
+}
+
+
 
 void Design::setNumberOfConstraints(unsigned int howManyConstraints){
 
+	assert(dimension>0);
+
 	numberOfConstraints = howManyConstraints;
 	constraintTrueValues = zeros<rowvec>(numberOfConstraints);
+	constraintTrueValuesLowFidelity = zeros<rowvec>(numberOfConstraints);
+	constraintTangent = zeros<rowvec>(numberOfConstraints);
+	constraintTangentLowFidelity = zeros<rowvec>(numberOfConstraints);
+
+	constraintGradientsMatrix = zeros<mat>(numberOfConstraints, dimension);
+	constraintGradientsMatrixLowFi = zeros<mat>(numberOfConstraints, dimension);
+
+	constraintDifferentiationDirectionsMatrix = zeros<mat>(numberOfConstraints, dimension);
+	constraintDifferentiationDirectionsMatrixLowFi = zeros<mat>(numberOfConstraints, dimension);
 
 
 }
 
-
 void Design::generateRandomDesignVector(vec lb, vec ub){
-
 	designParameters = generateRandomRowVector(lb,ub);
-
-
 }
 
 void Design::generateRandomDesignVector(double lb, double ub){
 
 	designParameters = generateRandomRowVector(lb,ub,dimension);
-
-
 }
+
+
+
 
 rowvec Design::constructSampleObjectiveFunction(void) const{
 
 	rowvec sample(dimension+1);
 
-	for(unsigned int i=0; i<dimension; i++){
-
-		sample(i) = designParameters(i);
-	}
-
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = trueValue;
 
+	return sample;
+}
+
+rowvec Design::constructSampleObjectiveFunctionLowFi(void) const{
+
+	rowvec sample(dimension+1);
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension) = trueValueLowFidelity;
+
+	return sample;
+}
+
+
+
+rowvec Design::constructSampleObjectiveFunctionWithTangent(void) const{
+
+	assert(tangentDirection.size() == dimension);
+	rowvec sample(2*dimension+2, fill::zeros);
+
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension)   = trueValue;
+	sample(dimension+1) = tangentValue;
+
+	for(unsigned int i=0; i<dimension; i++){
+		sample(dimension+2+i) = tangentDirection(i);
+	}
+
+	return sample;
+}
+
+rowvec Design::constructSampleObjectiveFunctionWithTangentLowFi(void) const{
+
+	assert(tangentDirection.size() == dimension);
+	rowvec sample(2*dimension+2, fill::zeros);
+
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension)   = trueValueLowFidelity;
+	sample(dimension+1) = tangentValueLowFidelity;
+
+	for(unsigned int i=0; i<dimension; i++){
+		sample(dimension+2+i) = tangentDirection(i);
+	}
 
 	return sample;
 }
 
 rowvec Design::constructSampleObjectiveFunctionWithGradient(void) const{
 
+	assert(gradient.size() == dimension);
 	rowvec sample(2*dimension+1);
 
-	for(unsigned int i=0; i<dimension; i++){
-
-		sample(i) = designParameters(i);
-	}
-
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = trueValue;
 
 	for(unsigned int i=0; i<dimension; i++){
-
-
 		sample(dimension+1+i) = gradient(i);
+	}
+	return sample;
+}
 
+rowvec Design::constructSampleObjectiveFunctionWithGradientLowFi(void) const{
+
+	assert(gradientLowFidelity.size() == dimension);
+	rowvec sample(2*dimension+1);
+
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension) = trueValue;
+
+	for(unsigned int i=0; i<dimension; i++){
+		sample(dimension+1+i) = gradientLowFidelity(i);
+	}
+	return sample;
+}
+
+rowvec Design::constructSampleConstraint(int constraintID) const{
+
+	assert(constraintID < numberOfConstraints);
+	assert(constraintTrueValues.size() == numberOfConstraints);
+
+	rowvec sample(dimension+1);
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension) = constraintTrueValues(constraintID);
+
+	return sample;
+}
+
+rowvec Design::constructSampleConstraintLowFi(int constraintID) const{
+
+	assert(constraintID < numberOfConstraints);
+	assert(constraintTrueValuesLowFidelity.size() == numberOfConstraints);
+
+	rowvec sample(dimension+1);
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension) = constraintTrueValuesLowFidelity(constraintID);
+
+	return sample;
+}
+
+
+rowvec Design::constructSampleConstraintWithTangent(int constraintID) const{
+
+	assert(constraintID < numberOfConstraints);
+	assert(constraintTrueValues.size() == numberOfConstraints);
+	assert(constraintDifferentiationDirectionsMatrix.n_rows == numberOfConstraints);
+	assert(constraintTangent.size() == numberOfConstraints);
+
+	rowvec sample(2*dimension+2);
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension) = constraintTrueValues(constraintID);
+	sample(dimension+1) = constraintTangent(constraintID);
+
+	rowvec direction = constraintDifferentiationDirectionsMatrix.row(constraintID);
+
+	for(unsigned int i=0; i<dimension; i++){
+			sample(dimension+2+i) = direction(i);
 	}
 
 	return sample;
 }
+
+rowvec Design::constructSampleConstraintWithTangentLowFi(int constraintID) const{
+
+	assert(constraintID < numberOfConstraints);
+	assert(constraintTrueValuesLowFidelity.size() == numberOfConstraints);
+	assert(constraintDifferentiationDirectionsMatrixLowFi.n_rows == numberOfConstraints);
+	assert(constraintTangentLowFidelity.size() == numberOfConstraints);
+
+	rowvec sample(2*dimension+2);
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension)   = constraintTrueValuesLowFidelity(constraintID);
+	sample(dimension+1) = constraintTangentLowFidelity(constraintID);
+
+	rowvec direction = constraintDifferentiationDirectionsMatrixLowFi.row(constraintID);
+
+	for(unsigned int i=0; i<dimension; i++){
+			sample(dimension+2+i) = direction(i);
+	}
+
+	return sample;
+}
+
+rowvec Design::constructSampleConstraintWithGradient(int constraintID) const{
+
+	assert(constraintID < numberOfConstraints);
+	assert(constraintTrueValues.size() == numberOfConstraints);
+
+	rowvec sample(2*dimension+1);
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension) = constraintTrueValues(constraintID);
+	rowvec constraintGradient = constraintGradientsMatrix.row(constraintID);
+	for(unsigned int i=0; i<dimension; i++){
+		sample(dimension+1+i) = constraintGradient(i);
+	}
+
+	return sample;
+}
+
+rowvec Design::constructSampleConstraintWithGradientLowFi(int constraintID) const{
+
+	assert(constraintID < numberOfConstraints);
+	assert(constraintTrueValuesLowFidelity.size() == numberOfConstraints);
+
+	rowvec sample(2*dimension+1);
+	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension) = constraintTrueValuesLowFidelity(constraintID);
+	rowvec constraintGradient = constraintGradientsMatrixLowFi.row(constraintID);
+	for(unsigned int i=0; i<dimension; i++){
+		sample(dimension+1+i) = constraintGradient(i);
+	}
+
+	return sample;
+}
+
+
 
 bool Design::checkIfHasNan(void) const{
 
@@ -142,59 +306,23 @@ bool Design::checkIfHasNan(void) const{
 			ifHasNan = true;
 		}
 
-
 	}
 	return ifHasNan;
 
 
 }
 
-rowvec Design::constructSampleConstraint(unsigned int constraintID) const{
-
-	rowvec sample(dimension+1);
-
-	for(unsigned int i=0; i<dimension; i++){
-
-		sample(i) = designParameters(i);
-	}
-
-	sample(dimension) = constraintTrueValues(constraintID);
 
 
-	return sample;
-}
-
-rowvec Design::constructSampleConstraintWithGradient(unsigned int constraintID) const{
-
-	rowvec sample(2*dimension+1);
-
-	for(unsigned int i=0; i<dimension; i++){
-
-		sample(i) = designParameters(i);
-	}
-
-	sample(dimension) = constraintTrueValues(constraintID);
-
-	rowvec constraintGradient = constraintGradients.at(constraintID);
-	for(unsigned int i=0; i<dimension; i++){
 
 
-		sample(dimension+1+i) = constraintGradient(i);
-
-	}
 
 
-	return sample;
-}
 
 
-Design::Design(void){
-
-
-}
+Design::Design(void){}
 
 void Design::print(void) const{
-
 
 	std::cout<<"\n\nPrinting Design...\n";
 	std::cout<<"Design parameters = \n";
@@ -247,7 +375,7 @@ void Design::saveToAFile(std::string filename) const{
 	assert(!filename.empty());
 	std::ofstream fileOut;
 	fileOut.open (filename);
-	fileOut << "Tag: "<<tag<<"\n";
+	fileOut << tag<<"\n";
 	fileOut << "Design parameters vector:\n";
 	fileOut << designParameters;
 	fileOut << "Objective function value: "<<objectiveFunctionValue<<"\n";
@@ -259,11 +387,7 @@ void Design::saveToAFile(std::string filename) const{
 
 	}
 
-
 	fileOut.close();
-
-
-
 
 }
 
@@ -273,9 +397,7 @@ void Design::saveDesignVectorAsCSVFile(std::string fileName) const{
 	designVectorFile.precision(10);
 	if (designVectorFile.is_open())
 	{
-
 		for(unsigned int i=0; i<designParameters.size()-1; i++){
-
 			designVectorFile << designParameters(i)<<",";
 		}
 
@@ -284,10 +406,9 @@ void Design::saveDesignVectorAsCSVFile(std::string fileName) const{
 		designVectorFile.close();
 	}
 	else{
-
-		cout << "ERROR: Unable to open file";
-		abort();
+		abortWithErrorMessage("ERROR: Unable to open file");
 	}
+
 }
 
 void Design::saveDesignVector(std::string fileName) const{
@@ -297,20 +418,13 @@ void Design::saveDesignVector(std::string fileName) const{
 	designVectorFile.precision(10);
 	if (designVectorFile.is_open())
 	{
-
-		for(unsigned int i=0; i<designParameters.size()-1; i++){
-
-			designVectorFile << designParameters(i)<<" ";
+		for(unsigned int i=0; i<designParameters.size(); i++){
+			designVectorFile << designParameters(i)<<"\n";
 		}
-
-		designVectorFile << designParameters(designParameters.size()-1);
-
 		designVectorFile.close();
 	}
 	else{
-
-		cout << "ERROR: Unable to open file";
-		abort();
+		abortWithErrorMessage("ERROR: Unable to open file");
 	}
 }
 
@@ -332,7 +446,6 @@ void CDesignExpectedImprovement::generateRandomDesignVector(vec lb, vec ub){
 
 }
 
-
 void CDesignExpectedImprovement::generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub){
 
 
@@ -353,6 +466,4 @@ void CDesignExpectedImprovement::generateRandomDesignVectorAroundASample(const r
 	}
 
 	dv = generateRandomRowVector(lowerBounds, upperBounds);
-
-
 }

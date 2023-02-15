@@ -110,13 +110,18 @@ protected:
 
 		TestFunction testFunctionEggholder("Eggholder",2);
 
-		testFunctionEggholder.setFunctionPointer(Eggholder);
+		testFunctionEggholder.func_ptr = Eggholder;
+		testFunctionEggholder.setBoxConstraints(0.0,200.0);
+		testFunctionEggholder.numberOfTrainingSamples = N;
+		testFunctionEggholder.filenameTrainingData = "Eggholder.csv";
+		testFunctionEggholder.numberOfTestSamples = N;
+		testFunctionEggholder.filenameTestData = "EggholderTest.csv";
 
-		testFunctionEggholder.setBoxConstraints(0,200.0);
-		trainingDataEggholder = testFunctionEggholder.generateRandomSamples(N);
-		saveMatToCVSFile(trainingDataEggholder,"Eggholder.csv");
-		testDataEggholder = testFunctionEggholder.generateRandomSamples(N);
-		saveMatToCVSFile(testDataEggholder,"EggholderTest.csv");
+		testFunctionEggholder.generateTrainingSamples();
+		testFunctionEggholder.generateTestSamples();
+
+		trainingDataEggholder = testFunctionEggholder.trainingSamples;
+		testDataEggholder = testFunctionEggholder.testSamples;
 
 
 	}
@@ -125,13 +130,14 @@ protected:
 
 		TestFunction testFunctionLinear("LinearTF1",2);
 
-		testFunctionLinear.setFunctionPointer(LinearTF1);
-
+		testFunctionLinear.func_ptr =  LinearTF1;
 		testFunctionLinear.setBoxConstraints(-10.0,10.0);
-		trainingDataLinearTestFunction = testFunctionLinear.generateRandomSamples(N);
-		saveMatToCVSFile(trainingDataLinearTestFunction,"LinearTF.csv");
-		testDataLinearTestFunction = testFunctionLinear.generateRandomSamples(N);
-		saveMatToCVSFile(testDataLinearTestFunction,"LinearTFTest.csv");
+		testFunctionLinear.numberOfTrainingSamples = N;
+		testFunctionLinear.filenameTrainingData = "LinearTF.csv";
+		testFunctionLinear.numberOfTestSamples = N;
+		testFunctionLinear.filenameTestData = "LinearTFTest.csv";
+		trainingDataEggholder = testFunctionLinear.trainingSamples;
+		testDataEggholder = testFunctionLinear.testSamples;
 
 
 	}
@@ -149,7 +155,7 @@ protected:
 };
 
 
-TEST_F(KrigingModelTest, updateAuxilliaryFieldsWithSVDMethod) {
+TEST_F(KrigingModelTest, updateAuxilliaryFields) {
 
 	vec hyperParameters(4);
 	hyperParameters(0) = 10.0;
@@ -159,7 +165,7 @@ TEST_F(KrigingModelTest, updateAuxilliaryFieldsWithSVDMethod) {
 
 	testModel2D.setHyperParameters(hyperParameters);
 
-	testModel2D.updateAuxilliaryFieldsWithSVDMethod();
+	testModel2D.updateAuxilliaryFields();
 
 	testModel2D.tryOnTestData();
 

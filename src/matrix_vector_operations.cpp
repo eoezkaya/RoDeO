@@ -103,6 +103,18 @@ void copyRowVector(rowvec &a,rowvec b){
 
 }
 
+void copyRowVectorFirstKElements(rowvec &a,const rowvec &b, unsigned int k){
+
+	assert(a.size()>=k);
+	assert(b.size()>=k);
+
+	for(unsigned int i=0; i<k; i++){
+		a(i) = b(i);
+	}
+
+}
+
+
 void copyRowVector(rowvec &a,rowvec b, unsigned int indx){
 
 	assert(a.size() >= b.size() + indx);

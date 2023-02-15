@@ -45,15 +45,15 @@ using namespace arma;
 
 class TestFunction {
 
-private:
+public:
 
 	unsigned int dimension;
 	std::string function_name;
 
 	Bounds boxConstraints;
 
-
 	mat trainingSamples;
+	mat trainingSamplesLowFidelity;
 	mat testSamples;
 
 	mat trainingSamplesInput;
@@ -61,103 +61,58 @@ private:
 
 
 	unsigned int numberOfTrainingSamples = 0;
+	unsigned int numberOfTrainingSamplesLowFi = 0;
 	unsigned int numberOfTestSamples = 0;
 
 	std::string filenameTrainingData;
 	std::string filenameTestData;
 
+	std::string filenameTrainingDataLowFidelity;
+	std::string filenameTrainingDataHighFidelity;
 
-	bool ifFunctionIsNoisy = false;
-	bool ifBoxConstraintsSet = false;
-
-	bool ifFunctionPointerIsSet = false;
-	bool ifFunctionPointerAdjIsSet = false;
-
-	bool ifVisualize = false;
-	bool ifDisplayResults = false;
-
-	bool ifTrainingDataFileExists = false;
-	bool ifTestDataFileExists = false;
 
 	double noiseLevel = 0.0;
 
-	std::string fileNameSurrogateModelData;
 
 	double (*func_ptr)(double *) = NULL;
 	double (*adj_ptr)(double *, double *) = NULL;
+	double (*tan_ptr)(double *, double *, double *) = NULL;
 
+	double (*func_ptrLowFi)(double *) = NULL;
+	double (*adj_ptrLowFi)(double *, double *) = NULL;
+	double (*tan_ptrLowFi)(double *, double *, double *) = NULL;
 
-
-public:
-
-	double inSampleError = 0.0;
-	double outSampleError = 0.0; /*generalization error */
+	unsigned int evaluationSelect = 1;
 
 	void evaluate(Design &d) const;
-	void evaluateAdjoint(Design &d) const;
-	void evaluateTangent(Design &d) const;
-
-	short int numberOfSamplesUsedForVisualization = 100;
-
-
 
     TestFunction(std::string name,int dimension);
 
-    void plot(int resolution = 100) const;
+    void setBoxConstraints(double lb, double ub);
+
 
     void generateSamplesInputTrainingData(void);
     void generateSamplesInputTestData(void);
 
     void generateTestSamples(void);
+
     void generateTrainingSamples(void);
     void generateTrainingSamplesWithAdjoints(void);
     void generateTrainingSamplesWithTangents(void);
 
-    mat getTrainingSamplesInput(void) const;
-    mat getTestSamplesInput(void) const;
-    mat getTrainingSamples(void) const;
-    mat getTestSamples(void) const;
-
-
-
-    void validateAdjoints(void);
-
-
-    void setNoiseLevel(double);
-    void setVisualizationOn(void);
-    void setVisualizationOff(void);
-
-    void setDisplayOn(void);
-    void setDisplayOff(void);
-
-    void setNumberOfTrainingSamples(unsigned int);
-    void setNumberOfTestSamples(unsigned int);
-
-    void setNameFilenameTrainingData(std::string);
-    void setNameFilenameTestData(std::string );
-
-    void readFileTestData(void);
-    void readFileTrainingData(void);
-
-    void visualizeSurrogate1D(SurrogateModel *TestFunSurrogate, unsigned int resolution=1000) const;
-    void visualizeSurrogate2D(SurrogateModel *TestFunSurrogate, unsigned int resolution=100) const;
+    void generateTrainingSamplesMultiFidelity(void);
+    void generateTrainingSamplesMultiFidelityWithAdjoint(void);
+    void generateTrainingSamplesMultiFidelityWithTangents(void);
+    void generateTrainingSamplesMultiFidelityWithLowFiAdjoint(void);
+    void generateTrainingSamplesMultiFidelityWithLowFiTangents(void);
 
     void print(void);
-    mat  generateRandomSamples(unsigned int);
-    mat  generateRandomSamplesWithGradients(unsigned int);
-
-    mat  generateUniformSamples(unsigned int howManySamples) const;
-
     void evaluateGlobalExtrema(void) const;
-    void setBoxConstraints(double lowerBound, double upperBound);
-    void setBoxConstraints(vec lowerBound, vec upperBound);
 
-
-    void setFunctionPointer(double (*testFunction)(double *));
-    void setFunctionPointer(double (*testFunctionAdjoint)(double *, double *));
-
-    bool checkIfExecutableIsReadyToRun(void) const;
-
+private:
+    mat generateSamplesWithFunctionalValues(mat input, unsigned int N) const;
+    mat generateSamplesWithAdjoints(mat input, unsigned int N) const;
+    mat generateSamplesWithTangents(mat input, unsigned int N) const;
 } ;
 
 
@@ -168,11 +123,39 @@ public:
 
 /* regression test functions */
 
-double LinearTF1(double *x);
-double LinearTF1Adj(double *x, double *xb);
+/*****************************************************************************/
 
+double LinearTF1(double *x);
+double LinearTF1LowFidelity(double *x);
+double LinearTF1LowFidelityAdj(double *x, double *xb);
+double LinearTF1Adj(double *x, double *xb);
+double LinearTF1Tangent(double *x, double *xd, double *fdot);
+double LinearTF1LowFidelityTangent(double *x, double *xd, double *fdot);
+
+
+/*****************************************************************************/
 double testFunction1D(double *x);
 double testFunction1DAdj(double *x, double *xb);
+double testFunction1DTangent(double *x, double *xd, double *testFunction1D);
+double testFunction1DLowFi(double *x);
+double testFunction1DAdjLowFi(double *x, double *xb);
+double testFunction1DTangentLowFi(double *x, double *xd, double *fdot);
+
+/*****************************************************************************/
+
+double Himmelblau(double *x);
+double HimmelblauLowFi(double *x);
+double HimmelblauAdj(double *x, double *xb);
+double HimmelblauAdjLowFi(double *x, double *xb);
+double HimmelblauTangent(double *x, double *xd, double *fdot);
+double HimmelblauTangentLowFi(double *x, double *xd, double *fdot);
+
+
+
+/*****************************************************************************/
+
+
+
 
 void generateEggholderData(std::string filename, unsigned int nSamples);
 void generateEggholderDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi);
@@ -222,9 +205,7 @@ double Rosenbrock8DAdj(double *x, double *xb) ;
 double Shubert(double *x);
 double ShubertAdj(double *x, double *xb);
 
-double Himmelblau(double *x);
-double HimmelblauLowFi(double *x);
-double HimmelblauAdj(double *x, double *xb);
+
 double Himmelblau(vec x);
 double HimmelblauLowFi(vec x);
 vec HimmelblauGradient(vec x);

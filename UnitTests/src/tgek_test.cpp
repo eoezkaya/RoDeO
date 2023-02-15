@@ -50,26 +50,22 @@ protected:
 
 	void generate1DTestFunctionDataForTGEKModel(unsigned int N, unsigned int NTest) {
 
-		TestFunction testFunctionHimmelblau("1DTestFunction", 1);
+		TestFunction testFunction("1DTestFunction", 1);
 
-		testFunctionHimmelblau.setFunctionPointer(testFunction1D);
-		testFunctionHimmelblau.setFunctionPointer(testFunction1DAdj);
 
-		testFunctionHimmelblau.setBoxConstraints(0.0, 6.0);
+		testFunction.tan_ptr = testFunction1DTangent;
+		testFunction.setBoxConstraints(0.0, 6.0);
 
-		testFunctionHimmelblau.setNameFilenameTrainingData(
-				"trainingSamplesHimmelblauTGEK.csv");
-		testFunctionHimmelblau.setNumberOfTrainingSamples(N);
-		testFunctionHimmelblau.generateSamplesInputTrainingData();
-		testFunctionHimmelblau.generateTrainingSamplesWithTangents();
+		testFunction.filenameTrainingData = "trainingSamplesHimmelblauTGEK.csv";
+		testFunction.numberOfTrainingSamples = N;
+		testFunction.generateTrainingSamplesWithTangents();
 
-		testFunctionHimmelblau.setNameFilenameTestData(
-				"testSamplesHimmelblauTGEK.csv");
-		testFunctionHimmelblau.setNumberOfTestSamples(NTest);
-		testFunctionHimmelblau.generateTestSamples();
+		testFunction.filenameTestData = "testSamplesHimmelblauTGEK.csv";
+		testFunction.numberOfTestSamples  = NTest;
+		testFunction.generateTestSamples();
 
-		trainingData.load("trainingSamplesHimmelblauTGEK.csv", csv_ascii);
-		testData.load("testSamplesHimmelblauTGEK.csv");
+		trainingData = testFunction.trainingSamples;
+		testData = testFunction.testSamples;
 
 	}
 
@@ -77,24 +73,20 @@ protected:
 
 		TestFunction testFunctionHimmelblau("Himmelblau", 2);
 
-		testFunctionHimmelblau.setFunctionPointer(Himmelblau);
-		testFunctionHimmelblau.setFunctionPointer(HimmelblauAdj);
-
+		testFunctionHimmelblau.tan_ptr = HimmelblauTangent;
 		testFunctionHimmelblau.setBoxConstraints(-6.0, 6.0);
 
-		testFunctionHimmelblau.setNameFilenameTrainingData(
-				"trainingSamplesHimmelblauTGEK.csv");
-		testFunctionHimmelblau.setNumberOfTrainingSamples(N);
+		testFunctionHimmelblau.filenameTrainingData = "trainingSamplesHimmelblauTGEK.csv";
+		testFunctionHimmelblau.numberOfTrainingSamples = N;
 		testFunctionHimmelblau.generateSamplesInputTrainingData();
 		testFunctionHimmelblau.generateTrainingSamplesWithTangents();
 
-		testFunctionHimmelblau.setNameFilenameTestData(
-				"testSamplesHimmelblauTGEK.csv");
-		testFunctionHimmelblau.setNumberOfTestSamples(N);
+		testFunctionHimmelblau.filenameTestData = "testSamplesHimmelblauTGEK.csv";
+		testFunctionHimmelblau.numberOfTestSamples  = N;
 		testFunctionHimmelblau.generateTestSamples();
 
-		trainingData.load("trainingSamplesHimmelblauTGEK.csv", csv_ascii);
-		testData.load("testSamplesHimmelblauTGEK.csv");
+		trainingData = testFunctionHimmelblau.trainingSamples;
+		testData = testFunctionHimmelblau.testSamples;
 
 	}
 
@@ -102,19 +94,17 @@ protected:
 
 		TestFunction testFunctionHimmelblau("Himmelblau", 2);
 
-		testFunctionHimmelblau.setFunctionPointer(Himmelblau);
+		testFunctionHimmelblau.func_ptr =  Himmelblau;
 
 		testFunctionHimmelblau.setBoxConstraints(-6.0, 6.0);
 
-		testFunctionHimmelblau.setNameFilenameTrainingData(
-				"trainingSamplesHimmelblauKriging.csv");
-		testFunctionHimmelblau.setNumberOfTrainingSamples(N);
+		testFunctionHimmelblau.filenameTrainingData = "trainingSamplesHimmelblauKriging.csv";
+		testFunctionHimmelblau.numberOfTrainingSamples = N;
 		testFunctionHimmelblau.generateSamplesInputTrainingData();
 		testFunctionHimmelblau.generateTrainingSamples();
 
-		testFunctionHimmelblau.setNameFilenameTestData(
-				"testSamplesHimmelblauKriging.csv");
-		testFunctionHimmelblau.setNumberOfTestSamples(N);
+		testFunctionHimmelblau.filenameTestData = "testSamplesHimmelblauKriging.csv";
+		testFunctionHimmelblau.numberOfTestSamples  = N;
 		testFunctionHimmelblau.generateTestSamples();
 
 		trainingData.load("trainingSamplesHimmelblauKriging.csv", csv_ascii);
