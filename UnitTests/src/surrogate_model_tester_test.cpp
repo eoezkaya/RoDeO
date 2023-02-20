@@ -59,16 +59,13 @@ protected:
 		testFunction.function.numberOfTrainingSamples = 50;
 		testFunction.function.numberOfTestSamples = 100;
 
+		testFunction.function.filenameTrainingDataHighFidelity = "trainingData.csv";
+		testFunction.function.filenameTrainingDataLowFidelity = "trainingDataLowFi.csv";
+		testFunction.function.numberOfTrainingSamplesLowFi = 100;
 
 	}
 
-	void TearDown() override {
-
-
-
-
-	}
-
+	void TearDown() override {}
 
 	SurrogateModelTester surrogateTester;
 	HimmelblauFunction testFunction;
@@ -106,6 +103,47 @@ TEST_F(SurrogateTesterTest, setBoxConstraints){
 	ASSERT_EQ(dimBoxConstraints,2);
 
 }
+
+
+TEST_F(SurrogateTesterTest, performSurrogateModelTestMultiLevelOnlyFunctionalValues){
+
+
+	Bounds boxConstraints;
+	boxConstraints.setDimension(2);
+	boxConstraints.setBounds(-6.0, 6.0);
+
+	surrogateTester.setBoxConstraints(boxConstraints);
+	testFunction.function.generateTrainingSamplesMultiFidelity();
+	testFunction.function.generateTestSamples();
+
+
+
+	surrogateTester.setName("testModel");
+	surrogateTester.setFileNameTrainingData(testFunction.function.filenameTrainingData);
+	surrogateTester.setFileNameTrainingDataLowFidelity(testFunction.function.filenameTrainingDataLowFidelity);
+
+	surrogateTester.setFileNameTestData(testFunction.function.filenameTestData);
+	surrogateTester.setNumberOfTrainingIterations(1000);
+
+	surrogateTester.setSurrogateModel(MULTI_LEVEL);
+	surrogateTester.setDisplayOn();
+	surrogateTester.performSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv", csv_ascii);
+
+	vec SE = results.col(4);
+
+	EXPECT_LT(mean(SE), 100000);
+
+	remove("surrogateTestResults.csv");
+	remove(testFunction.function.filenameTrainingDataHighFidelity.c_str());
+	remove(testFunction.function.filenameTrainingDataLowFidelity.c_str());
+	remove(testFunction.function.filenameTestData.c_str());
+
+}
+
+
 
 TEST_F(SurrogateTesterTest, performSurrogateModelTestLinearRegression){
 
@@ -229,21 +267,16 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
 	boxConstraints.setBounds(-6.0, 6.0);
 
 	surrogateTester.setBoxConstraints(boxConstraints);
-
 	testFunction.function.generateTrainingSamplesWithTangents();
 	testFunction.function.generateTestSamples();
 
 	surrogateTester.setName("testModel");
 	surrogateTester.setFileNameTrainingData(testFunction.function.filenameTrainingData);
 	surrogateTester.setFileNameTestData(testFunction.function.filenameTestData);
-
 	surrogateTester.setNumberOfTrainingIterations(1000);
 
-
 	surrogateTester.setSurrogateModel(TANGENT);
-	//	surrogateTester.setDisplayOn();
-
-
+//	surrogateTester.setDisplayOn();
 	surrogateTester.performSurrogateModelTest();
 
 	mat results;
@@ -262,151 +295,45 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
 
 
 
-TEST(testSurrogateModelTester, testperformSurrogateModelTestAggregation){
+
+//TEST_F(SurrogateTesterTest, performSurrogateModelTestAggregation){
+//
+//
+//	Bounds boxConstraints;
+//	boxConstraints.setDimension(2);
+//	boxConstraints.setBounds(-6.0, 6.0);
+//
+//	surrogateTester.setBoxConstraints(boxConstraints);
+//	testFunction.function.generateTrainingSamplesWithAdjoints();
+//	testFunction.function.generateTestSamples();
+//
+//
+//	surrogateTester.setName("testModel");
+//	surrogateTester.setFileNameTrainingData(testFunction.function.filenameTrainingData);
+//	surrogateTester.setFileNameTestData(testFunction.function.filenameTestData);
+//
+//
+//
+//	surrogateTester.setNumberOfTrainingIterations(1000);
+//
+//	surrogateTester.setDisplayOn();
+//	surrogateTester.setSurrogateModel(AGGREGATION);
+//	surrogateTester.performSurrogateModelTest();
+//
+//	mat results;
+//	results.load("surrogateTestResults.csv", csv_ascii);
+//
+//	vec SE = results.col(4);
+//
+//	EXPECT_LT(mean(SE), 100000);
+//
+//	remove("surrogateTestResults.csv");
+//	remove(testFunction.function.filenameTrainingData.c_str());
+//	remove(testFunction.function.filenameTestData.c_str());
+//
+//}
 
 
-	unsigned int dim = 2;
-	unsigned int N = 100;
-
-	TestFunction himmelblauFunction("Himmelblau",dim);
-
-	himmelblauFunction.adj_ptr = HimmelblauAdj;
-	himmelblauFunction.setBoxConstraints(-6.0, 6.0);
-
-	himmelblauFunction.numberOfTrainingSamples = N;
-	himmelblauFunction.generateSamplesInputTrainingData();
-	himmelblauFunction.generateTrainingSamples();
-	mat trainingData = himmelblauFunction.trainingSamples;
-
-
-	himmelblauFunction.numberOfTestSamples = N;
-	himmelblauFunction.generateSamplesInputTestData();
-	himmelblauFunction.generateTestSamples();
-	mat testData      = himmelblauFunction.testSamplesInput;
-	mat testDataInput = himmelblauFunction.testSamplesInput;
-
-	saveMatToCVSFile(trainingData,"trainingData.csv");
-	saveMatToCVSFile(testDataInput,"testDataInput.csv");
-
-
-	SurrogateModelTester surrogateTester;
-	surrogateTester.setName("testModel");
-	surrogateTester.setFileNameTrainingData("trainingData.csv");
-	surrogateTester.setFileNameTestData("testDataInput.csv");
-	surrogateTester.setNumberOfTrainingIterations(1000);
-
-
-	surrogateTester.setSurrogateModel(AGGREGATION);
-
-	//	surrogateTester.setDisplayOn();
-
-	surrogateTester.performSurrogateModelTest();
-
-
-	mat results;
-	results.load("surrogateTest.csv", csv_ascii);
-
-	vec yTilde = results.col(dim);
-
-	double squaredError = 0.0;
-	for(unsigned int i=0; i<N; i++){
-
-		double yExact =  testData(i,dim);
-		squaredError+= (yTilde(i) - yExact) * (yTilde(i) - yExact);
-#if 0
-		std::cout<<"yExact = "<<yExact<<" yTilde = "<<yTilde(i)<<"\n";
-#endif
-	}
-
-	double meanSquaredError =  squaredError/N;
-#if 0
-	std::cout<<"MSE = "<<meanSquaredError<<"\n";
-#endif
-
-	EXPECT_LT(meanSquaredError, 10000.0);
-
-
-
-	remove("surrogateTest.csv");
-	remove("trainingData.csv");
-	remove("testDataInput.csv");
-
-
-}
-
-TEST(testSurrogateModelTester, testperformSurrogateModelTestMultiLevel){
-
-
-	int nSamplesLowFi = 200;
-	int nSamplesHiFi  = 50;
-
-	unsigned int N = 100;
-	unsigned int dim = 2;
-
-	generateHimmelblauDataMultiFidelity("highFidelityTrainingData.csv","lowFidelityTraingData.csv",nSamplesHiFi ,nSamplesLowFi);
-
-	SurrogateModelTester surrogateTester;
-	surrogateTester.setName("testModel");
-	surrogateTester.setFileNameTrainingDataLowFidelity("lowFidelityTraingData.csv");
-	surrogateTester.setFileNameTrainingData("highFidelityTrainingData.csv");
-
-
-	TestFunction himmelblauFunction("Himmelblau",dim);
-	himmelblauFunction.adj_ptr = HimmelblauAdj;
-	himmelblauFunction.setBoxConstraints(-6.0, 6.0);
-
-
-
-	himmelblauFunction.numberOfTestSamples = N;
-	himmelblauFunction.generateSamplesInputTestData();
-	himmelblauFunction.generateTestSamples();
-	mat testData      = himmelblauFunction.testSamples;
-	mat testDataInput = himmelblauFunction.testSamplesInput;
-
-	saveMatToCVSFile(testDataInput,"testDataInput.csv");
-
-
-	surrogateTester.setFileNameTestData("testDataInput.csv");
-
-	surrogateTester.setNumberOfTrainingIterations(1000);
-
-
-	surrogateTester.setSurrogateModel(MULTI_LEVEL);
-
-	//	surrogateTester.setDisplayOn();
-
-	surrogateTester.performSurrogateModelTest();
-
-
-	mat results;
-	results.load("surrogateTest.csv", csv_ascii);
-
-	vec yTilde = results.col(dim);
-
-	double squaredError = 0.0;
-	for(unsigned int i=0; i<N; i++){
-
-		double yExact =  testData(i,dim);
-		squaredError+= (yTilde(i) - yExact) * (yTilde(i) - yExact);
-#if 0
-		std::cout<<"yExact = "<<yExact<<" yTilde = "<<yTilde(i)<<"\n";
-#endif
-	}
-
-	double meanSquaredError =  squaredError/N;
-#if 0
-	std::cout<<"MSE = "<<meanSquaredError<<"\n";
-#endif
-
-	EXPECT_LT(meanSquaredError, 10000.0);
-
-
-
-	remove("surrogateTest.csv");
-	remove("lowFidelityTraingData.csv");
-	remove("highFidelityTrainingData.csv");
-	remove("testDataInput.csv");
-}
 
 
 

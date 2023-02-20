@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -23,7 +23,7 @@
  * General Public License along with CoDiPack.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -54,15 +54,12 @@ private:
 
 public:
 
-
 	AggregationModel();
 	AggregationModel(std::string);
 
 	void setNameOfInputFile(std::string);
 	void setNameOfHyperParametersFile(std::string);
 	void setNumberOfTrainingIterations(unsigned int);
-
-	void setDisplayOn(void);
 
 	void initializeSurrogateModel(void);
 	void printSurrogateModel(void) const;
@@ -76,9 +73,7 @@ public:
 	void determineOptimalL1NormWeights(void);
 	void setRho(double);
 
-
 	vec getL1NormWeights(void) const;
-
 
 	double calculateMinimumDistanceToNearestPoint(const rowvec &, int) const;
 	double calculateDualModelEstimate(const rowvec &, int) const;

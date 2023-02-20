@@ -80,5 +80,31 @@ public:
 };
 
 
+class HimmelblauConstraintFunction1{
+
+
+public:
+
+	TestFunction function;
+
+	HimmelblauConstraintFunction1();
+	HimmelblauConstraintFunction1(double, double);
+
+};
+
+
+class HimmelblauConstraintFunction2{
+
+
+public:
+
+	TestFunction function;
+
+	HimmelblauConstraintFunction2();
+	HimmelblauConstraintFunction2(double, double);
+
+};
+
+
 
 #endif

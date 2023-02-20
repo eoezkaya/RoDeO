@@ -50,8 +50,10 @@
 
 using namespace arma;
 
+Optimizer::Optimizer(){}
 
-Optimizer::Optimizer(std::string nameTestcase, int numberOfOptimizationParams, std::string problemType){
+
+Optimizer::Optimizer(std::string nameTestcase, int numberOfOptimizationParams){
 
 	/* RoDeO does not allow problems with too many optimization parameters */
 
@@ -77,11 +79,37 @@ Optimizer::Optimizer(std::string nameTestcase, int numberOfOptimizationParams, s
 	iterMaxEILoop = dimension*10000;
 
 
-	setProblemType(problemType);
-
+	//	setProblemType(problemType);
 
 
 }
+
+void Optimizer::setDimension(unsigned int dim){
+
+	dimension = dim;
+
+	sampleDim = dimension;
+
+	lowerBounds.zeros(dimension);
+	upperBounds.zeros(dimension);
+
+	lowerBoundsForEIMaximization.zeros(dimension);
+	upperBoundsForEIMaximization.zeros(dimension);
+	upperBoundsForEIMaximization.fill(1.0/dimension);
+
+
+	iterMaxEILoop = dimension*10000;
+
+}
+
+void Optimizer::setName(std::string problemName){
+
+	name = problemName;
+
+}
+
+
+
 
 void Optimizer::setParameterToDiscrete(unsigned int index, double increment){
 
@@ -117,41 +145,41 @@ bool Optimizer::checkSettings(void) const{
 }
 
 
-void Optimizer::setProblemType(std::string type){
-
-	assert(!type.empty());
-
-	if(type == "MAXIMIZATION" || type == "Maximize" || type == "maximization" || type == "maximize" ){
-
-		type = "maximize";
-
-	}
-
-	else if(type == "MINIMIZATION" || type == "Minimize" || type == "minimization" || type == "minimize"){
-
-		type = "minimize";
-
-	}
-
-	else if(type == "DOE" || type == "doe" || type == "DoE" || type == "Doe"){
-
-		type = "DoE";
-
-	}
-
-	else{
-
-		std::cout<<"ERROR: Problem type is undefined!\n";
-		abort();
-
-	}
-
-
-	optimizationType = type;
-
-
-
-}
+//void Optimizer::setProblemType(std::string type){
+//
+//	assert(!type.empty());
+//
+//	if(type == "MAXIMIZATION" || type == "Maximize" || type == "maximization" || type == "maximize" ){
+//
+//		type = "maximize";
+//
+//	}
+//
+//	else if(type == "MINIMIZATION" || type == "Minimize" || type == "minimization" || type == "minimize"){
+//
+//		type = "minimize";
+//
+//	}
+//
+//	else if(type == "DOE" || type == "doe" || type == "DoE" || type == "Doe"){
+//
+//		type = "DoE";
+//
+//	}
+//
+//	else{
+//
+//		std::cout<<"ERROR: Problem type is undefined!\n";
+//		abort();
+//
+//	}
+//
+//
+//	optimizationType = type;
+//
+//
+//
+//}
 
 void Optimizer::setInitialObjectiveFunctionValue(double value){
 
@@ -296,6 +324,9 @@ void Optimizer::addObjectFunction(ObjectiveFunction &objFunc){
 
 	assert(ifObjectFunctionIsSpecied == false);
 	objFun = objFunc;
+
+	designVectorFileName = objFun.getFileNameDesignVector();
+
 	sampleDim++;
 	ifObjectFunctionIsSpecied = true;
 
@@ -307,23 +338,23 @@ void Optimizer::addObjectFunction(ObjectiveFunction &objFunc){
 
 void Optimizer::evaluateConstraints(Design &d){
 
-
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-
-		if(!it->checkIfGradientAvailable()){
-
-			it->evaluate(d);
-
-		}else{
-
-			it->evaluateAdjoint(d);
-
-		}
-		it->readEvaluateOutput(d);
-
-
-	}
+	//
+	//	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+	//
+	//
+	//		if(!it->checkIfGradientAvailable()){
+	//
+	//			it->evaluate(d);
+	//
+	//		}else{
+	//
+	//			it->evaluateAdjoint(d);
+	//
+	//		}
+	//		it->readEvaluateOutput(d);
+	//
+	//
+	//	}
 
 
 }
@@ -374,8 +405,6 @@ void Optimizer::addConstraintValuesToDoEData(Design &d) const{
 }
 
 
-
-
 void Optimizer::estimateConstraints(CDesignExpectedImprovement &design) const{
 
 	rowvec x = design.dv;
@@ -390,8 +419,6 @@ void Optimizer::estimateConstraints(CDesignExpectedImprovement &design) const{
 
 
 }
-
-
 
 
 bool Optimizer::checkBoxConstraints(void) const{
@@ -433,7 +460,6 @@ void Optimizer::print(void) const{
 	std::cout<<"\nOptimizer Settings = \n\n";
 	std::cout<<"Problem name : "<<name<<"\n";
 	std::cout<<"Dimension    : "<<dimension<<"\n";
-	std::cout<<"Type         : "<<optimizationType<<"\n";
 	std::cout<<"Maximum number of function evaluations: " <<maxNumberOfSamples<<"\n";
 	std::cout<<"Maximum number of iterations for EI maximization: " <<iterMaxEILoop<<"\n";
 
@@ -442,8 +468,7 @@ void Optimizer::print(void) const{
 
 	printConstraints();
 
-	if (constraintFunctions.empty()){
-
+	if (!ifConstrained()){
 		std::cout << "Optimization problem does not have any constraints\n";
 	}
 
@@ -454,25 +479,15 @@ void Optimizer::print(void) const{
 		printVector(incrementsForDiscreteVariables);
 	}
 
-
 }
 
 void Optimizer::printConstraints(void) const{
 
-	if(ifDisplay && !constraintFunctions.empty()){
+	std::cout<< "List of constraints = \n";
 
-		std::cout<< "List of constraints = \n";
-
-
-
-		for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-			it->print();
-
-		}
-
+	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+		it->print();
 	}
-
 
 }
 
@@ -645,16 +660,9 @@ void Optimizer::computeConstraintsandPenaltyTerm(Design &d) {
 
 
 
-			if(optimizationType == "minimize"){
+			penaltyTerm = LARGE;
+			d.isDesignFeasible = false;
 
-				penaltyTerm = LARGE;
-				d.isDesignFeasible = false;
-			}
-			else if(optimizationType == "maximize"){
-
-				penaltyTerm = -LARGE;
-				d.isDesignFeasible = false;
-			}
 
 		}
 
@@ -681,28 +689,14 @@ void Optimizer::addConstraintValuesToData(Design &d){
 void Optimizer::checkIfSettingsAreOK(void) const{
 
 	if (maxNumberOfSamples == 0){
-
-		fprintf(stderr, "ERROR: Maximum number of samples is not set for the optimization!\n");
-		cout<<"maxNumberOfSamples = "<<maxNumberOfSamples<<"\n";
-		abort();
+		abortWithErrorMessage("Maximum number of samples is not set for the optimization");
 	}
-
-
-
 	if(checkBoxConstraints() == false){
-
-		fprintf(stderr, "ERROR: Box constraints are not set properly!\n");
-		abort();
-
+		abortWithErrorMessage("Box constraints are not set properly");
 	}
-
-
 
 
 }
-
-
-
 
 
 
@@ -1092,16 +1086,14 @@ void Optimizer::clearOptimizationHistoryFile(void) const{
 
 
 void Optimizer::setHowOftenTrainModels(unsigned int value){
-
-
 	howOftenTrainModels = value;
-
-
 }
 
 
 void Optimizer::EfficientGlobalOptimization(void){
 
+	assert(ifObjectFunctionIsSpecied);
+	assert(ifBoxConstraintsSet);
 
 	checkIfSettingsAreOK();
 
@@ -1154,7 +1146,6 @@ void Optimizer::EfficientGlobalOptimization(void){
 		printf("The most promising design (not normalized):\n");
 		best_dv.print();
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
-
 #endif
 
 
@@ -1169,15 +1160,19 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 		if(!objFun.checkIfGradientAvailable()) {
 
-			objFun.evaluate(currentBestDesign);
+			objFun.setEvaluationMode("primal");
+			objFun.evaluateDesign(currentBestDesign);
+			objFun.addDesignToData(currentBestDesign);
+
+
 		}
 		else{
 
-			objFun.evaluateAdjoint(currentBestDesign);
-		}
+			objFun.setEvaluationMode("adjoint");
+			objFun.evaluateDesign(currentBestDesign);
+			objFun.addDesignToData(currentBestDesign);
 
-		objFun.readEvaluateOutput(currentBestDesign);
-		objFun.addDesignToData(currentBestDesign);
+		}
 
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 
@@ -1276,11 +1271,11 @@ void Optimizer::EfficientGlobalOptimization2(void){
 			trainSurrogates();
 		}
 
-//		if(iterOpt%10 == 0){
-//
-//			zoomInDesignSpace();
-//
-//		}
+		//		if(iterOpt%10 == 0){
+		//
+		//			zoomInDesignSpace();
+		//
+		//		}
 
 		findTheMostPromisingDesign();
 
@@ -1315,16 +1310,16 @@ void Optimizer::EfficientGlobalOptimization2(void){
 
 		if(!objFun.checkIfGradientAvailable()) {
 
-			objFun.evaluateLowFidelity(currentBestDesign);
+			//CEO			objFun.evaluateLowFidelity(currentBestDesign);
 
 		}
 		else{
 
-			objFun.evaluateAdjoint(currentBestDesign);
+			//CEO			objFun.evaluateAdjoint(currentBestDesign);
 
 		}
 
-		objFun.readEvaluateOutput(currentBestDesign);
+		//CEO		objFun.readEvaluateOutput(currentBestDesign);
 		objFun.addLowFidelityDesignToData(currentBestDesign);
 
 
@@ -1369,8 +1364,8 @@ void Optimizer::EfficientGlobalOptimization2(void){
 		if( fv2  < Q(0)) {
 
 
-			objFun.evaluate(currentBestDesign);
-			objFun.readEvaluateOutput(currentBestDesign);
+			//CEO			objFun.evaluate(currentBestDesign);
+			//CEO			objFun.readEvaluateOutput(currentBestDesign);
 			objFun.addDesignToData(currentBestDesign);
 
 			std::cout<<"High fidelity design\n";
@@ -1512,25 +1507,14 @@ void Optimizer::calculateImprovementValue(Design &d){
 		}
 
 
-		if(optimizationType == "minimize"){
 
-			if(d.objectiveFunctionValue < initialobjectiveFunctionValue){
 
-				d.improvementValue = initialobjectiveFunctionValue - d.objectiveFunctionValue;
+		if(d.objectiveFunctionValue < initialobjectiveFunctionValue){
 
-			}
+			d.improvementValue = initialobjectiveFunctionValue - d.objectiveFunctionValue;
 
 		}
-		if(optimizationType == "maximize"){
 
-			if(d.objectiveFunctionValue > initialobjectiveFunctionValue){
-
-				d.improvementValue = d.objectiveFunctionValue - initialobjectiveFunctionValue;
-
-			}
-
-
-		}
 
 
 	}
@@ -1625,8 +1609,8 @@ void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 
 		if(!objFun.checkIfGradientAvailable()) {
 
-			objFun.evaluate(currentDesign);
-			objFun.readEvaluateOutput(currentDesign);
+			//CEO			objFun.evaluate(currentDesign);
+			//CEO			objFun.readEvaluateOutput(currentDesign);
 			rowvec temp(dimension+1);
 			copyRowVector(temp,dv);
 			temp(dimension) = currentDesign.trueValue;
@@ -1636,8 +1620,8 @@ void Optimizer::performDoE(unsigned int howManySamples, DoE_METHOD methodID){
 		}
 		else{
 
-			objFun.evaluateAdjoint(currentDesign);
-			objFun.readEvaluateOutput(currentDesign);
+			//CEO			objFun.evaluateAdjoint(currentDesign);
+			//CEO			objFun.readEvaluateOutput(currentDesign);
 			rowvec temp(2*dimension+1);
 			copyRowVector(temp,currentDesign.designParameters);
 			temp(dimension) = currentDesign.trueValue;

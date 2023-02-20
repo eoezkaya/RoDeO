@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -33,197 +33,395 @@
 #include "optimization.hpp"
 #include "matrix_vector_operations.hpp"
 #include "auxiliary_functions.hpp"
-#include "test_functions.hpp"
+#include "standard_test_functions.hpp"
 #include "design.hpp"
 #include<gtest/gtest.h>
 
 
-TEST(testOptimizer, testTangentEnhancedOptimization){
-
-	chdir("./testTangentEnhancedOptimization");
-	compileWithCpp("himmelblauWithTangent.cpp", "himmelblauWithTangent");
-
-	Bounds boxConstraints(2);
-	boxConstraints.setBounds(-6.0,6.0);
-
-	std::string studyName = "testOptimizerTangentEnhanced";
-	Optimizer testStudy(studyName, 2);
-	testStudy.setBoxConstraints(boxConstraints);
-	testStudy.setMaximumNumberOfIterations(100);
+#define OPTIMIZATION_TEST
+#ifdef OPTIMIZATION_TEST
 
 
+class OptimizationTest : public ::testing::Test {
+protected:
+	void SetUp() override {
+
+		objFunHimmelblau.setDimension(2);
+
+		vec lb(2); lb.fill(-6.0);
+		vec ub(2); ub.fill(6.0);
+
+		Bounds boxConstraints(2);
+		boxConstraints.setBounds(lb, ub );
+
+		objFunHimmelblau.setParameterBounds(boxConstraints);
+
+		definition.designVectorFilename = "dv.dat";
+		definition.executableName = "himmelblau";
+		definition.outputFilename = "objFunVal.dat";
+		definition.name= "himmelblau";
+		definition.nameHighFidelityTrainingData = "himmelblau.csv";
 
 
+		constraintFunc1.setDimension(2);
+		constraintFunc1.setParameterBounds(boxConstraints);
+
+		constraintFunc2.setDimension(2);
+		constraintFunc2.setParameterBounds(boxConstraints);
 
 
+		constraintDefinition1.designVectorFilename = "dv.dat";
+		constraintDefinition1.executableName = "constraint1";
+		constraintDefinition1.outputFilename = "constraintFunction1.dat";
 
-	abort();
-}
-
-
-
-TEST(testOptimizer, testMLOptimization){
-
-	chdir("./testMultiLevelOptimization");
-	compileWithCpp("himmelblauHighFidelity.cpp", "himmelblauHighFidelity");
-	compileWithCpp("himmelblauLowFidelity.cpp",  "himmelblauLowFidelity");
+		std::string defitinition1 = "constraint1 > 1.4";
+		constraintDefinition1.setDefinition(defitinition1);
+		constraintDefinition1.nameHighFidelityTrainingData = "constraint1.csv";
 
 
-	Bounds boxConstraints(2);
-    boxConstraints.setBounds(-6.0,6.0);
+		constraintDefinition2.designVectorFilename = "dv.dat";
+		constraintDefinition2.executableName = "constraint2";
+		constraintDefinition2.outputFilename = "constraintFunction2.dat";
 
-	unsigned int NhiFi = 100;
+		std::string defitinition2 = "constraint2 < 0.1";
+		constraintDefinition2.setDefinition(defitinition2);
+		constraintDefinition2.nameHighFidelityTrainingData = "constraint2.csv";
 
-	generateHimmelblauDataMultiFidelity("HimmelblauHiFiData.csv", "HimmelblauLowFiData.csv", 50, 100);
+		testOptimizer.setDimension(2);
+		testOptimizer.setName("HimmelblauOptimization");
 
+		testOptimizer.setBoxConstraints(boxConstraints);
 
-	std::string studyName = "testOptimizerMultiLevel";
-	Optimizer testStudy(studyName, 2);
+		himmelblauFunction.function.filenameTrainingData = "himmelblau.csv";
+		himmelblauFunction.function.numberOfTrainingSamples = 50;
 
-	testStudy.setMaximumNumberOfIterations(100);
-	testStudy.setMaximumNumberOfIterationsLowFidelity(100);
+		constraint1.function.filenameTrainingData = "constraint1.csv";
+		constraint1.function.numberOfTrainingSamples = 50;
 
-
-
-	testStudy.setBoxConstraints(boxConstraints);
-
-
-	ObjectiveFunction objFunTest("testObjectiveFunctionMLSurrogate",2);
-
-
-	objFunTest.setParameterBounds(boxConstraints);
-
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("testObjectiveFunctionMLSurrogate");
-	testObjectiveFunctionDef.outputFilename      = "objFunVal.dat";
-	testObjectiveFunctionDef.outputFilenameLowFi = "objFunVal.dat";
-	testObjectiveFunctionDef.ifMultiLevel = true;
-	testObjectiveFunctionDef.designVectorFilename = "dv.dat";
-	testObjectiveFunctionDef.executableName = "himmelblauHighFidelity";
-	testObjectiveFunctionDef.executableNameLowFi = "himmelblauLowFidelity";
-	testObjectiveFunctionDef.nameHighFidelityTrainingData = "HimmelblauHiFiData.csv";
-	testObjectiveFunctionDef.nameLowFidelityTrainingData  = "HimmelblauLowFiData.csv";
+		constraint2.function.filenameTrainingData = "constraint2.csv";
+		constraint2.function.numberOfTrainingSamples = 50;
 
 
-	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
-
-	testStudy.addObjectFunction(objFunTest);
-	testStudy.setFileNameDesignVector("dv.dat");
-
-	testStudy.setDisplayOn();
-
-	testStudy.setHowOftenTrainModels(1000);
-
-	testStudy.EfficientGlobalOptimization2();
-
-	chdir("../");
-
-	abort();
-}
-
-
-
-
-
-
-
-
-
-
-TEST(testOptimizer, testfindTheMostPromisingDesign){
-
-	mat samples(100,3);
-
-	/* we construct first test data using the function x1*x1 + x2 * x2 */
-	for (unsigned int i=0; i<samples.n_rows; i++){
-		rowvec x(3);
-		x(0) = generateRandomDouble(0.5,1.0);
-		x(1) = generateRandomDouble(0.5,1.0);
-
-		x(2) = x(0)*x(0) + x(1)*x(1);
-		samples.row(i) = x;
 
 	}
-	samples(0,0) = 0.0; samples(0,1) = 0.0; samples(0,2) = 0.0;
+
+	void TearDown() override {
 
 
-	vec lb(2); lb.fill(0.0);
-	vec ub(2); ub.fill(1.0);
+
+	}
+
+	std::string problemName = "himmelblauOptimization";
+	Optimizer testOptimizer;
+	ObjectiveFunction objFunHimmelblau;
+	ConstraintFunction constraintFunc1;
+	ConstraintFunction constraintFunc2;
+
+	HimmelblauFunction himmelblauFunction;
+	HimmelblauConstraintFunction1 constraint1;
+	HimmelblauConstraintFunction2 constraint2;
+
+	ObjectiveFunctionDefinition definition;
+	ConstraintDefinition constraintDefinition1;
+	ConstraintDefinition constraintDefinition2;
 
 
-	saveMatToCVSFile(samples,"ObjFuncTest.csv");
-
-	ObjectiveFunction objFunc("ObjFuncTest", 2);
-	objFunc.setParameterBounds(lb,ub);
-
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
-	objFunc.setParametersByDefinition(testObjectiveFunctionDef);
+};
 
 
-	std::string studyName = "testOptimizer";
-	Optimizer testStudy(studyName, 2);
-	testStudy.addObjectFunction(objFunc);
-	testStudy.initializeSurrogates();
+TEST_F(OptimizationTest, constructor){
 
-	testStudy.findTheMostPromisingDesign();
-
-	CDesignExpectedImprovement testDesign = testStudy.getDesignWithMaxExpectedImprovement();
-
-
-	EXPECT_LT(testDesign.dv(0), 0.1);
-	EXPECT_LT(testDesign.dv(1), 0.1);
-
-}
-
-
-TEST(testOptimizer, testMaximizeEIGradientBased){
-
-	mat samples(10,3);
-
-
-	 samples(0,0) = 1.4199;  samples(0,1) = 0.2867; samples(0,2) = 2.0982;
-	 samples(1,0) = 1.2761;  samples(1,1) = 0.7363; samples(1,2) = 2.1706;
-	 samples(2,0) =-4.8526;  samples(2,1) =-1.3832; samples(2,2) = 25.4615;
-	 samples(3,0) =-4.9643;  samples(3,1) = 2.5681; samples(3,2) = 31.2395;
-	 samples(4,0) =-3.2966;  samples(4,1) = 3.7140; samples(4,2) = 24.6612;
-	 samples(5,0) = 2.1202;  samples(5,1) = 1.5686; samples(5,2) =  6.9559;
-	 samples(6,0) = 4.0689;  samples(6,1) = 3.8698; samples(6,2) = 31.5311;
-	 samples(7,0) = 3.6139;  samples(7,1) =-0.5469; samples(7,2) = 13.3596;
-	 samples(8,0) = 4.5835;  samples(8,1) =-3.9091; samples(8,2) = 36.2896;
-	 samples(9,0) = 3.8641;  samples(9,1) = 2.3025; samples(9,2) = 20.2327;
-
-	vec lb(2); lb.fill(-5.0);
-	vec ub(2); ub.fill(5.0);
-
-
-	saveMatToCVSFile(samples,"ObjFuncTest.csv");
-
-	ObjectiveFunction objFunc("ObjFuncTest", 2);
-	objFunc.setParameterBounds(lb,ub);
-
-	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
-	objFunc.setParametersByDefinition(testObjectiveFunctionDef);
-
-	objFunc.initializeSurrogate();
-
-
-	std::string studyName = "testOptimizer";
-	Optimizer testStudy(studyName, 2);
-	testStudy.addObjectFunction(objFunc);
-	testStudy.initializeSurrogates();
-
-	rowvec dv(2); dv(0) = 0.29; dv(1) = 0.29;
-
-	CDesignExpectedImprovement initialDesign(dv);
-
-
-	CDesignExpectedImprovement optimizedDesign = testStudy.MaximizeEIGradientBased(initialDesign);
-
-	ASSERT_GT(optimizedDesign.valueExpectedImprovement, initialDesign.valueExpectedImprovement + 1.0);
-
-
+	ASSERT_TRUE(testOptimizer.ifBoxConstraintsSet);
+	ASSERT_FALSE(testOptimizer.ifConstrained());
 }
 
 
 
+TEST_F(OptimizationTest, setOptimizationProblem){
+
+	objFunHimmelblau.setParametersByDefinition(definition);
+	constraintFunc1.setParametersByDefinition(constraintDefinition1);
+	constraintFunc2.setParametersByDefinition(constraintDefinition2);
+
+	constraintFunc1.setID(0);
+	constraintFunc2.setID(1);
+
+	testOptimizer.addObjectFunction(objFunHimmelblau);
+	testOptimizer.addConstraint(constraintFunc1);
+	testOptimizer.addConstraint(constraintFunc2);
+
+
+	ASSERT_TRUE(testOptimizer.numberOfConstraints == 2);
+	ASSERT_TRUE(testOptimizer.ifBoxConstraintsSet);
+	ASSERT_TRUE(testOptimizer.ifObjectFunctionIsSpecied);
+	ASSERT_TRUE(testOptimizer.ifConstrained());
+
+
+
+}
+
+TEST_F(OptimizationTest, initializeSurrogates){
+
+	himmelblauFunction.function.generateTrainingSamples();
+	constraint1.function.generateTrainingSamples();
+	constraint2.function.generateTrainingSamples();
+
+	objFunHimmelblau.setParametersByDefinition(definition);
+	constraintFunc1.setParametersByDefinition(constraintDefinition1);
+	constraintFunc2.setParametersByDefinition(constraintDefinition2);
+
+	constraintFunc1.setID(0);
+	constraintFunc2.setID(1);
+
+	testOptimizer.addObjectFunction(objFunHimmelblau);
+	testOptimizer.addConstraint(constraintFunc1);
+	testOptimizer.addConstraint(constraintFunc2);
+
+	testOptimizer.initializeSurrogates();
+
+	ASSERT_TRUE(testOptimizer.ifSurrogatesAreInitialized);
+
+}
+
+
+TEST_F(OptimizationTest, EGOUnconstrained){
+
+	compileWithCpp("himmelblau.cpp", definition.executableName);
+	himmelblauFunction.function.generateTrainingSamples();
+
+	objFunHimmelblau.setParametersByDefinition(definition);
+
+	testOptimizer.setMaximumNumberOfIterations(10);
+	testOptimizer.addObjectFunction(objFunHimmelblau);
+	testOptimizer.EfficientGlobalOptimization();
+
+	mat results;
+	results.load("himmelblau.csv", csv_ascii);
+
+	ASSERT_TRUE(results.n_rows == 60);
+
+}
+
+
+
+
+TEST_F(OptimizationTest, trainSurrogates){
+
+	himmelblauFunction.function.generateTrainingSamples();
+	constraint1.function.generateTrainingSamples();
+	constraint2.function.generateTrainingSamples();
+
+	objFunHimmelblau.setParametersByDefinition(definition);
+	constraintFunc1.setParametersByDefinition(constraintDefinition1);
+	constraintFunc2.setParametersByDefinition(constraintDefinition2);
+
+	constraintFunc1.setID(0);
+	constraintFunc2.setID(1);
+
+	testOptimizer.addObjectFunction(objFunHimmelblau);
+	testOptimizer.addConstraint(constraintFunc1);
+	testOptimizer.addConstraint(constraintFunc2);
+
+	testOptimizer.initializeSurrogates();
+	testOptimizer.trainSurrogates();
+
+	ASSERT_TRUE(testOptimizer.ifSurrogatesAreInitialized);
+
+
+}
+
+
+
+
+
+
+//
+//TEST(testOptimizer, testTangentEnhancedOptimization){
+//
+//	chdir("./testTangentEnhancedOptimization");
+//	compileWithCpp("himmelblauWithTangent.cpp", "himmelblauWithTangent");
+//
+//	Bounds boxConstraints(2);
+//	boxConstraints.setBounds(-6.0,6.0);
+//
+//	std::string studyName = "testOptimizerTangentEnhanced";
+//	Optimizer testStudy(studyName, 2);
+//	testStudy.setBoxConstraints(boxConstraints);
+//	testStudy.setMaximumNumberOfIterations(100);
+//
+//
+//
+//
+//
+//
+//
+//	abort();
+//}
+//
+//
+//
+//TEST(testOptimizer, testMLOptimization){
+//
+//	chdir("./testMultiLevelOptimization");
+//	compileWithCpp("himmelblauHighFidelity.cpp", "himmelblauHighFidelity");
+//	compileWithCpp("himmelblauLowFidelity.cpp",  "himmelblauLowFidelity");
+//
+//
+//	Bounds boxConstraints(2);
+//    boxConstraints.setBounds(-6.0,6.0);
+//
+//	unsigned int NhiFi = 100;
+//
+//	generateHimmelblauDataMultiFidelity("HimmelblauHiFiData.csv", "HimmelblauLowFiData.csv", 50, 100);
+//
+//
+//	std::string studyName = "testOptimizerMultiLevel";
+//	Optimizer testStudy(studyName, 2);
+//
+//	testStudy.setMaximumNumberOfIterations(100);
+//	testStudy.setMaximumNumberOfIterationsLowFidelity(100);
+//
+//
+//
+//	testStudy.setBoxConstraints(boxConstraints);
+//
+//
+//	ObjectiveFunction objFunTest("testObjectiveFunctionMLSurrogate",2);
+//
+//
+//	objFunTest.setParameterBounds(boxConstraints);
+//
+//	ObjectiveFunctionDefinition testObjectiveFunctionDef("testObjectiveFunctionMLSurrogate");
+//	testObjectiveFunctionDef.outputFilename      = "objFunVal.dat";
+//	testObjectiveFunctionDef.outputFilenameLowFi = "objFunVal.dat";
+//	testObjectiveFunctionDef.ifMultiLevel = true;
+//	testObjectiveFunctionDef.designVectorFilename = "dv.dat";
+//	testObjectiveFunctionDef.executableName = "himmelblauHighFidelity";
+//	testObjectiveFunctionDef.executableNameLowFi = "himmelblauLowFidelity";
+//	testObjectiveFunctionDef.nameHighFidelityTrainingData = "HimmelblauHiFiData.csv";
+//	testObjectiveFunctionDef.nameLowFidelityTrainingData  = "HimmelblauLowFiData.csv";
+//
+//
+//	objFunTest.setParametersByDefinition(testObjectiveFunctionDef);
+//
+//	testStudy.addObjectFunction(objFunTest);
+//	testStudy.setFileNameDesignVector("dv.dat");
+//
+//	testStudy.setDisplayOn();
+//
+//	testStudy.setHowOftenTrainModels(1000);
+//
+//	testStudy.EfficientGlobalOptimization2();
+//
+//	chdir("../");
+//
+//	abort();
+//}
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//TEST(testOptimizer, testfindTheMostPromisingDesign){
+//
+//	mat samples(100,3);
+//
+//	/* we construct first test data using the function x1*x1 + x2 * x2 */
+//	for (unsigned int i=0; i<samples.n_rows; i++){
+//		rowvec x(3);
+//		x(0) = generateRandomDouble(0.5,1.0);
+//		x(1) = generateRandomDouble(0.5,1.0);
+//
+//		x(2) = x(0)*x(0) + x(1)*x(1);
+//		samples.row(i) = x;
+//
+//	}
+//	samples(0,0) = 0.0; samples(0,1) = 0.0; samples(0,2) = 0.0;
+//
+//
+//	vec lb(2); lb.fill(0.0);
+//	vec ub(2); ub.fill(1.0);
+//
+//
+//	saveMatToCVSFile(samples,"ObjFuncTest.csv");
+//
+//	ObjectiveFunction objFunc("ObjFuncTest", 2);
+//	objFunc.setParameterBounds(lb,ub);
+//
+//	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+//	objFunc.setParametersByDefinition(testObjectiveFunctionDef);
+//
+//
+//	std::string studyName = "testOptimizer";
+//	Optimizer testStudy(studyName, 2);
+//	testStudy.addObjectFunction(objFunc);
+//	testStudy.initializeSurrogates();
+//
+//	testStudy.findTheMostPromisingDesign();
+//
+//	CDesignExpectedImprovement testDesign = testStudy.getDesignWithMaxExpectedImprovement();
+//
+//
+//	EXPECT_LT(testDesign.dv(0), 0.1);
+//	EXPECT_LT(testDesign.dv(1), 0.1);
+//
+//}
+//
+//
+//TEST(testOptimizer, testMaximizeEIGradientBased){
+//
+//	mat samples(10,3);
+//
+//
+//	 samples(0,0) = 1.4199;  samples(0,1) = 0.2867; samples(0,2) = 2.0982;
+//	 samples(1,0) = 1.2761;  samples(1,1) = 0.7363; samples(1,2) = 2.1706;
+//	 samples(2,0) =-4.8526;  samples(2,1) =-1.3832; samples(2,2) = 25.4615;
+//	 samples(3,0) =-4.9643;  samples(3,1) = 2.5681; samples(3,2) = 31.2395;
+//	 samples(4,0) =-3.2966;  samples(4,1) = 3.7140; samples(4,2) = 24.6612;
+//	 samples(5,0) = 2.1202;  samples(5,1) = 1.5686; samples(5,2) =  6.9559;
+//	 samples(6,0) = 4.0689;  samples(6,1) = 3.8698; samples(6,2) = 31.5311;
+//	 samples(7,0) = 3.6139;  samples(7,1) =-0.5469; samples(7,2) = 13.3596;
+//	 samples(8,0) = 4.5835;  samples(8,1) =-3.9091; samples(8,2) = 36.2896;
+//	 samples(9,0) = 3.8641;  samples(9,1) = 2.3025; samples(9,2) = 20.2327;
+//
+//	vec lb(2); lb.fill(-5.0);
+//	vec ub(2); ub.fill(5.0);
+//
+//
+//	saveMatToCVSFile(samples,"ObjFuncTest.csv");
+//
+//	ObjectiveFunction objFunc("ObjFuncTest", 2);
+//	objFunc.setParameterBounds(lb,ub);
+//
+//	ObjectiveFunctionDefinition testObjectiveFunctionDef("ObjectiveFunctionTest");
+//	objFunc.setParametersByDefinition(testObjectiveFunctionDef);
+//
+//	objFunc.initializeSurrogate();
+//
+//
+//	std::string studyName = "testOptimizer";
+//	Optimizer testStudy(studyName, 2);
+//	testStudy.addObjectFunction(objFunc);
+//	testStudy.initializeSurrogates();
+//
+//	rowvec dv(2); dv(0) = 0.29; dv(1) = 0.29;
+//
+//	CDesignExpectedImprovement initialDesign(dv);
+//
+//
+//	CDesignExpectedImprovement optimizedDesign = testStudy.MaximizeEIGradientBased(initialDesign);
+//
+//	ASSERT_GT(optimizedDesign.valueExpectedImprovement, initialDesign.valueExpectedImprovement + 1.0);
+//
+//
+//}
+
+
+#endif
 
 

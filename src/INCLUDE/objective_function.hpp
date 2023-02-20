@@ -63,15 +63,12 @@ public:
 	std::string nameHighFidelityTrainingData;
 
 	bool ifMultiLevel = false;
-	bool ifGradient = false;
-	bool ifTangent  = false;
-	bool ifGradientLowFi = false;
-	bool ifTangentLowFi = false;
 	bool ifDefined = false;
 
 
+	SURROGATE_MODEL modelHiFi  = ORDINARY_KRIGING;
+	SURROGATE_MODEL modelLowFi = ORDINARY_KRIGING;
 
-	ObjectiveFunctionDefinition(std::string name);
 	ObjectiveFunctionDefinition();
 	bool checkIfDefinitionIsOk(void) const;
 	unsigned int identifyCase(void) const;
@@ -96,32 +93,7 @@ protected:
 	double (*objectiveFunPtr)(double *);
 	double (*objectiveFunAdjPtr)(double *,double *);
 
-
 	std::string evaluationMode;
-
-	std::string name;
-	std::string fileNameDesignVector;
-
-
-	std::string executableName;
-	std::string executablePath;
-	std::string fileNameInputRead;
-	std::string readMarker;
-	std::string readMarkerAdjoint;
-	std::string readMarkerTangent;
-
-	std::string executableNameLowFi;
-	std::string executablePathLowFi;
-	std::string fileNameInputReadLowFi;
-	std::string readMarkerLowFi;
-	std::string readMarkerAdjointLowFi;
-
-//	std::string fileNameTrainingDataForSurrogate;
-//
-//	std::string fileNameTrainingDataForSurrogateHighFidelity;
-//	std::string fileNameTrainingDataForSurrogateLowFidelity;
-
-
 	ObjectiveFunctionDefinition definition;
 
 
@@ -150,19 +122,9 @@ protected:
 	unsigned int dim = 0;
 
 
-	void readOutputWithoutMarkers(Design &outputDesignBuffer) const;
-
-	bool checkIfMarkersAreNotSet(void) const;
-
-
-
 
 public:
 
-
-
-
-	ObjectiveFunction(std::string, unsigned int);
 	ObjectiveFunction();
 
 	bool ifDoErequired = true;
@@ -171,9 +133,7 @@ public:
 	bool ifFunctionPointerIsSet = false;
 	bool ifInitialized = false;
 	bool ifParameterBoundsAreSet = false;
-	bool ifMultilevel = false;
 	bool ifDefinitionIsSet = false;
-	bool ifUseTangentEnhancedKriging = false;
 	bool ifSurrogateModelIsDefined = false;
 
 
@@ -211,8 +171,7 @@ public:
 	unsigned int getDimension(void) const;
 
 	std::string getName(void) const{
-
-		return name;
+		return definition.name;
 	}
 
 	bool ifHasFunctionFunctionPointer(void) const{
@@ -227,24 +186,9 @@ public:
 	void saveDoEData(std::vector<rowvec>) const;
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
+
 	void setFileNameDesignVector(std::string);
-
-
-
-	double getValueAtMarker(std::string, std::string, size_t = 0) const;
-	rowvec getMarkerValuesVector(std::string, std::string, size_t = 0) const;
-
-
-	void setReadMarker(std::string marker);
-	std::string getReadMarker(void) const;
-
-	size_t isMarkerFound(const std::string &marker, const std::string &inputStr) const;
-
-	double getMarkerValue(std::string inputStr, size_t foundMarker) const;
-	rowvec getMarkerAdjointValues(const std::string &inputStr, size_t foundMarkerPosition) const;
-
-	void setReadMarkerAdjoint(std::string marker);
-	std::string getReadMarkerAdjoint(void) const;
+	std::string getFileNameDesignVector(void) const;
 
 
 	void setParametersByDefinition(ObjectiveFunctionDefinition);
@@ -264,13 +208,6 @@ public:
 	void readOutputDesign(Design &) const;
 
 
-
-
-
-	void evaluate(Design &d);
-	void evaluateLowFidelity(Design &d);
-	void evaluateAdjoint(Design &d);
-	void readEvaluateOutput(Design &d);
 
 	void addDesignToData(Design &d);
 	void addLowFidelityDesignToData(Design &d);

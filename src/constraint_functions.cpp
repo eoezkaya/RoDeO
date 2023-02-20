@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  *  file is part of RoDeO
  *
@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
@@ -49,24 +49,7 @@
 using namespace arma;
 
 
-ConstraintDefinition::ConstraintDefinition(void){
-
-	value = 0.0;
-
-}
-
-
-ConstraintDefinition::ConstraintDefinition(std::string nameInput, std::string ineqType, double valueInput){
-
-	assert(isNotEmpty(nameInput));
-
-	name = nameInput;
-	inequalityType = ineqType;
-	value = valueInput;
-
-}
-
-ConstraintDefinition::ConstraintDefinition(std::string definition){
+void ConstraintDefinition::setDefinition(std::string definition){
 
 	assert(!definition.empty());
 	size_t found  = definition.find(">");
@@ -75,15 +58,12 @@ ConstraintDefinition::ConstraintDefinition(std::string definition){
 	std::string nameBuf,typeBuf, valueBuf;
 
 	if (found!= std::string::npos){
-
 		place = found;
 	}
 	else if (found2 != std::string::npos){
-
 		place = found2;
 	}
 	else{
-
 		std::cout<<"ERROR: Something is wrong with the constraint definition!\n";
 		abort();
 	}
@@ -94,440 +74,102 @@ ConstraintDefinition::ConstraintDefinition(std::string definition){
 	valueBuf.assign(definition,place+1,definition.length() - nameBuf.length() - typeBuf.length());
 	valueBuf = removeSpacesFromString(valueBuf);
 
-
 	name = nameBuf;
 	inequalityType = typeBuf;
 	value = stod(valueBuf);
-
-
 }
 
 void ConstraintDefinition::print(void) const{
 
-	std::cout<<"\nConstraint definition = \n";
-	std::cout<<"ID = "<<ID<<"\n";
-	std::cout<<name<<" "<<inequalityType<<" "<<value<<"\n";
+	std::cout<<"\n================ Constraint function definition ================\n";
+	std::cout<< "Name = "<<name<<"\n";
+	std::cout<< "ID = "<<ID<<"\n";
+	std::cout<< "Type = "<<inequalityType<<"\n";
+	std::cout<< "Target value = "<<value<<"\n";
 	std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
-	std::cout<< "Output filename = "<<outputFilename<<"\n";
-	std::cout<< "Executable name = "<<executableName<<"\n";
+	std::cout<< "Training data = " << nameHighFidelityTrainingData << "\n";;
+	std::cout<< "Executable = " << executableName << "\n";
+	std::cout<< "Path = " << path << "\n";
+	std::cout<< "Surrogate model = " << modelHiFi << "\n";
+	std::cout<< "Multilevel = "<<ifMultiLevel<<"\n";
 
-	if(!path.empty()){
-
-		std::cout<< "Executable path = "<<path<<"\n";
+	if(ifMultiLevel){
+		std::cout<< "Low fidelity model = " << "\n";
+		std::cout<< "\tTraining data = " << nameHighFidelityTrainingData << "\n";;
+		std::cout<< "\tExecutable = " << executableName << "\n";
+		std::cout<< "\tPath = " << path << "\n";
+		std::cout<< "\tSurrogate model = " << modelHiFi << "\n";
 
 	}
 
+
+	std::cout<< "================================================================\n\n";
 }
 
 
-
-ConstraintFunction::ConstraintFunction(std::string name, unsigned int dimension)
-: ObjectiveFunction(name, dimension){
-
-
-
-}
 
 
 ConstraintFunction::ConstraintFunction(){}
 
-void ConstraintFunction::readEvaluateOutput(Design &d) {
-
-//#if 0
-//	cout<<"Reading constraint function\n";
-//#endif
-//
-//	assert(d.dimension == dim);
-//
-//
-//	if(ifAdjointMarkerIsSet == true){
-//
-//
-//		if(ifGradientAvailable == false && readMarkerAdjoint != "None"){
-//
-//			cout << "ERROR: Adjoint marker is set for the constraint function but gradient is not available!\n";
-//			cout << "Did you set GRADIENT_AVAILABLE properly?\n";
-//			abort();
-//
-//		}
-//
-//	}
-//
-//
-//	if(ifGradientAvailable && ifMarkerIsSet){
-//
-//		if(ifAdjointMarkerIsSet== false){
-//
-//			std::cout << "ERROR: Adjoint marker not is set for a constraint function!\n";
-//			std::cout << "Did you set CONSTRAINT_FUNCTION_GRADIENT_READ_MARKER properly?\n";
-//			abort();
-//
-//		}
-//
-//
-//
-//	}
-//
-//
-//	/* input from file without using markers */
-//
-//	if(checkIfMarkersAreNotSet()){
-//
-//		readOutputWithoutMarkers(d);
-//
-//	}
-//
-//	/* input from file using markers (the values are separated with ',')*/
-//	else{
-//
-//		readOutputWithMarkers(d);
-//
-//	}
-//
-//#if 0
-//	d.print();
-//#endif
-
-}
-
-void ConstraintFunction::readOutputWithoutMarkers(Design &outputDesignBuffer) const{
-
-	assert(isNotEmpty(fileNameInputRead));
-	std::ifstream inputFileStream(fileNameInputRead, ios::in);
-
-	if (!inputFileStream.is_open()) {
-
-		cout << "ERROR: There was a problem opening the input file!\n";
-		abort();
-	}
-
-
-	rowvec constraintGradient = zeros<rowvec>(dim);
-
-	double functionValue;
-	inputFileStream >> functionValue;
-
-
-	outputDesignBuffer.constraintTrueValues(ID) = functionValue;
-
-
-	if(ifGradientAvailable){
-
-
-		for(unsigned int i=0; i<dim; i++){
-
-			inputFileStream >> constraintGradient(i);
-
-		}
-
-		abortIfHasNan(constraintGradient);
-
-	}
-
-
-	outputDesignBuffer.constraintGradients.push_back(constraintGradient);
-	inputFileStream.close();
-
-
-}
-
-
-void ConstraintFunction::readOutputWithMarkers(Design &outputDesignBuffer) const{
-
-//	assert(isNotEmpty(fileNameInputRead));
-//	std::ifstream inputFileStream(fileNameInputRead, ios::in);
-//
-//	if (!inputFileStream.is_open()) {
-//
-//		cout << "ERROR: There was a problem opening the input file!\n";
-//		abort();
-//	}
-//
-//
-//	rowvec constraintGradient = zeros<rowvec>(dim);
-//
-//
-//	bool markerFound = false;
-//	bool markerAdjointFound = false;
-//
-//	for( std::string line; getline( inputFileStream, line ); ){ /* check each line */
-//
-//		size_t foundMarkerPosition = isMarkerFound(readMarker, line);
-//
-//		if (foundMarkerPosition != std::string::npos){
-//
-//			outputDesignBuffer.constraintTrueValues(ID) = getMarkerValue(line, foundMarkerPosition );
-//			markerFound = true;
-//
-//		}
-//
-//
-//		if(ifGradientAvailable){
-//
-//			/* check for constraint gradient marker */
-//			size_t foundMarkerPosition = isMarkerFound(readMarkerAdjoint, line);
-//
-//			if (foundMarkerPosition != std::string::npos){
-//
-//				constraintGradient = getMarkerAdjointValues(line, foundMarkerPosition );
-//				markerAdjointFound  = true;
-//
-//			}
-//		}
-//
-//	}
-//#if 0
-//	printVector(constraintGradient,"constraintGradient");
-//#endif
-//
-//	outputDesignBuffer.constraintGradients.push_back(constraintGradient);
-//
-//	if(ifGradientAvailable && !markerAdjointFound){
-//
-//		cout<<"ERROR: No values can be read for the constraint gradient!\n";
-//		abort();
-//
-//
-//	}
-//
-//	if(markerFound == false){
-//
-//		cout<<"ERROR: No values can be read for the constraint function!\n";
-//		abort();
-//
-//
-//	}
-//
-//	inputFileStream.close();
-
-
-}
-
-void ConstraintFunction::print(void) const {
-
-	std::cout << "\n#####################################################\n";
-	std::cout << "Constraint function ID = "<<ID<<"\n";
-	std::cout << "Name: " << name << endl;
-	std::cout << "Dimension: " << dim << endl;
-	std::cout << "Type of constraint: " << inequalityType << " " <<value<< endl;
-	std::cout << "Executable name: " << executableName << "\n";
-	std::cout << "Executable path: " << executablePath << "\n";
-	std::cout << "Input file name: " << fileNameDesignVector << "\n";
-	std::cout << "Output file name: " << fileNameInputRead << "\n";
-
-	if(ifGradientAvailable){
-		std::cout<<"Uses gradient vector: Yes\n";
-
-	}
-	else{
-		std::cout<<"Uses gradient vector: No\n";
-
-	}
-
-
-#if 0
-	surrogateModel.printSurrogateModel();
-#endif
-	std::cout << "#####################################################\n\n";
-}
-
-
-bool ConstraintFunction::isInequalityTypeValid(const std::string &inequalityType){
-
-	if (inequalityType == ">") return true;
-	if (inequalityType == "<") return true;
-
-	return false;
-
-}
-
-void ConstraintFunction::setParametersByDefinition(ConstraintDefinition inequalityConstraint){
-
-
-	assert(isNotEmpty(inequalityConstraint.inequalityType));
-	assert(isNotEmpty(inequalityConstraint.name));
-	assert(isInequalityTypeValid(inequalityConstraint.inequalityType));
-
-
-	ID = inequalityConstraint.ID;
-
-	executableName = inequalityConstraint.executableName;
-	executablePath = inequalityConstraint.path;
-	fileNameDesignVector = inequalityConstraint.designVectorFilename;
-	fileNameInputRead = inequalityConstraint.outputFilename;
-	inequalityType = inequalityConstraint.inequalityType;
-	name =  inequalityConstraint.name;
-
-	value = inequalityConstraint.value;
-
-
-
-
-	if(isNotEmpty(inequalityConstraint.marker)){
-
-		readMarker = inequalityConstraint.marker;
-		ifMarkerIsSet = true;
-
-	}
-
-	if(isNotEmpty(inequalityConstraint.markerForGradient)){
-
-
-		readMarkerAdjoint = inequalityConstraint.markerForGradient;
-		ifAdjointMarkerIsSet = true;
-
-	}
-
-
-
-	ifInequalityConstraintSpecified  = true;
-
+void ConstraintFunction::setParametersByDefinition(ConstraintDefinition definitionInput){
+	definitionConstraint = definitionInput;
+	definition.designVectorFilename = definitionConstraint.designVectorFilename;
+	definition.executableName = definitionConstraint.executableName;
+	definition.executableNameLowFi = definitionConstraint.executableNameLowFi;
+	definition.modelHiFi = definitionConstraint.modelHiFi;
+	definition.modelLowFi = definitionConstraint.modelLowFi;
+	definition.ifMultiLevel = definitionConstraint.ifMultiLevel;
+	definition.name = definitionConstraint.name;
+	definition.nameHighFidelityTrainingData = definitionConstraint.nameHighFidelityTrainingData;
+	definition.nameLowFidelityTrainingData = definitionConstraint.nameLowFidelityTrainingData;
+	definition.path = definitionConstraint.path;
+	definition.pathLowFi = definitionConstraint.pathLowFi;
+	definition.outputFilename = definitionConstraint.outputFilename;
+	definition.outputFilenameLowFi = definitionConstraint.outputFilenameLowFi;
 	ifDefinitionIsSet = true;
 
-
 }
 
 
 
-double ConstraintFunction::getValue(void) const{
 
-	return value;
-
-
+void ConstraintFunction::setID(int givenID){
+	definitionConstraint.ID = givenID;
 }
 
+int ConstraintFunction::getID(void) const{
+	return definitionConstraint.ID;
+}
+
+void ConstraintFunction::setInequalityType(std::string type){
+
+	assert(type.compare(">") == 0  || type.compare("<") == 0);
+	definitionConstraint.inequalityType = type;
+
+}
 std::string ConstraintFunction::getInequalityType(void) const{
+	return definitionConstraint.inequalityType;
+}
 
-	return inequalityType;
+void ConstraintFunction::setInequalityTargetValue(double value){
+	definitionConstraint.value = value;
 
-
+}
+double ConstraintFunction::getInequalityTargetValue(void) const{
+	return definitionConstraint.value;
 }
 
 
 bool ConstraintFunction::checkFeasibility(double valueIn) const{
 
-	assert(ifInequalityConstraintSpecified);
-
 	bool result = false;
-	if (inequalityType == "<") {
-
-		if (valueIn < value) {
-
-			result = true;
-
-		}
-
-	}
-
-	if (inequalityType == ">") {
-
-		if (valueIn > value) {
-
-			result = true;
-
-		}
-
-	}
-
-	return result;
-}
-
-
-void ConstraintFunction::evaluate(Design &d) {
-
-	double functionValue = 0.0;
-
-	rowvec x = d.designParameters;
-	if (ifFunctionPointerIsSet) {
-
-		functionValue = objectiveFunPtr(x.memptr());
-
-
-		d.trueValue = functionValue;
-		d.objectiveFunctionValue = functionValue;
-
-	}
-
-	else if (executableName != "None" && fileNameDesignVector != "None") {
-
-		if (ifRunNecessary) {
-
-			std::string runCommand = getExecutionCommand();
-#if 0
-			cout<<"calling a system command\n";
-#endif
-
-			system(runCommand.c_str());
-
-		}
-
-#if 0
-		cout<<"No need to call a system command\n";
-#endif
-
-
-
-	} else {
-
-		cout<< "ERROR: Cannot evaluate the constraint function. Check settings!\n";
-		abort();
-	}
-
-
-}
-
-void ConstraintFunction::addDesignToData(Design &d){
-
-
-}
-
-
-
-ConstraintFunction2::ConstraintFunction2(){}
-
-void ConstraintFunction2::setID(int givenID){
-
-	constraintID = givenID;
-}
-
-int ConstraintFunction2::getID(void) const{
-
-	return constraintID;
-}
-
-void ConstraintFunction2::setInequalityType(std::string type){
-
-	assert(type.compare(">") == 0  || type.compare("<") == 0);
-
-	inequalityType = type;
-
-}
-std::string ConstraintFunction2::getInequalityType(void) const{
-
-	return inequalityType;
-}
-
-void ConstraintFunction2::setInequalityTargetValue(double value){
-
-	constraintTargetValue = value;
-
-}
-double ConstraintFunction2::getInequalityTargetValue(void) const{
-
-	return constraintTargetValue;
-}
-
-
-bool ConstraintFunction2::checkFeasibility(double valueIn) const{
-
-	bool result = false;
-	if (inequalityType.compare("<") == 0) {
-		if (valueIn < constraintTargetValue) {
+	if (definitionConstraint.inequalityType.compare("<") == 0) {
+		if (valueIn < definitionConstraint.value) {
 			result = true;
 		}
 	}
-	if (inequalityType.compare(">") == 0) {
-		if (valueIn > constraintTargetValue) {
+	if (definitionConstraint.inequalityType.compare(">") == 0) {
+		if (valueIn > definitionConstraint.value) {
 			result = true;
 		}
 	}
@@ -535,7 +177,7 @@ bool ConstraintFunction2::checkFeasibility(double valueIn) const{
 }
 
 
-void ConstraintFunction2::readOutputDesign(Design &d) const{
+void ConstraintFunction::readOutputDesign(Design &d) const{
 
 	if(evaluationMode.compare("primal") == 0 ){
 
@@ -551,11 +193,7 @@ void ConstraintFunction2::readOutputDesign(Design &d) const{
 		resultBuffer = readOutput(2);
 		d.trueValue = resultBuffer(0);
 		d.objectiveFunctionValue = d.trueValue;
-
 		d.tangentValue = resultBuffer(1);
-
-
-
 	}
 
 	if(evaluationMode.compare("adjoint") == 0 ){
@@ -563,7 +201,11 @@ void ConstraintFunction2::readOutputDesign(Design &d) const{
 		rowvec resultBuffer(1+dim);
 
 		resultBuffer = readOutput(1+dim);
-		d.constraintTrueValues(getID()) = resultBuffer(0);
+
+		int id = definitionConstraint.ID;
+		assert(id>=0);
+
+		d.constraintTrueValues(id) = resultBuffer(0);
 
 		rowvec gradient(dim,fill::zeros);
 
@@ -571,14 +213,12 @@ void ConstraintFunction2::readOutputDesign(Design &d) const{
 
 			gradient(i) = resultBuffer(i+1);
 		}
-
 		d.constraintGradients.push_back(gradient);
-
 	}
 
 }
 
-void ConstraintFunction2::evaluateDesign(Design &d){
+void ConstraintFunction::evaluateDesign(Design &d){
 
 	assert(d.designParameters.size() == dim);
 
@@ -588,23 +228,24 @@ void ConstraintFunction2::evaluateDesign(Design &d){
 
 }
 
-void ConstraintFunction2::addDesignToData(Design &d){
+void ConstraintFunction::addDesignToData(Design &d){
 
 	assert((isNotEmpty(definition.nameHighFidelityTrainingData)));
 	assert(ifInitialized);
-	assert(constraintID>=0);
+
+	assert(definitionConstraint.ID >= 0);
 
 	rowvec newsample;
 
 
 	if(evaluationMode.compare("primal") == 0 ){
-		newsample = d.constructSampleConstraint(constraintID);
+		newsample = d.constructSampleConstraint(definitionConstraint.ID);
 	}
 	if(evaluationMode.compare("tangent") == 0 ){
-		newsample = d.constructSampleConstraintWithTangent(constraintID);
+		newsample = d.constructSampleConstraintWithTangent(definitionConstraint.ID);
 	}
 	if(evaluationMode.compare("adjoint") == 0 ){
-		newsample = d.constructSampleConstraintWithGradient(constraintID);
+		newsample = d.constructSampleConstraintWithGradient(definitionConstraint.ID);
 	}
 
 	assert(newsample.size()>0);
@@ -612,5 +253,13 @@ void ConstraintFunction2::addDesignToData(Design &d){
 
 
 }
+
+
+void ConstraintFunction::print(void) const{
+
+	definitionConstraint.print();
+
+}
+
 
 

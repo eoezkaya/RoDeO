@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -188,22 +188,17 @@ void SurrogateModelData::readDataTest(string inputFilename){
 	outputToScreen.printMessage("Loading test data from the file: " + inputFilename);
 
 	bool status = XrawTest.load(inputFilename.c_str(), csv_ascii);
-
-
 	if(status == true)
 	{
 		outputToScreen.printMessage("Data input is done...");
-
 	}
 	else
 	{
 		outputToScreen.printErrorMessageAndAbort("Problem with data the input (cvs ascii format), cannot read: " + inputFilename);
-
 	}
 
 	numberOfTestSamples = XrawTest.n_rows;
 	outputToScreen.printMessage("Number of test samples = ", numberOfTestSamples);
-
 
 	if(XrawTest.n_cols == dimension +1){
 
@@ -213,54 +208,36 @@ void SurrogateModelData::readDataTest(string inputFilename){
 	}
 
 	if(XrawTest.n_cols == dimension){
-
-
 		XTest = XrawTest;
 	}
-
 	if(XrawTest.n_cols < dimension || XrawTest.n_cols> dimension+1){
-
 		outputToScreen.printErrorMessageAndAbort("Problem with data the test data (cvs ascii format), too many or too few columns in file: " + inputFilename);
-
 	}
 
-
 	ifTestDataIsRead = true;
-
-
 }
 
 
 
 void SurrogateModelData::assignDimensionFromData(void){
 
-
 	unsigned int dimensionOfTrainingData;
 
 	if(ifDataHasGradients){
-
 		dimensionOfTrainingData = (rawData.n_cols-1)/2;
 	}
-
 	else if(ifDataHasDirectionalDerivatives){
-
 		dimensionOfTrainingData =  (rawData.n_cols-2)/2;
 	}
-
 	else{
-
-
 		dimensionOfTrainingData =  rawData.n_cols-1;
 	}
 
-
 	if(dimension > 0 && dimensionOfTrainingData!= dimension){
-
 		outputToScreen.printErrorMessageAndAbort("Dimension of the training data does not match with the specified dimension!");
 	}
 
 	dimension = dimensionOfTrainingData;
-
 	outputToScreen.printMessage("Dimension of the problem is identified as ", dimension);
 
 }
@@ -307,12 +284,8 @@ void SurrogateModelData::assignDirectionalDerivativesVector(void){
 	assert(dimension>0);
 
 	if(ifDataHasDirectionalDerivatives){
-
 		directionalDerivatives = rawData.col(dimension+1);
-
-
 	}
-
 }
 
 
@@ -322,11 +295,8 @@ void SurrogateModelData::assignDifferentiationDirectionMatrix(void){
 	assert(numberOfSamples>0);
 
 	if(ifDataHasDirectionalDerivatives){
-
 		differentiationDirections = rawData.submat(0, dimension+2,numberOfSamples-1,  2*dimension+1);
 	}
-
-
 }
 
 void SurrogateModelData::normalize(void){
@@ -364,7 +334,6 @@ void SurrogateModelData::normalizeSampleInputMatrix(void){
 
 	X = (1.0/dimension)*XNormalized;
 
-
 	ifDataIsNormalized = true;
 }
 
@@ -383,14 +352,9 @@ void SurrogateModelData::normalizeSampleInputMatrixTest(void){
 
 
 	for(unsigned int i=0; i<numberOfTestSamples;i++){
-
 		for(unsigned int j=0; j<dimension;j++){
-
 			XNormalized(i,j) = (XTest(i,j) - xmin(j))/deltax(j);
-
-
 		}
-
 	}
 
 	XTest = (1.0/dimension)*XNormalized;

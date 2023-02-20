@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -41,44 +41,19 @@
 
 
 
-class ConstraintDefinition{
+class ConstraintDefinition : public ObjectiveFunctionDefinition{
 
 public:
-	std::string name;
+
 	std::string inequalityType;
-
-	std::string executableName;
-	std::string path;
-	std::string designVectorFilename;
-	std::string outputFilename;
-	std::string marker;
-	std::string markerForGradient;
-
-	/* These are required only for multi-level option */
-	std::string executableNameLowFi;
-	std::string pathLowFi;
-	std::string outputFilenameLowFi;
-	std::string markerLowFi;
-	std::string markerForGradientLowFi;
-
-
-	bool ifMultiLevel = false;
-
-
 	int ID = -1;
-	bool ifGradient = false;
-	bool ifGradientLowFi = false;
-	bool ifDefined = false;
+	double value = 0.0;
 
-	double value;
 
-	ConstraintDefinition(std::string, std::string, double);
-	ConstraintDefinition(std::string);
-	ConstraintDefinition();
+	void setDefinition(std::string definition);
 	void print(void) const;
 
 };
-
 
 
 
@@ -87,86 +62,17 @@ class ConstraintFunction: public ObjectiveFunction {
 
 private:
 
-	std::string inequalityType;
-	double value;
-	bool ifRunNecessary = true;
+	ConstraintDefinition definitionConstraint;
 
-	int ID = -1;
-	bool ifInequalityConstraintSpecified  = false;
-
-	void readOutputWithoutMarkers(Design &d) const;
-	void readOutputWithMarkers(Design &d) const;
-
-	bool isInequalityTypeValid(const std::string &);
+	bool ifFunctionExplictlyDefined = false;
 
 
 public:
 
 	ConstraintFunction();
-	ConstraintFunction(std::string, unsigned int);
-	ConstraintFunction(std::string, double (*objFun)(double *), unsigned int);
 
-	void readEvaluateOutput(Design &d);
-	bool checkFeasibility(double value) const;
-	void addDesignToData(Design &);
+	void setParametersByDefinition(ConstraintDefinition);
 
-
-	void setInequalityConstraint(ConstraintDefinition inequalityConstraint);
-	void setParametersByDefinition(ConstraintDefinition inequalityConstraint);
-
-
-	bool checkIfRunExecutableNecessary(void);
-	void evaluate(Design &d);
-
-	void setID(int givenID) {
-		assert(givenID>=0);
-		ID = givenID;
-
-	}
-
-	int getID(void) const {
-
-		return ID;
-
-	}
-
-	void setrunOn(void) {
-
-		ifRunNecessary = true;
-	}
-
-	void setrunOff(void) {
-
-		ifRunNecessary = false;
-
-	}
-
-
-
-	void print(void) const;
-
-	double getValue(void) const;
-	std::string getInequalityType(void) const;
-
-
-};
-
-
-
-class ConstraintFunction2: public ObjectiveFunction {
-
-
-private:
-
-	std::string inequalityType;
-	double constraintTargetValue;
-	bool ifExplictlyDefined = false;
-	int constraintID = -1;
-
-
-public:
-
-	ConstraintFunction2();
 
 	double (*constraintFunctionPtr)(double *) = NULL;
 
@@ -186,14 +92,10 @@ public:
 	void evaluateDesign(Design &d);
 	void addDesignToData(Design &d);
 
+	void print(void) const;
+
 
 };
-
-
-
-
-
-
 
 
 

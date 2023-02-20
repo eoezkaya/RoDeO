@@ -5,7 +5,7 @@
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -63,12 +63,14 @@ RoDeODriver::RoDeODriver(){
 
 	configKeysObjectiveFunction.add(ConfigKey("OUTPUT_FILE","stringVector") );
 	configKeysObjectiveFunction.add(ConfigKey("PATH","stringVector") );
-	configKeysObjectiveFunction.add(ConfigKey("GRADIENT","stringVector") );
-	configKeysObjectiveFunction.add(ConfigKey("TANGENT","stringVector") );
 	configKeysObjectiveFunction.add(ConfigKey("EXECUTABLE","stringVector") );
+	configKeysObjectiveFunction.add(ConfigKey("SURROGATE_MODEL","stringVector") );
+
+	configKeysObjectiveFunction.add(ConfigKey("FILENAME_TRAINING_DATA","stringVector") );
 
 	configKeysObjectiveFunction.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
 	configKeysObjectiveFunction.add(ConfigKey("MULTILEVEL_MODEL","string") );
+
 
 	/* Keywords for constraints */
 
@@ -77,12 +79,12 @@ RoDeODriver::RoDeODriver(){
 
 	configKeysConstraintFunction.add(ConfigKey("OUTPUT_FILE","stringVector") );
 	configKeysConstraintFunction.add(ConfigKey("PATH","stringVector") );
-	configKeysConstraintFunction.add(ConfigKey("GRADIENT","stringVector") );
-	configKeysConstraintFunction.add(ConfigKey("TANGENT","stringVector") );
+
 	configKeysConstraintFunction.add(ConfigKey("EXECUTABLE","stringVector") );
+	configKeysConstraintFunction.add(ConfigKey("SURROGATE_MODEL","stringVector") );
 	configKeysConstraintFunction.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
 	configKeysConstraintFunction.add(ConfigKey("MULTILEVEL_MODEL","string") );
-
+	configKeysConstraintFunction.add(ConfigKey("FILENAME_TRAINING_DATA","stringVector") );
 
 
 
@@ -133,6 +135,7 @@ RoDeODriver::RoDeODriver(){
 	availableSurrogateModels.push_back("LINEAR_REGRESSION");
 	availableSurrogateModels.push_back("AGGREGATION");
 	availableSurrogateModels.push_back("MULTI_LEVEL");
+	availableSurrogateModels.push_back("TANGENT");
 
 	configFileName = settings.config_file;
 
@@ -370,42 +373,25 @@ void RoDeODriver::checkSettingsForOptimization(void) const{
 void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 
 	if(ifDisplayIsOn()){
-
 		std::cout<<"Checking consistency of the configuration parameters...\n";
 	}
 
-
 	checkIfProblemTypeIsSetProperly();
-
-
 
 	std::string type = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
 
-
 	if(type == "SURROGATE_TEST"){
-
 		checkSettingsForSurrogateModelTest();
-
-
-
 	}
 
 	if(type == "DoE"){
-
 		checkSettingsForDoE();
-
 	}
-
-
-
 
 	if(type == "Optimization" || type == "OPTIMIZATION"){
 
 		checkSettingsForOptimization();
-
-
 	}
-
 
 }
 
@@ -427,9 +413,6 @@ void RoDeODriver::checkIfProblemTypeIsSetProperly(void) const{
 
 }
 
-
-
-
 bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 
 	if (s == "DoE" || s == "DOE" || s == "OPTIMIZATION" || s == "Optimization" || s == "SURROGATE_TEST" ){
@@ -438,28 +421,23 @@ bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 	}
 	else return false;
 
-
 }
 
 
 ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 
 	if(ifDisplayIsOn()){
-
 		std::cout<<"Setting objective function...\n";
-
 	}
-
 
 
 	std::string objFunName = configKeysObjectiveFunction.getConfigKeyStringValue("NAME");
 	int dim = configKeys.getConfigKeyIntValue("DIMENSION");
-	ObjectiveFunction objFunc(objFunName, dim);
+
+	ObjectiveFunction objFunc;
+	objFunc.setDimension(dim);
 
 	std::string optimizationType = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
-
-
-
 
 
 	objFunc.setParametersByDefinition(objectiveFunction);
@@ -468,16 +446,6 @@ ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
 
 	objFunc.setParameterBounds(lb,ub);
-
-
-	std::string ifGradientAvailable = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",0);
-
-
-	if(checkIfOn(ifGradientAvailable)){
-
-		objFunc.setGradientOn();
-
-	}
 
 
 	unsigned int nIterForSurrogateTraining = 10000;
@@ -490,14 +458,6 @@ ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 
 
 	objFunc.setNumberOfTrainingIterationsForSurrogateModel(nIterForSurrogateTraining);
-
-
-	if(ifDisplayIsOn()){
-
-		objFunc.print();
-
-	}
-
 
 	return objFunc;
 
@@ -536,7 +496,7 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 
 	std::string outputFilename;
 	std::string exePath;
-	std::string ifGradient;
+	std::string surrogateModel;
 
 
 	configKeysConstraintFunction.parseString(inputString);
@@ -552,52 +512,75 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	executableName = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",0);
 	outputFilename = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",0);
 	exePath = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("PATH",0);
-	ifGradient = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",0);
+	surrogateModel = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
+
+	ConstraintDefinition constraintFunctionDefinition;
+	constraintFunctionDefinition.setDefinition(definitionBuffer);
+
+	constraintFunctionDefinition.designVectorFilename = designVectorFilename;
+	constraintFunctionDefinition.executableName = executableName;
+	constraintFunctionDefinition.outputFilename = outputFilename;
+	constraintFunctionDefinition.path = exePath;
+	constraintFunctionDefinition.modelHiFi = getSurrogateModelID(surrogateModel);
+
+	std::string multilevel;
+	multilevel = configKeysConstraintFunction.getConfigKeyStringValue("MULTILEVEL_MODEL");
 
 
-	ConstraintDefinition result(definitionBuffer);
-	result.designVectorFilename = designVectorFilename;
-	result.executableName = executableName;
-	result.outputFilename = outputFilename;
-	result.path = exePath;
+	if(checkIfOn(multilevel)){
 
+		constraintFunctionDefinition.ifMultiLevel = true;
 
-	result.ID = numberOfConstraints;
+		std::string executableNameLowFi = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",1);
+		if(executableNameLowFi.empty()){
+			abortWithErrorMessage("EXECUTABLE for the low fidelity model is not defined!");
+		}
+		constraintFunctionDefinition.executableNameLowFi = executableNameLowFi;
+
+		std::string filenameTrainingDataLowFi;
+		filenameTrainingDataLowFi = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",1);
+		if(filenameTrainingDataLowFi.empty()){
+			abortWithErrorMessage("FILENAME_TRAINING_DATA is not defined for the low fidelity model");
+		}
+		constraintFunctionDefinition.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
+
+		std::string outputFilenameLowFi = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",1);
+
+		if(outputFilenameLowFi.empty()){
+			outputFilenameLowFi = outputFilename;
+		}
+		constraintFunctionDefinition.outputFilenameLowFi = outputFilenameLowFi;
+
+		std::string surrogateModelLowFi;
+		surrogateModelLowFi = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",1);
+		if(surrogateModelLowFi.empty()){
+			surrogateModelLowFi = surrogateModel;
+		}
+		constraintFunctionDefinition.modelLowFi = getSurrogateModelID(surrogateModelLowFi);
+
+		std::string exePathLowFi = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("PATH",1);
+		if(exePathLowFi.empty()){
+			exePathLowFi = exePath;
+		}
+		constraintFunctionDefinition.pathLowFi = exePathLowFi;
+
+	}
+
+	constraintFunctionDefinition.ID = numberOfConstraints;
 	numberOfConstraints++;
 
-
-	if(checkIfOn(ifGradient)){
-
-		result.ifGradient = true;
-
-	}
-
-	if(ifDisplayIsOn()){
-
-		std::cout <<"Adding a constraint definition with ID = "<< result.ID<<"\n";
-	}
-
-
-	constraints.push_back(result);
+	constraints.push_back(constraintFunctionDefinition);
 
 
 }
-
 
 ObjectiveFunctionDefinition RoDeODriver::getObjectiveFunctionDefinition(void) const{
-
 	return objectiveFunction;
-
-
 }
 
-
 ConstraintDefinition RoDeODriver::getConstraintDefinition(unsigned int i) const{
-
 	assert(i<constraints.size());
-	return this->constraints.at(i);
-
-
+	return constraints.at(i);
 }
 
 
@@ -627,10 +610,9 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	std::string executableName;
 	std::string outputFilename;
 	std::string exePath;
-	std::string gradient;
-	std::string tangent;
-
+	std::string surrogateModel;
 	std::string multilevel;
+	std::string filenameTrainingData;
 
 	configKeysObjectiveFunction.parseString(inputString);
 
@@ -640,17 +622,14 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 #endif
 
 
-
 	name = configKeysObjectiveFunction.getConfigKeyStringValue("NAME");
 	designVectorFilename = configKeysObjectiveFunction.getConfigKeyStringValue("DESIGN_VECTOR_FILE");
-
 
 	executableName = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",0);
 	outputFilename = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",0);
 	exePath = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("PATH",0);
-	gradient = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",0);
-	tangent = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("TANGENT",0);
-
+	filenameTrainingData = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
+	surrogateModel = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
 
 	objectiveFunction.name = name;
 	objectiveFunction.designVectorFilename =  designVectorFilename;
@@ -658,68 +637,52 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	objectiveFunction.executableName = executableName;
 	objectiveFunction.path = exePath;
 	objectiveFunction.outputFilename = outputFilename;
+	objectiveFunction.nameHighFidelityTrainingData = filenameTrainingData;
+	objectiveFunction.modelHiFi = getSurrogateModelID(surrogateModel);
 
-	if(checkIfOn(gradient)){
-		objectiveFunction.ifGradient = true;
-	}
-	if(checkIfOn(tangent)){
-		objectiveFunction.ifTangent = true;
-	}
 
 	multilevel = configKeysObjectiveFunction.getConfigKeyStringValue("MULTILEVEL_MODEL");
+
 
 	if(checkIfOn(multilevel)){
 
 		objectiveFunction.ifMultiLevel = true;
 
 		std::string executableNameLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",1);
-
 		if(executableNameLowFi.empty()){
-
-			std::cout<<"ERROR: EXECUTABLE for the low fidelity model is not defined!\n";
-			abort();
-
+			abortWithErrorMessage("EXECUTABLE for the low fidelity model is not defined!");
 		}
+		objectiveFunction.executableNameLowFi = executableNameLowFi;
+
+		std::string filenameTrainingDataLowFi;
+
+		filenameTrainingDataLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",1);
+
+		if(filenameTrainingDataLowFi.empty()){
+			abortWithErrorMessage("FILENAME_TRAINING_DATA is not defined for the low fidelity model");
+		}
+		objectiveFunction.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
 
 
 		std::string outputFilenameLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",1);
-
 		if(outputFilenameLowFi.empty()){
-
 			outputFilenameLowFi = outputFilename;
-
 		}
+		objectiveFunction.outputFilenameLowFi = outputFilenameLowFi;
 
 		std::string exePathLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("PATH",1);
-
 		if(exePathLowFi.empty()){
-
 			exePathLowFi = exePath;
-
 		}
-
-		std::string	markerLowFi =  configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("MARKER",1);
-
-
-
-		std::string	markerGradientLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("MARKER_FOR_GRADIENT",1);
-
-
-		std::string	gradientLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("GRADIENT",1);
-
-		if(gradientLowFi.empty()){
-
-			gradientLowFi = gradient;
-
-		}
-
-		objectiveFunction.executableNameLowFi = executableNameLowFi;
-		objectiveFunction.outputFilenameLowFi = outputFilenameLowFi;
 		objectiveFunction.pathLowFi = exePathLowFi;
 
-		if(checkIfOn(gradientLowFi)){
-			objectiveFunction.ifGradientLowFi = true;
+		std::string surrogateModelLowFi;
+		surrogateModelLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",1);
+		if(surrogateModelLowFi.empty()){
+			surrogateModelLowFi = surrogateModel;
 		}
+		objectiveFunction.modelLowFi = getSurrogateModelID(surrogateModelLowFi);
+
 
 	}
 	objectiveFunction.ifDefined = true;
@@ -727,8 +690,6 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 
 }
-
-
 
 void RoDeODriver::extractObjectiveFunctionDefinitionFromString(std::string inputString){
 
@@ -758,8 +719,6 @@ void RoDeODriver::extractObjectiveFunctionDefinitionFromString(std::string input
 		stringBufferObjectiveFunction.assign(inputString,foundLeftBracket+1,foundRightBracket - foundLeftBracket -1);
 
 		parseObjectiveFunctionDefinition(stringBufferObjectiveFunction);
-
-
 
 
 	}
@@ -864,19 +823,14 @@ void RoDeODriver::extractConfigDefinitionsFromString(std::string inputString){
 
 ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDefinition) const{
 
-	assert(constraintDefinition.ID >= 0);
-
-	if(ifDisplayIsOn()){
-
-		std::cout<<"Setting the constraint with ID = "<< constraintDefinition.ID << "\n";
-
-	}
 
 
 	int dim = configKeys.getConfigKeyIntValue("DIMENSION");
 
 
-	ConstraintFunction constraintFunc(constraintDefinition.name, dim);
+	ConstraintFunction constraintFunc;
+	constraintFunc.setDimension(dim);
+
 	constraintFunc.setParametersByDefinition(constraintDefinition);
 
 	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
@@ -884,40 +838,11 @@ ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDef
 	constraintFunc.setParameterBounds(lb,ub);
 
 
-	if(constraintDefinition.ifGradient){
-
-		constraintFunc.setGradientOn();
-
-	}
-
 
 	unsigned int nIterForSurrogateTraining = 10000;
 
 
-
-
-
-
 	constraintFunc.setNumberOfTrainingIterationsForSurrogateModel(nIterForSurrogateTraining);
-
-
-	if(ifDisplayIsOn()){
-
-
-		constraintFunc.print();
-
-	}
-
-	if(this->checkIfRunIsNecessary(constraintDefinition.ID)){
-
-		constraintFunc.setrunOn();
-	}
-	else{
-
-		constraintFunc.setrunOff();
-	}
-
-
 
 	return constraintFunc;
 
@@ -1079,10 +1004,9 @@ void RoDeODriver::determineProblemDimensionAndBoxConstraintsFromTrainingData(voi
 Optimizer RoDeODriver::setOptimizationStudy(void) {
 
 	std::string name = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
-	std::string type = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
 	int dim = configKeys.getConfigKeyIntValue("DIMENSION");
 
-	Optimizer optimizationStudy(name, dim, type);
+	Optimizer optimizationStudy(name, dim);
 	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
 	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
 
@@ -1285,9 +1209,11 @@ SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
 	}
 
 	if(modelName == "MULTI_LEVEL" ||  modelName == "multi-level" || modelName == "MULTI-LEVEL") {
-
 		return MULTI_LEVEL;
+	}
 
+	if(modelName == "TANGENT" ||  modelName == "tangent" || modelName == "Tangent") {
+		return TANGENT;
 	}
 
 
@@ -1300,37 +1226,27 @@ void RoDeODriver::runSurrogateModelTest(void){
 	SurrogateModelTester surrogateTest;
 
 	std::string problemName = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
-
 	surrogateTest.setName(problemName);
 
 	std::string surrogateModelType = configKeys.getConfigKeyStringValue("SURROGATE_MODEL");
-
 	SURROGATE_MODEL modelID = getSurrogateModelID(surrogateModelType);
 
-
 	int dimension = configKeys.getConfigKeyIntValue("DIMENSION");
-
 	surrogateTest.setDimension(dimension);
 
 	std::string filenameTrainingData = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
-
 	surrogateTest.setFileNameTrainingData(filenameTrainingData);
 
 
 	if(modelID == MULTI_LEVEL){
 
 		std::string filenameTrainingDataLowFidelity = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",1);
-
 		surrogateTest.setFileNameTrainingDataLowFidelity(filenameTrainingDataLowFidelity);
-
 	}
 
 
 	std::string filenameTestData = configKeys.getConfigKeyStringValue("FILENAME_TEST_DATA");
-
 	surrogateTest.setFileNameTestData(filenameTestData);
-
-
 
 	if(configKeys.ifConfigKeyIsSet("LOWER_BOUNDS") && configKeys.ifConfigKeyIsSet("UPPER_BOUNDS")){
 
@@ -1338,10 +1254,7 @@ void RoDeODriver::runSurrogateModelTest(void){
 		vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
 
 		Bounds boxConstraints(lb,ub);
-
-		boxConstraints.print();
 		surrogateTest.setBoxConstraints(boxConstraints);
-
 
 	}
 
@@ -1361,15 +1274,9 @@ void RoDeODriver::runSurrogateModelTest(void){
 		std::string display = configKeys.getConfigKeyStringValue("DISPLAY");
 
 		if(checkIfOn(display)){
-
 			surrogateTest.setDisplayOn();
-			surrogateTest.print();
 		}
-
-
-
 	}
-
 
 	surrogateTest.performSurrogateModelTest();
 

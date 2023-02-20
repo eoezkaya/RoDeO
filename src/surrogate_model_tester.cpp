@@ -37,37 +37,24 @@
 
 
 
-SurrogateModelTester::SurrogateModelTester(){
-
-
-
-}
+SurrogateModelTester::SurrogateModelTester(){}
 
 unsigned int SurrogateModelTester::getDimension(void) const{
-
 	return dimension;
-
-
 }
 
 void SurrogateModelTester::setDimension(unsigned int value){
-
 	dimension = value;
-
 }
 
-
 void SurrogateModelTester::setName(string nameInput){
-
 	assert(isNotEmpty(nameInput));
-	name = nameInput;
 
+	name = nameInput;
 }
 
 void SurrogateModelTester::setNumberOfTrainingIterations(unsigned int nIterations) {
-
 	numberOfTrainingIterations = nIterations;
-
 }
 
 
@@ -91,10 +78,13 @@ void SurrogateModelTester::setSurrogateModel(SURROGATE_MODEL modelType){
 		  surrogateModel = &krigingModel;
 
 
-	    break;
+		  break;
 
 	  case TANGENT:
+
 		  surrogateModel = &tangentModel;
+
+		  break;
 
 	  case AGGREGATION:
 
@@ -150,12 +140,8 @@ void SurrogateModelTester::setBoxConstraints(Bounds boxConstraintsInput){
 }
 
 Bounds SurrogateModelTester::getBoxConstraints(void) const{
-
 	return boxConstraints;
-
 }
-
-
 
 void SurrogateModelTester::performSurrogateModelTest(void){
 
@@ -163,13 +149,18 @@ void SurrogateModelTester::performSurrogateModelTest(void){
 
 	outputToScreen.printMessage("Performing surrogate model test...");
 
+	outputToScreen.printMessage("Reading training data...");
 	surrogateModel->readData();
+	outputToScreen.printMessage("Reading test data...");
 	surrogateModel->readDataTest();
 	surrogateModel->setBoxConstraints(boxConstraints);
+	outputToScreen.printMessage("Data normalization...");
 	surrogateModel->normalizeData();
 	surrogateModel->normalizeDataTest();
+	outputToScreen.printMessage("Surrogate model initialization...");
 	surrogateModel->initializeSurrogateModel();
 	surrogateModel->setNumberOfTrainingIterations(numberOfTrainingIterations);
+	outputToScreen.printMessage("Surrogate model training...");
 	surrogateModel->train();
 
 

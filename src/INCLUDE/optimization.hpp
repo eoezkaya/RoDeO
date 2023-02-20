@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
@@ -68,8 +68,7 @@ private:
 
 	std::vector<CDesignExpectedImprovement> theMostPromisingDesigns;
 
-	bool ifObjectFunctionIsSpecied = false;
-	bool ifSurrogatesAreInitialized = false;
+
 	bool isHistoryFileInitialized = false;
 
 	bool IfinitialValueForObjFunIsSet= false;
@@ -107,15 +106,21 @@ public:
 	unsigned int sampleDim;
 
 	unsigned int iterGradientEILoop = 100;
-	std::string optimizationType = "minimize";
 
 	bool ifVisualize = false;
 	bool ifDisplay = false;
-
 	bool ifBoxConstraintsSet = false;
+	bool ifObjectFunctionIsSpecied = false;
+	bool ifSurrogatesAreInitialized = false;
+
+	Optimizer();
+	Optimizer(std::string ,int);
 
 
-	Optimizer(std::string ,int, std::string = "minimize");
+	void setDimension(unsigned int);
+	void setName(std::string);
+
+
 	void setParameterToDiscrete(unsigned int, double);
 
 	void roundDiscreteParameters(rowvec &);

@@ -84,11 +84,11 @@ protected:
 
 	void setDefinitionForCase2(void){
 
-		definition.ifGradient = true;
+		definition.modelHiFi = AGGREGATION;
 	}
 	void setDefinitionForCase3(void){
 
-		definition.ifTangent  = true;
+		definition.modelHiFi = TANGENT;
 	}
 
 	void setDefinitionForCase4(void){

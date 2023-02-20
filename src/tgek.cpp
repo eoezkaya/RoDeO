@@ -65,8 +65,6 @@ void TGEKModel::setNameOfInputFile(string filename){
 void TGEKModel::setNameOfHyperParametersFile(string filename){
 
 
-
-
 }
 void TGEKModel::setNumberOfTrainingIterations(unsigned int n){
 

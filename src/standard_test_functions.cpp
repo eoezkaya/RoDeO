@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -23,7 +23,7 @@
  * General Public License along with CoDiPack.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -137,6 +137,19 @@ NonLinear1DTestFunction1::NonLinear1DTestFunction1(double lb, double ub):functio
 
 /***********************************************************************************/
 
+HimmelblauConstraintFunction1::HimmelblauConstraintFunction1():function("ConstraintFunction1", 2){
 
+	function.func_ptr = himmelblauConstraintFunction1;
+	function.setBoxConstraints(-6.0, 6.0);
+
+}
+
+
+HimmelblauConstraintFunction2::HimmelblauConstraintFunction2():function("ConstraintFunction2", 2){
+
+	function.func_ptr = himmelblauConstraintFunction2;
+	function.setBoxConstraints(-6.0, 6.0);
+
+}
 
 

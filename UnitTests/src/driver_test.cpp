@@ -40,9 +40,15 @@
 #ifdef TESTDRIVERON
 
 
-TEST(testDriver, testparseConstraintDefinition){
+TEST(testDriver, parseConstraintDefinition){
 
-	std::string inputString = "DEFINITION = constraint1 > 1.0\nDESIGN_VECTOR_FILE = dv.dat\nEXECUTABLE = himmelblau\nOUTPUT_FILE = objFunVal.dat\nPATH = ./\nGRADIENT=yes\n";
+	std::string inputString = "DEFINITION = constraint1 > 1.0\n";
+	inputString+="DESIGN_VECTOR_FILE = dv.dat\n";
+	inputString+="EXECUTABLE = himmelblau\n";
+	inputString+="OUTPUT_FILE = objFunVal.dat\n";
+	inputString+="PATH = ./\n";
+	inputString+="SURROGATE_MODEL = UNIVERSAL_KRIGING";
+
 
 #if 0
 	std::cout<<inputString<<"\n";
@@ -58,14 +64,19 @@ TEST(testDriver, testparseConstraintDefinition){
 	EXPECT_EQ(constraintDef.outputFilename, "objFunVal.dat");
 	EXPECT_EQ(constraintDef.executableName, "himmelblau");
 	EXPECT_EQ(constraintDef.path, "./");
-	EXPECT_EQ(constraintDef.ifGradient, true);
+
 
 
 }
 
-TEST(testDriver, testparseObjectiveFunctionDefinition){
+TEST(testDriver, parseObjectiveFunctionDefinition){
 
-	std::string inputString = "NAME = ObjFun\nDESIGN_VECTOR_FILE = dv.dat\nEXECUTABLE = himmelblau\nOUTPUT_FILE = objFunVal.dat\nPATH = ./\nGRADIENT= on\n";
+	std::string inputString = "NAME = ObjFun\n";
+	inputString+="DESIGN_VECTOR_FILE = dv.dat\n";
+	inputString+="EXECUTABLE = himmelblau\n";
+	inputString+="OUTPUT_FILE = objFunVal.dat\n";
+	inputString+="PATH = ./\n";
+	inputString+="SURROGATE_MODEL = UNIVERSAL_KRIGING";
 #if 0
 	std::cout<<inputString<<"\n";
 #endif
@@ -79,12 +90,11 @@ TEST(testDriver, testparseObjectiveFunctionDefinition){
 	EXPECT_EQ(ObjDef.outputFilename, "objFunVal.dat");
 	EXPECT_EQ(ObjDef.executableName, "himmelblau");
 	EXPECT_EQ(ObjDef.path, "./");
-	EXPECT_EQ(ObjDef.ifGradient, true);
 
 }
 
 
-TEST(testDriver, testextractConfigDefinitionFromString){
+TEST(testDriver, extractConfigDefinitionFromString){
 
 	std::string inputString = "DIMENSION = 2\nPROBLEM_TYPE = optimization\n";
 
@@ -113,7 +123,7 @@ TEST(testDriver, testextractConfigDefinitionFromString){
 
 
 
-TEST(testDriver, testextractConstraintDefinitionsFromString){
+TEST(testDriver, extractConstraintDefinitionsFromString){
 
 	std::string inputString = "CONSTRAINT_FUNCTION{\nDEFINITION = constraint1 > 1.0\nDESIGN_VECTOR_FILE = dv.dat\nEXECUTABLE = himmelblau\nOUTPUT_FILE = objFunVal.dat\nPATH = ./\n}\n#some comment\nCONSTRAINT_FUNCTION{\nDEFINITION = constraint2 < 0.0\nDESIGN_VECTOR_FILE = dv.dat\nEXECUTABLE = himmelblau\nOUTPUT_FILE = objFunVal.dat\nPATH = ./\n}\n#some comment again";
 
@@ -150,7 +160,7 @@ TEST(testDriver, testextractConstraintDefinitionsFromString){
 }
 
 
-TEST(testDriver, testextractObjectiveFunctionDefinitionFromString){
+TEST(testDriver, extractObjectiveFunctionDefinitionFromString){
 
 	std::string inputString = "OBJECTIVE_FUNCTION{\nNAME = objFun\nDESIGN_VECTOR_FILE = dv.dat\nEXECUTABLE = himmelblau\nOUTPUT_FILE = objFunVal.dat\nPATH = ./\n}";
 
@@ -178,7 +188,7 @@ TEST(testDriver, testextractObjectiveFunctionDefinitionFromString){
 
 
 
-TEST(testDriver, testreadConfigFileForConstraintFunction){
+TEST(testDriver, readConfigFileForConstraintFunction){
 
 	RoDeODriver testDriver;
 	testDriver.setConfigFilename("testConfigFileForConstraintFunction.cfg");
@@ -200,7 +210,7 @@ TEST(testDriver, testreadConfigFileForConstraintFunction){
 
 }
 
-TEST(testDriver, testreadConfigFile){
+TEST(testDriver, readConfigFile){
 	RoDeODriver testDriver;
 	testDriver.setConfigFilename("testConfigFile.cfg");
 	testDriver.readConfigFile();
@@ -226,14 +236,13 @@ TEST(testDriver, testreadConfigFile){
 	EXPECT_EQ(objFun.executableName, "himmelblau");
 	EXPECT_EQ(objFun.outputFilename, "objFunVal.dat");
 	EXPECT_EQ(objFun.path, "./");
-	EXPECT_EQ(objFun.ifGradient, false);
+
 }
 
 TEST(testDriver, testreadConfigFile2){
 	RoDeODriver testDriver;
 	testDriver.setConfigFilename("testConfigFile2.cfg");
 	testDriver.readConfigFile();
-
 
 	int dimension = testDriver.getDimension();
 	EXPECT_EQ(dimension, 2);
@@ -246,7 +255,44 @@ TEST(testDriver, testreadConfigFile2){
 	EXPECT_EQ(objFun.executableName, "himmelblau");
 	EXPECT_EQ(objFun.outputFilename, "objFunVal.dat");
 	EXPECT_EQ(objFun.path, "./");
-	EXPECT_EQ(objFun.ifGradient, true);
+}
+
+TEST(testDriver, testsetObjectiveFunction){
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFileDoETest1.cfg");
+	testDriver.readConfigFile();
+
+	ObjectiveFunction testObjFun = testDriver.setObjectiveFunction();
+
+	std::string command = testObjFun.getExecutionCommand();
+	int dim = testObjFun.getDimension();
+
+	ASSERT_EQ(command,"./himmelblauDoETest1");
+	ASSERT_EQ(dim,2);
+
+
+}
+
+
+TEST(testDriver, testsetObjectiveFunctionWithMultiLevel){
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFilesetObjectiveFunctionML.cfg");
+	testDriver.readConfigFile();
+
+	//	testDriver.printObjectiveFunctionDefinition();
+
+	ObjectiveFunction testObjFun = testDriver.setObjectiveFunction();
+
+	std::string command = testObjFun.getExecutionCommand();
+	int dim = testObjFun.getDimension();
+
+	ASSERT_EQ(command,"./himmelblau");
+	ASSERT_EQ(dim,2);
+
+	std::string commandLowFi = testObjFun.getExecutionCommandLowFi();
+	ASSERT_EQ(commandLowFi,"./himmelblauLowFi");
 
 }
 
@@ -254,7 +300,8 @@ TEST(testDriver, testreadConfigFile2){
 
 
 
-TEST(testDriver, testrunSurrogateModelTestOrdinaryKriging){
+
+TEST(testDriver, runSurrogateModelTestOrdinaryKriging){
 
 	/* Here we test the ORDINARY_KRIGING model using the Himmelblau function */
 
@@ -266,32 +313,86 @@ TEST(testDriver, testrunSurrogateModelTestOrdinaryKriging){
 	testFunction.function.generateTrainingSamples();
 	testFunction.function.generateTestSamples();
 
-
 	RoDeODriver testDriver;
 	testDriver.setConfigFilename("testConfigFileSurrogateTest1.cfg");
 	testDriver.readConfigFile();
-
-
 	testDriver.runSurrogateModelTest();
 
 	mat results;
-	results.load("surrogateTest.csv", csv_ascii);
+	results.load("surrogateTestResults.csv");
 
-	results.print();
+	ASSERT_EQ(results.n_cols, 5);
+	ASSERT_EQ(results.n_rows, 201);
 
-
-	ASSERT_EQ(results.n_cols, 3);
-	ASSERT_EQ(results.n_rows, 200);
-
-
-
-//	remove("surrogateTest.csv");
-//	remove("trainingData.csv");
-//	remove("testData.csv");
-//
-//
+	remove("surrogateTest.csv");
+	remove("trainingData.csv");
+	remove("testData.csv");
 
 }
+
+TEST(testDriver, runSurrogateModelTestTangentModel){
+
+	HimmelblauFunction testFunction;
+	testFunction.function.filenameTrainingData = "trainingData.csv";
+	testFunction.function.filenameTestData = "testData.csv";
+	testFunction.function.numberOfTestSamples = 200;
+	testFunction.function.numberOfTrainingSamples = 50;
+	testFunction.function.generateTrainingSamplesWithTangents();
+	testFunction.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFileSurrogateTestTangent.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv");
+
+	ASSERT_EQ(results.n_cols, 5);
+	ASSERT_EQ(results.n_rows, 201);
+
+	remove("surrogateTest.csv");
+	remove("trainingData.csv");
+	remove("testData.csv");
+
+}
+
+TEST(testDriver, runSurrogateModelTestMultiLevelModel){
+
+	HimmelblauFunction testFunction;
+	testFunction.function.filenameTrainingDataHighFidelity = "trainingData.csv";
+	testFunction.function.filenameTrainingDataLowFidelity = "trainingDataLowFi.csv";
+	testFunction.function.filenameTestData = "testData.csv";
+	testFunction.function.numberOfTestSamples = 200;
+	testFunction.function.numberOfTrainingSamples = 50;
+	testFunction.function.numberOfTrainingSamplesLowFi = 100;
+	testFunction.function.generateTrainingSamplesMultiFidelity();
+	testFunction.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+	testDriver.setConfigFilename("testConfigFileSurrogateTestMultiLevel.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv");
+
+	ASSERT_EQ(results.n_cols, 5);
+	ASSERT_EQ(results.n_rows, 201);
+
+	remove("surrogateTest.csv");
+	remove("trainingData.csv");
+	remove("trainingDataLowFi.csv");
+	remove("testData.csv");
+
+}
+
+
+
+
+
+
+
 //
 //
 //
@@ -350,70 +451,10 @@ TEST(testDriver, testrunSurrogateModelTestOrdinaryKriging){
 //
 //}
 //
-//TEST(testDriver, testrunSurrogateModelTestMultiLevel){
-//
-//	int nSamplesLowFi = 200;
-//	int nSamplesHiFi  = 50;
-//
-//	unsigned int NTest = 100;
-//	unsigned int dim = 2;
-//
-//	generateHimmelblauDataMultiFidelity("trainingData.csv","trainingDataLowFidelity.csv",nSamplesHiFi ,nSamplesLowFi);
-//
-//	TestFunction himmelblauFunction("Himmelblau",dim);
-//	himmelblauFunction.func_ptr =  Himmelblau;
-//	himmelblauFunction.setBoxConstraints(-6.0, 6.0);
+
 //
 //
-//
-//	himmelblauFunction.numberOfTestSamples = NTest;
-//	himmelblauFunction.generateSamplesInputTestData();
-//	himmelblauFunction.generateTestSamples();
-//	mat testData      = himmelblauFunction.testSamples;
-//	mat testDataInput = himmelblauFunction.testSamplesInput;
-//
-//	saveMatToCVSFile(testDataInput,"testDataInput.csv");
-//
-//	RoDeODriver testDriver;
-//	testDriver.setConfigFilename("testConfigFileSurrogateTest3.cfg");
-//	testDriver.readConfigFile();
-//
-//
-//	testDriver.runSurrogateModelTest();
-//
-//	mat results;
-//	results.load("surrogateTest.csv", csv_ascii);
-//
-//	ASSERT_EQ(results.n_cols, dim+1);
-//	ASSERT_EQ(results.n_rows, NTest);
-//
-//
-//	remove("surrogateTest.csv");
-//	remove("trainingData.csv");
-//	remove("trainingDataLowFidelity.csv");
-//	remove("testDataInput.csv");
-//
-//
-//}
-//
-//
-//TEST(testDriver, testsetObjectiveFunction){
-//
-//	RoDeODriver testDriver;
-//	testDriver.setConfigFilename("testConfigFileDoETest1.cfg");
-//	testDriver.readConfigFile();
-//
-//	ObjectiveFunction testObjFun = testDriver.setObjectiveFunction();
-//
-//	std::string command = testObjFun.getExecutionCommand();
-//	int dim = testObjFun.getDimension();
-//
-//	ASSERT_EQ(command,"./himmelblauDoETest1");
-//	ASSERT_EQ(dim,2);
-//
-//
-//}
-//
+
 //
 ////TEST(testDriver, testsetObjectiveFunctionWithMultiLevel){
 ////
