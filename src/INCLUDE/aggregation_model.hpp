@@ -83,7 +83,7 @@ public:
 	double interpolateWithGradients(rowvec) const ;
 	void interpolateWithVariance(rowvec,double *,double *) const;
 
-	void calculateExpectedImprovement(CDesignExpectedImprovement &) const;
+//	void calculateExpectedImprovement(CDesignExpectedImprovement &) const;
 
 
 	unsigned int findNearestNeighbor(const rowvec &) const;

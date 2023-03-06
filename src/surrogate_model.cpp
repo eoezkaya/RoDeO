@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDEO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -126,8 +126,6 @@ void SurrogateModel::setBoxConstraints(Bounds boxConstraintsInput){
 
 	data.setBoxConstraints(boxConstraintsInput);
 
-
-
 }
 
 
@@ -136,7 +134,6 @@ void SurrogateModel::setBoxConstraints(vec xmin, vec xmax){
 
 	Bounds boxConstraints(xmin,xmax);
 	setBoxConstraints(boxConstraints);
-
 
 }
 
@@ -217,9 +214,7 @@ void SurrogateModel::readData(void){
 }
 
 void SurrogateModel::printData(void) const{
-
 	data.print();
-
 }
 
 void SurrogateModel::readDataTest(void){
@@ -230,6 +225,74 @@ void SurrogateModel::readDataTest(void){
 	ifHasTestData = true;
 	ifTestDataIsRead = true;
 }
+
+
+void SurrogateModel::reduceTrainingData(const vec &lb, const vec &ub) const{
+
+	assert(ifDataIsRead);
+
+
+	unsigned int dim = data.getDimension();
+	unsigned int N   = data.getNumberOfSamples();
+
+	mat readBuffer;
+
+	readBuffer.load(filenameDataInput, csv_ascii);
+	assert(N == readBuffer.n_rows);
+
+	Bounds boxConstraints = data.getBoxConstraints();
+	assert(boxConstraints.areBoundsSet());
+
+	vec lowerBounds = boxConstraints.getLowerBounds();
+	vec upperBounds = boxConstraints.getUpperBounds();
+
+	for(unsigned int i=0; i<dim; i++){
+		assert(lb(i) >=  lowerBounds(i));
+		assert(ub(i) <=  upperBounds(i));
+	}
+
+	vector<int> rowIndicesToDelete;
+	int count = 0;
+	for(unsigned int i=0; i<N; i++){
+
+		printScalar(i);
+
+		rowvec sample     = readBuffer.row(i);
+		rowvec dv         = sample.tail(dim);
+		vec x = convertToVector(dv);
+
+
+		x.print();
+
+		if(!isBetween(x,lb,ub)){
+			rowIndicesToDelete.push_back(i);
+			count++;
+		}
+
+	}
+
+	unsigned int Nleft = N - count;
+	mat writeBuffer(Nleft,readBuffer.n_cols);
+
+	for(unsigned int i=0; i<N; i++){
+
+
+	}
+
+
+
+
+
+
+
+	readBuffer.save(filenameDataInput, csv_ascii);
+
+
+}
+
+
+
+
 
 void SurrogateModel::normalizeData(void){
 
@@ -323,28 +386,16 @@ void SurrogateModel::saveTestResults(void) const{
 
 }
 
-
 void SurrogateModel::printSurrogateModel(void) const{
-
 	data.print();
-
 }
-
-
 rowvec SurrogateModel::getRowX(unsigned int index) const{
-
 	return data.getRowX(index);
-
 }
-
 
 rowvec SurrogateModel::getRowXRaw(unsigned int index) const{
-
 	return data.getRowXRaw(index);
 }
-
-
-
 
 void SurrogateModel::setNameOfInputFileTest(string filename){
 
@@ -356,9 +407,7 @@ void SurrogateModel::setNameOfOutputFileTest(string filename){
 
 	assert(isNotEmpty(filename));
 	filenameTestResults = filename;
-
 }
-
 
 void SurrogateModel::tryOnTestData(void){
 
@@ -411,18 +460,8 @@ void SurrogateModel::tryOnTestData(void){
 			output.printMessage("fExact = ",fExact(i));
 		}
 
-
 		results.row(i) = sample;
-
-
 	}
-
-
 	testResults = results;
-
-
-
-
-
 }
 

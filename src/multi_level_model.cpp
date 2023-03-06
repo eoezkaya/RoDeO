@@ -42,13 +42,7 @@ using namespace arma;
 
 using std::cout;
 
-MultiLevelModel::MultiLevelModel(){
-
-
-}
-
-
-
+MultiLevelModel::MultiLevelModel(){}
 
 void MultiLevelModel::setNameOfInputFile(string filename){
 
@@ -797,49 +791,6 @@ mat MultiLevelModel::getRawDataError(void) const{
 }
 
 
-
-void MultiLevelModel::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
-
-	double ftilde = 0.0;
-	double ssqr   = 0.0;
-
-	interpolateWithVariance(designCalculated.dv,&ftilde,&ssqr);
-
-	double	sigma = sqrt(ssqr)	;
-
-	double expectedImprovementValue = 0.0;
-
-	if(fabs(sigma) > EPSILON){
-
-		double ymin = data.getMinimumOutputVector();
-		double ymax = data.getMaximumOutputVector();
-
-		double improvement = 0.0;
-		improvement = ymin - ftilde;
-
-		double	Z = (improvement)/sigma;
-#if 0
-		printf("Z = %15.10f\n",Z);
-		printf("ymin = %15.10f\n",ymin);
-#endif
-
-
-		expectedImprovementValue = improvement*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
-	}
-	else{
-
-		expectedImprovementValue = 0.0;
-
-	}
-#if 0
-	printf("expectedImprovementValue = %20.20f\n",expectedImprovementValue);
-#endif
-
-	designCalculated.objectiveFunctionValue = ftilde;
-	designCalculated.valueExpectedImprovement = expectedImprovementValue;
-
-
-}
 
 unsigned int MultiLevelModel::findNearestNeighbourLowFidelity(rowvec x) const{
 

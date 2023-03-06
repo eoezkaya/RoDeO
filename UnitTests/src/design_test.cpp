@@ -33,9 +33,10 @@
 #include "design.hpp"
 #include "matrix_vector_operations.hpp"
 #include "random_functions.hpp"
+#include "test_defines.hpp"
 #include<gtest/gtest.h>
 
-
+#ifdef TEST_DESIGN
 
 
 class DesignTest: public ::testing::Test {
@@ -292,18 +293,11 @@ TEST_F(DesignTest, constructSampleConstraintAdjointLowFi){
 	ASSERT_EQ(samples(3), 51.2);
 	ASSERT_EQ(samples(4), -20.0);
 
-
-
-
 }
-
-
-
-
 
 TEST_F(DesignTest, saveToAFile){
 
-	testDesign.objectiveFunctionValue = 1.22;
+	testDesign.trueValue = 1.22;
 	testDesign.tag = "Global Optimum Design";
 	testDesign.ID = 22;
 
@@ -318,81 +312,104 @@ TEST_F(DesignTest, saveToAFile){
 
 }
 
+class CDesignExpectedImprovementTest: public ::testing::Test {
+protected:
+	void SetUp() override {
+		testDesign.dim = 5;
+		rowvec constraints(2,fill::zeros);
+		rowvec dv(5,fill::zeros);
+		testDesign.constraintValues = constraints;
+		testDesign.dv = dv;
+		testDesign.objectiveFunctionValue = 18.8;
+		testDesign.sigma = 5.6;
 
-
-
-
-
-
-
-
-
-
-
-
-
-TEST(testDesign, CDesignExpectedImprovementRandomGenerate){
-
-	CDesignExpectedImprovement design(5,2);
-	ASSERT_EQ(design.dim,5);
-	ASSERT_EQ(design.constraintValues.size(),2);
-
-	design.generateRandomDesignVector();
-
-	for(unsigned int i=0; i<5; i++){
-
-		ASSERT_LT(design.dv(i),0.2);
 
 	}
 
-}
+	void TearDown() override {
 
-TEST(testDesign, tgradientUpdateDesignVector){
+	}
 
 
-	rowvec dv(3);
-	dv(0) = 0.1; dv(1) = 0.2; dv(2) = 0.3;
-	rowvec grad(3);
-	grad(0) = 0.001; grad(1) = 2.0; grad(2) = -1.0;
-	CDesignExpectedImprovement design(dv);
+	DesignForBayesianOptimization testDesign;
 
-	design.gradientUpdateDesignVector(grad,10.0);
+};
 
-	ASSERT_LT(fabs(design.dv(0)-0.11),10E-10);
-	ASSERT_EQ(design.dv(1), 1.0/3.0);
-	ASSERT_EQ(design.dv(2), 0.0);
+TEST_F(CDesignExpectedImprovementTest, constructor){
 
+	ASSERT_EQ(testDesign.dim,5);
+	ASSERT_EQ(testDesign.constraintValues.size(),2);
 
 }
 
-TEST(testDesign, generateRandomDesignVectorAroundASample){
 
-	unsigned int dim =  generateRandomInt(5,10);
+TEST_F(CDesignExpectedImprovementTest, generateRandomDesignVector){
+
+	testDesign.generateRandomDesignVector();
+
+	for(unsigned int i=0; i<5; i++){
+		ASSERT_LT(testDesign.dv(i),0.2);
+	}
+}
+
+TEST_F(CDesignExpectedImprovementTest, gradientUpdateDesignVector){
+
+	rowvec dv(5);
+	dv(0) = 0.1; dv(1) = 0.2; dv(2) = 0.3; dv(3) = 0.3; dv(4) = 0.3;
+	rowvec grad(5);
+	grad(0) = 0.001; grad(1) = 2.0; grad(2) = -1.0; grad(3) = -1.0; grad(4) = -1.0;
+	testDesign.dv = dv;
+	testDesign.gradientUpdateDesignVector(grad,10.0);
+	ASSERT_LT(fabs(testDesign.dv(0)- 0.11),10E-10);
+	ASSERT_EQ(testDesign.dv(1), 1.0/5.0);
+	ASSERT_EQ(testDesign.dv(2), 0.0);
+}
+
+TEST_F(CDesignExpectedImprovementTest, generateRandomDesignVectorAroundASample){
+
+	unsigned int dim =  5;
 	unsigned int N =  generateRandomInt(20,30);
 
-
 	mat samples(N,dim,fill::randu);
-
 	samples *=(1.0/dim);
-
 	unsigned int randomIndex =  generateRandomInt(0,N-1);
 
-
 	rowvec randomSample = samples.row(randomIndex);
-
 	vec lb(dim);
 	vec ub(dim);
-
 	lb.fill(0.0);
 	ub.fill(1.0/dim);
 
-	CDesignExpectedImprovement testDesign(dim);
-
 	testDesign.generateRandomDesignVectorAroundASample(randomSample,lb,ub);
 
+	double normL2 = norm(randomSample-testDesign.dv);
+
+	EXPECT_LT(normL2, 1.0);
+	EXPECT_GT(normL2, 0.0);
 
 }
 
+
+TEST_F(CDesignExpectedImprovementTest, calculateProbalityThatTheEstimateIsGreaterThanAValue){
+
+	double p = testDesign.calculateProbalityThatTheEstimateIsGreaterThanAValue(20.0);
+	EXPECT_GT(p, 0.4);
+
+	p = testDesign.calculateProbalityThatTheEstimateIsGreaterThanAValue(200.0);
+	EXPECT_LT(p, 0.0001);
+
+}
+
+TEST_F(CDesignExpectedImprovementTest, calculateProbalityThatTheEstimateIsLessThanAValue){
+
+	double p1 = testDesign.calculateProbalityThatTheEstimateIsLessThanAValue(20.0);
+	double p2 = testDesign.calculateProbalityThatTheEstimateIsGreaterThanAValue(20.0);
+
+	EXPECT_EQ(p1+p2, 1.0);
+}
+
+
+#endif
 
 
 

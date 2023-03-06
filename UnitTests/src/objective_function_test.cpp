@@ -35,8 +35,9 @@
 #include "matrix_vector_operations.hpp"
 #include "standard_test_functions.hpp"
 #include "auxiliary_functions.hpp"
+#include "test_defines.hpp"
 
-#define TEST_OBJECTIVE_FUNCTION
+
 #ifdef TEST_OBJECTIVE_FUNCTION
 
 

@@ -183,6 +183,8 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 
 		rowvec functionalValue(1);
 		functionalValue = readOutput(1);
+
+		assert(d.constraintTrueValues.size() > getID());
 		d.constraintTrueValues(getID()) = functionalValue(0);
 	}
 
@@ -192,7 +194,6 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 
 		resultBuffer = readOutput(2);
 		d.trueValue = resultBuffer(0);
-		d.objectiveFunctionValue = d.trueValue;
 		d.tangentValue = resultBuffer(1);
 	}
 

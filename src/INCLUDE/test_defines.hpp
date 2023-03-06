@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with RoDeO.
+ * General Public License along with RoDEO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, RPTU)
@@ -29,37 +29,33 @@
  *
  */
 
-#include<gtest/gtest.h>
-#include "output.hpp"
-#include "test_defines.hpp"
 
-#ifdef TEST_OUTPUT
+//#define TEST_AGGREGATION
+//#define TEST_STANDARD_TEST_FUNCTIONS
+//#define TEST_SURROGATE_MODEL_TESTER
+//#define TEST_TANGENT_MODEL
+//#define TEST_TESTFUNCTIONS
+//#define TEST_SURROGATE_MODEL_DATA
+//#define TEST_SURROGATE_MODEL_BASE
+//#define TEST_POLYNOMIALS
+//#define TEST_OUTPUT
+#define TEST_AUX
+//#define TEST_BOUNDS
+//#define TEST_CONFIGKEY
+//#define TEST_CONSTRAIN_FUNCTION
+//#define TEST_CORRELATION_FUNCTIONS
+//#define TEST_DESIGN
+//#define TESTEAOPTIMIZER
+//#define TEST_LHS
+//#define TEST_METRIC
+//#define TEST_OBJECTIVE_FUNCTION
+//#define TEST_MULTILEVEL_MODEL
+//#define TEST_DRIVER
+//#define TEST_KRIGING
+//#define TEST_KRIGINGGENERALIZATION
+//#define TEST_MATRIX_VECTOR_OPS
+//#define TEST_GENERAL_PURPOSE_OPTIMIZER
+//#define TEST_GRADIENTOPTIMIZER
+//#define TEST_LINEAR_SOLVER
+//#define OPTIMIZATION_TEST
 
-
-
-TEST(testOutput, testConstructor){
-
-	OutputDevice testObject;
-	ASSERT_EQ(testObject.ifScreenDisplay, false);
-
-}
-
-
-TEST(testOutput, testprintMsgWithInt){
-
-	OutputDevice testObject;
-//	testObject.ifScreenDisplay = true;
-	testObject.printMessage("hello world = ", 5);
-
-}
-
-TEST(testOutput, testprintMsg){
-
-	OutputDevice testObject;
-	testObject.printMessage("hello world");
-
-}
-
-
-
-#endif

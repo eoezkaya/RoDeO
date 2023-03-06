@@ -178,33 +178,33 @@ double generateRandomDoubleFromNormalDist(double xs, double xe, double sigma_fac
 	return distribution(generator);
 }
 
-void generateKRandomIntegers(uvec &numbers, unsigned int N, unsigned int k){
-
-	unsigned int numbersGenerated = 0;
-
-	numbers.fill(0);
-
-
-	while (numbersGenerated != k){
-
-
-		int r = rand()%N;
-#if 0
-		printf("random number = %d\n",r);
-#endif
-		if (isIntheList(r, numbers) == -1 ){
-
-			numbers(numbersGenerated) = r;
-			numbersGenerated++;
-#if 0
-			printf("numbers =\n");
-			numbers.print();
-#endif
-		}
-
-	}
-
-}
+//void generateKRandomIntegers(uvec &numbers, unsigned int N, unsigned int k){
+//
+//	unsigned int numbersGenerated = 0;
+//
+//	numbers.fill(0);
+//
+//
+//	while (numbersGenerated != k){
+//
+//
+//		int r = rand()%N;
+//#if 0
+//		printf("random number = %d\n",r);
+//#endif
+//		if (isIntheList(r, numbers) == -1 ){
+//
+//			numbers(numbersGenerated) = r;
+//			numbersGenerated++;
+//#if 0
+//			printf("numbers =\n");
+//			numbers.print();
+//#endif
+//		}
+//
+//	}
+//
+//}
 
 
 

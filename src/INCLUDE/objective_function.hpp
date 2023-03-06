@@ -90,8 +90,8 @@ private:
 protected:
 
 
-	double (*objectiveFunPtr)(double *);
-	double (*objectiveFunAdjPtr)(double *,double *);
+//	double (*objectiveFunPtr)(double *);
+//	double (*objectiveFunAdjPtr)(double *,double *);
 
 	std::string evaluationMode;
 	ObjectiveFunctionDefinition definition;
@@ -121,6 +121,8 @@ protected:
 
 	unsigned int dim = 0;
 
+	double yMin = 0.0;
+
 
 
 public:
@@ -130,7 +132,6 @@ public:
 	bool ifDoErequired = true;
 	bool ifWarmStart = false;
 	bool ifGradientAvailable = false;
-	bool ifFunctionPointerIsSet = false;
 	bool ifInitialized = false;
 	bool ifParameterBoundsAreSet = false;
 	bool ifDefinitionIsSet = false;
@@ -141,10 +142,6 @@ public:
 
 
 	void bindSurrogateModel(void);
-
-
-	void setFunctionPointer(double (*objFun)(double *));
-	void setFunctionPointer(double (*objFun)(double *, double *));
 
 	void initializeSurrogate(void);
 	void trainSurrogate(void);
@@ -174,11 +171,6 @@ public:
 		return definition.name;
 	}
 
-	bool ifHasFunctionFunctionPointer(void) const{
-
-		return ifFunctionPointerIsSet;
-
-	}
 
 	void setFileNameReadInput(std::string fileName);
 	void setFileNameReadInputLowFidelity(std::string fileName);
@@ -189,13 +181,14 @@ public:
 
 	void setFileNameDesignVector(std::string);
 	std::string getFileNameDesignVector(void) const;
+	std::string getFileNameTrainingData(void) const;
 
 
 	void setParametersByDefinition(ObjectiveFunctionDefinition);
 
 
-	void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const;
-
+	void calculateExpectedImprovement(DesignForBayesianOptimization &designCalculated) const;
+	void calculateProbabilityOfImprovement(DesignForBayesianOptimization &designCalculated) const;
 
 	void evaluateDesign(Design &d);
 	void evaluateObjectiveFunction(void);
@@ -214,6 +207,8 @@ public:
 
 	bool checkIfGradientAvailable(void) const;
 	double interpolate(rowvec x) const;
+	pair<double, double> interpolateWithVariance(rowvec x) const;
+
 	void print(void) const;
 	std::string getExecutionCommand(void) const;
 	std::string getExecutionCommandLowFi(void) const;

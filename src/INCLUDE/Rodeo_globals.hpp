@@ -35,8 +35,10 @@
 
 extern Rodeo_settings settings;
 
-const double rootTwoPi = 2.506628274631000;
+const double SQRT2PI = 2.506628274631000;
+const double INVSQRT2PI = 0.3989422804014327;
 const double LARGE = 10E14;
 const double EPSILON = 10E-14;
 const double GOLDENRATIO = 1.618033988749;
+const double SQRT2 = 1.414213562;
 #endif

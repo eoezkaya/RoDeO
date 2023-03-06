@@ -150,6 +150,7 @@ unsigned int ObjectiveFunction::getDimension(void) const{
 void ObjectiveFunction::bindSurrogateModel(void){
 
 	assert(ifDefinitionIsSet);
+	assert(definition.modelHiFi != NONE);
 
 
 	if(definition.modelHiFi == ORDINARY_KRIGING){
@@ -211,15 +212,6 @@ void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition de
 
 }
 
-void ObjectiveFunction::setFunctionPointer(double (*objFun)(double *)){
-	objectiveFunPtr = objFun;
-	ifFunctionPointerIsSet = true;
-}
-void ObjectiveFunction::setFunctionPointer(double (*objFun)(double *, double *)){
-	objectiveFunAdjPtr = objFun;
-	ifFunctionPointerIsSet = true;
-}
-
 void ObjectiveFunction::setGradientOn(void){
 	ifGradientAvailable = true;
 }
@@ -253,6 +245,12 @@ void ObjectiveFunction::setFileNameDesignVector(std::string fileName){
 std::string ObjectiveFunction::getFileNameDesignVector(void) const{
 	return definition.designVectorFilename;
 }
+
+std::string ObjectiveFunction::getFileNameTrainingData(void) const{
+	return definition.nameHighFidelityTrainingData;
+}
+
+
 
 void ObjectiveFunction::setExecutablePath(std::string path){
 
@@ -318,12 +316,16 @@ void ObjectiveFunction::initializeSurrogate(void){
 #if 0
 	surrogate->printSurrogateModel();
 #endif
+
+	yMin = min(surrogate->gety());
+
 	ifInitialized = true;
 }
 
 void ObjectiveFunction::trainSurrogate(void){
 
 	assert(ifInitialized);
+
 	surrogate->train();
 }
 
@@ -356,10 +358,71 @@ void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 
 }
 
-void ObjectiveFunction::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
+void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimization &designCalculated) const{
 
-	surrogate->calculateExpectedImprovement(designCalculated);
+	double ftilde, ssqr;
+
+	surrogate->interpolateWithVariance(designCalculated.dv, &ftilde, &ssqr);
+
+	double	sigma = sqrt(ssqr)	;
+
+#if 0
+	printf("standart_ERROR = %15.10f\n",sigma);
+#endif
+
+	double expectedImprovementValue = 0.0;
+
+	if(fabs(sigma) > EPSILON){
+
+		double improvement = 0.0;
+		improvement = yMin   - ftilde;
+
+		double	Z = (improvement)/sigma;
+#if 0
+		printf("Z = %15.10f\n",Z);
+		printf("ymin = %15.10f\n",yMin);
+#endif
+
+		expectedImprovementValue = improvement*cdf(Z,0.0,1.0)+  sigma * pdf(Z,0.0,1.0);
+
+
+	}
+	else{
+
+		expectedImprovementValue = 0.0;
+
+	}
+
+
+	designCalculated.valueAcqusitionFunction = expectedImprovementValue;
+	designCalculated.objectiveFunctionValue = ftilde;
+	designCalculated.sigma = sigma;
 }
+
+
+void ObjectiveFunction::calculateProbabilityOfImprovement(DesignForBayesianOptimization &designCalculated) const{
+
+	double ftilde, ssqr;
+
+	surrogate->interpolateWithVariance(designCalculated.dv, &ftilde, &ssqr);
+
+	double	sigma = sqrt(ssqr)	;
+	designCalculated.sigma = sigma;
+
+	double PI = designCalculated.calculateProbalityThatTheEstimateIsLessThanAValue(yMin);
+
+	designCalculated.valueAcqusitionFunction = PI;
+
+	designCalculated.objectiveFunctionValue = ftilde;
+
+}
+
+
+
+
+
+
+
 
 bool ObjectiveFunction::checkIfGradientAvailable(void) const{
 	return ifGradientAvailable;
@@ -460,8 +523,6 @@ void ObjectiveFunction::readOutputDesign(Design &d) const{
 
 		functionalValue = readOutput(1);
 		d.trueValue = functionalValue(0);
-		d.objectiveFunctionValue = d.trueValue;
-
 	}
 
 	if(evaluationMode.compare("tangent") == 0 ){
@@ -470,8 +531,6 @@ void ObjectiveFunction::readOutputDesign(Design &d) const{
 
 		resultBuffer = readOutput(2);
 		d.trueValue = resultBuffer(0);
-		d.objectiveFunctionValue = d.trueValue;
-
 		d.tangentValue = resultBuffer(1);
 
 	}
@@ -482,8 +541,6 @@ void ObjectiveFunction::readOutputDesign(Design &d) const{
 
 		resultBuffer = readOutput(1+dim);
 		d.trueValue = resultBuffer(0);
-		d.objectiveFunctionValue = d.trueValue;
-
 		rowvec gradient(dim,fill::zeros);
 
 		for(unsigned int i=0; i<dim; i++){
@@ -548,6 +605,19 @@ void ObjectiveFunction::evaluateObjectiveFunction(void){
 double ObjectiveFunction::interpolate(rowvec x) const{
 	return surrogate->interpolate(x);
 }
+
+pair<double, double> ObjectiveFunction::interpolateWithVariance(rowvec x) const{
+
+	double ftilde,sigmaSqr;
+	surrogate->interpolateWithVariance(x, &ftilde, &sigmaSqr);
+
+	pair<double, double> result;
+	result.first = ftilde;
+	result.second = sqrt(sigmaSqr);
+
+	return result;
+}
+
 
 void ObjectiveFunction::print(void) const{
 	definition.print();

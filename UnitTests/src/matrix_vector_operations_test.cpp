@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -33,13 +33,58 @@
 #include "auxiliary_functions.hpp"
 #include "bounds.hpp"
 #include "random_functions.hpp"
+#include "test_defines.hpp"
 #include<gtest/gtest.h>
 
 
+#ifdef TEST_MATRIX_VECTOR_OPS
+
+
+TEST(testMatrixVectorOperations, isEqualRowVector){
+
+	rowvec v1(5,fill::randu);
+	rowvec v3(5,fill::randu);
+	rowvec v2 = v1;
+	v2(0) += 10E-8;
+
+	ASSERT_TRUE(isEqual(v1,v2,10E-5));
+	ASSERT_FALSE(isEqual(v1,v2,10E-9));
+
+}
+
+TEST(testMatrixVectorOperations, isEqualMatrix){
+
+	mat m1(5,5,fill::randu);
+	mat m2(5,5,fill::randu);
+
+
+	ASSERT_FALSE(isEqual(m1,m2,10E-5));
+
+	m2 = m1;
+	m2 +=10E-6;
+
+	ASSERT_FALSE(isEqual(m1,m2,10E-8));
+	ASSERT_TRUE(isEqual(m1,m2,10E-4));
+
+
+}
 
 
 
-TEST(testMatrixVectorOperations, testabortIfHasNan){
+TEST(testMatrixVectorOperations, findIndexOfRow){
+
+	mat m1(5,5,fill::randu);
+	rowvec v1 = m1.row(2);
+	rowvec v2(5, fill::randu);
+
+	ASSERT_TRUE(findIndexOfRow(v1, m1,10E-08) == 2 );
+	ASSERT_TRUE(findIndexOfRow(v2, m1,10E-08) == -1 );
+
+
+}
+
+
+TEST(testMatrixVectorOperations, abortIfHasNan){
 
 	unsigned int dim = 5;
 	rowvec testVector = zeros<rowvec>(dim);
@@ -52,7 +97,7 @@ TEST(testMatrixVectorOperations, testabortIfHasNan){
 }
 
 
-TEST(testMatrixVectorOperations, testcopyRowVector){
+TEST(testMatrixVectorOperations, copyRowVector){
 
 	rowvec a(10,fill::randu);
 	rowvec b(5, fill::randu);
@@ -68,7 +113,7 @@ TEST(testMatrixVectorOperations, testcopyRowVector){
 }
 
 
-TEST(testMatrixVectorOperations, testnormalizeRowVector){
+TEST(testMatrixVectorOperations, normalizeRowVector){
 
 	rowvec x(5,fill::randu);
 	vec xmin(5); xmin.fill(0.1);
@@ -89,7 +134,7 @@ TEST(testMatrixVectorOperations, testnormalizeRowVector){
 }
 
 
-TEST(testMatrixVectorOperations, testnormalizeMatrix){
+TEST(testMatrixVectorOperations, normalizeMatrix){
 
 
 	unsigned int dim1 = 10;
@@ -114,7 +159,7 @@ TEST(testMatrixVectorOperations, testnormalizeMatrix){
 
 }
 
-TEST(testMatrixVectorOperations, testfindInterval){
+TEST(testMatrixVectorOperations, findInterval){
 
 	vec discreteValues(5);
 	discreteValues(0) = -1.8;
@@ -130,7 +175,7 @@ TEST(testMatrixVectorOperations, testfindInterval){
 	EXPECT_EQ(index,-1);
 
 }
-TEST(testMatrixVectorOperations, testconvertToVector){
+TEST(testMatrixVectorOperations, convertToVector){
 
 	rowvec testRowVector(10,fill::randu);
 
@@ -143,7 +188,7 @@ TEST(testMatrixVectorOperations, testconvertToVector){
 
 
 }
-TEST(testMatrixVectorOperations, testconvertToRowVector){
+TEST(testMatrixVectorOperations, convertToRowVector){
 
 	vec testVector(10,fill::randu);
 
@@ -156,7 +201,7 @@ TEST(testMatrixVectorOperations, testconvertToRowVector){
 
 
 }
-TEST(testMatrixVectorOperations, testaddOneElement){
+TEST(testMatrixVectorOperations, addOneElement){
 
 	vec testVector(10,fill::randu);
 	double val = testVector(5);
@@ -182,7 +227,7 @@ TEST(testMatrixVectorOperations, testaddOneElement){
 
 }
 
-TEST(testMatrixVectorOperations, testjoinMatricesByColumns){
+TEST(testMatrixVectorOperations, joinMatricesByColumns){
 
 	mat A(4,2,fill::randu);
 	mat B(4,5,fill::randu);
@@ -196,7 +241,7 @@ TEST(testMatrixVectorOperations, testjoinMatricesByColumns){
 
 }
 
-TEST(testMatrixVectorOperations, testjoinMatricesByRows){
+TEST(testMatrixVectorOperations, joinMatricesByRows){
 
 	mat A(4,6,fill::randu);
 	mat B(3,6,fill::randu);
@@ -231,7 +276,7 @@ TEST(testMatrixVectorOperations, testMakeUnitRowVector){
 }
 
 
-TEST(testMatrixVectorOperations, testFindIndicesKMax){
+TEST(testMatrixVectorOperations, FindIndicesKMax){
 
 	vec v(6);
 	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
@@ -246,7 +291,7 @@ TEST(testMatrixVectorOperations, testFindIndicesKMax){
 }
 
 
-TEST(testMatrixVectorOperations, testFindIndicesKMin){
+TEST(testMatrixVectorOperations, FindIndicesKMin){
 
 	vec v(6);
 	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
@@ -260,3 +305,41 @@ TEST(testMatrixVectorOperations, testFindIndicesKMin){
 
 }
 
+
+
+TEST(testMatrixVectorOperations, shuffleRows){
+
+	mat A(6,5,fill::randu);
+	A = shuffleRows(A);
+
+	ASSERT_TRUE(A.n_rows == 6);
+	ASSERT_TRUE(A.n_cols == 5);
+}
+
+
+TEST(testMatrixVectorOperations, isBetweenRowVec){
+
+	rowvec v1(3);
+	rowvec lb(3);
+	rowvec ub(3);
+
+	v1(0) = 0.2;  v1(1) = 0.8; v1(2) = 0.9;
+	lb(0) = 0.1;  lb(1) = 0.0; lb(2) = -1.9;
+	ub(0) = 0.3;  ub(1) = 1.0; ub(2) = 1.9;
+
+	bool ifBetween = isBetween(v1,lb,ub);
+
+	ASSERT_TRUE(ifBetween);
+
+	v1(0) = 0.1;
+	ifBetween = isBetween(v1,lb,ub);
+
+	ASSERT_TRUE(ifBetween);
+
+	v1(0) = -0.1;
+	ifBetween = isBetween(v1,lb,ub);
+
+	ASSERT_FALSE(ifBetween);
+}
+
+#endif

@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,17 +20,22 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
  */
 
+
 #ifndef TRAIN_KRIGING_HPP
 #define TRAIN_KRIGING_HPP
+
+
+
+
 #include <armadillo>
 #include "Rodeo_macros.hpp"
 #include "surrogate_model.hpp"
@@ -70,6 +75,7 @@ private:
 	ExponentialCorrelationFunction correlationFunction;
 
 
+	double yMin = -LARGE;
 
 	void updateWithNewData(void);
 	void updateModelParams(void);
@@ -82,7 +88,6 @@ public:
 
 	void setNameOfInputFile(std::string);
 	void setNameOfHyperParametersFile(std::string);
-
 
 
 	void setNumberOfTrainingIterations(unsigned int);
@@ -103,7 +108,6 @@ public:
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
 
 
-	void calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const;
 	void addNewSampleToData(rowvec newsample);
 	void addNewLowFidelitySampleToData(rowvec newsample);
 

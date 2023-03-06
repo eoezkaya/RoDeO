@@ -37,21 +37,7 @@
 using namespace arma;
 
 
-//LinearModel::LinearModel(std::string nameInput):SurrogateModel(nameInput){
-//
-//	modelID = LINEAR_REGRESSION;
-//
-//
-//	setNameOfHyperParametersFile(nameInput);
-//
-//
-//}
-
-LinearModel::LinearModel():SurrogateModel(){
-
-
-}
-
+LinearModel::LinearModel():SurrogateModel(){}
 
 void LinearModel::initializeSurrogateModel(void){
 
@@ -218,11 +204,7 @@ double LinearModel::interpolate(rowvec x ) const{
 
 
 void LinearModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
-
-	cout << "ERROR: interpolateWithVariance does not exist for LinearModel\n";
-	abort();
-
-
+	assert(false);
 }
 double LinearModel::interpolateWithGradients(rowvec xp) const{
 
@@ -274,20 +256,8 @@ void LinearModel::printSurrogateModel(void) const{
 
 }
 
-void LinearModel::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
 
-	std::cout<<"ERROR: Cannot calculate expected improvement for linear model!\n";
-	abort();
-
-
-}
-
-void LinearModel::addNewSampleToData(rowvec newsample){
-
-
-
-
-}
+void LinearModel::addNewSampleToData(rowvec newsample){}
 
 void LinearModel::addNewLowFidelitySampleToData(rowvec newsample){
 

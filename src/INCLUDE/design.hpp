@@ -36,52 +36,25 @@
 #include "random_functions.hpp"
 using namespace arma;
 
-class CDesignExpectedImprovement{
+class DesignForBayesianOptimization{
 
 public:
 	rowvec dv;
-	double valueExpectedImprovement;
-	double objectiveFunctionValue;
+	double objectiveFunctionValue = 0.0;
+	double valueAcqusitionFunction = 0.0;
+
+	double sigma = 0.0;
 	rowvec constraintValues;
-	unsigned int dim;
+	rowvec constraintSigmas;
+	rowvec constraintFeasibilityProbabilities;
+	unsigned int dim = 0;
 
 
-	CDesignExpectedImprovement(unsigned int dimension, unsigned int numberOfConstraints){
-
-		dim = dimension;
-		constraintValues = zeros<rowvec>(numberOfConstraints);
-		valueExpectedImprovement = 0.0;
-		objectiveFunctionValue = 0.0;
-
-	}
-
-	CDesignExpectedImprovement(unsigned int dimension){
-
-		dim = dimension;
-		valueExpectedImprovement = 0.0;
-		objectiveFunctionValue = 0.0;
-
-	}
-
-	CDesignExpectedImprovement(rowvec designVector, unsigned int numberOfConstraints){
-
-		dv = designVector;
-		dim = designVector.size();
-		constraintValues = zeros<rowvec>(numberOfConstraints);
-		valueExpectedImprovement = 0.0;
-		objectiveFunctionValue = 0.0;
-
-	}
-
-	CDesignExpectedImprovement(rowvec designVector){
-
-		dv = designVector;
-		dim = designVector.size();
-		valueExpectedImprovement = 0.0;
-		objectiveFunctionValue = 0.0;
-
-	}
-
+	DesignForBayesianOptimization();
+	DesignForBayesianOptimization(unsigned int dimension, unsigned int numberOfConstraints);
+	DesignForBayesianOptimization(unsigned int dimension);
+	DesignForBayesianOptimization(rowvec designVector, unsigned int numberOfConstraints);
+	DesignForBayesianOptimization(rowvec designVector);
 
 	void generateRandomDesignVector(void);
 	void generateRandomDesignVector(vec lb, vec ub);
@@ -89,40 +62,14 @@ public:
 	void generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub);
 
 
+	double calculateProbalityThatTheEstimateIsLessThanAValue(double value);
+	double calculateProbalityThatTheEstimateIsGreaterThanAValue(double value);
+
+	void updateAcqusitionFunctionAccordingToConstraints(void);
 
 
-	void gradientUpdateDesignVector(rowvec gradient, double stepSize){
-
-
-		/* we go in the direction of gradient since we maximize */
-		dv = dv + stepSize*gradient;
-
-		double lowerBound = 0.0;
-		double upperBound = 1.0/dim;
-
-		for(unsigned int k=0; k<dim; k++){
-
-			/* if new design vector does not satisfy the box constraints */
-			if(dv(k) < lowerBound) dv(k) = lowerBound;
-			if(dv(k) > upperBound) dv(k) = upperBound;
-
-		}
-
-	}
-
-	void print(void) const{
-		std::cout.precision(15);
-		std::cout<<"Design vector = \n";
-		dv.print();
-		std::cout<<"Objective function value = "<<objectiveFunctionValue<<"\n";
-		std::cout<<"Expected Improvement value = "<<valueExpectedImprovement<<"\n";
-
-		if(constraintValues.size() > 0){
-
-			std::cout<<"Constraint values = \n";
-			constraintValues.print();
-		}
-	}
+	void gradientUpdateDesignVector(rowvec gradient, double stepSize);
+	void print(void) const;
 
 
 };
@@ -138,17 +85,22 @@ public:
 	unsigned int numberOfConstraints = 0;
 
 	rowvec designParameters;
+	rowvec designParametersNormalized;
 	rowvec constraintTrueValues;
+	rowvec constraintEstimates;
 	rowvec gradient;
 	rowvec gradientLowFidelity;
 	rowvec tangentDirection;
 
 	double trueValue = 0;
+	double estimatedValue = 0.0;
 	double trueValueLowFidelity = 0;
 	double tangentValue = 0.0;
 	double tangentValueLowFidelity = 0.0;
-	double objectiveFunctionValue = 0.0;
+//	double objectiveFunctionValue = 0.0;
 	double improvementValue = 0.0;
+
+	double ExpectedImprovementvalue = 0.0;
 
 	std::vector<rowvec> constraintGradients;
 	std::vector<rowvec> constraintGradientsLowFidelity;
@@ -173,7 +125,7 @@ public:
 	unsigned int ID = 0;
 	std::string tag;
 
-	bool isDesignFeasible = false;
+	bool isDesignFeasible = true;
 
 	Design();
 	Design(rowvec);
@@ -194,6 +146,10 @@ public:
 
 
 	bool checkIfHasNan(void) const;
+
+	void calculateNormalizedDesignParameters(vec lb, vec ub);
+	void calculateDesignParametersFromNormalized(vec lb, vec ub);
+
 
 	rowvec constructSampleObjectiveFunction(void) const;
 	rowvec constructSampleObjectiveFunctionLowFi(void) const;

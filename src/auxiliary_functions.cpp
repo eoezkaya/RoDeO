@@ -132,21 +132,18 @@ bool checkValue(double value, double expected, double tolerance){
 }
 
 
-bool isBetween(double number, double a, double b){
-
-	if(b>a){
-
-		if(number >= a && number <= b) return true;
-	}
-	else{
-
-		if(number >= b && number <= a) return true;
-	}
 
 
-	return false;
+
+bool isEqual(string s1, string s2){
+
+	if(s1.length()!= s2.length()) return false;
+
+	if(s1.compare(s2) == 0 ) return true;
+	else return false;
 
 }
+
 
 bool checkValue(double value, double expected){
 
@@ -380,29 +377,6 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut){
 
 }
 
-int check_if_lists_are_equal(int *list1, int *list2, int dim){
-
-	int flag=1;
-	for(int i=0; i<dim; i++){
-
-		int item_to_check = list1[i];
-
-		if ( is_in_the_list(item_to_check, list2, dim) == -1){
-
-			flag = 0;
-			return flag;
-
-
-		}
-	}
-
-	return flag;
-}
-
-
-
-
-
 
 
 /** Returns the pdf of x, given the distribution described by mu and sigma..
@@ -417,15 +391,16 @@ int check_if_lists_are_equal(int *list1, int *list2, int dim){
 
 double pdf(double x, double m, double s)
 {
-	static const double inv_sqrt_2pi = 0.3989422804014327;
 	double a = (x - m) / s;
 
-	return inv_sqrt_2pi / s * std::exp(-0.5 * a * a);
+	return INVSQRT2PI / s * std::exp(-0.5 * a * a);
 }
 
 
 
 /** Returns the cdf of x, given the distribution described by mu and sigma..
+ *
+ *  CFD(x0) = Pr(x < x0)
  *
  * @param[in] x
  * @param[in] mu
@@ -433,263 +408,27 @@ double pdf(double x, double m, double s)
  * @return normal_cdf(x) with mu and sigma
  *
  */
-double cdf(double x, double mu, double sigma)
+double cdf(double x0, double mu, double sigma)
 {
-	return 0.5 * (1 + erf((x - mu) / (sigma * sqrt(2.0))));
-}
 
-
-/** checks whether an entry is in a list or not.
- *
- * @param[in] entry
- * @param[in] list
- * @param[in] list size
- * @return -1 if no, position in the list if yes
- *
- */
-int is_in_the_list(int entry, int *list, int list_size){
-
-	int flag=-1;
-
-	for(int i=0;i< list_size;i++) {
-
-		if(list[i]==entry) flag=i;
-	}
-
-	return flag;
-}
-
-/** checks whether an entry is in a list or not.
- *
- * @param[in] entry
- * @param[in] list (as a std::vector)
- * @param[in] list size
- * @return -1 if no, position in the list if yes
- *
- */
-int is_in_the_list(int entry, std::vector<int> &list){
-
-	int flag=-1;
-
-	for (std::vector<int>::iterator it = list.begin() ; it != list.end(); ++it){
-
-		if(*it == entry) {
-
-			flag = *it;
-		}
-
-	}
-
-	return flag;
-}
-
-bool isNotAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list){
-
-	if(isAlreadyInTheList(entry, list)){
-
-		return false;
-	}
-	else{
-
-		return true;
-	}
-
-}
-
-bool isAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list){
-
-	for (std::vector<unsigned int>::iterator it = list.begin() ; it != list.end(); ++it){
-
-		if(*it == entry) {
-
-			return true;
-		}
-
-	}
-
-	return false;
-}
-
-/** checks whether an entry is in a list or not.
- *
- * @param[in] entry
- * @param[in] list (as a arma::vec)
- * @param[in] list size
- * @return -1 if no, position in the list if yes
- *
- */
-int isIntheList(unsigned int entry, uvec &list){
-
-	int flag=-1;
-
-	for (unsigned int i = 0 ; i< list.size(); i++){
-
-		if(list(i) == entry) {
-
-			flag = i;
-		}
-
-	}
-
-	return flag;
+	double inp = (x0 - mu) / (sigma * SQRT2);
+	double result = 0.5 * (1.0 + erf(inp));
+	return result;
 }
 
 
 
-bool ifIsInTheList(const std::vector<std::string> &vec, std::string item){
+double calculateProbalityLessThanAValue(double value, double mu, double sigma){
 
-	if ( std::find(vec.begin(), vec.end(), item) != vec.end() )
-		return true;
-	else
-		return false;
-
+	double p = cdf(value, mu, sigma);
+	return p;
 
 
 }
+double calculateProbalityGreaterThanAValue(double value, double mu, double sigma){
 
-
-/** solve a linear system Ax=b, with a given Cholesky decomposition of A
- *
- * @param[in] U
- * @param[out] x
- * @param[in] b
- *
- */
-void solveLinearSystemCholesky(mat U, vec &x, vec b){
-
-	mat L = trans(U);
-
-	unsigned int dim = x.size();
-
-	if(dim != U.n_rows || dim != b.size()){
-
-		std::cout<<"ERROR: Dimensions does not match!\n";
-		abort();
-
-	}
-	/* initialize x */
-
-	x.fill(0.0);
-
-	vec y(dim,fill::zeros);
-
-	/* forward subst. L y = b */
-
-	for (unsigned int i = 0; i < dim; i++) {
-
-		double residual = 0.0;
-
-		for (unsigned int j = 0; j < i; j++) {
-
-			residual = residual + L(i, j) * y(j);
-
-		}
-
-		y(i) = (b(i) - residual) / L(i, i);
-	}
-
-
-	/* back subst. U x = y */
-
-	for (int i = dim - 1; i >= 0; i--) {
-
-		double residual = 0.0;
-
-		for (int j = dim - 1; j > i; j--){
-
-			residual = residual + U(i, j) * x(j);
-		}
-
-
-		x(i) = (y(i) - residual) / U(i, i);
-	}
-
-}
-
-
-
-bool checkLinearSystem(mat A, vec x, vec b, double tol){
-
-	vec r = A*x-b;
-	double norm = L1norm(r, r.size());
-
-	if(norm > tol) return false;
-	else return true;
-
-}
-
-
-vec calculateResidual(mat A, vec x, vec b){
-
-	vec r = A*x-b;
-
-	return r;
-}
-
-
-
-
-
-/** randomly generates the indices of a validation set
- *
- * @param[in] size   dimension of the validation set
- * @param[in] N      dimension of the data set
- * @param[out] indices
- *
- */
-void generate_validation_set(int *indices, int size, int N){
-
-	int number_of_indices_generated=0;
-	int random_int;
-	int flag;
-
-#if 1
-	printf("size of the validation set = %d\n",size);
-	printf("size of the data set = %d\n",N);
-#endif
-
-	if(size <0 || size>N){
-
-		printf("Error: Size of the validation set is wrong");
-		exit(-1);
-	}
-
-	for(int i=0; i<size;i++){
-
-		indices[i]=-1;
-	}
-
-	/* initialize random seed: */
-	srand (time(NULL));
-
-	while(number_of_indices_generated < size){
-
-		while(1){
-
-			/* generate a random index */
-			random_int = rand() % N;
-#if 1
-			printf("random_int = %d\n",random_int);
-#endif
-			/* check if it is already in the list */
-			flag = is_in_the_list(random_int, indices, size);
-#if 1
-			printf("flag = %d\n",flag);
-#endif
-
-			if(flag == -1){
-
-				indices[number_of_indices_generated]= random_int;
-				number_of_indices_generated++;
-				break;
-
-			}
-
-
-		}
-
-	}
-
+	double p =  1.0 - cdf(value, mu, sigma);
+	return p;
 
 }
 
@@ -700,7 +439,7 @@ bool checkifTooCLose(const rowvec &v1, const rowvec &v2, double tol){
 
 	rowvec diff = v1 - v2;
 
-	double distance = L1norm(diff, v1.size());
+	double distance = norm(diff, 1);
 
 	if(distance < tol) return true;
 	else return false;
@@ -882,185 +621,5 @@ vec getDoubleValuesFromString(std::string str,char delimiter){
 
 
 
-
-
-
-
-/*
- * Correlation function R(x^i,x^j)
- *
- * R(x^i,x^j)=exp(-sum_{k=1}^p (  theta_k* ( abs(x^i_k-x^j_k)**gamma_k  ) )  )
- * @param[in] x_i
- * @param[in] X_j
- * @param[in] theta
- * @param[in] gamma
- * @return R
- *
- * */
-double compute_R(rowvec x_i, rowvec x_j, vec theta, vec gamma) {
-
-	int dim = theta.size();
-
-	double sum = 0.0;
-	for (int k = 0; k < dim; k++) {
-
-		sum += theta(k) * pow(fabs(x_i(k) - x_j(k)), gamma(k));
-
-	}
-
-	return exp(-sum);
-}
-
-
-
-/*
- * Correlation function R(x^i,x^j) with gamma = 2.0
- *
- * R(x^i,x^j)=exp(-sum_{k=1}^p (  theta_k* ( abs(x^i_k-x^j_k)**2.0  ) )  )
- * @param[in] x_i
- * @param[in] X_j
- * @param[in] theta
- * @return R
- *
- * */
-double compute_R_Gauss(rowvec x_i,
-		rowvec x_j,
-		vec theta) {
-
-	int dim = theta.size();
-
-	double sum = 0.0;
-	for (int k = 0; k < dim; k++) {
-
-		sum += theta(k) * pow(fabs(x_i(k) - x_j(k)), 2.0);
-
-	}
-
-	return exp(-sum);
-}
-
-
-
-/*
- *
- *
- * derivative of R(x^i,x^j) w.r.t. x^i_k (for GEK)
- *
- *
- * */
-
-double compR_dxi(rowvec x_i, rowvec x_j, vec theta, int k) {
-
-	int dim = theta.size();
-	double sum = 0.0;
-	double result;
-
-
-
-	/* first compute R(x^i,x^j) */
-	for(int m=0;m<dim;m++){
-		sum+=theta(m)*pow( fabs(x_i(m)-x_j(m)),2.0 );
-	}
-	sum=exp(-sum);
-	result= -2.0*theta(k)* (x_i(k)-x_j(k))* sum;
-	return result;
-}
-
-
-
-
-
-/*
- *
- *
- * derivative of R(x^i,x^j) w.r.t. x^j_k (for GEK)
- *
- *
- *
- * */
-
-double compR_dxj(rowvec x_i, rowvec x_j, vec theta,  int k) {
-
-	int dim = theta.size();
-	double sum = 0.0;
-	double result;
-
-
-	/* first compute R(x^i,x^j) */
-	for(int m=0;m<dim;m++){
-		sum+=theta(m)*pow( fabs(x_i(m)-x_j(m)),2.0 );
-	}
-	sum=exp(-sum);
-
-	result= 2.0*theta(k)* (x_i(k)-x_j(k))* sum;
-
-	return result;
-}
-
-
-/*
- *
- * second derivative of R(x^i,x^j) w.r.t. x^i_l and x^j_k (hand derivation)
- * (for GEK)
- *
- * */
-
-double compute_dr_dxi_dxj(rowvec x_i, rowvec x_j, vec theta,int l,int k){
-
-	int dim = theta.size();
-	double corr = 0.0;
-	double dx;
-
-	for (int i = 0;i<dim;i++){
-
-		corr = corr + theta(i) * pow(fabs(x_i(i)-x_j(i)),2.0);
-	}
-
-	corr = exp(-corr);
-
-	if (k == l){
-
-		dx = 2.0*theta(k)*(-2.0*theta(k)*pow((x_i(k)-x_j(k)),2.0)+1.0)*corr;
-	}
-	if (k != l) {
-
-		dx = -4.0*theta(k)*theta(l)*(x_i(k)-x_j(k))*(x_i(l)-x_j(l))*corr;
-	}
-
-	return dx;
-}
-
-
-/*
- *
- * Computation of the correlation matrix using standart correlation function
- *
- *
- * */
-
-void compute_R_matrix(vec theta,
-		vec gamma,
-		double reg_param,
-		mat &R,
-		mat &X) {
-	double temp;
-	int nrows = R.n_rows;
-
-	R.fill(0.0);
-
-
-	for (int i = 0; i < nrows; i++) {
-		for (int j = i + 1; j < nrows; j++) {
-
-			temp = compute_R(X.row(i), X.row(j), theta, gamma);
-			R(i, j) = temp;
-			R(j, i) = temp;
-		}
-
-	}
-
-	R = R + eye(nrows,nrows) + eye(nrows,nrows)*reg_param;
-
-} /* end of compute_R_matrix */
 
 

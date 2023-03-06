@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -34,6 +34,7 @@
 
 #include "matrix_vector_operations.hpp"
 #include "auxiliary_functions.hpp"
+#include "random_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -181,7 +182,17 @@ void joinMatricesByRows(mat& A, const mat& B){
 
 }
 
+void appendMatrixToCSVData(const mat& A, std::string fileName){
 
+	unsigned int nRows = A.n_rows;
+
+	for(unsigned int i=0; i<nRows; i++){
+
+		appendRowVectorToCSVData(A.row(i),fileName);
+	}
+
+
+}
 
 void appendRowVectorToCSVData(rowvec v, std::string fileName){
 
@@ -564,6 +575,37 @@ mat normalizeMatrix(mat matrixIn, Bounds &boxConstraints){
 }
 
 
+bool isEqual(const rowvec &a, const rowvec &b, double tolerance){
+
+	unsigned int sizeOfa = a.size();
+	unsigned int sizeOfb = b.size();
+
+	assert(sizeOfa == sizeOfb);
+
+	for(unsigned int i=0; i<sizeOfa; i++){
+
+		if(checkValue(a(i),b(i), tolerance) == false) return false;
+	}
+
+	return true;
+}
+
+bool isEqual(const vec &a, const vec &b, double tolerance){
+
+	unsigned int sizeOfa = a.size();
+	unsigned int sizeOfb = b.size();
+
+	assert(sizeOfa == sizeOfb);
+
+	for(unsigned int i=0; i<sizeOfa; i++){
+
+		if(checkValue(a(i),b(i), tolerance) == false) return false;
+	}
+
+	return true;
+}
+
+
 
 bool isEqual(const mat &A, const mat&B, double tolerance){
 
@@ -586,6 +628,34 @@ bool isEqual(const mat &A, const mat&B, double tolerance){
 }
 
 
+bool isBetween(const vec &v, const vec&a, const vec&b){
+
+	assert(v.size() == a.size() && v.size() == b.size());
+
+	for(unsigned int i=0; i<v.size(); i++){
+
+		if(v(i) < a(i)) return false;
+		if(v(i) > b(i)) return false;
+	}
+
+	return true;
+
+}
+
+bool isBetween(const rowvec &v, const rowvec&a, const rowvec&b){
+
+	assert(v.size() == a.size() && v.size() == b.size());
+
+	for(unsigned int i=0; i<v.size(); i++){
+
+		if(v(i) < a(i)) return false;
+		if(v(i) > b(i)) return false;
+	}
+
+	return true;
+
+}
+
 int findInterval(double value, vec discreteValues){
 
 
@@ -606,5 +676,38 @@ int findInterval(double value, vec discreteValues){
 	}
 
 	return -1;
+}
+
+
+int findIndexOfRow(const rowvec &v, const mat &A, double tolerance = 10E-8){
+
+	assert(v.size() == A.n_cols);
+
+
+	for(unsigned int i=0; i<A.n_rows; i++){
+
+		if(isEqual(v,A.row(i), tolerance)) return i;
+
+	}
+
+	return -1;
+}
+
+
+mat shuffleRows(mat A){
+
+	mat result = A;
+
+	unsigned int Nrows = result.n_rows;
+	assert(Nrows>0);
+
+	for(unsigned int i=0; i<10*Nrows; i++){
+
+		int indx1 = generateRandomInt(0, Nrows-1);
+		int indx2 = generateRandomInt(0, Nrows-1);
+
+		if(indx1 != indx2) result.swap_rows( indx1, indx2  );
+	}
+	return result;
 }
 

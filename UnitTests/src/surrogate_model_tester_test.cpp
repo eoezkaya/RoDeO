@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, RPTU)
@@ -35,9 +35,9 @@
 #include "bounds.hpp"
 #include "random_functions.hpp"
 #include "standard_test_functions.hpp"
+#include "test_defines.hpp"
 
 
-#define TEST_SURROGATE_MODEL_TESTER
 #ifdef TEST_SURROGATE_MODEL_TESTER
 
 
@@ -291,50 +291,6 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
 	remove(testFunction.function.filenameTestData.c_str());
 
 }
-
-
-
-
-
-//TEST_F(SurrogateTesterTest, performSurrogateModelTestAggregation){
-//
-//
-//	Bounds boxConstraints;
-//	boxConstraints.setDimension(2);
-//	boxConstraints.setBounds(-6.0, 6.0);
-//
-//	surrogateTester.setBoxConstraints(boxConstraints);
-//	testFunction.function.generateTrainingSamplesWithAdjoints();
-//	testFunction.function.generateTestSamples();
-//
-//
-//	surrogateTester.setName("testModel");
-//	surrogateTester.setFileNameTrainingData(testFunction.function.filenameTrainingData);
-//	surrogateTester.setFileNameTestData(testFunction.function.filenameTestData);
-//
-//
-//
-//	surrogateTester.setNumberOfTrainingIterations(1000);
-//
-//	surrogateTester.setDisplayOn();
-//	surrogateTester.setSurrogateModel(AGGREGATION);
-//	surrogateTester.performSurrogateModelTest();
-//
-//	mat results;
-//	results.load("surrogateTestResults.csv", csv_ascii);
-//
-//	vec SE = results.col(4);
-//
-//	EXPECT_LT(mean(SE), 100000);
-//
-//	remove("surrogateTestResults.csv");
-//	remove(testFunction.function.filenameTrainingData.c_str());
-//	remove(testFunction.function.filenameTestData.c_str());
-//
-//}
-
-
-
 
 
 #endif

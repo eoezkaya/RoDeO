@@ -62,8 +62,48 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
 
 bool checkValue(double value, double expected, double tolerance);
 bool checkValue(double value, double expected);
-bool isBetween(double number, double a, double b);
 
+template<typename T> bool isBetween(T number, T a, T b){
+
+	assert(b>a);
+
+	if(number >= a && number <= b) return true;
+	return false;
+}
+
+
+template<typename T> bool isIntheList(const std::vector<T> &vec, T item){
+
+	if ( std::find(vec.begin(), vec.end(), item) != vec.end() )
+		return true;
+	else
+		return false;
+
+}
+
+template<typename T> bool isNotIntheList(const std::vector<T> &vec, T item){
+
+	if(isIntheList(vec, item)) return false;
+	else return true;
+}
+
+
+template<typename T> bool isIntheList(T* v, T item, unsigned int dim){
+
+	for(unsigned int i=0; i<dim; i++){
+
+		if(v[i] == item) return true;
+
+	}
+
+	return false;
+}
+
+template<typename T> bool isNotIntheList(T* v, T item, unsigned int dim){
+
+	if(isIntheList(v, item, dim)) return false;
+	else return true;
+}
 
 
 bool checkMatrix(mat values, mat expected, double tolerance);
@@ -75,6 +115,8 @@ void abortWithErrorMessage(string message);
 
 bool isEmpty(std::string);
 bool isNotEmpty(std::string);
+bool isEqual(string s1, string s2);
+
 
 bool checkIfOn(std::string keyword);
 bool checkIfOff(std::string keyword);
@@ -88,12 +130,13 @@ double pdf(double x, double mu, double sigma);
 
 /* Returns the probability of [-inf,x] of a gaussian distribution */
 double cdf(double x, double mu, double sigma);
+double calculateProbalityLessThanAValue(double value, double mu, double sigma);
+double calculateProbalityGreaterThanAValue(double value, double mu, double sigma);
 
 
 
 
-
-void solveLinearSystemCholesky(mat U, vec &x, vec b);
+//void solveLinearSystemCholesky(mat U, vec &x, vec b);
 
 bool file_exist(const char *fileName);
 bool file_exist(std::string filename);
@@ -106,116 +149,15 @@ vec getDoubleValuesFromString(std::string sub_str, char delimiter);
 std::string removeSpacesFromString(std::string );
 std::string removeKeywordFromString(std::string inputStr,  std::string keyword);
 
-
-int check_if_lists_are_equal(int *list1, int *list2, int dim);
-
-int is_in_the_list(int entry, int *list, int list_size);
-int is_in_the_list(int entry, std::vector<int> &list);
-bool isAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list);
-bool isNotAlreadyInTheList(unsigned int entry, std::vector<unsigned int> &list);
-int isIntheList(unsigned int entry, uvec &list);
-
-
-bool ifIsInTheList(const std::vector<std::string> &vec, std::string item);
-
-
 void compute_max_min_distance_data(mat &x, double &max_distance, double &min_distance);
-
-
-void generate_validation_set(int *indices, int size, int N);
-void generate_validation_set(uvec &indices, int size);
-
-void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod);
-void remove_validation_points_from_data(mat &X, vec &y, uvec & indices, mat &Xmod, vec &ymod, uvec &map);
 
 
 bool checkifTooCLose(const rowvec &, const rowvec &, double = 10E-6);
 bool checkifTooCLose(const rowvec &, const mat &,double = 10E-6);
 
 
-bool checkLinearSystem(mat A, vec x, vec b, double tol);
-vec calculateResidual(mat A, vec x, vec b);
-
-
 #define PRINT_HERE printf("Here : %s(%d)--:",__FILE__,__LINE__);
 
-
-/* distance functions */
-
-template<class T>
-double L1norm(T x, int p, int* index=NULL){
-	double sum=0.0;
-	if(index == NULL){
-
-		for(int i=0;i<p;i++){
-
-			sum+=fabs(x(i));
-		}
-	}
-	else{
-
-		for(int i=0;i<p;i++){
-
-			sum+=fabs(x(index[i]));
-		}
-
-	}
-
-	return sum;
-}
-
-
-template<class T>
-double L2norm(T x, int p, int* index=NULL){
-
-	double sum;
-	if(index == NULL){
-		sum=0.0;
-
-		for(int i=0;i<p;i++){
-
-			sum+=x(i)*x(i);
-		}
-
-	}
-	else{
-
-		sum=0.0;
-
-		for(int i=0;i<p;i++){
-
-			sum+=x(index[i])*x(index[i]);
-		}
-
-	}
-
-	return sqrt(sum);
-}
-
-template<class T>
-double Lpnorm(T x, int p, int size,int *index=NULL){
-	double sum=0.0;
-
-
-	if(index == NULL){
-
-		for(int i=0;i<size;i++){
-
-			sum+=pow(fabs(x(i)),p);
-		}
-
-	}
-	else{
-
-		for(int i=0;i<size;i++){
-
-			sum+=pow(fabs(x(index[i])),p);
-		}
-
-
-	}
-	return pow(sum,1.0/p);
-}
 
 
 void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, unsigned int norm=2);
@@ -241,13 +183,5 @@ int getPopularlabel(int* labels, int size);
 
 void testLPnorm(void);
 
-double compute_R(rowvec x_i, rowvec x_j, vec theta, vec gamma);
-void compute_R_matrix(vec theta, vec gamma, double reg_param,mat& R, mat &X);
-
-//void compute_R_matrix_GEK(vec theta, double reg_param, mat& R, mat &X, mat &grad);
-
-
-double compute_R_Gauss(rowvec x_i, rowvec x_j, vec theta);
-double compR_dxi(rowvec x_i, rowvec x_j, vec theta, int k);
 
 #endif

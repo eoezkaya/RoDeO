@@ -221,7 +221,7 @@ rowvec Design::constructSampleConstraintWithTangent(int constraintID) const{
 	rowvec direction = constraintDifferentiationDirectionsMatrix.row(constraintID);
 
 	for(unsigned int i=0; i<dimension; i++){
-			sample(dimension+2+i) = direction(i);
+		sample(dimension+2+i) = direction(i);
 	}
 
 	return sample;
@@ -242,7 +242,7 @@ rowvec Design::constructSampleConstraintWithTangentLowFi(int constraintID) const
 	rowvec direction = constraintDifferentiationDirectionsMatrixLowFi.row(constraintID);
 
 	for(unsigned int i=0; i<dimension; i++){
-			sample(dimension+2+i) = direction(i);
+		sample(dimension+2+i) = direction(i);
 	}
 
 	return sample;
@@ -314,38 +314,22 @@ bool Design::checkIfHasNan(void) const{
 
 
 
-
-
-
-
-
-
 Design::Design(void){}
 
 void Design::print(void) const{
 
-	std::cout<<"\n\nPrinting Design...\n";
+	std::cout<< "\n***************** " << tag << " *****************\n";
 	std::cout<<"Design parameters = \n";
 	printVector(designParameters);
 	std::cout<<"Function value = "<<trueValue<<"\n";
 
-
 	if(!gradient.is_zero() && gradient.size() > 0){
-
 		printVector(gradient,"gradient vector");
-
 	}
 
-
-
-	if(constraintTrueValues.size() >0){
-
-		printVector(constraintTrueValues,"constraint values");
-
+	if(constraintTrueValues.size() > 0){
+		constraintTrueValues.print("constraint values");
 	}
-
-
-
 
 	if(!constraintGradients.empty()){
 
@@ -357,13 +341,17 @@ void Design::print(void) const{
 				printVector(*it);
 				count++;
 			}
-
-
 		}
 	}
 
-	std::cout<<"Objective function value = "<<objectiveFunctionValue<<"\n";
+	if(isDesignFeasible){
+		std::cout<<"Feasibility = YES\n";
+	}
+	else{
+		std::cout<<"Feasibility = NO\n";
+	}
 	std::cout<<"Improvement = "<<improvementValue<<"\n";
+	std::cout<<"\n";
 
 
 }
@@ -373,18 +361,26 @@ void Design::print(void) const{
 void Design::saveToAFile(std::string filename) const{
 
 	assert(!filename.empty());
+
 	std::ofstream fileOut;
 	fileOut.open (filename);
 	fileOut << tag<<"\n";
 	fileOut << "Design parameters vector:\n";
 	fileOut << designParameters;
-	fileOut << "Objective function value: "<<objectiveFunctionValue<<"\n";
+	fileOut << "Objective function = " << trueValue << "\n";
 
 	if(numberOfConstraints>0){
 
 		fileOut << "Constraint values vector:\n";
 		fileOut << constraintTrueValues;
 
+	}
+
+	if(isDesignFeasible){
+		fileOut << "Feasibility = YES\n";
+	}
+	else{
+		fileOut << "Feasibility = NO\n";
 	}
 
 	fileOut.close();
@@ -428,8 +424,65 @@ void Design::saveDesignVector(std::string fileName) const{
 	}
 }
 
+DesignForBayesianOptimization::DesignForBayesianOptimization(){};
 
-void CDesignExpectedImprovement::generateRandomDesignVector(void){
+DesignForBayesianOptimization::DesignForBayesianOptimization(unsigned int dimension, unsigned int numberOfConstraints){
+
+	dim = dimension;
+	constraintValues = zeros<rowvec>(numberOfConstraints);
+	constraintSigmas = zeros<rowvec>(numberOfConstraints);
+}
+
+DesignForBayesianOptimization::DesignForBayesianOptimization(unsigned int dimension){
+	dim = dimension;
+}
+
+DesignForBayesianOptimization::DesignForBayesianOptimization(rowvec designVector, unsigned int numberOfConstraints){
+
+	dv = designVector;
+	dim = designVector.size();
+	constraintValues = zeros<rowvec>(numberOfConstraints);
+	constraintSigmas = zeros<rowvec>(numberOfConstraints);
+
+}
+
+DesignForBayesianOptimization::DesignForBayesianOptimization(rowvec designVector){
+
+	dv = designVector;
+	dim = designVector.size();
+
+}
+
+void DesignForBayesianOptimization::gradientUpdateDesignVector(rowvec gradient, double stepSize){
+
+
+	/* we go in the direction of gradient since we maximize */
+	dv = dv + stepSize*gradient;
+
+	double lowerBound = 0.0;
+	double upperBound = 1.0/dim;
+
+	for(unsigned int k=0; k<dim; k++){
+
+		/* if new design vector does not satisfy the box constraints */
+		if(dv(k) < lowerBound) dv(k) = lowerBound;
+		if(dv(k) > upperBound) dv(k) = upperBound;
+
+	}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+void DesignForBayesianOptimization::generateRandomDesignVector(void){
 
 	double lowerBound = 0.0;
 	double upperBound = 1.0/dim;
@@ -438,19 +491,17 @@ void CDesignExpectedImprovement::generateRandomDesignVector(void){
 
 }
 
-void CDesignExpectedImprovement::generateRandomDesignVector(vec lb, vec ub){
-
-
+void DesignForBayesianOptimization::generateRandomDesignVector(vec lb, vec ub){
 	dv = generateRandomRowVector(lb, ub);
-
-
 }
 
-void CDesignExpectedImprovement::generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub){
+void DesignForBayesianOptimization::generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub){
 
+	assert(sample.size() == dim);
 
-	vec lowerBounds(dim);
-	vec upperBounds(dim);
+	vec lowerBounds(dim, fill::zeros);
+	vec upperBounds(dim, fill::zeros);
+
 
 	double factor = 1.0/dim;
 	double dx = factor*0.01;
@@ -461,9 +512,55 @@ void CDesignExpectedImprovement::generateRandomDesignVectorAroundASample(const r
 		lowerBounds(i) = sample(i) - dx;
 		upperBounds(i) = sample(i) + dx;
 		if(lowerBounds(i) < lb(i))    lowerBounds(i) = lb(i);
-		if(upperBounds(i) > lb(i)) upperBounds(i) = ub(i);
+		if(upperBounds(i) > lb(i))    upperBounds(i) = ub(i);
 
 	}
 
 	dv = generateRandomRowVector(lowerBounds, upperBounds);
 }
+
+void DesignForBayesianOptimization::print(void) const{
+	std::cout.precision(15);
+	std::cout<<"CDesignExpectedImprovement\n";
+	std::cout<<"Design vector = \n";
+	dv.print();
+	std::cout<<"Objective function value = "<<objectiveFunctionValue<<"\n";
+	std::cout<<"Sigma = " << sigma << "\n";
+	std::cout<<"Acqusition function value = "<< valueAcqusitionFunction <<"\n";
+
+	if(constraintValues.size() > 0){
+
+		std::cout<<"Constraint values = \n";
+		constraintValues.print();
+	}
+
+	std::cout<<"\n";
+}
+
+
+double DesignForBayesianOptimization::calculateProbalityThatTheEstimateIsLessThanAValue(double value){
+
+	return cdf(value, objectiveFunctionValue, sigma) ;
+
+
+}
+double DesignForBayesianOptimization::calculateProbalityThatTheEstimateIsGreaterThanAValue(double value){
+
+
+	return 1.0 - cdf(value, objectiveFunctionValue, sigma) ;
+
+}
+
+
+void DesignForBayesianOptimization::updateAcqusitionFunctionAccordingToConstraints(void){
+
+
+	for(unsigned int i=0; i<constraintFeasibilityProbabilities.size(); i++){
+
+		valueAcqusitionFunction *= constraintFeasibilityProbabilities(i);
+	}
+
+
+}
+
+

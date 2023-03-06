@@ -45,6 +45,9 @@ using namespace arma;
 void abortIfHasNan(rowvec &);
 
 bool isEqual(const mat &A, const mat&B, double tolerance);
+bool isEqual(const rowvec &a, const rowvec &b, double tolerance);
+bool isEqual(const vec &a, const vec &b, double tolerance);
+
 
 void printMatrix(mat M, std::string name="None");
 void printVector(vec v, std::string name="None");
@@ -92,6 +95,7 @@ vec convertToVector(rowvec &);
 rowvec convertToRowVector(vec &);
 
 void appendRowVectorToCSVData(rowvec v, std::string fileName);
+void appendMatrixToCSVData(const mat& A, std::string fileName);
 
 mat readMatFromCVSFile(std::string fileName);
 void saveMatToCVSFile(mat M, std::string fileName);
@@ -103,6 +107,13 @@ mat normalizeMatrix(mat matrixIn, Bounds &boxConstraints);
 
 int findInterval(double value, vec discreteValues);
 
+int findIndexOfRow(const rowvec &v, const mat &A, double);
+
+
+mat shuffleRows(mat A);
+
+bool isBetween(const vec &v, const vec&a, const vec&b);
+bool isBetween(const rowvec &v, const rowvec&a, const rowvec&b);
 
 
 #endif

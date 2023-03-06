@@ -209,8 +209,11 @@ void TestFunction::generateSamplesInputTrainingData(void){
 
 	LHSSamples samplesTraining(dimension, lb, ub, howManySamples);
 
+
 	trainingSamplesInput = samplesTraining.getSamples();
-	trainingSamplesInput = shuffle(trainingSamplesInput);
+	trainingSamplesInput = shuffleRows(trainingSamplesInput);
+
+	ifInputSamplesAreGenerated = true;
 
 
 }
@@ -304,7 +307,12 @@ void TestFunction::generateTrainingSamples(void){
 	assert(isNotEmpty(filenameTrainingData));
 	assert(boxConstraints.areBoundsSet());
 
-	generateSamplesInputTrainingData();
+	if(!ifInputSamplesAreGenerated){
+
+		generateSamplesInputTrainingData();
+	}
+
+
 
 	evaluationSelect = 1;
 	trainingSamples = generateSamplesWithFunctionalValues(trainingSamplesInput, numberOfTrainingSamples);
@@ -318,7 +326,10 @@ void TestFunction::generateTrainingSamplesWithAdjoints(void){
 	assert(isNotEmpty(filenameTrainingData));
 	assert(boxConstraints.areBoundsSet());
 
-	generateSamplesInputTrainingData();
+	if(!ifInputSamplesAreGenerated){
+
+		generateSamplesInputTrainingData();
+	}
 	evaluationSelect = 2;
 	trainingSamples = generateSamplesWithAdjoints(trainingSamplesInput,numberOfTrainingSamples);
 	saveMatToCVSFile(trainingSamples, filenameTrainingData);
@@ -332,7 +343,10 @@ void TestFunction::generateTrainingSamplesMultiFidelity(void){
 	assert(boxConstraints.areBoundsSet());
 	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
 
-	generateSamplesInputTrainingData();
+	if(!ifInputSamplesAreGenerated){
+
+		generateSamplesInputTrainingData();
+	}
 
 	evaluationSelect = 1;
 	trainingSamples = generateSamplesWithFunctionalValues(trainingSamplesInput,numberOfTrainingSamples);
@@ -353,7 +367,10 @@ void TestFunction::generateTrainingSamplesMultiFidelityWithAdjoint(void){
 	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
 
 
-	generateSamplesInputTrainingData();
+	if(!ifInputSamplesAreGenerated){
+
+		generateSamplesInputTrainingData();
+	}
 	evaluationSelect = 2;
 	trainingSamples = generateSamplesWithAdjoints(trainingSamplesInput,numberOfTrainingSamples);
 	saveMatToCVSFile(trainingSamples, filenameTrainingDataHighFidelity);
@@ -371,7 +388,10 @@ void TestFunction::generateTrainingSamplesWithTangents(void){
 	assert(isNotEmpty(filenameTrainingData));
 	assert(boxConstraints.areBoundsSet());
 
-	generateSamplesInputTrainingData();
+	if(!ifInputSamplesAreGenerated){
+
+		generateSamplesInputTrainingData();
+	}
 	evaluationSelect = 3;
 	trainingSamples = generateSamplesWithTangents(trainingSamplesInput,numberOfTrainingSamples);
 
@@ -387,7 +407,10 @@ void TestFunction::generateTrainingSamplesMultiFidelityWithTangents(void){
 	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
 
 
-	generateSamplesInputTrainingData();
+	if(!ifInputSamplesAreGenerated){
+
+		generateSamplesInputTrainingData();
+	}
 	evaluationSelect = 3;
 
 	trainingSamples = generateSamplesWithTangents(trainingSamplesInput,numberOfTrainingSamples);
@@ -408,7 +431,10 @@ void TestFunction::generateTrainingSamplesMultiFidelityWithLowFiAdjoint(void){
 	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
 
 
-	generateSamplesInputTrainingData();
+	if(!ifInputSamplesAreGenerated){
+
+		generateSamplesInputTrainingData();
+	}
 	evaluationSelect = 1;
 	trainingSamples = this->generateSamplesWithFunctionalValues(trainingSamplesInput,numberOfTrainingSamples);
 	saveMatToCVSFile(trainingSamples, filenameTrainingDataHighFidelity);
@@ -427,7 +453,10 @@ void TestFunction::generateTrainingSamplesMultiFidelityWithLowFiTangents(void){
 	assert(numberOfTrainingSamplesLowFi > numberOfTrainingSamples);
 
 
-	generateSamplesInputTrainingData();
+	if(!ifInputSamplesAreGenerated){
+
+		generateSamplesInputTrainingData();
+	}
 	evaluationSelect = 1;
 	trainingSamples = generateSamplesWithFunctionalValues(trainingSamplesInput,numberOfTrainingSamples);
 	saveMatToCVSFile(trainingSamples, filenameTrainingDataHighFidelity);
@@ -1361,7 +1390,7 @@ void generateHimmelblauDataMultiFidelityWithShuffle(std::string filenameHiFi, st
 
 	}
 
-	samplesHiFi = shuffle(samplesHiFi);
+	samplesHiFi = shuffleRows(samplesHiFi);
 	saveMatToCVSFile(samplesHiFi, filenameHiFi);
 
 }

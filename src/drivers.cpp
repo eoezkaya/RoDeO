@@ -303,7 +303,7 @@ void RoDeODriver::checkIfSurrogateModelTypeIsOK(void) const{
 	surrogateModelType.abortIfNotSet();
 
 
-	bool ifTypeIsOK = ifIsInTheList(availableSurrogateModels, surrogateModelType.stringValue);
+	bool ifTypeIsOK = isIntheList(availableSurrogateModels, surrogateModelType.stringValue);
 
 	if(!ifTypeIsOK){
 
@@ -492,6 +492,7 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	std::string definitionBuffer;
 	std::string designVectorFilename;
 	std::string executableName;
+	std::string filenameTrainingData;
 
 
 	std::string outputFilename;
@@ -512,6 +513,7 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	executableName = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",0);
 	outputFilename = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",0);
 	exePath = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("PATH",0);
+	filenameTrainingData = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
 	surrogateModel = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
 
 	ConstraintDefinition constraintFunctionDefinition;
@@ -522,6 +524,7 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	constraintFunctionDefinition.outputFilename = outputFilename;
 	constraintFunctionDefinition.path = exePath;
 	constraintFunctionDefinition.modelHiFi = getSurrogateModelID(surrogateModel);
+	constraintFunctionDefinition.nameHighFidelityTrainingData = filenameTrainingData;
 
 	std::string multilevel;
 	multilevel = configKeysConstraintFunction.getConfigKeyStringValue("MULTILEVEL_MODEL");
@@ -900,13 +903,6 @@ void RoDeODriver::runOptimization(void){
 
 	}
 
-	if(ifDisplayIsOn()){
-
-		optimizationStudy.print();
-
-	}
-
-
 
 	if(checkIfOff(WarmStart)){
 
@@ -917,6 +913,9 @@ void RoDeODriver::runOptimization(void){
 
 	}
 
+
+
+	optimizationStudy.print();
 
 	optimizationStudy.EfficientGlobalOptimization();
 
@@ -1012,12 +1011,8 @@ Optimizer RoDeODriver::setOptimizationStudy(void) {
 
 	optimizationStudy.setBoxConstraints(lb,ub);
 
-	std::string dvFilename = configKeysObjectiveFunction.getConfigKeyStringValue("DESIGN_VECTOR_FILE");
-
-	optimizationStudy.setFileNameDesignVector(dvFilename);
-
-
 	ObjectiveFunction objFunc = setObjectiveFunction();
+
 	optimizationStudy.addObjectFunction(objFunc);
 
 
@@ -1183,6 +1178,11 @@ bool RoDeODriver::checkIfRunIsNecessary(int idConstraint) const{
 
 
 SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
+
+	if(modelName.empty()){
+
+		return ORDINARY_KRIGING;
+	}
 
 	if(modelName == "Kriging" || modelName == "KRIGING" || modelName == "ORDINARY_KRIGING" ||  modelName == "ordinary_kriging") {
 

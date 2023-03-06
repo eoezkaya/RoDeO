@@ -70,6 +70,8 @@ public:
 	std::string filenameTrainingDataLowFidelity;
 	std::string filenameTrainingDataHighFidelity;
 
+	bool ifInputSamplesAreGenerated = false;
+
 
 	double noiseLevel = 0.0;
 

@@ -144,7 +144,7 @@ public:
 	virtual void train(void) = 0;
 	virtual double interpolate(rowvec x) const = 0;
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
-	virtual void calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const = 0;
+
 	virtual void addNewSampleToData(rowvec newsample) = 0;
 	virtual void addNewLowFidelitySampleToData(rowvec newsample) = 0;
 
@@ -163,6 +163,7 @@ public:
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
 
+	void reduceTrainingData(const vec &lb, const vec &ub) const;
 
 
 };

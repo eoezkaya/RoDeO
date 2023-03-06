@@ -507,6 +507,10 @@ void KrigingModel::updateAuxilliaryFields(void){
 
 	}
 
+
+	yMin = data.getMinimumOutputVector();
+
+
 #if 0
 
 	checkAuxilliaryFields();
@@ -545,57 +549,55 @@ double KrigingModel::interpolate(rowvec xp ) const{
 
 
 
-void KrigingModel::calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const{
-
-	double ftilde = 0.0;
-	double ssqr   = 0.0;
-
-	interpolateWithVariance(currentDesign.dv,&ftilde,&ssqr);
-
-#if 0
-	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
-#endif
-
-	double	sigma = sqrt(ssqr)	;
-
-#if 0
-	printf("standart_ERROR = %15.10f\n",sigma);
-#endif
-
-	double expectedImprovementValue = 0.0;
-
-	if(fabs(sigma) > EPSILON){
-
-		double ymin = data.getMinimumOutputVector();
-		double ymax = data.getMaximumOutputVector();
-
-		double improvement = 0.0;
-		improvement = ymin - ftilde;
-
-		double	Z = (improvement)/sigma;
-#if 0
-		printf("Z = %15.10f\n",Z);
-		printf("ymin = %15.10f\n",ymin);
-#endif
-
-
-		expectedImprovementValue = improvement*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
-	}
-	else{
-
-		expectedImprovementValue = 0.0;
-
-	}
-#if 0
-	printf("expectedImprovementValue = %20.20f\n",expectedImprovementValue);
-#endif
-
-	currentDesign.objectiveFunctionValue = ftilde;
-	currentDesign.valueExpectedImprovement = expectedImprovementValue;
-
-
-
-}
+//void KrigingModel::calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const{
+//
+//	double ftilde = 0.0;
+//	double ssqr   = 0.0;
+//
+//	interpolateWithVariance(currentDesign.dv,&ftilde,&ssqr);
+//
+//#if 0
+//	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
+//#endif
+//
+//	double	sigma = sqrt(ssqr)	;
+//
+//#if 0
+//	printf("standart_ERROR = %15.10f\n",sigma);
+//#endif
+//
+//	double expectedImprovementValue = 0.0;
+//
+//	if(fabs(sigma) > EPSILON){
+//
+//		double improvement = 0.0;
+//		improvement = yMin - ftilde;
+//
+//		double	Z = (improvement)/sigma;
+//#if 0
+//		printf("Z = %15.10f\n",Z);
+//		printf("ymin = %15.10f\n",yMin);
+//#endif
+//
+//		expectedImprovementValue = improvement*cdf(Z,0.0,1.0)+  sigma * pdf(Z,0.0,1.0);
+//
+//
+//	}
+//	else{
+//
+//		expectedImprovementValue = 0.0;
+//
+//	}
+//#if 1
+//	printf("expectedImprovementValue = %20.20f\n",expectedImprovementValue);
+//#endif
+//
+//	currentDesign.objectiveFunctionValue = ftilde;
+//	currentDesign.valueExpectedImprovement = expectedImprovementValue;
+//
+//
+//
+//}
 
 void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const{
 

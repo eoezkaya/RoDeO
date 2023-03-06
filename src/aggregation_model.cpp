@@ -430,50 +430,50 @@ double AggregationModel::calculateDualModelWeight(const rowvec &x, int index) co
 }
 
 
-void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const{
-
-
-	double ftilde = 0.0;
-	double ssqr   = 0.0;
-
-	interpolateWithVariance(currentDesign.dv,&ftilde,&ssqr);
-
-#if 0
-	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
-#endif
-
-	double	sigma = sqrt(ssqr);
-
-#if 0
-	printf("standart_ERROR = %15.10f\n",sigma);
-#endif
-
-	double expectedImprovementValue = 0.0;
-
-
-	if(fabs(sigma) > EPSILON){
-
-		double ymin = data.getMinimumOutputVector();
-		double	Z = (ymin - ftilde)/sigma;
-#if 0
-		printf("EIfac = %15.10f\n",EIfac);
-		printf("ymin = %15.10f\n",ymin);
-#endif
-
-		expectedImprovementValue = (ymin - ftilde)* cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
-	}
-	else{
-
-		expectedImprovementValue = 0.0;
-
-	}
-#if 0
-	printf("EI = %15.10f\n",EI);
-#endif
-	currentDesign.objectiveFunctionValue = ftilde;
-	currentDesign.valueExpectedImprovement = expectedImprovementValue;
-
-}
+//void AggregationModel::calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const{
+//
+//
+//	double ftilde = 0.0;
+//	double ssqr   = 0.0;
+//
+//	interpolateWithVariance(currentDesign.dv,&ftilde,&ssqr);
+//
+//#if 0
+//	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
+//#endif
+//
+//	double	sigma = sqrt(ssqr);
+//
+//#if 0
+//	printf("standart_ERROR = %15.10f\n",sigma);
+//#endif
+//
+//	double expectedImprovementValue = 0.0;
+//
+//
+//	if(fabs(sigma) > EPSILON){
+//
+//		double ymin = data.getMinimumOutputVector();
+//		double	Z = (ymin - ftilde)/sigma;
+//#if 0
+//		printf("EIfac = %15.10f\n",EIfac);
+//		printf("ymin = %15.10f\n",ymin);
+//#endif
+//
+//		expectedImprovementValue = (ymin - ftilde)* cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
+//	}
+//	else{
+//
+//		expectedImprovementValue = 0.0;
+//
+//	}
+//#if 0
+//	printf("EI = %15.10f\n",EI);
+//#endif
+//	currentDesign.objectiveFunctionValue = ftilde;
+//	currentDesign.valueExpectedImprovement = expectedImprovementValue;
+//
+//}
 
 
 

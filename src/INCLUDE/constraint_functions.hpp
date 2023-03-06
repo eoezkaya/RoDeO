@@ -73,9 +73,6 @@ public:
 
 	void setParametersByDefinition(ConstraintDefinition);
 
-
-	double (*constraintFunctionPtr)(double *) = NULL;
-
 	void setInequalityType(std::string);
 	std::string getInequalityType(void) const;
 

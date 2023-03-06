@@ -23,7 +23,7 @@
  * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -48,8 +48,8 @@ private:
 	vec lowerBounds;
 	vec upperBounds;
 
-	vec lowerBoundsForEIMaximization;
-	vec upperBoundsForEIMaximization;
+	vec lowerBoundsForAcqusitionFunctionMaximization;
+	vec upperBoundsForAcqusitionFunctionMaximization;
 
 
 	std::string designVectorFileName;
@@ -66,7 +66,7 @@ private:
 	std::vector<ConstraintFunction> constraintFunctions;
 	ObjectiveFunction objFun;
 
-	std::vector<CDesignExpectedImprovement> theMostPromisingDesigns;
+	std::vector<DesignForBayesianOptimization> theMostPromisingDesigns;
 
 
 	bool isHistoryFileInitialized = false;
@@ -75,20 +75,23 @@ private:
 
 	Design globalOptimalDesign;
 
-	double initialobjectiveFunctionValue = 0.0;
+	double initialImprovementValue = 0.0;
 
 	double zoomInFactor = 0.5;
+	double zoomFactorShrinkageRate = 0.75;
 
-	unsigned int iterMaxEILoop;
+	unsigned int iterMaxAcqusitionFunction;
 
 	unsigned int numberOfDisceteVariables = 0;
 	std::vector<double> incrementsForDiscreteVariables;
 	std::vector<int> indicesForDiscreteVariables;
 
+	void setOptimizationHistoryConstraints(mat inputObjectiveFunction);
+	void setOptimizationHistoryFeasibilityValues(mat inputObjectiveFunction);
+	void calculateInitialImprovementValue(void);
 
-
-
-
+	void findTheGlobalOptimalDesign(void);
+	void initializeBoundsForAcquisitionFunctionMaximization();
 
 public:
 
@@ -100,18 +103,24 @@ public:
 
 	unsigned int maxNumberOfSamplesLowFidelity = 0;
 
-	unsigned int howOftenTrainModels = 10; /* train surrogates in every 10 iteration */
-
+	unsigned int howOftenTrainModels = 10;
+	unsigned int howOftenZoomIn = 10;
 
 	unsigned int sampleDim;
 
 	unsigned int iterGradientEILoop = 100;
+
 
 	bool ifVisualize = false;
 	bool ifDisplay = false;
 	bool ifBoxConstraintsSet = false;
 	bool ifObjectFunctionIsSpecied = false;
 	bool ifSurrogatesAreInitialized = false;
+	bool ifZoomInDesignSpaceIsAllowed = false;
+	bool ifreduceTrainingDataZoomIn = false;
+
+
+	OutputDevice output;
 
 	Optimizer();
 	Optimizer(std::string ,int);
@@ -131,7 +140,7 @@ public:
 	void visualizeOptimizationHistory(void) const;
 
 	void EfficientGlobalOptimization(void);
-	void EfficientGlobalOptimization2(void);
+//	void EfficientGlobalOptimization2(void);
 
 	void initializeSurrogates(void);
 	void trainSurrogates(void);
@@ -153,13 +162,16 @@ public:
 
 	void setDisplayOn(void);
 	void setDisplayOff(void);
+	void setZoomInOn(void);
+	void setZoomInOff(void);
 
 	void setHowOftenTrainModels(unsigned int value);
+	void setHowOftenZoomIn(unsigned int value);
 
 
 	void zoomInDesignSpace(void);
 
-	void setInitialObjectiveFunctionValue(double);
+	void setInitialImprovementValue(double);
 	void calculateImprovementValue(Design &);
 
 	void addConstraint(ConstraintFunction &);
@@ -168,7 +180,7 @@ public:
 	void addConstraintValuesToDoEData(Design &) const;
 
 
-	void estimateConstraints(CDesignExpectedImprovement &) const;
+	void estimateConstraints(DesignForBayesianOptimization &) const;
 
 	void checkIfSettingsAreOK(void) const;
 	bool checkBoxConstraints(void) const;
@@ -177,27 +189,32 @@ public:
 	void addObjectFunction(ObjectiveFunction &);
 
 
-	void addPenaltyToExpectedImprovementForConstraints(CDesignExpectedImprovement &) const;
+	void addPenaltyToAcqusitionFunctionForConstraints(DesignForBayesianOptimization &) const;
 
 	void computeConstraintsandPenaltyTerm(Design &);
 
 
-	void findTheGlobalOptimalDesign(void);
+
 	void findTheGlobalOptimalDesignMultiFidelity(void);
 
 
+	void setOptimizationHistory(void);
 	void updateOptimizationHistory(Design d);
 	void clearOptimizationHistoryFile(void) const;
 	void prepareOptimizationHistoryFile(void) const;
 
+	mat getOptimizationHistory(void) const;
+
 
 	void addConstraintValuesToData(Design &d);
 
+	void calculateFeasibilityProbabilities(DesignForBayesianOptimization &) const;
 
-	rowvec calculateEIGradient(CDesignExpectedImprovement &) const;
-	CDesignExpectedImprovement MaximizeEIGradientBased(CDesignExpectedImprovement ) const;
+
+	rowvec calculateGradientOfAcqusitionFunction(DesignForBayesianOptimization &) const;
+	DesignForBayesianOptimization MaximizeAcqusitionFunctionGradientBased(DesignForBayesianOptimization ) const;
 	void findTheMostPromisingDesign(unsigned int howManyDesigns = 1);
-	CDesignExpectedImprovement getDesignWithMaxExpectedImprovement(void) const;
+	DesignForBayesianOptimization getDesignWithMaxExpectedImprovement(void) const;
 
 	rowvec generateRandomRowVectorAroundASample(void);
 

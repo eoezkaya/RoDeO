@@ -36,11 +36,11 @@
 #include "standard_test_functions.hpp"
 #include "auxiliary_functions.hpp"
 #include "design.hpp"
+#include "test_defines.hpp"
 
 
 
 
-#define TEST_CONSTRAIN_FUNCTION
 #ifdef TEST_CONSTRAIN_FUNCTION
 
 

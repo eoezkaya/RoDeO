@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,21 +20,77 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
  */
 
 #include "auxiliary_functions.hpp"
+#include "test_defines.hpp"
 #include<gtest/gtest.h>
 
+#ifdef TEST_AUX
 
 
-TEST(testAuxiliaryFunctions, testcalculatePolynomial){
+
+TEST(testAuxiliaryFunctions, isBetween){
+
+	double x = 1.2;
+	double a = 0.2;
+	double b = 4.9;
+
+	ASSERT_TRUE(isBetween(x,a,b));
+
+	int y = 1;
+	int c = 2;
+	int d = 4;
+
+	ASSERT_FALSE(isBetween(y,c,d));
+}
+
+TEST(testAuxiliaryFunctions, isIntheList){
+
+	vector<string> v;
+	v.push_back("red");
+	v.push_back("green");
+	v.push_back("black");
+
+
+	ASSERT_TRUE(isIntheList<string>(v,"red"));
+	ASSERT_FALSE(isIntheList<string>(v,"yellow"));
+	ASSERT_FALSE(isIntheList<string>(v,"re"));
+
+	vector<int> w;
+	w.push_back(2);
+	w.push_back(14);
+	w.push_back(77);
+
+
+	ASSERT_TRUE(isIntheList<int>(w,2));
+	ASSERT_TRUE(isNotIntheList<int>(w,44));
+
+}
+
+TEST(testAuxiliaryFunctions, isIntheListV2){
+
+	int *v = new int[4];
+	v[0] = 1; v[1] = 2; v[2] = 3; v[3] = 7;
+
+
+	ASSERT_TRUE(isIntheList<int>(v,2,4));
+	ASSERT_TRUE(isNotIntheList<int>(v,44,4));
+
+	delete[] v;
+
+}
+
+
+
+TEST(testAuxiliaryFunctions, calculatePolynomial){
 
 	double x = 1.2;
 	rowvec coeffs(3);
@@ -48,34 +104,34 @@ TEST(testAuxiliaryFunctions, testcalculatePolynomial){
 
 }
 
-TEST(testAuxiliaryFunctions, testsolveLinearSystemCholesky){
-
-
-	unsigned int dim = 10;
-
-	mat M(dim,dim,fill::randu);
-	mat A = M*trans(M);
-
-	mat U = chol(A);
-
-	vec b(dim,fill::randu);
-	vec x(dim,fill::randu);
-
-	solveLinearSystemCholesky(U, x, b);
-
-	vec Xexact = inv(A)*b;
-
-	for(unsigned int i=0; i<dim; i++){
-
-		double err = fabs(x(i) - Xexact(i));
-		EXPECT_LE(err, 10E-6);
-
-	}
-
-
-
-
-}
+//TEST(testAuxiliaryFunctions, solveLinearSystemCholesky){
+//
+//
+//	unsigned int dim = 10;
+//
+//	mat M(dim,dim,fill::randu);
+//	mat A = M*trans(M);
+//
+//	mat U = chol(A);
+//
+//	vec b(dim,fill::randu);
+//	vec x(dim,fill::randu);
+//
+//	solveLinearSystemCholesky(U, x, b);
+//
+//	vec Xexact = inv(A)*b;
+//
+//	for(unsigned int i=0; i<dim; i++){
+//
+//		double err = fabs(x(i) - Xexact(i));
+//		EXPECT_LE(err, 10E-6);
+//
+//	}
+//
+//
+//
+//
+//}
 
 
 TEST(testAuxiliaryFunctions, testpdf){
@@ -83,15 +139,10 @@ TEST(testAuxiliaryFunctions, testpdf){
 	double x = 1.6;
 	double sigma = 1.8;
 	double mu = 0.9;
-
 	double result = pdf(x, mu, sigma);
-
 	double err =fabs( result-	0.2054931699076307154202);
 
 	EXPECT_LE(err, 10E-10);
-
-
-
 }
 
 TEST(testAuxiliaryFunctions, testcdf){
@@ -99,15 +150,10 @@ TEST(testAuxiliaryFunctions, testcdf){
 	double x = 1.6;
 	double sigma = 1.8;
 	double mu = 0.9;
-
 	double result = cdf(x, mu, sigma);
-
-	double err =fabs( result-	0.6513208290612620373879);
+	double err =fabs( result -	0.6513208290612620373879);
 
 	EXPECT_LE(err, 10E-10);
-
-
-
 }
 
 TEST(testAuxiliaryFunctions, testcheckifTooCLose){
@@ -142,7 +188,7 @@ TEST(testAuxiliaryFunctions, testcheckifTooCLoseVectorMatrixVersion){
 }
 
 
-TEST(testAuxiliaryFunctions, testremoveSpacesFromString){
+TEST(testAuxiliaryFunctions, removeSpacesFromString){
 
 	std::string testString = " this is a test string ";
 
@@ -154,22 +200,8 @@ TEST(testAuxiliaryFunctions, testremoveSpacesFromString){
 
 }
 
-TEST(testAuxiliaryFunctions, testIfIsInTheList){
 
-	std::vector<std::string> list;
-	list.push_back("This");
-	list.push_back("is");
-	list.push_back("an");
-	list.push_back("apple");
-
-	bool ifExists = ifIsInTheList(list,"apple");
-	ASSERT_TRUE(ifExists);
-	ifExists = ifIsInTheList(list,"orange");
-	ASSERT_FALSE(ifExists);
-
-}
-
-TEST(testAuxiliaryFunctions, testgetStringValuesFromString){
+TEST(testAuxiliaryFunctions, getStringValuesFromString){
 
 	std::string testString = "apple";
 
@@ -189,7 +221,7 @@ TEST(testAuxiliaryFunctions, testgetStringValuesFromString){
 }
 
 
-TEST(testAuxiliaryFunctions, testgetDoubleValuesFromString){
+TEST(testAuxiliaryFunctions, getDoubleValuesFromString){
 
 	std::string testString = "-1.99";
 
@@ -208,7 +240,7 @@ TEST(testAuxiliaryFunctions, testgetDoubleValuesFromString){
 
 }
 
-TEST(testAuxiliaryFunctions, testremoveKeywordFromString){
+TEST(testAuxiliaryFunctions, removeKeywordFromString){
 
 	std::string key = "DIMENSION";
 	std::string s = "DIMENSION = blabla , blabla";
@@ -227,7 +259,7 @@ TEST(testAuxiliaryFunctions, testremoveKeywordFromString){
 
 }
 
-TEST(testAuxiliaryFunctions, testisEmpty){
+TEST(testAuxiliaryFunctions, isEmpty){
 
 	std::string testStr;
 
@@ -238,7 +270,7 @@ TEST(testAuxiliaryFunctions, testisEmpty){
 }
 
 
-TEST(testAuxiliaryFunctions, testisNotEmpty){
+TEST(testAuxiliaryFunctions, isNotEmpty){
 
 	std::string testStr = "test";
 
@@ -248,4 +280,20 @@ TEST(testAuxiliaryFunctions, testisNotEmpty){
 
 
 }
+
+
+TEST(testAuxiliaryFunctions, isEqualString){
+
+	std::string testStr = "test";
+	std::string str = "test";
+	std::string str2 = "tes";
+	std::string str3 = "tesa";
+
+	ASSERT_TRUE(isEqual(testStr,str));
+	ASSERT_FALSE(isEqual(testStr,str2));
+	ASSERT_FALSE(isEqual(testStr,str3));
+
+}
+
+#endif
 
