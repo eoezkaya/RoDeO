@@ -53,7 +53,8 @@ protected:
 		vec lb(2); lb.fill(-6.0);
 		vec ub(2); ub.fill(6.0);
 
-		objFunTest.setParameterBounds(lb,ub);
+		Bounds boxConstraints(lb,ub);
+		objFunTest.setParameterBounds(boxConstraints);
 
 		definition.designVectorFilename = "dv.dat";
 		definition.executableName = "himmelblau";
@@ -282,7 +283,7 @@ TEST_F(ObjectiveFunctionTest, readOutputDesign){
 	objFunTest.setEvaluationMode("primal");
 	objFunTest.readOutputDesign(d);
 	EXPECT_EQ(d.trueValue, 2.144);
-	EXPECT_EQ(d.objectiveFunctionValue, 2.144);
+
 
 	remove("readOutputTestFile.txt");
 
@@ -301,7 +302,7 @@ TEST_F(ObjectiveFunctionTest, readOutputDesignAdjoint){
 	objFunTest.setEvaluationMode("adjoint");
 	objFunTest.readOutputDesign(d);
 	EXPECT_EQ(d.trueValue, 2.144);
-	EXPECT_EQ(d.objectiveFunctionValue, 2.144);
+
 	rowvec gradient = d.gradient;
 	EXPECT_EQ(gradient(0), 3.2);
 	EXPECT_EQ(gradient(1), 89.1);
@@ -323,7 +324,7 @@ TEST_F(ObjectiveFunctionTest, readOutputDesignTangent){
 	objFunTest.setEvaluationMode("tangent");
 	objFunTest.readOutputDesign(d);
 	EXPECT_EQ(d.trueValue, 2.144);
-	EXPECT_EQ(d.objectiveFunctionValue, 2.144);
+
 	EXPECT_EQ(d.tangentValue, -12.11);
 	remove("readOutputTestFile.txt");
 

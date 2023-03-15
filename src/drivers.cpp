@@ -107,19 +107,17 @@ RoDeODriver::RoDeODriver(){
 
 	configKeys.add(ConfigKey("SURROGATE_MODEL","string") );
 
-	configKeys.add(ConfigKey("NUMBER_OF_DOE_SAMPLES","int") );
 	configKeys.add(ConfigKey("MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS","int") );
 
-	configKeys.add(ConfigKey("WARM_START","string") );
 	configKeys.add(ConfigKey("DESIGN_VECTOR_FILENAME","string") );
 
 	configKeys.add(ConfigKey("VISUALIZATION","string") );
 	configKeys.add(ConfigKey("DISPLAY","string") );
+	configKeys.add(ConfigKey("ZOOM_IN","string") );
+	configKeys.add(ConfigKey("ZOOM_IN_CONTRACTION_FACTOR","double") );
+	configKeys.add(ConfigKey("ZOOM_IN_HOW_OFTEN","int") );
 
-	configKeys.add(ConfigKey("NUMBER_OF_ITERATIONS_FOR_EXPECTED_IMPROVEMENT_MAXIMIZATION","int") );
-
-	configKeys.add(ConfigKey("GENERATE_ONLY_SAMPLES","string") );
-	configKeys.add(ConfigKey("DOE_OUTPUT_FILENAME","string") );
+	configKeys.add(ConfigKey("MAX_NUMBER_OF_INNER_ITERATIONS","int") );
 
 	configKeys.add(ConfigKey("DISCRETE_VARIABLES","doubleVector") );
 	configKeys.add(ConfigKey("DISCRETE_VARIABLES_VALUE_INCREMENTS","doubleVector") );
@@ -145,47 +143,37 @@ RoDeODriver::RoDeODriver(){
 
 void RoDeODriver::setDisplayOn(void){
 
-
-
 	configKeys.assignKeywordValue("DISPLAY",std::string("ON"));
-
+	output.ifScreenDisplay = true;
 
 }
 void RoDeODriver::setDisplayOff(void){
 
-
 	configKeys.assignKeywordValue("DISPLAY",std::string("OFF"));
+	output.ifScreenDisplay = false;
 }
 
 
 
 void RoDeODriver::readConfigFile(void){
 
+	assert(isNotEmpty(configFileName));
 
-	if(ifDisplayIsOn()){
+	output.printMessage("Reading the configuration file: ", configFileName);
 
-		std::cout<<"Reading the configuration file : "<< configFileName <<"\n";
-
-	}
 
 	std::string stringCompleteFile;
 
 	readFileToaString(configFileName, stringCompleteFile);
 
-	if(ifDisplayIsOn()){
-
-		std::cout<<"Configuration file = \n";
-		std::cout<<stringCompleteFile;
-
-	}
+	output.printMessage("Configuration file = ");
+	output.printMessage(stringCompleteFile);
 
 	extractConfigDefinitionsFromString(stringCompleteFile);
 
 	extractObjectiveFunctionDefinitionFromString(stringCompleteFile);
 
 	extractConstraintDefinitionsFromString(stringCompleteFile);
-
-
 
 	checkConsistencyOfConfigParams();
 }
@@ -240,15 +228,11 @@ void RoDeODriver::checkIfBoxConstraintsAreSetPropertly(void) const{
 		std::cout<<"Checking box constraint settings...\n";
 	}
 
-
 	ConfigKey ub = configKeys.getConfigKey("UPPER_BOUNDS");
 	ConfigKey lb = configKeys.getConfigKey("LOWER_BOUNDS");
 
-
-
 	ConfigKey dimension = configKeys.getConfigKey("DIMENSION");
 	int dim = dimension.intValue;
-
 
 	ub.abortIfNotSet();
 	lb.abortIfNotSet();
@@ -257,31 +241,18 @@ void RoDeODriver::checkIfBoxConstraintsAreSetPropertly(void) const{
 	int sizeLb = lb.vectorDoubleValue.size();
 
 	if(sizeUb != sizeLb || sizeUb != dim){
-
-		std::cout<<"ERROR: Dimension of bounds does not match with the problem dimension, did you set LOWER_BOUNDS and UPPER_BOUNDS properly?\n";
-		abort();
-
+		abortWithErrorMessage("Dimension of bounds does not match with the problem dimension, did you set LOWER_BOUNDS and UPPER_BOUNDS properly?");
 	}
 
 	for(int i=0; i<dim; i++){
 
 		if( ub.vectorDoubleValue(i) <= lb.vectorDoubleValue(i)){
-
-			std::cout<<"ERROR: Lower bounds cannot be greater or equal than upper bounds, did you set LOWER_BOUNDS and UPPER_BOUNDS properly?\n";
-			abort();
-
-
+			abortWithErrorMessage("Lower bounds cannot be greater or equal than upper bounds, did you set LOWER_BOUNDS and UPPER_BOUNDS properly?");
 		}
-
 
 	}
 
-
 }
-
-
-
-
 
 
 void RoDeODriver::checkSettingsForSurrogateModelTest(void) const{
@@ -291,7 +262,6 @@ void RoDeODriver::checkSettingsForSurrogateModelTest(void) const{
 
 	configKeys.abortifConfigKeyIsNotSet("FILENAME_TRAINING_DATA");
 	configKeys.abortifConfigKeyIsNotSet("FILENAME_TEST_DATA");
-
 
 }
 
@@ -336,24 +306,11 @@ void RoDeODriver::checkIfConstraintsAreProperlyDefined(void) const{
 
 		}
 
-
 	}
 
-
 }
 
 
-void RoDeODriver::checkSettingsForDoE(void) const{
-
-	checkIfProblemDimensionIsSetProperly();
-	checkIfBoxConstraintsAreSetPropertly();
-
-	checkIfConstraintsAreProperlyDefined();
-
-	configKeys.abortifConfigKeyIsNotSet("NUMBER_OF_DOE_SAMPLES");
-
-
-}
 
 void RoDeODriver::checkSettingsForOptimization(void) const{
 
@@ -384,10 +341,6 @@ void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 		checkSettingsForSurrogateModelTest();
 	}
 
-	if(type == "DoE"){
-		checkSettingsForDoE();
-	}
-
 	if(type == "Optimization" || type == "OPTIMIZATION"){
 
 		checkSettingsForOptimization();
@@ -406,30 +359,45 @@ void RoDeODriver::checkIfProblemTypeIsSetProperly(void) const{
 	if(!ifProblemTypeIsValid){
 
 		std::cout<<"ERROR: Problem type is not valid, did you set PROBLEM_TYPE properly?\n";
-		std::cout<<"Valid problem types: OPTIMIZATION, DoE, SURROGATE_TEST\n";
+		std::cout<<"Valid problem types: OPTIMIZATION, SURROGATE_TEST\n";
 		abort();
 
 	}
 
 }
 
+
+bool RoDeODriver::checkifProblemTypeIsOptimization(std::string s) const{
+
+	if(isEqual(s,"OPTIMIZATION")) return true;
+	if(isEqual(s,"optimization")) return true;
+	if(isEqual(s,"Optimization")) return true;
+
+	return false;
+}
+
+
+bool RoDeODriver::checkifProblemTypeIsSurrogateTest(std::string s) const{
+
+	if(isEqual(s,"SURROGATE_TEST")) return true;
+	if(isEqual(s,"surrogate_test")) return true;
+	if(isEqual(s,"Surrogate_Test")) return true;
+
+	return false;
+}
+
 bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 
-	if (s == "DoE" || s == "DOE" || s == "OPTIMIZATION" || s == "Optimization" || s == "SURROGATE_TEST" ){
+	if(checkifProblemTypeIsOptimization(s)) return true;
+	if(checkifProblemTypeIsOptimization(s)) return true;
 
-		return true;
-	}
-	else return false;
-
+	return false;
 }
 
 
 ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 
-	if(ifDisplayIsOn()){
-		std::cout<<"Setting objective function...\n";
-	}
-
+	output.printMessage("Setting the objective function...");
 
 	std::string objFunName = configKeysObjectiveFunction.getConfigKeyStringValue("NAME");
 	int dim = configKeys.getConfigKeyIntValue("DIMENSION");
@@ -437,25 +405,21 @@ ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 	ObjectiveFunction objFunc;
 	objFunc.setDimension(dim);
 
-	std::string optimizationType = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
-
-
 	objFunc.setParametersByDefinition(objectiveFunction);
 
 	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
 	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
 
-	objFunc.setParameterBounds(lb,ub);
+	Bounds boxConstraints(lb,ub);
+	objFunc.setParameterBounds(boxConstraints);
 
 
 	unsigned int nIterForSurrogateTraining = 10000;
 
-	if(configKeysObjectiveFunction.ifConfigKeyIsSet("NUMBER_OF_TRAINING_ITERATIONS")){
-
-		nIterForSurrogateTraining = configKeysObjectiveFunction.getConfigKeyIntValue("NUMBER_OF_TRAINING_ITERATIONS");
-
+	string key = "NUMBER_OF_TRAINING_ITERATIONS";
+	if(configKeysObjectiveFunction.ifConfigKeyIsSet(key)){
+		nIterForSurrogateTraining = configKeysObjectiveFunction.getConfigKeyIntValue(key);
 	}
-
 
 	objFunc.setNumberOfTrainingIterationsForSurrogateModel(nIterForSurrogateTraining);
 
@@ -838,7 +802,9 @@ ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDef
 
 	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
 	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
-	constraintFunc.setParameterBounds(lb,ub);
+
+	Bounds boxConstraints(lb,ub);
+	constraintFunc.setParameterBounds(boxConstraints);
 
 
 
@@ -854,26 +820,21 @@ ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDef
 void RoDeODriver::setOptimizationFeatures(Optimizer &optimizationStudy) const{
 
 	if(ifDisplayIsOn()){
-
 		optimizationStudy.setDisplayOn();
-
 	}
 
-	configKeys.abortifConfigKeyIsNotSet("MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS");
+	string keyword  = "MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS";
+	configKeys.abortifConfigKeyIsNotSet(keyword);
 
-	int nFunctionEvals = configKeys.getConfigKeyIntValue("MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS");
-
+	int nFunctionEvals = configKeys.getConfigKeyIntValue(keyword);
 	optimizationStudy.setMaximumNumberOfIterations(nFunctionEvals);
 
 
-	int nIterationsForEIMaximization = configKeys.getConfigKeyIntValue("DIMENSION")* 100000;
+	keyword = "MAX_NUMBER_OF_INNER_ITERATIONS";
+	if(configKeys.ifConfigKeyIsSet(keyword)){
 
-	if(configKeys.ifConfigKeyIsSet("NUMBER_OF_ITERATIONS_FOR_EXPECTED_IMPROVEMENT_MAXIMIZATION")){
-
-
-		nIterationsForEIMaximization = configKeys.getConfigKeyIntValue("NUMBER_OF_ITERATIONS_FOR_EXPECTED_IMPROVEMENT_MAXIMIZATION");
-
-		optimizationStudy.setMaximumNumberOfIterationsForEIMaximization(nIterationsForEIMaximization);
+		int numberOfMaxInnerIterations = configKeys.getConfigKeyIntValue("keyword");
+		optimizationStudy.setMaximumNumberOfInnerIterations(numberOfMaxInnerIterations);
 
 	}
 
@@ -883,39 +844,14 @@ void RoDeODriver::setOptimizationFeatures(Optimizer &optimizationStudy) const{
 
 void RoDeODriver::runOptimization(void){
 
-	displayMessage("Running Optimization...\n");
+	output.printMessage("Running Optimization...");
 
 	Optimizer optimizationStudy = setOptimizationStudy();
-
 	setOptimizationFeatures(optimizationStudy);
 
-
-	std::string WarmStart = "OFF";
-
-	if(configKeys.ifConfigKeyIsSet("WARM_START")){
-
-
-		WarmStart = configKeys.getConfigKeyStringValue("WARM_START");
-
-		std::string msg = "Warm start = " + WarmStart;
-		displayMessage(msg);
-
-
+	if(output.ifScreenDisplay){
+		optimizationStudy.print();
 	}
-
-
-	if(checkIfOff(WarmStart)){
-
-		configKeys.abortifConfigKeyIsNotSet("NUMBER_OF_DOE_SAMPLES");
-		int maximumNumberDoESamples = configKeys.getConfigKeyIntValue("NUMBER_OF_DOE_SAMPLES");
-		optimizationStudy.cleanDoEFiles();
-		optimizationStudy.performDoE(maximumNumberDoESamples,LHS);
-
-	}
-
-
-
-	optimizationStudy.print();
 
 	optimizationStudy.EfficientGlobalOptimization();
 
@@ -1002,18 +938,38 @@ void RoDeODriver::determineProblemDimensionAndBoxConstraintsFromTrainingData(voi
 
 Optimizer RoDeODriver::setOptimizationStudy(void) {
 
-	std::string name = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
+
+	string name = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
+
+	if(isEmpty(name)){
+
+		std::string msg = "PROBLEM_NAME is not set! Check the configuration file.";
+		abortWithErrorMessage(msg);
+	}
+
 	int dim = configKeys.getConfigKeyIntValue("DIMENSION");
 
 	Optimizer optimizationStudy(name, dim);
 	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
 	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
 
-	optimizationStudy.setBoxConstraints(lb,ub);
+	if(lb.size() == 0){
+
+		std::string msg = "LOWER_BOUNDS are not set! Check the configuration file.";
+		abortWithErrorMessage(msg);
+	}
+	if(ub.size() == 0){
+
+		std::string msg = "UPPER_BOUNDS are not set! Check the configuration file.";
+		abortWithErrorMessage(msg);
+	}
+
 
 	ObjectiveFunction objFunc = setObjectiveFunction();
-
 	optimizationStudy.addObjectFunction(objFunc);
+
+	Bounds boxConstraints(lb,ub);
+	optimizationStudy.setBoxConstraints(boxConstraints);
 
 
 	for ( auto i = constraints.begin(); i != constraints.end(); i++ ) {
@@ -1040,141 +996,6 @@ Optimizer RoDeODriver::setOptimizationStudy(void) {
 
 }
 
-
-void RoDeODriver::generateDoESamples(void) {
-
-	vec lowerBounds = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
-	vec upperBounds = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
-
-	unsigned int howManySamples =  configKeys.getConfigKeyIntValue("NUMBER_OF_DOE_SAMPLES");
-	unsigned int dimension = configKeys.getConfigKeyIntValue("DIMENSION");
-
-	assert(dimension == upperBounds.size());
-	assert(dimension == lowerBounds.size());
-
-	LHSSamples DoE(dimension, lowerBounds, upperBounds, howManySamples);
-
-
-
-
-	vec indicesOfDiscreteVariables = configKeys.getConfigKeyVectorDoubleValue("DISCRETE_VARIABLES");
-
-	unsigned int howManyDiscreteVariablesExist = indicesOfDiscreteVariables.size();
-
-	if(howManyDiscreteVariablesExist > 0) {
-
-		int *indicesForDiscreteVariables = new int[howManyDiscreteVariablesExist];
-
-		for(unsigned int i=0; i<howManyDiscreteVariablesExist; i++){
-
-			indicesForDiscreteVariables[i] = indicesOfDiscreteVariables[i];
-
-		}
-
-
-		DoE.setDiscreteParameterIndices(indicesForDiscreteVariables, howManyDiscreteVariablesExist);
-
-
-		vec increments = configKeys.getConfigKeyVectorDoubleValue("DISCRETE_VARIABLES_VALUE_INCREMENTS");
-
-		DoE.setDiscreteParameterIncrements(increments);
-
-
-		DoE.roundSamplesToDiscreteValues();
-
-
-		delete[] indicesForDiscreteVariables;
-
-
-	}
-
-	std::string filename= configKeys.getConfigKeyStringValue("DOE_OUTPUT_FILENAME");
-
-	assert(isNotEmpty(filename));
-	DoE.saveSamplesToCSVFile(filename);
-
-}
-
-
-
-void RoDeODriver::runDoE(void) {
-
-
-	Optimizer optimizationStudy = setOptimizationStudy();
-
-
-	if(!optimizationStudy.checkSettings()){
-
-		std::cout<<"ERROR: Settings check is failed!\n";
-		abort();
-	}
-
-	bool ifWarmStart = false;
-
-
-	if(ifDisplayIsOn()){
-
-		ifWarmStart = true;
-
-	}
-
-	if(ifWarmStart == false){
-
-		optimizationStudy.cleanDoEFiles();
-
-	}
-
-
-	configKeys.abortifConfigKeyIsNotSet("NUMBER_OF_DOE_SAMPLES");
-	int maximumNumberDoESamples = configKeys.getConfigKeyIntValue("NUMBER_OF_DOE_SAMPLES");
-
-	optimizationStudy.performDoE(maximumNumberDoESamples,LHS);
-
-
-
-}
-
-
-bool RoDeODriver::checkIfRunIsNecessary(int idConstraint) const{
-#if 0
-	std::cout<<"checkIfRunIsNecessary with idConstraint = "<<idConstraint<<"\n";
-#endif
-	assert(objectiveFunction.ifDefined);
-	assert(!objectiveFunction.executableName.empty());
-	assert(idConstraint < constraints.size());
-	assert(idConstraint >= 0);
-
-	ConstraintDefinition constraintToCheck = this->constraints.at(idConstraint);
-	std::string exeNameOftheConstraint = constraintToCheck.executableName;
-
-#if 0
-	constraintToCheck.print();
-#endif
-
-	assert(!exeNameOftheConstraint.empty());
-
-
-	if(objectiveFunction.executableName == exeNameOftheConstraint) {
-
-		return false;
-	}
-
-
-	if(ifDisplayIsOn()){
-
-		std::cout<<"Checking if a run is necessary for the constraint with ID = "<<idConstraint<<"\n";
-	}
-
-	for ( auto i = constraints.begin(); i != constraints.end(); i++ ) {
-
-		if(i->executableName == exeNameOftheConstraint && i->ID < idConstraint) return false;
-
-	}
-
-
-	return true;
-
-}
 
 
 SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
@@ -1285,103 +1106,39 @@ void RoDeODriver::runSurrogateModelTest(void){
 
 
 
-int RoDeODriver::runDriver(void){
+void RoDeODriver::run(void){
 
 
 	std::string problemType = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
 
-	if(problemType == "SURROGATE_TEST"){
+	if(checkifProblemTypeIsSurrogateTest(problemType)){
 
+		string msg = "\n################################## STARTING SURROGATE MODEL TEST ##################################\n";
+		output.printMessage(msg);
 
-		std::cout<<"\n################################## STARTING SURROGATE MODEL TEST ##################################\n";
 		runSurrogateModelTest();
 
-		std::cout<<"\n################################## FINISHED SURROGATE MODEL TEST ##################################\n";
+		msg = "\n################################## FINISHED SURROGATE MODEL TEST ##################################\n";
+		output.printMessage(msg);
 
-		return 0;
 	}
 
+	if(checkifProblemTypeIsOptimization(problemType)){
 
-	if(problemType == "DoE" || problemType == "DOE"){
+		string msg = "\n################################## STARTING Optimization ##################################\n";
+		output.printMessage(msg);
 
-
-
-		if(configKeys.ifFeatureIsOn("GENERATE_ONLY_SAMPLES")){
-			std::cout<<"\n################################## GENERATING DoE SAMPLES ########################\n";
-			generateDoESamples();
-
-			return 0;
-		}
-
-		std::cout<<"\n################################## STARTING DoE ##################################\n";
-		runDoE();
-
-		std::cout<<"\n################################## FINISHED DoE ##################################\n";
-
-		return 0;
-	}
-
-
-	if(isProblemTypeOptimization(problemType)){
-
-		std::cout<<"\n################################## STARTING Optimization ##################################\n";
 		runOptimization();
 
-		std::cout<<"\n################################## FINISHED Optimization ##################################\n";
-
-		return 0;
+		msg = "\n################################## FINISHED Optimization ##################################\n";
+		output.printMessage(msg);
 	}
 
 
-
-
-
-	std::cout<<"ERROR: PROBLEM_TYPE is unknown!\n";
-	abort();
-
-
+	abortWithErrorMessage("PROBLEM_TYPE is unknown!");
 
 }
 
-bool RoDeODriver::isProblemTypeOptimization(std::string type) const{
-
-	if(isProblemTypeMinimization(type)) return true;
-	if(isProblemTypeMaximization(type)) return true;
-
-	return false;
-}
-
-bool RoDeODriver::isProblemTypeMinimization(std::string type) const{
-
-	if(type == "minimize") return true;
-	if(type == "minimise") return true;
-	if(type == "MINIMIZE") return true;
-	if(type == "MINIMISE") return true;
-	if(type == "Minimize") return true;
-	if(type == "Minimise") return true;
-	if(type == "MINIMIZATION") return true;
-	if(type == "MINIMISATION") return true;
-	if(type == "Minimization") return true;
-	if(type == "Minimisation") return true;
-	return false;
-
-}
-
-bool RoDeODriver::isProblemTypeMaximization(std::string type) const{
-
-	if(type == "maximize") return true;
-	if(type == "maximise") return true;
-	if(type == "MAXIMIZE") return true;
-	if(type == "MAXIMISE") return true;
-	if(type == "Maximize") return true;
-	if(type == "Maximise") return true;
-	if(type == "MAXIMIZATION") return true;
-	if(type == "MAXIMISATION") return true;
-	if(type == "Maximization") return true;
-	if(type == "Maximisation") return true;
-	return false;
-
-}
 
 
 void RoDeODriver::displayMessage(std::string inputString) const{

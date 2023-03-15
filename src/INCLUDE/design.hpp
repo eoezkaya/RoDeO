@@ -68,7 +68,7 @@ public:
 	void updateAcqusitionFunctionAccordingToConstraints(void);
 
 
-	void gradientUpdateDesignVector(rowvec gradient, double stepSize);
+	void gradientUpdateDesignVector(const rowvec &, const vec &, const vec &, double);
 	void print(void) const;
 
 

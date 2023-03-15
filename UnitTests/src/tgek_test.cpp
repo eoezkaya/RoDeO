@@ -32,7 +32,7 @@
 #include "tgek.hpp"
 #include "kriging_training.hpp"
 #include "matrix_vector_operations.hpp"
-#include "test_functions.hpp"
+#include "standard_test_functions.hpp"
 #include "auxiliary_functions.hpp"
 #include "test_defines.hpp"
 #include<gtest/gtest.h>
@@ -51,71 +51,56 @@ protected:
 
 	void generate1DTestFunctionDataForTGEKModel(unsigned int N, unsigned int NTest) {
 
-		TestFunction testFunction("1DTestFunction", 1);
 
+		oneDimensionalTestFunction.function.filenameTrainingData = "trainingSamples1DFunctionTGEK.csv";
+		oneDimensionalTestFunction.function.numberOfTrainingSamples = N;
+		oneDimensionalTestFunction.function.generateTrainingSamplesWithTangents();
 
-		testFunction.tan_ptr = testFunction1DTangent;
-		testFunction.setBoxConstraints(0.0, 6.0);
+		oneDimensionalTestFunction.function.filenameTestData = "testSamples1DFunctionTGEK.csv";
+		oneDimensionalTestFunction.function.numberOfTestSamples  = NTest;
+		oneDimensionalTestFunction.function.generateTestSamples();
 
-		testFunction.filenameTrainingData = "trainingSamplesHimmelblauTGEK.csv";
-		testFunction.numberOfTrainingSamples = N;
-		testFunction.generateTrainingSamplesWithTangents();
-
-		testFunction.filenameTestData = "testSamplesHimmelblauTGEK.csv";
-		testFunction.numberOfTestSamples  = NTest;
-		testFunction.generateTestSamples();
-
-		trainingData = testFunction.trainingSamples;
-		testData = testFunction.testSamples;
+		trainingData = oneDimensionalTestFunction.function.trainingSamples;
+		testData = oneDimensionalTestFunction.function.testSamples;
 
 	}
 
 	void generate2DHimmelblauDataForTGEKModel(unsigned int N) {
 
-		TestFunction testFunctionHimmelblau("Himmelblau", 2);
 
-		testFunctionHimmelblau.tan_ptr = HimmelblauTangent;
-		testFunctionHimmelblau.setBoxConstraints(-6.0, 6.0);
+		himmelblauFunction.function.filenameTrainingData ="trainingSamplesHimmelblauTGEK.csv";
+		himmelblauFunction.function.numberOfTrainingSamples = N;
+		himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-		testFunctionHimmelblau.filenameTrainingData = "trainingSamplesHimmelblauTGEK.csv";
-		testFunctionHimmelblau.numberOfTrainingSamples = N;
-		testFunctionHimmelblau.generateSamplesInputTrainingData();
-		testFunctionHimmelblau.generateTrainingSamplesWithTangents();
+		himmelblauFunction.function.filenameTestData = "testSamplesHimmelblauTGEK.csv";
+		himmelblauFunction.function.numberOfTestSamples  = N;
+		himmelblauFunction.function.generateTestSamples();
 
-		testFunctionHimmelblau.filenameTestData = "testSamplesHimmelblauTGEK.csv";
-		testFunctionHimmelblau.numberOfTestSamples  = N;
-		testFunctionHimmelblau.generateTestSamples();
-
-		trainingData = testFunctionHimmelblau.trainingSamples;
-		testData = testFunctionHimmelblau.testSamples;
+		trainingData = himmelblauFunction.function.trainingSamples;
+		testData = himmelblauFunction.function.testSamples;
 
 	}
 
 	void generate2DHimmelblauDataForKrigingModel(unsigned int N) {
 
-		TestFunction testFunctionHimmelblau("Himmelblau", 2);
+		himmelblauFunction.function.filenameTrainingData ="trainingSamplesHimmelblauTGEK.csv";
+		himmelblauFunction.function.numberOfTrainingSamples = N;
+		himmelblauFunction.function.generateTrainingSamples();
 
-		testFunctionHimmelblau.func_ptr =  Himmelblau;
+		himmelblauFunction.function.filenameTestData = "testSamplesHimmelblauTGEK.csv";
+		himmelblauFunction.function.numberOfTestSamples  = N;
+		himmelblauFunction.function.generateTestSamples();
 
-		testFunctionHimmelblau.setBoxConstraints(-6.0, 6.0);
-
-		testFunctionHimmelblau.filenameTrainingData = "trainingSamplesHimmelblauKriging.csv";
-		testFunctionHimmelblau.numberOfTrainingSamples = N;
-		testFunctionHimmelblau.generateSamplesInputTrainingData();
-		testFunctionHimmelblau.generateTrainingSamples();
-
-		testFunctionHimmelblau.filenameTestData = "testSamplesHimmelblauKriging.csv";
-		testFunctionHimmelblau.numberOfTestSamples  = N;
-		testFunctionHimmelblau.generateTestSamples();
-
-		trainingData.load("trainingSamplesHimmelblauKriging.csv", csv_ascii);
-		testData.load("testSamplesHimmelblauKriging.csv");
+		trainingData = himmelblauFunction.function.trainingSamples;
+		testData = himmelblauFunction.function.testSamples;
 
 	}
 
 	mat trainingData;
 	mat testData;
 	TGEKModel testModel;
+	HimmelblauFunction himmelblauFunction;
+	NonLinear1DTestFunction1 oneDimensionalTestFunction;
 
 };
 
@@ -160,12 +145,8 @@ TEST_F(TGEKModelTest, generateWeightingMatrix) {
 	mat W = testModel.getWeightMatrix();
 
 	for(unsigned int i=0; i<5;i++){
-
 		ASSERT_TRUE(W(i,i) > 0.0);
-
 	}
-
-
 }
 
 TEST_F(TGEKModelTest, calculateOutSampleError) {
@@ -183,7 +164,7 @@ TEST_F(TGEKModelTest, calculateOutSampleError) {
 	testModel.setNumberOfTrainingIterations(1000);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
-//	testModel.setDisplayOn();
+	//	testModel.setDisplayOn();
 
 	testModel.setNumberOfDifferentiatedBasisFunctionsUsed(5);
 	testModel.train();
@@ -339,7 +320,7 @@ TEST_F(TGEKModelTest, updateAuxilliaryFields) {
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 
-//	testModel.setDisplayOn();
+	//	testModel.setDisplayOn();
 	testModel.updateAuxilliaryFields();
 
 }
@@ -369,7 +350,7 @@ TEST_F(TGEKModelTest, addNewSampleToData) {
 	generate2DHimmelblauDataForTGEKModel(10);
 
 	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
-		//	testModel.setDisplayOn();
+	//	testModel.setDisplayOn();
 	testModel.readData();
 	vec ub(2);
 	ub.fill(6.0);

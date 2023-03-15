@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -364,55 +364,7 @@ void TGEKModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) 
 	*f_tilde = interpolate(xp);
 
 }
-//void TGEKModel::calculateExpectedImprovement(CDesignExpectedImprovement &designCalculated) const{
-//
-//	double ftilde = 0.0;
-//	double ssqr   = 0.0;
-//
-//	interpolateWithVariance(designCalculated.dv,&ftilde,&ssqr);
-//
-//#if 0
-//	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
-//#endif
-//
-//	double	sigma = sqrt(ssqr)	;
-//
-//#if 0
-//	printf("standart_ERROR = %15.10f\n",sigma);
-//#endif
-//
-//	double expectedImprovementValue = 0.0;
-//
-//	if(fabs(sigma) > EPSILON){
-//
-//		double ymin = data.getMinimumOutputVector();
-//		double ymax = data.getMaximumOutputVector();
-//
-//		double improvement = 0.0;
-//		improvement = ymin - ftilde;
-//
-//		double	Z = (improvement)/sigma;
-//#if 0
-//		printf("Z = %15.10f\n",Z);
-//		printf("ymin = %15.10f\n",ymin);
-//#endif
-//
-//
-//		expectedImprovementValue = improvement*cdf(Z,0.0,1.0)+ sigma * pdf(Z,0.0,1.0);
-//	}
-//	else{
-//
-//		expectedImprovementValue = 0.0;
-//
-//	}
-//#if 0
-//	printf("expectedImprovementValue = %20.20f\n",expectedImprovementValue);
-//#endif
-//
-//	designCalculated.objectiveFunctionValue = ftilde;
-//	designCalculated.valueExpectedImprovement = expectedImprovementValue;
-//
-//}
+
 
 void TGEKModel::resetDataObjects(void){
 

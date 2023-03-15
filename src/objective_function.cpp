@@ -264,21 +264,19 @@ void ObjectiveFunction::setExecutableName(std::string exeName){
 
 }
 
-void ObjectiveFunction::setParameterBounds(vec lb, vec ub){
-
-	assert(dim == lb.size());
-	assert(dim == ub.size());
-	lowerBounds = lb;
-	upperBounds = ub;
-
-	ifParameterBoundsAreSet = true;
-}
 
 void ObjectiveFunction::setParameterBounds(Bounds bounds){
 
 	assert(dim == bounds.getDimension());
-	lowerBounds = bounds.getLowerBounds();
-	upperBounds = bounds.getUpperBounds();
+	assert(bounds.areBoundsSet());
+
+	boxConstraints = bounds;
+
+	if(ifSurrogateModelIsDefined){
+
+		surrogate->setBoxConstraints(boxConstraints);
+	}
+
 
 	ifParameterBoundsAreSet = true;
 }
@@ -305,7 +303,7 @@ void ObjectiveFunction::initializeSurrogate(void){
 
 	bindSurrogateModel();
 
-	Bounds boxConstraints(lowerBounds,upperBounds);
+	assert(boxConstraints.areBoundsSet());
 
 	surrogate->setBoxConstraints(boxConstraints);
 	surrogate->readData();
@@ -626,5 +624,11 @@ void ObjectiveFunction::print(void) const{
 void ObjectiveFunction::printSurrogate(void) const{
 	surrogate->printSurrogateModel();
 }
+
+void ObjectiveFunction::reduceTrainingDataFiles(unsigned howManySamples, double targetValue) const{
+
+	surrogate->reduceTrainingData(howManySamples,targetValue);
+}
+
 
 

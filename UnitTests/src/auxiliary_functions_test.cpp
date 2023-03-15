@@ -90,51 +90,8 @@ TEST(testAuxiliaryFunctions, isIntheListV2){
 
 
 
-TEST(testAuxiliaryFunctions, calculatePolynomial){
 
-	double x = 1.2;
-	rowvec coeffs(3);
-	coeffs(0) = 1.0;
-	coeffs(1) = 2.0;
-	coeffs(2) = 4.0;
-
-	double result = calculatePolynomial(x, coeffs);
-	EXPECT_EQ(result, 9.16);
-
-
-}
-
-//TEST(testAuxiliaryFunctions, solveLinearSystemCholesky){
-//
-//
-//	unsigned int dim = 10;
-//
-//	mat M(dim,dim,fill::randu);
-//	mat A = M*trans(M);
-//
-//	mat U = chol(A);
-//
-//	vec b(dim,fill::randu);
-//	vec x(dim,fill::randu);
-//
-//	solveLinearSystemCholesky(U, x, b);
-//
-//	vec Xexact = inv(A)*b;
-//
-//	for(unsigned int i=0; i<dim; i++){
-//
-//		double err = fabs(x(i) - Xexact(i));
-//		EXPECT_LE(err, 10E-6);
-//
-//	}
-//
-//
-//
-//
-//}
-
-
-TEST(testAuxiliaryFunctions, testpdf){
+TEST(testAuxiliaryFunctions, pdf){
 
 	double x = 1.6;
 	double sigma = 1.8;
@@ -145,7 +102,7 @@ TEST(testAuxiliaryFunctions, testpdf){
 	EXPECT_LE(err, 10E-10);
 }
 
-TEST(testAuxiliaryFunctions, testcdf){
+TEST(testAuxiliaryFunctions, cdf){
 
 	double x = 1.6;
 	double sigma = 1.8;
@@ -156,7 +113,7 @@ TEST(testAuxiliaryFunctions, testcdf){
 	EXPECT_LE(err, 10E-10);
 }
 
-TEST(testAuxiliaryFunctions, testcheckifTooCLose){
+TEST(testAuxiliaryFunctions, checkifTooCLose){
 
 	rowvec x1(3, fill::randu);
 
@@ -173,7 +130,7 @@ TEST(testAuxiliaryFunctions, testcheckifTooCLose){
 
 }
 
-TEST(testAuxiliaryFunctions, testcheckifTooCLoseVectorMatrixVersion){
+TEST(testAuxiliaryFunctions, checkifTooCLoseVectorMatrixVersion){
 
 	rowvec x1(3, fill::randu);
 	mat M(20,3,fill::randu);

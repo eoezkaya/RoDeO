@@ -72,6 +72,8 @@ vec normalizeColumnVector(vec x, double xmin, double xmax);
 
 rowvec normalizeRowVector(rowvec x, vec xmin, vec xmax);
 rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax);
+vec normalizeColumnVectorBack(vec xnorm, vec xmin, vec xmax);
+
 
 void copyRowVector(rowvec &a,rowvec b);
 void copyRowVector(rowvec &a,rowvec b, unsigned int);

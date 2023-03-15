@@ -41,6 +41,58 @@
 #ifdef TEST_DRIVER
 
 
+class DriverTest : public ::testing::Test {
+protected:
+	void SetUp() override {
+
+		himmelblauFunction.function.filenameTrainingData = "himmelblau.csv";
+		himmelblauFunction.function.numberOfTrainingSamples = 50;
+		himmelblauFunction.function.numberOfTrainingSamplesLowFi = 0;
+
+		constraint1.function.filenameTrainingData = "constraint1.csv";
+		constraint1.function.numberOfTrainingSamples = 40;
+
+		constraint2.function.filenameTrainingData = "constraint2.csv";
+		constraint2.function.numberOfTrainingSamples = 40;
+
+	}
+
+
+
+	void TearDown() override {	}
+
+	HimmelblauFunction himmelblauFunction;
+	HimmelblauConstraintFunction1 constraint1;
+	HimmelblauConstraintFunction2 constraint2;
+
+};
+
+
+
+TEST_F(DriverTest, runOptimizationHimmelblauUnconstrained){
+
+	/* In this test we perform unconstrained minimization of the Himmelblau function
+	 * with only function values */
+
+
+	himmelblauFunction.function.generateTrainingSamples();
+
+	compileWithCpp("himmelblau.cpp","himmelblau");
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileHimmelblauUnconstrainedOptimization.cfg");
+	testDriver.readConfigFile();
+	testDriver.runOptimization();
+
+
+	abort();
+
+}
+
+
+
 TEST(testDriverOptimization, runOptimizationHimmelblauConstrained){
 
 	/* In this test we perform constrained minimization of the Himmelblau function with only function values */
@@ -69,24 +121,7 @@ TEST(testDriverOptimization, runOptimizationHimmelblauConstrained){
 }
 
 
-TEST(testDriverOptimization, runOptimizationHimmelblauUnconstrained){
 
-	/* In this test we perform unconstrained minimization of the Himmelblau function with only function values */
-
-	HimmelblauFunction testFunction;
-	testFunction.function.filenameTrainingData = "himmelblau.csv";
-	testFunction.function.numberOfTrainingSamples = 50;
-	testFunction.function.generateTrainingSamples();
-
-	compileWithCpp("himmelblau.cpp","himmelblau");
-
-	RoDeODriver testDriver;
-
-	testDriver.setConfigFilename("testConfigFileHimmelblauUnconstrainedOptimization.cfg");
-	testDriver.readConfigFile();
-	testDriver.runOptimization();
-
-}
 
 
 

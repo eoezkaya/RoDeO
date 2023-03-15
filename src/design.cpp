@@ -352,6 +352,7 @@ void Design::print(void) const{
 	}
 	std::cout<<"Improvement = "<<improvementValue<<"\n";
 	std::cout<<"\n";
+	std::cout<< "\n*********************************************************\n\n\n";
 
 
 }
@@ -453,20 +454,18 @@ DesignForBayesianOptimization::DesignForBayesianOptimization(rowvec designVector
 
 }
 
-void DesignForBayesianOptimization::gradientUpdateDesignVector(rowvec gradient, double stepSize){
+void DesignForBayesianOptimization::gradientUpdateDesignVector(const rowvec &gradient, const vec &lb, const vec &ub, double stepSize){
 
 
 	/* we go in the direction of gradient since we maximize */
 	dv = dv + stepSize*gradient;
 
-	double lowerBound = 0.0;
-	double upperBound = 1.0/dim;
 
 	for(unsigned int k=0; k<dim; k++){
 
 		/* if new design vector does not satisfy the box constraints */
-		if(dv(k) < lowerBound) dv(k) = lowerBound;
-		if(dv(k) > upperBound) dv(k) = upperBound;
+		if(dv(k) < lb(k)) dv(k) = lb(k);
+		if(dv(k) > ub(k)) dv(k) = ub(k);
 
 	}
 

@@ -410,6 +410,20 @@ rowvec normalizeRowVectorBack(rowvec xnorm, vec xmin, vec xmax){
 	return xp;
 }
 
+vec normalizeColumnVectorBack(vec xnorm, vec xmin, vec xmax){
+
+	unsigned int dim = xnorm.size();
+	vec xp(dim);
+
+	for(unsigned int i=0; i<dim; i++){
+
+		assert(xmax(i) > xmin(i));
+		xp(i) = xnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
+
+	}
+	return xp;
+}
+
 
 uvec findIndicesKMax(const vec &v, unsigned int k){
 

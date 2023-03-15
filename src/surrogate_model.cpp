@@ -227,66 +227,82 @@ void SurrogateModel::readDataTest(void){
 }
 
 
-void SurrogateModel::reduceTrainingData(const vec &lb, const vec &ub) const{
+void SurrogateModel::reduceTrainingData(unsigned howManySamples, double targetValue) const{
 
 	assert(ifDataIsRead);
-
+	Bounds boxConstraints = data.getBoxConstraints();
+	assert(boxConstraints.areBoundsSet());
 
 	unsigned int dim = data.getDimension();
 	unsigned int N   = data.getNumberOfSamples();
 
-	mat readBuffer;
+	mat trainingData;
+	trainingData = data.getRawData();
 
-	readBuffer.load(filenameDataInput, csv_ascii);
-	assert(N == readBuffer.n_rows);
+	vec lb = boxConstraints.getLowerBounds();
+	vec ub = boxConstraints.getUpperBounds();
 
-	Bounds boxConstraints = data.getBoxConstraints();
-	assert(boxConstraints.areBoundsSet());
+	vector<pair<unsigned int, double >> samplesThatCanBeRemoved;
 
-	vec lowerBounds = boxConstraints.getLowerBounds();
-	vec upperBounds = boxConstraints.getUpperBounds();
-
-	for(unsigned int i=0; i<dim; i++){
-		assert(lb(i) >=  lowerBounds(i));
-		assert(ub(i) <=  upperBounds(i));
-	}
-
-	vector<int> rowIndicesToDelete;
-	int count = 0;
 	for(unsigned int i=0; i<N; i++){
 
-		printScalar(i);
-
-		rowvec sample     = readBuffer.row(i);
-		rowvec dv         = sample.tail(dim);
+		rowvec sample     = trainingData.row(i);
+		rowvec dv         = sample.head(dim);
+		double value      = sample(dim);
 		vec x = convertToVector(dv);
 
-
-		x.print();
-
 		if(!isBetween(x,lb,ub)){
-			rowIndicesToDelete.push_back(i);
-			count++;
+
+			pair<unsigned int, double> sampleToRemove;
+
+			sampleToRemove.first = i;
+			sampleToRemove.second = fabs(value - targetValue);
+
+			samplesThatCanBeRemoved.push_back(sampleToRemove);
 		}
+	}
+
+	unsigned int Nreduced = samplesThatCanBeRemoved.size();
+
+	if(Nreduced == 0){
+		howManySamples = 0;
 
 	}
 
-	unsigned int Nleft = N - count;
-	mat writeBuffer(Nleft,readBuffer.n_cols);
+	for(unsigned int i=0; i<Nreduced; i++){
 
-	for(unsigned int i=0; i<N; i++){
+		for(unsigned int j=i; j<Nreduced; j++){
 
+			pair<unsigned int, double> sample1;
+			pair<unsigned int, double> sample2;
 
+			sample1 = samplesThatCanBeRemoved.at(i);
+			sample2 = samplesThatCanBeRemoved.at(j);
+
+			double value1 = sample1.second;
+			double value2 = sample2.second;
+
+			if(value2 > value1){
+
+				pair<unsigned int, double> temp;
+				temp = samplesThatCanBeRemoved.at(i);
+				samplesThatCanBeRemoved.at(i) = samplesThatCanBeRemoved.at(j);
+				samplesThatCanBeRemoved.at(j) = temp;
+			}
+		}
 	}
 
+	uvec indicesToRemove(howManySamples);
 
+	for(unsigned int i=0; i<howManySamples; i++){
+		indicesToRemove(i) = samplesThatCanBeRemoved.at(i).first;
+	}
 
+	unsigned int Nleft = N - howManySamples;
+	mat writeBuffer(Nleft,trainingData.n_cols);
 
-
-
-
-	readBuffer.save(filenameDataInput, csv_ascii);
-
+	trainingData.shed_rows(indicesToRemove);
+	trainingData.save(filenameDataInput, csv_ascii);
 
 }
 

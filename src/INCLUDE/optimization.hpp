@@ -77,10 +77,13 @@ private:
 
 	double initialImprovementValue = 0.0;
 
+	bool ifZoomInDesignSpaceIsAllowed = false;
 	double zoomInFactor = 0.5;
 	double zoomFactorShrinkageRate = 0.75;
+	unsigned int howManySamplesReduceAfterZoomIn = 5;
 
-	unsigned int iterMaxAcqusitionFunction;
+
+	unsigned int iterMaxAcquisitionFunction;
 
 	unsigned int numberOfDisceteVariables = 0;
 	std::vector<double> incrementsForDiscreteVariables;
@@ -105,6 +108,7 @@ public:
 
 	unsigned int howOftenTrainModels = 10;
 	unsigned int howOftenZoomIn = 10;
+	double minDeltaXForZoom;
 
 	unsigned int sampleDim;
 
@@ -112,11 +116,10 @@ public:
 
 
 	bool ifVisualize = false;
-	bool ifDisplay = false;
 	bool ifBoxConstraintsSet = false;
 	bool ifObjectFunctionIsSpecied = false;
 	bool ifSurrogatesAreInitialized = false;
-	bool ifZoomInDesignSpaceIsAllowed = false;
+
 	bool ifreduceTrainingDataZoomIn = false;
 
 
@@ -140,36 +143,36 @@ public:
 	void visualizeOptimizationHistory(void) const;
 
 	void EfficientGlobalOptimization(void);
-//	void EfficientGlobalOptimization2(void);
 
 	void initializeSurrogates(void);
 	void trainSurrogates(void);
 
-	void performDoE(unsigned int howManySamples, DoE_METHOD methodID);
-	void cleanDoEFiles(void) const;
+
 	void setProblemType(std::string);
 	void setMaximumNumberOfIterations(unsigned int );
 	void setMaximumNumberOfIterationsLowFidelity(unsigned int);
 
-	void setMaximumNumberOfIterationsForEIMaximization(unsigned int);
+	void setMaximumNumberOfInnerIterations(unsigned int);
 
-	void setBoxConstraints(std::string filename="BoxConstraints.csv");
-	void setBoxConstraints(double lb, double ub);
-	void setBoxConstraints(vec lb, vec ub);
 	void setBoxConstraints(Bounds boxConstraints);
 
 	void setFileNameDesignVector(std::string filename);
 
 	void setDisplayOn(void);
 	void setDisplayOff(void);
+
 	void setZoomInOn(void);
 	void setZoomInOff(void);
+	void setZoomFactor(double value);
+
 
 	void setHowOftenTrainModels(unsigned int value);
 	void setHowOftenZoomIn(unsigned int value);
 
 
 	void zoomInDesignSpace(void);
+	void reduceTrainingDataFiles(void) const;
+	void reduceBoxConstraints(void);
 
 	void setInitialImprovementValue(double);
 	void calculateImprovementValue(Design &);
@@ -177,8 +180,6 @@ public:
 	void addConstraint(ConstraintFunction &);
 
 	void evaluateConstraints(Design &);
-	void addConstraintValuesToDoEData(Design &) const;
-
 
 	void estimateConstraints(DesignForBayesianOptimization &) const;
 
@@ -194,16 +195,11 @@ public:
 	void computeConstraintsandPenaltyTerm(Design &);
 
 
-
-	void findTheGlobalOptimalDesignMultiFidelity(void);
-
-
 	void setOptimizationHistory(void);
 	void updateOptimizationHistory(Design d);
 	void clearOptimizationHistoryFile(void) const;
 	void prepareOptimizationHistoryFile(void) const;
 
-	mat getOptimizationHistory(void) const;
 
 
 	void addConstraintValuesToData(Design &d);
@@ -221,7 +217,11 @@ public:
 
 	bool ifConstrained(void) const;
 
-	void displayMessage(std::string) const;
+
+	mat getOptimizationHistory(void) const;
+	pair<vec,vec> getBoundsForAcqusitionFunctionMaximization(void) const;
+	Design getGlobalOptimalDesign(void) const;
+
 
 
 };

@@ -54,8 +54,6 @@ void changeDirectoryToRodeoHome(void);
 void changeDirectoryToUnitTests(void);
 void changeDirectoryToWork(std::string cwd);
 
-void perturbVectorUniform(frowvec &xp,float sigmaPert);
-
 void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
 
 
@@ -157,31 +155,6 @@ bool checkifTooCLose(const rowvec &, const mat &,double = 10E-6);
 
 
 #define PRINT_HERE printf("Here : %s(%d)--:",__FILE__,__LINE__);
-
-
-
-void findKNeighbours(mat &data, rowvec &p, int K, double* min_dist,int *indices, unsigned int norm=2);
-
-
-void findKNeighbours(mat &data,
-		             rowvec &p,
-					 int K,
-					 vec &min_dist,
-					 uvec &indices,
-					 mat M);
-
-
-void findKNeighbours(mat &data,
-		rowvec &p,
-		int K,
-		int *input_indx ,
-		double* min_dist,
-		int *indices,
-		int number_of_independent_variables);
-
-int getPopularlabel(int* labels, int size);
-
-void testLPnorm(void);
 
 
 #endif

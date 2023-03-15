@@ -70,7 +70,7 @@ protected:
 
 	unsigned int numberOfThreads = 1;
 
-
+	unsigned int minimumNumberOfSamplesForTrainingDataShrinkage = 30;
 
 
 
@@ -163,7 +163,7 @@ public:
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
 
-	void reduceTrainingData(const vec &lb, const vec &ub) const;
+	void reduceTrainingData(unsigned int, double) const;
 
 
 };

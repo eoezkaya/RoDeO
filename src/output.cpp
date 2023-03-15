@@ -30,6 +30,7 @@
  */
 
 #include "output.hpp"
+#include "design.hpp"
 #include <iostream>
 
 using std::cout;
@@ -42,93 +43,86 @@ OutputDevice::OutputDevice(){
 void OutputDevice::printMessage(string message) const{
 
 	if(ifScreenDisplay){
-
 		cout<<message<<"\n";
-
 	}
-
 }
 
 void OutputDevice::printErrorMessageAndAbort(string message) const{
 
-		string errorMessage ="ERROR: " + message;
-		cout<<errorMessage<<"\n";
-		abort();
-
-
+	string errorMessage ="ERROR: " + message;
+	cout<<errorMessage<<"\n";
+	abort();
 }
 
 void OutputDevice::printMessage(string message, string whatToPrint) const{
 
 	if(ifScreenDisplay){
-
 		cout<<message<<" "<<whatToPrint<<"\n";
-
 	}
-
 }
 
-
 void OutputDevice::printMessage(std::string message, int whatToPrint) const{
-
-
 	if(ifScreenDisplay){
-
 		std::cout<<message<<" ";
 		std::cout<<whatToPrint<<"\n";
-
 	}
-
-
 }
 
 void OutputDevice::printMessage(std::string message, unsigned int whatToPrint) const{
 
-
 	if(ifScreenDisplay){
-
 		std::cout<<message<<" ";
 		std::cout<<whatToPrint<<"\n";
-
 	}
-
-
 }
 
-
 void OutputDevice::printMessage(std::string message, double whatToPrint) const{
-
-
 	if(ifScreenDisplay){
-
 		std::cout<<message<<" ";
 		std::cout<<whatToPrint<<"\n";
-
 	}
-
-
 }
 
 void OutputDevice::printMessage(std::string message, vec whatToPrint) const{
-
-
 	if(ifScreenDisplay){
-
 		printVector(whatToPrint,message);
-
 	}
-
-
 }
 
 void OutputDevice::printMessage(std::string message, mat whatToPrint) const{
+	if(ifScreenDisplay){
+		printMatrix(whatToPrint,message);
+	}
+}
 
+void OutputDevice::printDesign(const Design &d) const{
+	if(ifScreenDisplay){
+		d.print();
+	}
+}
+
+void OutputDevice::printIteration(unsigned int iteration) const{
+	if(ifScreenDisplay){
+		std::string whatToPrint;
+		whatToPrint = "################################# ";
+		whatToPrint += "Iteration = ";
+		whatToPrint += std::to_string(iteration);
+		whatToPrint += " #################################";
+		std::cout<<whatToPrint<<"\n";
+	}
+}
+
+
+void OutputDevice::printBoxConstraints(const vec &lb, const vec &ub) const{
+
+	unsigned int dim = lb.size();
+	assert(dim > 0);
+	assert(dim == ub.size());
 
 	if(ifScreenDisplay){
-
-		printMatrix(whatToPrint,message);
-
+		for(unsigned int i=0; i<dim; i++){
+			std::cout<<"Parameter("<<i<<") = "<<lb(i)<<"  "<<ub(i)<<"\n";
+		}
 	}
-
-
 }
+

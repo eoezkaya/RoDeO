@@ -5,7 +5,7 @@
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,14 +20,15 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
  */
+
 #ifndef DRIVERS_HPP
 #define DRIVERS_HPP
 
@@ -63,13 +64,15 @@ private:
 	ObjectiveFunctionDefinition objectiveFunction;
 
 	bool checkifProblemTypeIsValid(std::string) const;
+	bool checkifProblemTypeIsOptimization(std::string s) const;
+	bool checkifProblemTypeIsSurrogateTest(std::string s) const;
+
+
 	void checkIfProblemTypeIsSetProperly(void) const;
 
-	bool isProblemTypeOptimization(std::string) const;
-	bool isProblemTypeMinimization(std::string) const;
-	bool isProblemTypeMaximization(std::string) const;
-
 	SURROGATE_MODEL getSurrogateModelID(string) const;
+
+	OutputDevice output;
 
 
 
@@ -86,7 +89,6 @@ public:
 	void checkIfSurrogateModelTypeIsOK(void) const;
 
 	void checkSettingsForSurrogateModelTest(void) const;
-	void checkSettingsForDoE(void) const;
 	void checkSettingsForOptimization(void) const;
 
 
@@ -135,19 +137,14 @@ public:
 
 	void setConfigFilename(std::string);
 
-	int runDriver(void);
+	void run(void);
 
 	Optimizer setOptimizationStudy(void);
 	void setOptimizationFeatures(Optimizer &) const;
 
 	void runOptimization(void);
 	void runSurrogateModelTest(void);
-	void runDoE(void);
-	void generateDoESamples(void);
 
-
-
-	bool checkIfRunIsNecessary(int idConstraint) const;
 
 	bool ifDisplayIsOn(void) const;
 	void displayMessage(std::string inputString) const;
