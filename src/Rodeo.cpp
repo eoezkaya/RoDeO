@@ -79,10 +79,6 @@ int main(int argc, char* argv[]){
 	/* initialize random seed*/
 	srand (time(NULL));
 
-
-
-
-
 #ifdef UNIT_TESTS
 
 	changeDirectoryToUnitTests();
