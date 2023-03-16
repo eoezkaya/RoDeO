@@ -17,7 +17,7 @@ fclose(inp);
 
 double result = Himmelblau(x);
 FILE *outp = fopen("objFunVal.dat","w");
-fprintf(outp,"J = %15.10f\n",result);
+fprintf(outp,"%15.10f\n",result);
 fclose(outp);
 
 

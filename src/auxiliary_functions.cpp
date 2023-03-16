@@ -72,49 +72,20 @@ void compileWithCpp(std::string fileName, std::string exeName){
 
 }
 
-void changeDirectoryToRodeoHome(void){
 
-	const char* env_p;
-	if(env_p = std::getenv("RODEO_HOME")){
-		std::cout << "RODEO_HOME: " << env_p << '\n';
-	}
-	else{
-		std::cout<<"The environmental variable RODEO_HOME is undefined!\n";
-		abort();
-
-	}
-
-	int ret = chdir (env_p);
-	if(ret!=0){
-
-		std::cout<<"ERROR: Cannot change directory to $RODEO_HOME\n";
-		abort();
-	}
-
-}
 
 void changeDirectoryToUnitTests(void){
 
 	int ret =chdir ("./UnitTests");
 	if(ret!=0){
 
-		std::cout<<"ERROR: Cannot change directory to $RODEO_HOME/UnitTests\n";
+		std::cout<<"ERROR: Cannot change directory to $./UnitTests\n";
 		abort();
 	}
 
 }
 
-void changeDirectoryToWork(std::string cwd){
 
-	int ret = chdir (cwd.c_str());
-
-	if (ret != 0){
-
-		cout<<"Error: Cannot change directory! Are you sure that the directory: "<<cwd<<" exists?\n";
-		abort();
-	}
-
-}
 
 bool checkValue(double value, double expected, double tolerance){
 

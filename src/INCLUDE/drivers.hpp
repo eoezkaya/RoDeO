@@ -48,9 +48,9 @@ class RoDeODriver{
 private:
 
 
-	std::string configFileName;
+	string configFileName;
 
-	std::vector<std::string> availableSurrogateModels;
+	vector<string> availableSurrogateModels;
 
 
 	ConfigKeyList configKeys;
@@ -58,10 +58,10 @@ private:
 	ConfigKeyList configKeysConstraintFunction;
 
 
-	std::vector<ConstraintDefinition> constraints;
+	vector<ConstraintDefinition> constraints;
 	int numberOfConstraints = 0;
 
-	ObjectiveFunctionDefinition objectiveFunction;
+	ObjectiveFunctionDefinition definitionObjectiveFunction;
 
 	bool checkifProblemTypeIsValid(std::string) const;
 	bool checkifProblemTypeIsOptimization(std::string s) const;
@@ -71,6 +71,10 @@ private:
 	void checkIfProblemTypeIsSetProperly(void) const;
 
 	SURROGATE_MODEL getSurrogateModelID(string) const;
+
+	string removeComments(const string &configText) const;
+
+	void checkConsistencyOfObjectiveFunctionDefinition(void) const;
 
 	OutputDevice output;
 
@@ -103,11 +107,6 @@ public:
 
 
 	void checkIfConstraintsAreProperlyDefined(void) const;
-
-	bool ifIsAGradientBasedMethod(std::string) const;
-
-
-	void determineProblemDimensionAndBoxConstraintsFromTrainingData(void);
 
 
 	void checkConsistencyOfConfigParams(void) const;

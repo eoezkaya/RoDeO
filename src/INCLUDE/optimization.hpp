@@ -114,8 +114,6 @@ public:
 
 	unsigned int iterGradientEILoop = 100;
 
-
-	bool ifVisualize = false;
 	bool ifBoxConstraintsSet = false;
 	bool ifObjectFunctionIsSpecied = false;
 	bool ifSurrogatesAreInitialized = false;
@@ -140,7 +138,6 @@ public:
 	bool checkSettings(void) const;
 	void print(void) const;
 	void printConstraints(void) const;
-	void visualizeOptimizationHistory(void) const;
 
 	void EfficientGlobalOptimization(void);
 

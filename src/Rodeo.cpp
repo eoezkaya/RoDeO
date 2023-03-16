@@ -41,7 +41,7 @@
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
 #include "auxiliary_functions.hpp"
-#include "read_settings.hpp"
+//#include "read_settings.hpp"
 #include "surrogate_model.hpp"
 
 #include "aggregation_model.hpp"
@@ -54,8 +54,6 @@
 #ifdef UNIT_TESTS
 #include<gtest/gtest.h>
 #endif
-Rodeo_settings settings;
-
 
 
 
@@ -82,8 +80,6 @@ int main(int argc, char* argv[]){
 	srand (time(NULL));
 
 
-	changeDirectoryToRodeoHome();
-	settings.read();
 
 
 
@@ -100,12 +96,19 @@ int main(int argc, char* argv[]){
 #endif
 
 
-	changeDirectoryToWork(settings.cwd);
+	if(argc == 1){
+		abortWithErrorMessage("File name for the configuration file (*.cfg) is missing!");
+	}
+
+	std::string fileNameConfig = argv[1];
 
 
 	RoDeODriver driverToRun;
+	driverToRun.setConfigFilename(fileNameConfig);
 	driverToRun.readConfigFile();
 
 	driverToRun.run();
+
+	return 0;
 
 }

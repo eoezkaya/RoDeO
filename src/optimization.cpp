@@ -391,24 +391,6 @@ void Optimizer::printConstraints(void) const{
 }
 
 
-void Optimizer::visualizeOptimizationHistory(void) const{
-
-	if(dimension == 2){
-
-		std::string python_command = "python -W ignore "+ settings.python_dir + "/plot_2d_opthist.py "+ name;
-#if 0
-		cout<<python_command<<"\n";
-#endif
-		FILE* in = popen(python_command.c_str(), "r");
-
-		fprintf(in, "\n");
-
-	}
-
-
-}
-
-
 void Optimizer::initializeSurrogates(void){
 
 	assert(ifObjectFunctionIsSpecied);
@@ -1262,11 +1244,6 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 			output.printMessage("number of simulations > max_number_of_samples! Optimization is terminating...");
 			output.printDesign(globalOptimalDesign);
-
-			if(ifVisualize){
-				visualizeOptimizationHistory();
-			}
-
 			break;
 		}
 

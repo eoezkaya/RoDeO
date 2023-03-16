@@ -135,8 +135,6 @@ RoDeODriver::RoDeODriver(){
 	availableSurrogateModels.push_back("MULTI_LEVEL");
 	availableSurrogateModels.push_back("TANGENT");
 
-	configFileName = settings.config_file;
-
 }
 
 
@@ -154,7 +152,22 @@ void RoDeODriver::setDisplayOff(void){
 }
 
 
+string RoDeODriver::removeComments(const string &configText) const{
 
+	assert(isNotEmpty(configText));
+
+	string result;
+	istringstream buffer(configText);
+	string line;
+	while (getline(buffer, line)) {
+		if(line[0] != '#' && line[0] != '%') {
+			result.append(line + "\n");
+		}
+	}
+
+	return result;
+
+}
 void RoDeODriver::readConfigFile(void){
 
 	assert(isNotEmpty(configFileName));
@@ -166,14 +179,17 @@ void RoDeODriver::readConfigFile(void){
 
 	readFileToaString(configFileName, stringCompleteFile);
 
+	string configFileWithoutComments = removeComments(stringCompleteFile);
+
 	output.printMessage("Configuration file = ");
-	output.printMessage(stringCompleteFile);
+	output.printMessage(configFileWithoutComments);
 
-	extractConfigDefinitionsFromString(stringCompleteFile);
 
-	extractObjectiveFunctionDefinitionFromString(stringCompleteFile);
+	extractConfigDefinitionsFromString(configFileWithoutComments);
 
-	extractConstraintDefinitionsFromString(stringCompleteFile);
+	extractObjectiveFunctionDefinitionFromString(configFileWithoutComments);
+
+	extractConstraintDefinitionsFromString(configFileWithoutComments);
 
 	checkConsistencyOfConfigParams();
 }
@@ -191,31 +207,21 @@ void RoDeODriver::checkIfObjectiveFunctionNameIsDefined(void) const{
 	ConfigKey configKeyName = configKeysObjectiveFunction.getConfigKey("NAME");
 	configKeyName.abortIfNotSet();
 
-
 }
 
 
 void RoDeODriver::checkIfProblemDimensionIsSetProperly(void) const{
+
 	configKeys.abortifConfigKeyIsNotSet("DIMENSION");
 
-	ConfigKey dimension = configKeys.getConfigKey("DIMENSION");
+	int dimension = configKeys.getConfigKeyIntValue("DIMENSION");
 
-
-	if(dimension.intValue > 1000){
-
-		std::cout<<"ERROR: Problem dimension is too large, did you set DIMENSION properly?\n";
-		abort();
-
+	if(dimension > 1000){
+		abortWithErrorMessage("Problem dimension is too large, did you set DIMENSION properly?");
 	}
-
-	if(dimension.intValue <= 0){
-
-		std::cout<<"ERROR: Problem dimension must be a positive integer, did you set DIMENSION properly?\n";
-		abort();
-
+	if(dimension <= 0){
+		abortWithErrorMessage("Problem dimension must be positive, did you set DIMENSION properly?");
 	}
-
-
 
 }
 
@@ -283,7 +289,6 @@ void RoDeODriver::checkIfSurrogateModelTypeIsOK(void) const{
 		abort();
 
 	}
-
 
 }
 
@@ -395,6 +400,68 @@ bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 }
 
 
+
+void RoDeODriver::checkConsistencyOfObjectiveFunctionDefinition(void) const{
+
+	output.printMessage("Checking the consistency of the objective function definition...");
+
+	assert(definitionObjectiveFunction.ifDefined);
+
+	string exeName = definitionObjectiveFunction.executableName;
+
+	if(isEmpty(exeName)){
+		abortWithErrorMessage("Objective function EXECUTABLE is undefined");
+	}
+
+	string name = definitionObjectiveFunction.name;
+
+	if(isEmpty(exeName)){
+		abortWithErrorMessage("Objective function NAME is undefined");
+	}
+
+	string filenameDesignVector = definitionObjectiveFunction.designVectorFilename;
+	if(isEmpty(filenameDesignVector)){
+		abortWithErrorMessage("Objective function DESIGN_VECTOR_FILE is undefined");
+	}
+
+	string outputFileName = definitionObjectiveFunction.outputFilename;
+
+	if(isEmpty(outputFileName)){
+		abortWithErrorMessage("Objective function OUTPUT_FILE is undefined");
+	}
+
+	string filenameTrainingData = definitionObjectiveFunction.nameHighFidelityTrainingData;
+
+	if(isEmpty(filenameTrainingData)){
+		abortWithErrorMessage("Objective function FILENAME_TRAINING_DATA is undefined");
+	}
+
+
+	bool ifMultiLevelIsActive = definitionObjectiveFunction.ifMultiLevel;
+
+	if(ifMultiLevelIsActive){
+
+		string exeNameLowFi = definitionObjectiveFunction.executableNameLowFi;
+
+		if(isEmpty(exeNameLowFi)){
+			abortWithErrorMessage("Objective function EXECUTABLE for the low-fidelity model is undefined");
+		}
+		string filenameTrainingDataLowFi = definitionObjectiveFunction.nameLowFidelityTrainingData;
+
+		if(isEmpty(filenameTrainingDataLowFi)){
+			abortWithErrorMessage("Objective function FILENAME_TRAINING_DATA for the low-fidelity model is undefined");
+		}
+
+		string outputFileNameLowFi = definitionObjectiveFunction.outputFilenameLowFi;
+
+		if(isEmpty(outputFileNameLowFi)){
+			abortWithErrorMessage("Objective function OUTPUT_FILE for the low-fidelity model is undefined");
+		}
+	}
+
+}
+
+
 ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 
 	output.printMessage("Setting the objective function...");
@@ -405,7 +472,9 @@ ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 	ObjectiveFunction objFunc;
 	objFunc.setDimension(dim);
 
-	objFunc.setParametersByDefinition(objectiveFunction);
+	checkConsistencyOfObjectiveFunctionDefinition();
+
+	objFunc.setParametersByDefinition(definitionObjectiveFunction);
 
 	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
 	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
@@ -442,9 +511,7 @@ void RoDeODriver::printAllConstraintDefinitions(void) const{
 }
 
 void RoDeODriver::printObjectiveFunctionDefinition(void) const{
-
-	objectiveFunction.print();
-
+	definitionObjectiveFunction.print();
 }
 
 
@@ -542,7 +609,7 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 }
 
 ObjectiveFunctionDefinition RoDeODriver::getObjectiveFunctionDefinition(void) const{
-	return objectiveFunction;
+	return definitionObjectiveFunction;
 }
 
 ConstraintDefinition RoDeODriver::getConstraintDefinition(unsigned int i) const{
@@ -598,14 +665,14 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	filenameTrainingData = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
 	surrogateModel = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
 
-	objectiveFunction.name = name;
-	objectiveFunction.designVectorFilename =  designVectorFilename;
+	definitionObjectiveFunction.name = name;
+	definitionObjectiveFunction.designVectorFilename =  designVectorFilename;
 
-	objectiveFunction.executableName = executableName;
-	objectiveFunction.path = exePath;
-	objectiveFunction.outputFilename = outputFilename;
-	objectiveFunction.nameHighFidelityTrainingData = filenameTrainingData;
-	objectiveFunction.modelHiFi = getSurrogateModelID(surrogateModel);
+	definitionObjectiveFunction.executableName = executableName;
+	definitionObjectiveFunction.path = exePath;
+	definitionObjectiveFunction.outputFilename = outputFilename;
+	definitionObjectiveFunction.nameHighFidelityTrainingData = filenameTrainingData;
+	definitionObjectiveFunction.modelHiFi = getSurrogateModelID(surrogateModel);
 
 
 	multilevel = configKeysObjectiveFunction.getConfigKeyStringValue("MULTILEVEL_MODEL");
@@ -613,13 +680,13 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 	if(checkIfOn(multilevel)){
 
-		objectiveFunction.ifMultiLevel = true;
+		definitionObjectiveFunction.ifMultiLevel = true;
 
 		std::string executableNameLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",1);
 		if(executableNameLowFi.empty()){
 			abortWithErrorMessage("EXECUTABLE for the low fidelity model is not defined!");
 		}
-		objectiveFunction.executableNameLowFi = executableNameLowFi;
+		definitionObjectiveFunction.executableNameLowFi = executableNameLowFi;
 
 		std::string filenameTrainingDataLowFi;
 
@@ -628,32 +695,31 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 		if(filenameTrainingDataLowFi.empty()){
 			abortWithErrorMessage("FILENAME_TRAINING_DATA is not defined for the low fidelity model");
 		}
-		objectiveFunction.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
+		definitionObjectiveFunction.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
 
 
 		std::string outputFilenameLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",1);
 		if(outputFilenameLowFi.empty()){
 			outputFilenameLowFi = outputFilename;
 		}
-		objectiveFunction.outputFilenameLowFi = outputFilenameLowFi;
+		definitionObjectiveFunction.outputFilenameLowFi = outputFilenameLowFi;
 
 		std::string exePathLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("PATH",1);
 		if(exePathLowFi.empty()){
 			exePathLowFi = exePath;
 		}
-		objectiveFunction.pathLowFi = exePathLowFi;
+		definitionObjectiveFunction.pathLowFi = exePathLowFi;
 
 		std::string surrogateModelLowFi;
 		surrogateModelLowFi = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",1);
 		if(surrogateModelLowFi.empty()){
 			surrogateModelLowFi = surrogateModel;
 		}
-		objectiveFunction.modelLowFi = getSurrogateModelID(surrogateModelLowFi);
+		definitionObjectiveFunction.modelLowFi = getSurrogateModelID(surrogateModelLowFi);
 
 
 	}
-	objectiveFunction.ifDefined = true;
-
+	definitionObjectiveFunction.ifDefined = true;
 
 
 }
@@ -857,84 +923,18 @@ void RoDeODriver::runOptimization(void){
 
 }
 
-bool RoDeODriver::ifIsAGradientBasedMethod(std::string modelType) const{
-
-	if(modelType == "GRADIENT_ENHANCED_KRIGING" || modelType == "AGGREGATION"){
-
-		return true;
-	}
-	else return false;
-
-
-}
-
-
-
-void RoDeODriver::determineProblemDimensionAndBoxConstraintsFromTrainingData(void){
-
-	/* These two are absolutely required */
-	configKeys.abortifConfigKeyIsNotSet("FILENAME_TRAINING_DATA");
-	configKeys.abortifConfigKeyIsNotSet("SURROGATE_MODEL");
+//bool RoDeODriver::ifIsAGradientBasedMethod(std::string modelType) const{
+//
+//	if(modelType == "GRADIENT_ENHANCED_KRIGING" || modelType == "AGGREGATION"){
+//
+//		return true;
+//	}
+//	else return false;
+//
+//
+//}
 
 
-	std::string fileName = configKeys.getConfigKeyStringValue("FILENAME_TRAINING_DATA");
-	std::string surrogateModelType = configKeys.getConfigKeyStringValue("SURROGATE_MODEL");
-
-
-
-	mat bufferData;
-	bufferData.load(fileName, csv_ascii);
-
-	int dim;
-
-	unsigned int nCols = bufferData.n_cols;
-
-	if(  ifIsAGradientBasedMethod(surrogateModelType)){
-
-		dim = (nCols -1)/2;
-
-	}
-	else{
-
-		dim = (nCols -1);
-
-	}
-
-	assert(dim>0);
-
-
-	configKeys.assignKeywordValue("DIMENSION",dim);
-
-	vec lb,ub;
-
-
-	lb = zeros<vec>(dim);
-	ub = zeros<vec>(dim);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		vec columnOfData = bufferData.col(i);
-
-		lb(i) = min(columnOfData);
-		ub(i) = max(columnOfData);
-
-	}
-
-
-	configKeys.assignKeywordValue("LOWER_BOUNDS",lb);
-	configKeys.assignKeywordValue("UPPER_BOUNDS",ub);
-
-
-	if(ifDisplayIsOn()){
-
-
-		printVector(lb,"boxConstraintsLowerBounds");
-		printVector(ub,"boxConstraintsUpperBounds");
-		std::cout<<"dimension = "<<dim<<"\n";
-
-	}
-
-}
 
 Optimizer RoDeODriver::setOptimizationStudy(void) {
 

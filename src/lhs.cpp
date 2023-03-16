@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -413,45 +413,16 @@ void LHSSamples::saveSamplesToCSVFile(std::string fileName){
 
 }
 
-void LHSSamples::visualize(void){
-
-	if(this->numberOfDesignVariables!=2){
-		cout<<"ERROR: Can only visualize 2D samples\n";
-		abort();
-
-	}
-	saveSamplesToCSVFile("lhs_visialization.csv");
-	std::string python_command = "python -W ignore "+ settings.python_dir + "/lhs.py lhs_visialization.dat";
-
-#if 0
-	cout<<python_command<<"\n";
-#endif
-	FILE* in = popen(python_command.c_str(), "r");
-
-	fprintf(in, "\n");
-
-}
 
 
 void LHSSamples::printSamples(void){
-
-
-	printMatrix(this->samples,"LHS Samples");
-
-
-
+	printMatrix(samples,"LHS Samples");
 }
 
 
 mat LHSSamples::getSamples(void){
-
-	return this->samples;
-
+	return samples;
 }
-
-
-
-
 
 RandomSamples::RandomSamples(unsigned int d, double lb, double ub, unsigned int N){
 
@@ -558,44 +529,12 @@ void RandomSamples::saveSamplesToCSVFile(std::string fileName){
 
 }
 
-void RandomSamples::visualize(void){
-
-	if(numberOfDesignVariables!=2){
-		cout<<"ERROR: Can only visulaize 2D samples\n";
-		abort();
-
-	}
-	saveSamplesToCSVFile("random_samples_visialization.csv");
-	std::string python_command = "python -W ignore "+ settings.python_dir + "/lhs.py random_samples_visialization.dat";
-
-#if 1
-	cout<<python_command<<"\n";
-#endif
-	FILE* in = popen(python_command.c_str(), "r");
-
-	fprintf(in, "\n");
-
-}
 
 
 void RandomSamples::printSamples(void){
-
-
-	printMatrix(this->samples,"Random Samples");
-
-
+	printMatrix(samples,"Random Samples");
 
 }
-
-void testRandomSamples2D(void){
-	cout<<__func__<<"\n";
-	RandomSamples DoE(2,0.0,1.0, 50);
-	DoE.visualize();
-
-
-}
-
-
 
 
 
@@ -615,8 +554,6 @@ FullFactorialSamples::FullFactorialSamples(unsigned int d, double lb, double ub,
 
 
 	numberOfSamples = pow(levels,d);
-
-	cout<<"Number of Samples = "<<numberOfSamples<<"\n";
 
 	samples = zeros<mat>(numberOfSamples,d);
 
@@ -792,7 +729,7 @@ void FullFactorialSamples::incrementIndexCount(uvec &indxCount){
 			indxCount(i-1) = 0;
 		}
 	}
-#if 1
+#if 0
 	trans(indxCount).print();
 #endif
 
@@ -817,7 +754,7 @@ void FullFactorialSamples::generateSamples(void){
 
 	}
 
-#if 1
+#if 0
 	printVector(dx,"dx");
 #endif
 
@@ -832,7 +769,7 @@ void FullFactorialSamples::generateSamples(void){
 
 		}
 
-#if 1
+#if 0
 		printVector(dv,"dv");
 #endif
 
@@ -851,24 +788,6 @@ void FullFactorialSamples::saveSamplesToCSVFile(std::string fileName){
 
 }
 
-void FullFactorialSamples::visualize(void){
-
-	if(this->numberOfDesignVariables!=2){
-		cout<<"ERROR: Can only visulaize 2D samples\n";
-		abort();
-
-	}
-	saveSamplesToCSVFile("full_factorial_samples_visialization.csv");
-	std::string python_command = "python -W ignore "+ settings.python_dir + "/lhs.py full_factorial_samples_visialization.dat";
-
-#if 1
-	cout<<python_command<<"\n";
-#endif
-	FILE* in = popen(python_command.c_str(), "r");
-
-	fprintf(in, "\n");
-
-}
 
 void FullFactorialSamples::printSamples(void){
 
@@ -879,14 +798,3 @@ void FullFactorialSamples::printSamples(void){
 
 }
 
-void testFullFactorial2D(void){
-	cout<<__func__<<"\n";
-	uvec nLevels(2);
-	nLevels(0) = 6;
-	nLevels(1) = 6;
-
-	FullFactorialSamples DoE(2,0.0,1.0, nLevels);
-	DoE.visualize();
-
-
-}
