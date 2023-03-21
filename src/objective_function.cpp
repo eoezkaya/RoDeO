@@ -503,12 +503,11 @@ rowvec ObjectiveFunction::readOutput(unsigned int howMany) const{
 	}
 
 	for(unsigned int i=0; i<howMany;i++){
-
 		inputFileStream >> result(i);
-
 	}
 
 	inputFileStream.close();
+
 	return result;
 }
 

@@ -68,6 +68,25 @@ protected:
 };
 
 
+TEST_F(DriverTest, runOptimizationHimmelblauConstrained){
+
+
+	himmelblauFunction.function.generateTrainingSamples();
+	constraint1.function.generateTrainingSamples();
+
+	compileWithCpp("himmelblau.cpp","himmelblau");
+	compileWithCpp("constraint1.cpp","constraint1");
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileHimmelblauConstrainedOptimization1.cfg");
+	testDriver.readConfigFile();
+	testDriver.runOptimization();
+
+
+}
+
 
 TEST_F(DriverTest, runOptimizationHimmelblauUnconstrained){
 
@@ -76,6 +95,7 @@ TEST_F(DriverTest, runOptimizationHimmelblauUnconstrained){
 
 
 	himmelblauFunction.function.generateTrainingSamples();
+
 
 	compileWithCpp("himmelblau.cpp","himmelblau");
 
@@ -87,7 +107,7 @@ TEST_F(DriverTest, runOptimizationHimmelblauUnconstrained){
 	testDriver.runOptimization();
 
 
-	abort();
+
 
 }
 

@@ -41,7 +41,7 @@
 
 
 
-#ifdef TEST_CONSTRAIN_FUNCTION
+#ifdef TEST_CONSTRAINT_FUNCTION
 
 
 class ConstraintFunctionTest : public ::testing::Test {
@@ -57,7 +57,9 @@ protected:
 		vec lb(2); lb.fill(-6.0);
 		vec ub(2); ub.fill(6.0);
 
-		constraintFunTest.setParameterBounds(lb,ub);
+		Bounds boxConstraints(lb,ub);
+
+		constraintFunTest.setParameterBounds(boxConstraints);
 
 		definition.designVectorFilename = "dv.dat";
 		definition.executableName = "himmelblau";
@@ -112,7 +114,6 @@ protected:
 
 
 
-
 TEST_F(ConstraintFunctionTest, testConstructor) {
 
 	ASSERT_FALSE(constraintFunTest.ifGradientAvailable);
@@ -123,6 +124,31 @@ TEST_F(ConstraintFunctionTest, testConstructor) {
 	ASSERT_TRUE(constraintFunTest.getID() == -1);
 
 }
+
+TEST_F(ConstraintFunctionTest, setDefinition) {
+
+	string testString = "testConstraint1 < 12.0";
+	definition.setDefinition(testString);
+
+	string name = definition.name;
+
+	ASSERT_TRUE(name == "testConstraint1");
+
+	string type = definition.inequalityType;
+
+	ASSERT_TRUE(type == "<");
+
+	double value = definition.value;
+
+	ASSERT_TRUE(value == 12.0);
+
+	testString = "testConstraint1 = 12.0";
+	definition.setDefinition(testString);
+
+	cout<<definition.inequalityType<<"\n";
+
+}
+
 
 TEST_F(ConstraintFunctionTest, setInequalityType) {
 

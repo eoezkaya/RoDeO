@@ -34,6 +34,7 @@
 #include <armadillo>
 #include <vector>
 #include "random_functions.hpp"
+#include "Rodeo_globals.hpp"
 using namespace arma;
 
 class DesignForBayesianOptimization{
@@ -92,12 +93,11 @@ public:
 	rowvec gradientLowFidelity;
 	rowvec tangentDirection;
 
-	double trueValue = 0;
+	double trueValue = 0.0;
 	double estimatedValue = 0.0;
 	double trueValueLowFidelity = 0;
 	double tangentValue = 0.0;
 	double tangentValueLowFidelity = 0.0;
-//	double objectiveFunctionValue = 0.0;
 	double improvementValue = 0.0;
 
 	double ExpectedImprovementvalue = 0.0;

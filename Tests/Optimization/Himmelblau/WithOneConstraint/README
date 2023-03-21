@@ -18,8 +18,7 @@ The box constraints for x1 and x2 are given as
 
 The constraint is given as 
 
-x1 + x2 > 4.0
+x1*x1 + x2*x2 < 10.0
 
 
-Both the Himmelblau function and the constraint are implemented in the c-file "himmelblau.cpp". The program writes the function output and the constraint value (x1 + x2) to a file "objFunVal.dat". 
 

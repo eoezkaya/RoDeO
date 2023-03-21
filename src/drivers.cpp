@@ -400,6 +400,65 @@ bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 }
 
 
+void  RoDeODriver::checkConsistencyOfConstraint(ConstraintDefinition def) const{
+
+	assert(def.ifDefined);
+
+	string exeName = def.executableName;
+
+	if(isEmpty(exeName)){
+		abortWithErrorMessage("Constraint function EXECUTABLE is undefined!");
+	}
+
+	string filenameDesignVector = def.designVectorFilename;
+	if(isEmpty(filenameDesignVector)){
+		abortWithErrorMessage("Constraint function DESIGN_VECTOR_FILE is undefined!");
+	}
+
+	string outputFileName = def.outputFilename;
+
+	if(isEmpty(outputFileName)){
+		abortWithErrorMessage("Constraint function OUTPUT_FILE is undefined!");
+	}
+
+	string filenameTrainingData = def.nameHighFidelityTrainingData;
+
+	if(isEmpty(filenameTrainingData)){
+		abortWithErrorMessage("Constraint function FILENAME_TRAINING_DATA is undefined!");
+	}
+
+	bool ifMultiLevelIsActive = def.ifMultiLevel;
+
+	if(ifMultiLevelIsActive){
+
+		string exeNameLowFi = def.executableNameLowFi;
+
+		if(isEmpty(exeNameLowFi)){
+			abortWithErrorMessage("Constraint function EXECUTABLE for the low-fidelity model is undefined!");
+		}
+		string filenameTrainingDataLowFi = def.nameLowFidelityTrainingData;
+
+		if(isEmpty(filenameTrainingDataLowFi)){
+			abortWithErrorMessage("Constraint function FILENAME_TRAINING_DATA for the low-fidelity model is undefined!");
+		}
+
+		string outputFileNameLowFi = def.outputFilenameLowFi;
+
+		if(isEmpty(outputFileNameLowFi)){
+			abortWithErrorMessage("Constraint function OUTPUT_FILE for the low-fidelity model is undefined!");
+		}
+	}
+
+
+
+}
+
+void RoDeODriver::checkConsistencyOfConstraintDefinitions(void) const{
+
+	for ( auto i = constraints.begin(); i != constraints.end(); i++ ) {
+		checkConsistencyOfConstraint(*i);
+	}
+}
 
 void RoDeODriver::checkConsistencyOfObjectiveFunctionDefinition(void) const{
 
@@ -544,7 +603,7 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	executableName = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",0);
 	outputFilename = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",0);
 	exePath = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("PATH",0);
-	filenameTrainingData = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
+	filenameTrainingData = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
 	surrogateModel = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
 
 	ConstraintDefinition constraintFunctionDefinition;
@@ -601,6 +660,7 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	}
 
 	constraintFunctionDefinition.ID = numberOfConstraints;
+	constraintFunctionDefinition.ifDefined = true;
 	numberOfConstraints++;
 
 	constraints.push_back(constraintFunctionDefinition);
@@ -791,14 +851,6 @@ void RoDeODriver::extractConstraintDefinitionsFromString(std::string inputString
 
 			stringBufferConstraintFunction.assign(inputString,foundLeftBracket+1,foundRightBracket - foundLeftBracket -1);
 
-
-
-			displayMessage("Constraint function definition is found:");
-			displayMessage("\nDefinition begin");
-			displayMessage(stringBufferConstraintFunction);
-			displayMessage("\nDefinition end");
-
-
 			parseConstraintDefinition(stringBufferConstraintFunction);
 
 			posConstraintFunction =  foundLeftBracket;
@@ -817,8 +869,7 @@ void RoDeODriver::extractConstraintDefinitionsFromString(std::string inputString
 void RoDeODriver::extractConfigDefinitionsFromString(std::string inputString){
 
 
-	displayMessage("Extracting configuration parameters...");
-
+	output.printMessage("Extracting configuration parameters...");
 
 	std::stringstream iss(inputString);
 
@@ -841,18 +892,9 @@ void RoDeODriver::extractConfigDefinitionsFromString(std::string inputString){
 
 			configKeys.assignKeywordValueWithIndex(cleanString,indxKeyword);
 
-
 		}
-
 	}
-
-
-	displayMessage("Extracting configuration parameters is done...");
-
-
 }
-
-
 
 ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDefinition) const{
 
@@ -923,18 +965,6 @@ void RoDeODriver::runOptimization(void){
 
 }
 
-//bool RoDeODriver::ifIsAGradientBasedMethod(std::string modelType) const{
-//
-//	if(modelType == "GRADIENT_ENHANCED_KRIGING" || modelType == "AGGREGATION"){
-//
-//		return true;
-//	}
-//	else return false;
-//
-//
-//}
-
-
 
 Optimizer RoDeODriver::setOptimizationStudy(void) {
 
@@ -978,6 +1008,8 @@ Optimizer RoDeODriver::setOptimizationStudy(void) {
 		optimizationStudy.addConstraint(constraintToAdd);
 
 	}
+
+	checkConsistencyOfConstraintDefinitions();
 
 
 	vec indicesOfDiscreteVariables = configKeys.getConfigKeyVectorDoubleValue("DISCRETE_VARIABLES");
@@ -1123,7 +1155,7 @@ void RoDeODriver::run(void){
 
 	}
 
-	if(checkifProblemTypeIsOptimization(problemType)){
+	else if(checkifProblemTypeIsOptimization(problemType)){
 
 		string msg = "\n################################## STARTING Optimization ##################################\n";
 		output.printMessage(msg);
@@ -1134,20 +1166,9 @@ void RoDeODriver::run(void){
 		output.printMessage(msg);
 	}
 
+	else{
 
-	abortWithErrorMessage("PROBLEM_TYPE is unknown!");
-
-}
-
-
-
-void RoDeODriver::displayMessage(std::string inputString) const{
-
-	if(ifDisplayIsOn()){
-
-		std::cout<<inputString<<"\n";
-
-
+		abortWithErrorMessage("PROBLEM_TYPE is unknown!");
 	}
 
 

@@ -54,18 +54,11 @@ Optimizer::Optimizer(){}
 
 Optimizer::Optimizer(std::string nameTestcase, int numberOfOptimizationParams){
 
+	assert(isNotEmpty(nameTestcase));
+	assert(numberOfOptimizationParams>0);
+
 	name = nameTestcase;
-	dimension = numberOfOptimizationParams;
-	sampleDim = dimension;
-
-	lowerBounds.zeros(dimension);
-	upperBounds.zeros(dimension);
-
-	initializeBoundsForAcquisitionFunctionMaximization();
-
-	iterMaxAcquisitionFunction = dimension*10000;
-	minDeltaXForZoom = 0.001/dimension;
-
+	setDimension(numberOfOptimizationParams);
 
 }
 
@@ -79,27 +72,18 @@ void Optimizer::initializeBoundsForAcquisitionFunctionMaximization() {
 void Optimizer::setDimension(unsigned int dim){
 
 	dimension = dim;
-
 	sampleDim = dimension;
-
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
-
 	initializeBoundsForAcquisitionFunctionMaximization();
 	iterMaxAcquisitionFunction = dimension*10000;
-
+	minDeltaXForZoom = 0.001/dimension;
 	globalOptimalDesign.setDimension(dim);
-
 }
 
 void Optimizer::setName(std::string problemName){
-
 	name = problemName;
-
 }
-
-
-
 
 void Optimizer::setParameterToDiscrete(unsigned int index, double increment){
 
@@ -638,7 +622,7 @@ void Optimizer::findTheGlobalOptimalDesign(void){
 
 	unsigned int indexLastCol = optimizationHistory.n_cols -1;
 
-	bool isFeasibleDesignFound;
+	bool isFeasibleDesignFound = false;
 	double bestObjectiveFunctionValue = LARGE;
 	unsigned int bestIndex;
 
@@ -674,7 +658,6 @@ void Optimizer::findTheGlobalOptimalDesign(void){
 		globalOptimalDesign.isDesignFeasible = false;
 		globalOptimalDesign.ID = indexMin;
 	}
-
 
 	rowvec dv = bestSample.head(dimension);
 

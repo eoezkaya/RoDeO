@@ -79,6 +79,10 @@ void ConstraintDefinition::setDefinition(std::string definition){
 	value = stod(valueBuf);
 }
 
+
+
+
+
 void ConstraintDefinition::print(void) const{
 
 	std::cout<<"\n================ Constraint function definition ================\n";
@@ -112,6 +116,7 @@ void ConstraintDefinition::print(void) const{
 ConstraintFunction::ConstraintFunction(){}
 
 void ConstraintFunction::setParametersByDefinition(ConstraintDefinition definitionInput){
+
 	definitionConstraint = definitionInput;
 	definition.designVectorFilename = definitionConstraint.designVectorFilename;
 	definition.executableName = definitionConstraint.executableName;

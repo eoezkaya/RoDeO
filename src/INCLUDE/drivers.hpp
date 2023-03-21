@@ -75,6 +75,8 @@ private:
 	string removeComments(const string &configText) const;
 
 	void checkConsistencyOfObjectiveFunctionDefinition(void) const;
+	void checkConsistencyOfConstraintDefinitions(void) const;
+	void checkConsistencyOfConstraint(ConstraintDefinition) const;
 
 	OutputDevice output;
 
@@ -146,7 +148,6 @@ public:
 
 
 	bool ifDisplayIsOn(void) const;
-	void displayMessage(std::string inputString) const;
 
 };
 

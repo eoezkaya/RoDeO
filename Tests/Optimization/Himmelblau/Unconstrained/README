@@ -20,3 +20,4 @@ The box constraints for x1 and x2 are given as
 The Himmelblau function is implemented in the c-file "himmelblau.cpp" and writes the output to 
 a file "objFunVal.dat". 
 
+To run the test case, run the python file "runOptimization.py" in terminal: python runOptimization.py 
