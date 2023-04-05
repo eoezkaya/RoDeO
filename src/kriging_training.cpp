@@ -277,6 +277,7 @@ void KrigingModel::addNewSampleToData(rowvec newsample){
 
 	mat rawData = data.getRawData();
 
+
 	bool flagTooClose= checkifTooCLose(newsample, rawData);
 
 
@@ -604,7 +605,9 @@ void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double
 	assert(ifInitialized);
 	unsigned int N = data.getNumberOfSamples();
 	*ftildeOutput =  interpolate(xp);
+
 	vec R_inv_r(N);
+
 	vec r = correlationFunction.computeCorrelationVector(xp);
 
 	/* solve the linear system R x = r by Cholesky matrices U and L*/

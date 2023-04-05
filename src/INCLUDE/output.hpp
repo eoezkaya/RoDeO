@@ -55,6 +55,7 @@ public:
 	void printMessage(string, unsigned int) const;
 	void printMessage(string, double) const;
 	void printMessage(std::string, vec) const;
+	void printMessage(std::string message, rowvec whatToPrint) const;
 	void printMessage(std::string message, mat whatToPrint) const;
 	void printDesign(const Design &d) const;
 	void printIteration(unsigned int iteration) const;

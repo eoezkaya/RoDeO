@@ -77,7 +77,7 @@ void Optimizer::setDimension(unsigned int dim){
 	upperBounds.zeros(dimension);
 	initializeBoundsForAcquisitionFunctionMaximization();
 	iterMaxAcquisitionFunction = dimension*10000;
-	minDeltaXForZoom = 0.001/dimension;
+	minDeltaXForZoom = 0.01/dimension;
 	globalOptimalDesign.setDimension(dim);
 }
 
@@ -237,23 +237,12 @@ void Optimizer::addObjectFunction(ObjectiveFunction &objFunc){
 }
 
 
-
-
-
 void Optimizer::evaluateConstraints(Design &d){
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-		if(!it->checkIfGradientAvailable()){
 
-			it->setEvaluationMode("primal");
-			it->evaluateDesign(d);
-
-		}else{
-
-			abort();
-
-		}
-
+		it->setEvaluationMode("primal");
+		it->evaluateDesign(d);
 	}
 }
 
@@ -900,8 +889,6 @@ DesignForBayesianOptimization Optimizer::MaximizeAcqusitionFunctionGradientBased
 	} /* end of gradient-search loop */
 
 
-
-
 	return bestDesign;
 
 
@@ -1098,6 +1085,33 @@ mat Optimizer::getOptimizationHistory(void) const{
 	return optimizationHistory;
 }
 
+void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
+	/* now make a simulation for the most promising design */
+
+
+	SURROGATE_MODEL type = objFun.getSurrogateModelType();
+
+	if(type == TANGENT){
+
+		currentBestDesign.generateRandomDifferentiationDirection();
+		objFun.setEvaluationMode("tangent");
+
+	}
+
+	else{
+
+		objFun.setEvaluationMode("primal");
+
+	}
+
+
+	objFun.evaluateDesign(currentBestDesign);
+	objFun.addDesignToData(currentBestDesign);
+
+
+
+}
+
 void Optimizer::EfficientGlobalOptimization(void){
 
 	assert(ifObjectFunctionIsSpecied);
@@ -1165,10 +1179,12 @@ void Optimizer::EfficientGlobalOptimization(void){
 		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds, upperBounds);
 		double estimatedBestdv = objFun.interpolate(best_dvNorm);
 
+
 #if 0
 		printf("The most promising design (not normalized):\n");
 		best_dv.print();
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
+		cout<<"Acqusition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
 #endif
 
 
@@ -1183,26 +1199,9 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 		/* now make a simulation for the most promising design */
 
-		if(!objFun.checkIfGradientAvailable()) {
-
-			objFun.setEvaluationMode("primal");
-			objFun.evaluateDesign(currentBestDesign);
-			objFun.addDesignToData(currentBestDesign);
-
-
-		}
-		else{
-
-			objFun.setEvaluationMode("adjoint");
-			objFun.evaluateDesign(currentBestDesign);
-			objFun.addDesignToData(currentBestDesign);
-
-		}
-
+		evaluateObjectiveFunction(currentBestDesign);
 
 		computeConstraintsandPenaltyTerm(currentBestDesign);
-
-
 
 		calculateImprovementValue(currentBestDesign);
 

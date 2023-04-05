@@ -142,6 +142,8 @@ public:
 	void generateRandomDesignVector(vec lb, vec ub);
 	void generateRandomDesignVector(double lb, double ub);
 
+	void generateRandomDifferentiationDirection(void);
+
 	void setDimension(unsigned int);
 
 

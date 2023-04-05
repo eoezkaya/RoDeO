@@ -92,11 +92,6 @@ void SurrogateModelTester::setSurrogateModel(SURROGATE_MODEL modelType){
 		  surrogateModel->setGradientsOn();
 		  break;
 
-	  case MULTI_LEVEL:
-		  multilevelModel.setinputFileNameLowFidelityData(fileNameTraingDataLowFidelity);
-		  surrogateModel = &multilevelModel;
-		  break;
-
 	  default:
 
 		  outputToScreen.printErrorMessageAndAbort("Unknown modelType for the surrogate model!");

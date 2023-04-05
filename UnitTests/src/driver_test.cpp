@@ -46,8 +46,9 @@ protected:
 	void SetUp() override {
 
 		himmelblauFunction.function.filenameTrainingData = "himmelblau.csv";
+		himmelblauFunction.function.filenameTestData = "himmelblauTest.csv";
 		himmelblauFunction.function.numberOfTrainingSamples = 50;
-		himmelblauFunction.function.numberOfTrainingSamplesLowFi = 0;
+		himmelblauFunction.function.numberOfTrainingSamplesLowFi = 100;
 
 		constraint1.function.filenameTrainingData = "constraint1.csv";
 		constraint1.function.numberOfTrainingSamples = 40;
@@ -66,6 +67,64 @@ protected:
 	HimmelblauConstraintFunction2 constraint2;
 
 };
+
+
+TEST_F(DriverTest, runSurrogateModelHimmelblauMLModel){
+
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+	himmelblauFunction.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblau3.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	abort();
+
+}
+
+
+
+TEST_F(DriverTest, runSurrogateModelHimmelblauTangentModel){
+
+
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+	himmelblauFunction.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblau2.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	abort();
+
+}
+
+TEST_F(DriverTest, runSurrogateModelHimmelblauOrdinaryKriging){
+
+
+	himmelblauFunction.function.generateTrainingSamples();
+	himmelblauFunction.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblau1.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+}
+
+
+
+
+
+
 
 
 TEST_F(DriverTest, runOptimizationHimmelblauConstrained){

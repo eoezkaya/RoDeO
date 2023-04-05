@@ -95,11 +95,6 @@ protected:
 	ObjectiveFunctionDefinition definition;
 
 
-//	bool ifMarkerIsSet = false;
-//	bool ifAdjointMarkerIsSet = false;
-//	bool ifTangentMarkerIsSet = false;
-
-
 	Bounds boxConstraints;
 
 
@@ -120,6 +115,8 @@ protected:
 
 	double yMin = 0.0;
 
+	double sigmaFactor = 0.5;
+
 
 
 public:
@@ -128,7 +125,6 @@ public:
 
 	bool ifDoErequired = true;
 	bool ifWarmStart = false;
-	bool ifGradientAvailable = false;
 	bool ifInitialized = false;
 	bool ifParameterBoundsAreSet = false;
 	bool ifDefinitionIsSet = false;
@@ -143,6 +139,7 @@ public:
 	void initializeSurrogate(void);
 	void trainSurrogate(void);
 	void printSurrogate(void) const;
+	SURROGATE_MODEL getSurrogateModelType(void) const;
 
 	KrigingModel     getSurrogateModel(void) const;
 	AggregationModel getSurrogateModelGradient(void) const;
@@ -211,6 +208,8 @@ public:
 
 
 	void reduceTrainingDataFiles(unsigned int, double) const;
+
+	void setSigmaFactor(double);
 
 
 };

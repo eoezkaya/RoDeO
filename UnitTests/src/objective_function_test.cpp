@@ -105,7 +105,7 @@ protected:
 
 TEST_F(ObjectiveFunctionTest, testConstructor) {
 
-	ASSERT_FALSE(objFunTest.ifGradientAvailable);
+
 	ASSERT_FALSE(objFunTest.ifInitialized);
 	ASSERT_FALSE(objFunTest.ifSurrogateModelIsDefined);
 	ASSERT_TRUE(objFunTest.getDimension() == 2);
@@ -120,6 +120,16 @@ TEST_F(ObjectiveFunctionTest, testObjectiveFunctionDefinition) {
 	bool ifOk = definition.checkIfDefinitionIsOk();
 
 	ASSERT_TRUE(ifOk);
+
+}
+
+
+TEST_F(ObjectiveFunctionTest, getSurrogateModelType) {
+	setDefinitionForCase1();
+	objFunTest.setParametersByDefinition(definition);
+	SURROGATE_MODEL type = objFunTest.getSurrogateModelType();
+
+	ASSERT_TRUE(type == ORDINARY_KRIGING);
 
 }
 

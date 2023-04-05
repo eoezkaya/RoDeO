@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -40,27 +40,17 @@
 #include "auxiliary_functions.hpp"
 using namespace arma;
 
-using std::cout;
+using namespace std;
 
-MultiLevelModel::MultiLevelModel(){}
+//MultiLevelModel::MultiLevelModel():SurrogateModel(){}
 
-void MultiLevelModel::setNameOfInputFile(string filename){
-
-	assert(isNotEmpty(filename));
-
-	filenameDataInput = filename;
-	inputFileNameHighFidelityData = filename;
-	ifInputFileNameForHiFiModelIsSet = true;
-
-}
+void MultiLevelModel::setNameOfInputFile(string filename){}
 
 void MultiLevelModel::setNameOfInputFileError(void){
 
 	assert(isNotEmpty(name));
-
 	inputFileNameError = name +"_Error.csv";
 	output.printMessage("Error data is set as ", inputFileNameError);
-
 
 }
 
@@ -89,14 +79,7 @@ void MultiLevelModel::setinputFileNameHighFidelityData(string filename){
 	inputFileNameHighFidelityData = filename;
 	filenameDataInput = filename;
 
-
 	output.printMessage("Name for the high fidelity input data is set as " + inputFileNameHighFidelityData);
-
-
-
-	ifInputFileNameForHiFiModelIsSet = true;
-
-
 }
 
 void MultiLevelModel::setinputFileNameLowFidelityData(string filename){
@@ -106,64 +89,50 @@ void MultiLevelModel::setinputFileNameLowFidelityData(string filename){
 	inputFileNameLowFidelityData = filename;
 	output.printMessage("Name for the low fidelity input data is set as " + inputFileNameLowFidelityData);
 
-	ifInputFileNameForLowFiModelIsSet = true;
-
 }
 
 
 void MultiLevelModel::setDisplayOn(void){
-
-	data.setDisplayOn();
-	surrogateModelAggregationError.setDisplayOn();
-	surrogateModelAggregationLowFi.setDisplayOn();
-	surrogateModelKrigingError.setDisplayOn();
-	surrogateModelKrigingLowFi.setDisplayOn();
 	output.ifScreenDisplay = true;
-
 }
 
 void MultiLevelModel::setDisplayOff(void){
-
-	data.setDisplayOff();
-	surrogateModelAggregationError.setDisplayOff();
-	surrogateModelAggregationLowFi.setDisplayOff();
-	surrogateModelKrigingError.setDisplayOff();
-	surrogateModelKrigingLowFi.setDisplayOff();
-
 	output.ifScreenDisplay = false;
-
 }
 
 void  MultiLevelModel::setGamma(double value){
-
 	gamma = value;
-
 }
 double  MultiLevelModel::getGamma(void) const{
-
 	return gamma;
+}
+
+void MultiLevelModel::setBoxConstraints(Bounds boxConstraintsInput){
+
+	assert(ifSurrogateModelsAreSet);
+	assert(boxConstraintsInput.areBoundsSet());
+
+	boxConstraints = boxConstraintsInput;
+
+	lowFidelityModel->setBoxConstraints(boxConstraintsInput);
+	errorModel->setBoxConstraints(boxConstraintsInput);
+
+	ifBoxConstraintsAreSet = true;
 
 }
 
 
 void MultiLevelModel::initializeSurrogateModel(void){
 
+	assert(ifBoxConstraintsAreSet);
+	assert(ifSurrogateModelsAreSet);
+	assert(ifDataIsRead);
+
 	output.printMessage("Initializing the multi-level model...");
-
-	bindErrorModel();
-	bindLowFidelityModel();
-
-	readData();
-	normalizeData();
-
-
 	output.printMessage("\nInitializing the low fidelity model...");
 
 	lowFidelityModel->setNameOfInputFile(inputFileNameLowFidelityData);
-
 	lowFidelityModel->readData();
-	lowFidelityModel->setBoxConstraints(data.getBoxConstraints());
-
 	lowFidelityModel->normalizeData();
 	lowFidelityModel->initializeSurrogateModel();
 
@@ -173,11 +142,10 @@ void MultiLevelModel::initializeSurrogateModel(void){
 
 	output.printMessage("\nInitializing the error model...");
 
+	prepareErrorData();
+
 	errorModel->setNameOfInputFile(inputFileNameError);
-
 	errorModel->readData();
-	errorModel->setBoxConstraints(data.getBoxConstraints());
-
 	errorModel->normalizeData();
 	errorModel->initializeSurrogateModel();
 
@@ -251,6 +219,7 @@ void MultiLevelModel::setNumberOfThreads(unsigned int nThreads){
 void MultiLevelModel::determineGammaBasedOnData(void){
 
 	assert(ifDataIsRead);
+	assert(ifBoxConstraintsAreSet);
 
 	MultiLevelModel auxiliaryModel;
 
@@ -258,6 +227,8 @@ void MultiLevelModel::determineGammaBasedOnData(void){
 	auxiliaryModel = *this;
 
 	unsigned int numberOfHiFiSamplesAuxiliaryModel = NHiFi/5;
+
+	assert(numberOfHiFiSamplesAuxiliaryModel > 0);
 
 	mat rawDataAuxiliaryHiFiSamples =  rawDataHighFidelity;
 	rawDataAuxiliaryHiFiSamples = shuffle(rawDataAuxiliaryHiFiSamples);
@@ -276,12 +247,10 @@ void MultiLevelModel::determineGammaBasedOnData(void){
 
 
 
-	auxiliaryModel.setBoxConstraints(data.getBoxConstraints());
+	auxiliaryModel.setBoxConstraints(boxConstraints);
 
 	auxiliaryModel.initializeSurrogateModel();
 
-
-	Bounds boxConstraints = data.getBoxConstraints();
 	vec lb = boxConstraints.getLowerBounds();
 	vec ub = boxConstraints.getUpperBounds();
 
@@ -330,8 +299,6 @@ void MultiLevelModel::determineGammaBasedOnData(void){
 	output.printMessage("Best value for gamma = " , bestGamma );
 	setGamma(bestGamma);
 
-
-
 }
 
 
@@ -368,10 +335,7 @@ void MultiLevelModel::train(void){
 	lowFidelityModel->train();
 	errorModel->train();
 
-
 	determineGammaBasedOnData();
-
-
 }
 
 
@@ -476,18 +440,19 @@ void MultiLevelModel::interpolateWithVariance(rowvec xp,double *estimatedValue,d
 
 void MultiLevelModel::readHighFidelityData(void){
 
-	assert(ifInputFileNameForHiFiModelIsSet);
-	rawDataHighFidelity = readMatFromCVSFile(inputFileNameHighFidelityData);
+	assert(isNotEmpty(inputFileNameHighFidelityData));
 
+	rawDataHighFidelity = readMatFromCVSFile(inputFileNameHighFidelityData);
 	NHiFi =  rawDataHighFidelity.n_rows;
 
 }
 void MultiLevelModel::readLowFidelityData(void){
 
-	assert(ifInputFileNameForLowFiModelIsSet);
-	rawDataLowFidelity = readMatFromCVSFile(inputFileNameLowFidelityData);
+	assert(isNotEmpty(inputFileNameLowFidelityData));
 
+	rawDataLowFidelity = readMatFromCVSFile(inputFileNameLowFidelityData);
 	NLoFi =  rawDataLowFidelity.n_rows;
+	lowFidelityModel->readData();
 
 }
 
@@ -496,21 +461,20 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 	assert(NLoFi>0);
 	assert(NHiFi>0);
 	assert(NLoFi >= NHiFi);
-	assert(dimHiFi >0);
-	assert(dimLoFi >0);
+	assert(dimension>0);
 	assert(indexHiFiData < NHiFi);
 
 	unsigned int indexLoFi = 0;
 
-	rowvec x(dimHiFi);
+	rowvec x(dimension);
 
-	for(unsigned int i=0; i<dimHiFi; i++) x(i) = rawDataHighFidelity(indexHiFiData,i);
+	for(unsigned int i=0; i<dimension; i++) x(i) = rawDataHighFidelity(indexHiFiData,i);
 
 	double minNorm = LARGE;
 	for(unsigned int i=0; i < NLoFi; i++){
 
-		rowvec xp(dimLoFi);
-		for(unsigned int j=0; j<dimLoFi; j++) xp(j) = rawDataLowFidelity(i,j);
+		rowvec xp(dimension);
+		for(unsigned int j=0; j<dimension; j++) xp(j) = rawDataLowFidelity(i,j);
 
 		rowvec dx = x-xp;
 
@@ -519,19 +483,14 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 
 		if(normdx <minNorm){
 
-
 			minNorm = normdx;
 			indexLoFi = i;
 		}
-
 	}
 
 	if(minNorm > 10E-10){
-
-		cout<<"ERROR (Multilevel model): A high fidelity data point does not exist in the low fidelity data!\n";
-		abort();
+		abortWithErrorMessage("A high fidelity data point does not exist in the low fidelity data!");
 	}
-
 
 	return indexLoFi;
 
@@ -539,58 +498,66 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 
 void MultiLevelModel::prepareErrorData(void){
 
-	assert(NLoFi>0);
+	assert(dimension>0);
 	assert(NHiFi>0);
+	assert(NLoFi>0);
 	assert(NLoFi >= NHiFi);
 
 	output.printMessage("Preparing error data...");
 
 	setNameOfInputFileError();
 
-
-	/* if high fidelity data has gradients, low fidelity must also have gradients */
-	if(ifHighFidelityDataHasGradients) assert(ifLowFidelityDataHasGradients);
-
-	if(ifHighFidelityDataHasGradients){
-
-		rawDataError = zeros<mat>(NHiFi,2*dimHiFi+1);
-
-	}
-	else{
-
-		rawDataError = zeros<mat>(NHiFi,dimHiFi+1);
-
+	if(modelIDError == ORDINARY_KRIGING){
+		rawDataError = zeros<mat>(NHiFi,dimension+1);
 	}
 
 	for(unsigned int i = 0; i < NHiFi; i++){
 
-
 		unsigned int indexLowFi = findIndexHiFiToLowFiData(i);
 
+		double error = rawDataHighFidelity(i,dimension) - rawDataLowFidelity(indexLowFi,dimension);
 
-		double error = rawDataHighFidelity(i,dimHiFi) - rawDataLowFidelity(indexLowFi,dimLoFi);
-
-		for(unsigned int j = 0; j < dimHiFi; j++){
-
+		for(unsigned int j = 0; j < dimension; j++){
 			rawDataError(i,j) = rawDataHighFidelity(i,j);
-
 		}
-		rawDataError(i,dimHiFi) = error;
+		rawDataError(i,dimension) = error;
+
+	}
+
+
+
+
+	//
+	//
+	//	/* if high fidelity data has gradients, low fidelity must also have gradients */
+	//	if(ifHighFidelityDataHasGradients) assert(ifLowFidelityDataHasGradients);
+	//
+	//	if(ifHighFidelityDataHasGradients){
+	//
+	//		rawDataError = zeros<mat>(NHiFi,2*dimHiFi+1);
+	//
+	//	}
+	//	else{
+	//
+	//		rawDataError = zeros<mat>(NHiFi,dimHiFi+1);
+	//
+	//	}
+	//
 
 		/* difference in gradients */
 
-		if(ifHighFidelityDataHasGradients){
-
-			for(unsigned int j = 0; j < dimHiFi; j++){
-
-				double errorGradient = rawDataHighFidelity(i,dimHiFi+1+j) - rawDataHighFidelity(indexLowFi,dimLoFi+1+j);
-
-				rawDataError(i,dimHiFi+1+j) = errorGradient;
-			}
-
-		}
-	}
-
+		//			if(ifHighFidelityDataHasGradients){
+		//
+		//				for(unsigned int j = 0; j < dimHiFi; j++){
+		//
+		//					double errorGradient = rawDataHighFidelity(i,dimHiFi+1+j) - rawDataHighFidelity(indexLowFi,dimLoFi+1+j);
+		//
+		//					rawDataError(i,dimHiFi+1+j) = errorGradient;
+		//				}
+		//
+		//			}
+//	}
+	//
 	assert(isNotEmpty(inputFileNameError));
 
 	rawDataError.save(inputFileNameError, csv_ascii);
@@ -603,25 +570,14 @@ void MultiLevelModel::prepareErrorData(void){
 
 }
 
+void MultiLevelModel::setIDHiFiModel(SURROGATE_MODEL id){
 
-void MultiLevelModel::setGradientsOnLowFi(void){
-
-	ifLowFidelityDataHasGradients = true;
-
-}
-void MultiLevelModel::setGradientsOnHiFi(void){
-
-	ifHighFidelityDataHasGradients = true;
-}
-void MultiLevelModel::setGradientsOffLowFi(void){
-
-	ifLowFidelityDataHasGradients = false;
+	modelIDHiFi = id;
 
 }
-void MultiLevelModel::setGradientsOffHiFi(void){
+void MultiLevelModel::setIDLowFiModel(SURROGATE_MODEL id){
 
-	ifHighFidelityDataHasGradients = false;
-
+	modelIDLowFi = id;
 }
 
 
@@ -629,45 +585,48 @@ void MultiLevelModel::setGradientsOffHiFi(void){
 
 void MultiLevelModel::setDimensionsHiFiandLowFiModels(void){
 
-	unsigned int nColsLoFiData = this->rawDataLowFidelity.n_cols;
-	unsigned int nColsHiFiData = this->rawDataHighFidelity.n_cols;
-
-
-	if(this->ifLowFidelityDataHasGradients){
-
-		dimLoFi = (nColsLoFiData-1)/2;
-
-	}
-	else{
-
-		dimLoFi = nColsLoFiData-1;
-	}
-
-	if(this->ifHighFidelityDataHasGradients){
-
-		dimHiFi = (nColsHiFiData-1)/2;
-
-	}
-	else{
-
-		dimHiFi = nColsHiFiData-1;
-	}
-
-
-	if(dimHiFi != dimLoFi){
-
-		cout<<"ERROR: dimHiFi != dimLoFi!\n";
-		cout<<"dimHiFi = "<<dimHiFi<<"\n";
-		cout<<"dimLoFi = "<<dimLoFi<<"\n";
-		abort();
-
-	}
-
-	data.setDimension(dimHiFi);
+	//	unsigned int nColsLoFiData = this->rawDataLowFidelity.n_cols;
+	//	unsigned int nColsHiFiData = this->rawDataHighFidelity.n_cols;
+	//
+	//
+	//	if(this->ifLowFidelityDataHasGradients){
+	//
+	//		dimLoFi = (nColsLoFiData-1)/2;
+	//
+	//	}
+	//	else{
+	//
+	//		dimLoFi = nColsLoFiData-1;
+	//	}
+	//
+	//	if(this->ifHighFidelityDataHasGradients){
+	//
+	//		dimHiFi = (nColsHiFiData-1)/2;
+	//
+	//	}
+	//	else{
+	//
+	//		dimHiFi = nColsHiFiData-1;
+	//	}
+	//
+	//
+	//	if(dimHiFi != dimLoFi){
+	//
+	//		cout<<"ERROR: dimHiFi != dimLoFi!\n";
+	//		cout<<"dimHiFi = "<<dimHiFi<<"\n";
+	//		cout<<"dimLoFi = "<<dimLoFi<<"\n";
+	//		abort();
+	//
+	//	}
+	//
+	//	data.setDimension(dimHiFi);
 
 }
 
 void MultiLevelModel::readData(void){
+
+	assert(dimension>0);
+	assert(ifSurrogateModelsAreSet);
 
 	output.printMessage("Reading data for the multilevel model...");
 
@@ -676,15 +635,12 @@ void MultiLevelModel::readData(void){
 	readHighFidelityData();
 	readLowFidelityData();
 
-	setDimensionsHiFiandLowFiModels();
+
+	XLowFidelity =  rawDataLowFidelity.submat(0,0,NLoFi -1,  dimension -1);
+	XHighFidelity = rawDataHighFidelity.submat(0,0,NHiFi -1, dimension -1);
 
 
-
-	XLowFidelity =  rawDataLowFidelity.submat(0,0,NLoFi -1, dimLoFi -1);
-	XHighFidelity = rawDataHighFidelity.submat(0,0,NHiFi -1, dimHiFi -1);
-
-
-	prepareErrorData();
+	//	prepareErrorData();
 
 	ifDataIsRead = true;
 	output.printMessage("Reading data for the multilevel model is done...");
@@ -696,75 +652,94 @@ void MultiLevelModel::readData(void){
 
 void MultiLevelModel::normalizeData(void){
 
-	Bounds boxConstraints = data.getBoxConstraints();
-
 	XLowFidelity  = normalizeMatrix(XLowFidelity, boxConstraints);
-
-	unsigned int dim = data.getDimension();
-
-	XLowFidelity = (1.0/dim)*XLowFidelity;
+	XLowFidelity = (1.0/dimension)*XLowFidelity;
 	XHighFidelity  = normalizeMatrix(XHighFidelity, boxConstraints);
+	XHighFidelity = (1.0/dimension)*XHighFidelity;
 
-	XHighFidelity = (1.0/dim)*XHighFidelity;
-
-
+	ifNormalized = true;
 }
 
 
+void MultiLevelModel::bindModels(void){
+
+	assert(isNotEmpty(inputFileNameHighFidelityData));
+	assert(isNotEmpty(inputFileNameLowFidelityData));
+
+	bindLowFidelityModel();
+	bindErrorModel();
+
+	ifSurrogateModelsAreSet = true;
+}
+
+bool MultiLevelModel::checkifModelIDIsValid(SURROGATE_MODEL id) const{
+
+	if(id == NONE) return false;
+	if(id == ORDINARY_KRIGING) return true;
+	if(id == UNIVERSAL_KRIGING) return true;
+
+
+	return false;
+}
+
 void MultiLevelModel::bindLowFidelityModel(void){
 
-
-	if(ifLowFidelityDataHasGradients){
-
-		lowFidelityModel= &surrogateModelAggregationLowFi;
-
-		output.printMessage("Binding the low fidelity model with the aggregation model");
-
-
+	if(!checkifModelIDIsValid(modelIDLowFi)){
+		abortWithErrorMessage("Undefined surrogate model for the low fidelity model");
 	}
 
-	else{
+	if(modelIDLowFi == ORDINARY_KRIGING){
 
+		output.printMessage("Binding the low fidelity model with the Ordinary Kriging model...");
 		lowFidelityModel = &surrogateModelKrigingLowFi;
 
-		output.printMessage("Binding the low fidelity model with the Kriging model");
-
 
 	}
 
-	lowFidelityModel->setName(name);
-	lowFidelityModel->setNameOfHyperParametersFile(name + "_lowFidelity");
+	if(modelIDLowFi == UNIVERSAL_KRIGING){
 
+		output.printMessage("Binding the low fidelity model with the Universal Kriging model...");
+		surrogateModelKrigingLowFi.setLinearRegressionOn();
+		lowFidelityModel = &surrogateModelKrigingLowFi;
 
-	ifLowFidelityModelIsSet = true;
+	}
+
+	lowFidelityModel->setNameOfInputFile(inputFileNameLowFidelityData);
 
 }
 
 void MultiLevelModel::bindErrorModel(void){
 
+	assert(isNotEmpty(inputFileNameError));
 
+	if(!checkifModelIDIsValid(modelIDHiFi)){
+		abortWithErrorMessage("Undefined surrogate model for the high fidelity model");
+	}
 
-	if(ifLowFidelityDataHasGradients && ifHighFidelityDataHasGradients){
+	if(modelIDLowFi == ORDINARY_KRIGING && modelIDHiFi == ORDINARY_KRIGING){
 
-		errorModel = &surrogateModelAggregationError;
-
-		output.printMessage("Binding the error model with the aggregation model");
-
+		output.printMessage("Binding the error model with the Ordinary Kriging model...");
+		errorModel = &surrogateModelKrigingError;
+		modelIDError = ORDINARY_KRIGING;
 
 	}
 
-	else{
+	if(modelIDLowFi == TANGENT && modelIDHiFi == ORDINARY_KRIGING){
 
+		output.printMessage("Binding the error model with the Ordinary Kriging model...");
 		errorModel = &surrogateModelKrigingError;
 
-		output.printMessage("Binding the error model with the Kriging model");
+		modelIDError = ORDINARY_KRIGING;
 
 	}
 
-	errorModel->setNameOfHyperParametersFile(name + "_Error");
-	errorModel->setName(name);
 
-	ifErrorModelIsSet = true;
+
+
+
+
+
+
 
 }
 
@@ -833,17 +808,11 @@ double MultiLevelModel::findNearestL1DistanceToAHighFidelitySample(rowvec x) con
 }
 
 unsigned int MultiLevelModel::getNumberOfLowFiSamples(void) const{
-
 	return NLoFi;
-
 }
 unsigned int MultiLevelModel::getNumberOfHiFiSamples(void) const{
-
 	return NHiFi;
-
 }
-
-
 
 void MultiLevelModel::addNewSampleToData(rowvec newsample){
 

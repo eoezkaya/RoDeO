@@ -77,6 +77,7 @@ private:
 	void checkConsistencyOfObjectiveFunctionDefinition(void) const;
 	void checkConsistencyOfConstraintDefinitions(void) const;
 	void checkConsistencyOfConstraint(ConstraintDefinition) const;
+	void abortIfModelTypeIsInvalid(const std::string &modelName) const;
 
 	OutputDevice output;
 

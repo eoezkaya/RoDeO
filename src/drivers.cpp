@@ -89,7 +89,6 @@ RoDeODriver::RoDeODriver(){
 
 
 	/* Other keywords */
-	configKeys.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
 
 	configKeys.add(ConfigKey("PROBLEM_TYPE","string") );
 	configKeys.add(ConfigKey("PROBLEM_NAME","string") );
@@ -98,19 +97,16 @@ RoDeODriver::RoDeODriver(){
 	configKeys.add(ConfigKey("LOWER_BOUNDS","doubleVector") );
 
 
-	configKeys.add(ConfigKey("NUMBER_OF_TEST_SAMPLES","int") );
-	configKeys.add(ConfigKey("NUMBER_OF_TRAINING_SAMPLES","int") );
-
-
+	/* For Surrogate Model Test */
+	configKeys.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
+	configKeys.add(ConfigKey("MULTILEVEL_MODEL","string") );
 	configKeys.add(ConfigKey("FILENAME_TRAINING_DATA","stringVector") );
 	configKeys.add(ConfigKey("FILENAME_TEST_DATA","string") );
+	configKeys.add(ConfigKey("SURROGATE_MODEL","stringVector") );
 
-	configKeys.add(ConfigKey("SURROGATE_MODEL","string") );
+
 
 	configKeys.add(ConfigKey("MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS","int") );
-
-	configKeys.add(ConfigKey("DESIGN_VECTOR_FILENAME","string") );
-
 	configKeys.add(ConfigKey("VISUALIZATION","string") );
 	configKeys.add(ConfigKey("DISPLAY","string") );
 	configKeys.add(ConfigKey("ZOOM_IN","string") );
@@ -132,7 +128,6 @@ RoDeODriver::RoDeODriver(){
 	availableSurrogateModels.push_back("UNIVERSAL_KRIGING");
 	availableSurrogateModels.push_back("LINEAR_REGRESSION");
 	availableSurrogateModels.push_back("AGGREGATION");
-	availableSurrogateModels.push_back("MULTI_LEVEL");
 	availableSurrogateModels.push_back("TANGENT");
 
 }
@@ -192,6 +187,8 @@ void RoDeODriver::readConfigFile(void){
 	extractConstraintDefinitionsFromString(configFileWithoutComments);
 
 	checkConsistencyOfConfigParams();
+
+	output.printMessage("Parsing of the configuration file is done...");
 }
 
 
@@ -271,6 +268,16 @@ void RoDeODriver::checkSettingsForSurrogateModelTest(void) const{
 
 }
 
+void RoDeODriver::abortIfModelTypeIsInvalid(const string &modelName) const {
+	bool ifTypeIsOK = isIntheList(availableSurrogateModels, modelName);
+	if (!ifTypeIsOK) {
+		std::cout
+		<< "ERROR: Surrogate model is not available, did you set SURROGATE_MODEL properly?\n";
+		std::cout << "Available surrogate models:\n";
+		printVector(availableSurrogateModels);
+		abort();
+	}
+}
 
 void RoDeODriver::checkIfSurrogateModelTypeIsOK(void) const{
 
@@ -278,16 +285,18 @@ void RoDeODriver::checkIfSurrogateModelTypeIsOK(void) const{
 
 	surrogateModelType.abortIfNotSet();
 
+	string modelName = configKeys.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
+	abortIfModelTypeIsInvalid(modelName);
 
-	bool ifTypeIsOK = isIntheList(availableSurrogateModels, surrogateModelType.stringValue);
+	ConfigKey multilevelModel = configKeys.getConfigKey("MULTILEVEL_MODEL");
 
-	if(!ifTypeIsOK){
 
-		std::cout<<"ERROR: Surrogate model is not available, did you set SURROGATE_MODEL properly?\n";
-		std::cout<<"Available surrogate models:\n";
-		printVector(availableSurrogateModels);
-		abort();
+	std::string multilevel;
+	multilevel = configKeys.getConfigKeyStringValue("MULTILEVEL_MODEL");
 
+	if(checkIfOn(multilevel)){
+		string modelName = configKeys.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",1);
+		abortIfModelTypeIsInvalid(modelName);
 	}
 
 }
@@ -394,7 +403,7 @@ bool RoDeODriver::checkifProblemTypeIsSurrogateTest(std::string s) const{
 bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 
 	if(checkifProblemTypeIsOptimization(s)) return true;
-	if(checkifProblemTypeIsOptimization(s)) return true;
+	if(checkifProblemTypeIsSurrogateTest(s)) return true;
 
 	return false;
 }
@@ -1061,10 +1070,6 @@ SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
 
 	}
 
-	if(modelName == "MULTI_LEVEL" ||  modelName == "multi-level" || modelName == "MULTI-LEVEL") {
-		return MULTI_LEVEL;
-	}
-
 	if(modelName == "TANGENT" ||  modelName == "tangent" || modelName == "Tangent") {
 		return TANGENT;
 	}
@@ -1076,62 +1081,73 @@ SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
 
 void RoDeODriver::runSurrogateModelTest(void){
 
-	SurrogateModelTester surrogateTest;
-
-	std::string problemName = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
-	surrogateTest.setName(problemName);
-
-	std::string surrogateModelType = configKeys.getConfigKeyStringValue("SURROGATE_MODEL");
-	SURROGATE_MODEL modelID = getSurrogateModelID(surrogateModelType);
-
-	int dimension = configKeys.getConfigKeyIntValue("DIMENSION");
-	surrogateTest.setDimension(dimension);
-
-	std::string filenameTrainingData = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
-	surrogateTest.setFileNameTrainingData(filenameTrainingData);
-
-
-	if(modelID == MULTI_LEVEL){
-
-		std::string filenameTrainingDataLowFidelity = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",1);
-		surrogateTest.setFileNameTrainingDataLowFidelity(filenameTrainingDataLowFidelity);
-	}
-
-
-	std::string filenameTestData = configKeys.getConfigKeyStringValue("FILENAME_TEST_DATA");
-	surrogateTest.setFileNameTestData(filenameTestData);
-
-	if(configKeys.ifConfigKeyIsSet("LOWER_BOUNDS") && configKeys.ifConfigKeyIsSet("UPPER_BOUNDS")){
-
-		vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
-		vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
-
-		Bounds boxConstraints(lb,ub);
-		surrogateTest.setBoxConstraints(boxConstraints);
-
-	}
-
-	if(configKeys.ifConfigKeyIsSet("NUMBER_OF_TRAINING_ITERATIONS")){
-
-		unsigned int numberOfIterationsForSurrogateModelTraining = configKeys.getConfigKeyIntValue("NUMBER_OF_TRAINING_ITERATIONS");
-
-		surrogateTest.setNumberOfTrainingIterations(numberOfIterationsForSurrogateModelTraining);
-
-	}
-
-
-	surrogateTest.setSurrogateModel(modelID);
-
-	if(configKeys.ifConfigKeyIsSet("DISPLAY")) {
-
-		std::string display = configKeys.getConfigKeyStringValue("DISPLAY");
-
-		if(checkIfOn(display)){
-			surrogateTest.setDisplayOn();
-		}
-	}
-
-	surrogateTest.performSurrogateModelTest();
+//	SurrogateModelTester surrogateTest;
+//
+//	string problemName = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
+//	surrogateTest.setName(problemName);
+//
+//	string multiLevel  = configKeys.getConfigKeyStringValue("MULTILEVEL_MODEL");
+//
+//
+//	string surrogateModelTypeHiFi = configKeys.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
+//	string filenameTrainingDataHiFi = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
+//
+//
+//	string surrogateModelTypeLowFi;
+//	string filenameTrainingDataLowFi;
+//
+//	if(checkIfOn(multiLevel)){
+//		surrogateModelTypeLowFi   = configKeys.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",1);
+//		filenameTrainingDataLowFi = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",1);
+//	}
+//
+//
+//	surrogateTest.setFileNameTrainingData(surrogateModelTypeHiFi);
+//
+//
+//
+//	SURROGATE_MODEL modelID = getSurrogateModelID(surrogateModelType);
+//
+//	int dimension = configKeys.getConfigKeyIntValue("DIMENSION");
+//	surrogateTest.setDimension(dimension);
+//
+//
+//
+//
+//	std::string filenameTestData = configKeys.getConfigKeyStringValue("FILENAME_TEST_DATA");
+//	surrogateTest.setFileNameTestData(filenameTestData);
+//
+//	if(configKeys.ifConfigKeyIsSet("LOWER_BOUNDS") && configKeys.ifConfigKeyIsSet("UPPER_BOUNDS")){
+//
+//		vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
+//		vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
+//
+//		Bounds boxConstraints(lb,ub);
+//		surrogateTest.setBoxConstraints(boxConstraints);
+//
+//	}
+//
+//	if(configKeys.ifConfigKeyIsSet("NUMBER_OF_TRAINING_ITERATIONS")){
+//
+//		unsigned int numberOfIterationsForSurrogateModelTraining = configKeys.getConfigKeyIntValue("NUMBER_OF_TRAINING_ITERATIONS");
+//
+//		surrogateTest.setNumberOfTrainingIterations(numberOfIterationsForSurrogateModelTraining);
+//
+//	}
+//
+//
+//	surrogateTest.setSurrogateModel(modelID);
+//
+//	if(configKeys.ifConfigKeyIsSet("DISPLAY")) {
+//
+//		std::string display = configKeys.getConfigKeyStringValue("DISPLAY");
+//
+//		if(checkIfOn(display)){
+//			surrogateTest.setDisplayOn();
+//		}
+//	}
+//
+//	surrogateTest.performSurrogateModelTest();
 
 
 }

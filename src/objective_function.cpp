@@ -147,6 +147,11 @@ unsigned int ObjectiveFunction::getDimension(void) const{
 
 
 
+SURROGATE_MODEL ObjectiveFunction::getSurrogateModelType(void) const{
+	return definition.modelHiFi;
+}
+
+
 void ObjectiveFunction::bindSurrogateModel(void){
 
 	assert(ifDefinitionIsSet);
@@ -212,12 +217,7 @@ void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition de
 
 }
 
-void ObjectiveFunction::setGradientOn(void){
-	ifGradientAvailable = true;
-}
-void ObjectiveFunction::setGradientOff(void){
-	ifGradientAvailable = false;
-}
+
 void ObjectiveFunction::setDisplayOn(void){
 	output.ifScreenDisplay = true;
 }
@@ -362,7 +362,7 @@ void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimizati
 
 	surrogate->interpolateWithVariance(designCalculated.dv, &ftilde, &ssqr);
 
-	double	sigma = sqrt(ssqr)	;
+	double	sigma = sqrt(ssqr);
 
 #if 0
 	printf("standart_ERROR = %15.10f\n",sigma);
@@ -418,14 +418,6 @@ void ObjectiveFunction::calculateProbabilityOfImprovement(DesignForBayesianOptim
 
 
 
-
-
-
-
-bool ObjectiveFunction::checkIfGradientAvailable(void) const{
-	return ifGradientAvailable;
-}
-
 std::string ObjectiveFunction::getExecutionCommand(void) const{
 
 	std::string runCommand;
@@ -478,15 +470,17 @@ void ObjectiveFunction::addDesignToData(Design &d){
 
 void ObjectiveFunction::addLowFidelityDesignToData(Design &d){
 
-	rowvec newsample;
 
-	if(ifGradientAvailable){
-		newsample = d.constructSampleObjectiveFunctionWithGradient();
-	}
-	else{
-		newsample = d.constructSampleObjectiveFunction();
-	}
-	surrogate->addNewLowFidelitySampleToData(newsample);
+	assert(false);
+//	rowvec newsample;
+//
+//	if(ifGradientAvailable){
+//		newsample = d.constructSampleObjectiveFunctionWithGradient();
+//	}
+//	else{
+//		newsample = d.constructSampleObjectiveFunction();
+//	}
+//	surrogate->addNewLowFidelitySampleToData(newsample);
 }
 
 
@@ -629,5 +623,10 @@ void ObjectiveFunction::reduceTrainingDataFiles(unsigned howManySamples, double 
 	surrogate->reduceTrainingData(howManySamples,targetValue);
 }
 
+void ObjectiveFunction::setSigmaFactor(double factor){
 
+	assert(factor>0.0);
+	sigmaFactor = factor;
+
+}
 

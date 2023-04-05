@@ -95,6 +95,7 @@ private:
 
 	void findTheGlobalOptimalDesign(void);
 	void initializeBoundsForAcquisitionFunctionMaximization();
+	void evaluateObjectiveFunction(Design &currentBestDesign);
 
 public:
 

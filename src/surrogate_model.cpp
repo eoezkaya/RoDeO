@@ -58,6 +58,11 @@ void SurrogateModel::setName(std::string nameInput){
 
 }
 
+void SurrogateModel::setDimension(unsigned int dim){
+
+	dimension = dim;
+}
+
 
 void SurrogateModel::setNumberOfThreads(unsigned int n){
 
@@ -459,7 +464,9 @@ void SurrogateModel::tryOnTestData(void){
 		rowvec xp = data.getRowXTest(i);
 		rowvec x  = data.getRowXRawTest(i);
 
-		output.printMessage("x",x);
+		output.printMessage("\n");
+		output.printMessage("x = ",x);
+
 
 		double fTilde = interpolate(xp);
 		output.printMessage("fTilde = ",fTilde);
@@ -474,6 +481,7 @@ void SurrogateModel::tryOnTestData(void){
 			addOneElement(sample,squaredError);
 
 			output.printMessage("fExact = ",fExact(i));
+			output.printMessage("\n");
 		}
 
 		results.row(i) = sample;

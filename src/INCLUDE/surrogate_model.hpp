@@ -47,6 +47,7 @@ class SurrogateModel{
 
 protected:
 
+	unsigned int dimension = 0;
 
 	unsigned int NTest = 0;
 
@@ -74,6 +75,8 @@ protected:
 
 
 
+
+
 public:
 
 	bool ifInitialized = false;
@@ -84,6 +87,8 @@ public:
 	bool ifHasTestData = false;
 	bool ifNormalizedTestData = false;
 
+
+	void setDimension(unsigned int);
 
 	mat testResults;
 

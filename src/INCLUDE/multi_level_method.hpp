@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -36,13 +36,14 @@
 #include "surrogate_model.hpp"
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
+#include "tgek.hpp"
 
 using std::string;
 
 
 /* Hyperparameters of the MultiLevelModel =  Hyperparameters of the lowFi Model + Hyperparameters of the error Model + gamma */
 
-class MultiLevelModel : public SurrogateModel {
+class MultiLevelModel : public SurrogateModel{
 
 private:
 
@@ -55,9 +56,15 @@ private:
 
 	KrigingModel surrogateModelKrigingLowFi;
 	AggregationModel surrogateModelAggregationLowFi;
+	TGEKModel surrogateModelTGEKLowFi;
 
 	KrigingModel surrogateModelKrigingError;
 	AggregationModel surrogateModelAggregationError;
+	TGEKModel surrogateModelTGEKHiFi;
+
+	SURROGATE_MODEL modelIDHiFi;
+	SURROGATE_MODEL modelIDLowFi;
+	SURROGATE_MODEL modelIDError;
 
 
 	mat rawDataHighFidelity;
@@ -72,31 +79,27 @@ private:
 
 	mat rawDataError;
 
+	Bounds boxConstraints;
 
-	unsigned int dimHiFi = 0;
-	unsigned int dimLoFi = 0;
 
 	double gamma = 1.0;
 	unsigned int maxIterationsForGammaTraining = 1000;
 
 
+	bool checkifModelIDIsValid(SURROGATE_MODEL id) const;
+	void bindLowFidelityModel(void);
+	void bindErrorModel(void);
+
+
+
 
 public:
 
-	bool ifInputFileNameForHiFiModelIsSet = false;
-	bool ifInputFileNameForLowFiModelIsSet = false;
 
-	bool ifLowFidelityModelIsSet = false;
-	bool ifErrorModelIsSet = false;
+	bool ifSurrogateModelsAreSet = false;
 	bool ifErrorDataIsSet = false;
+	bool ifBoxConstraintsAreSet = false;
 
-
-	bool ifHighFidelityDataHasGradients = false;
-	bool ifLowFidelityDataHasGradients = false;
-
-
-	MultiLevelModel();
-	MultiLevelModel(string);
 
 	void setNameOfInputFile(string filename);
 	void setNameOfInputFileError(void);
@@ -106,6 +109,8 @@ public:
 
 	void setinputFileNameHighFidelityData(string);
 	void setinputFileNameLowFidelityData(string);
+
+	void setBoxConstraints(Bounds boxConstraintsInput);
 
 	void readData(void);
 	void normalizeData(void);
@@ -119,11 +124,14 @@ public:
 
 	void updateAuxilliaryFields(void);
 
+	void setIDHiFiModel(SURROGATE_MODEL);
+	void setIDLowFiModel(SURROGATE_MODEL);
 
-	void setGradientsOnLowFi(void);
-	void setGradientsOnHiFi(void);
-	void setGradientsOffLowFi(void);
-	void setGradientsOffHiFi(void);
+
+//	void setGradientsOnLowFi(void);
+//	void setGradientsOnHiFi(void);
+//	void setGradientsOffLowFi(void);
+//	void setGradientsOffHiFi(void);
 
 	void setDisplayOn(void);
 	void setDisplayOff(void);
@@ -163,8 +171,7 @@ public:
 	unsigned int findIndexHiFiToLowFiData(unsigned int indexHiFiData) const;
 
 
-	void bindLowFidelityModel(void);
-	void bindErrorModel(void);
+	void bindModels(void);
 
 	mat getRawDataHighFidelity(void) const;
 	mat getRawDataLowFidelity(void) const;

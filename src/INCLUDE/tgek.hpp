@@ -76,6 +76,8 @@ private:
 
 
 	   	uvec indicesDifferentiatedBasisFunctions;
+		unsigned int numberOfDifferentiatedBasisFunctions = 5;
+
 
 	   	std::string filenameTrainingDataAuxModel = "auxiliaryData.csv";
 
@@ -88,7 +90,6 @@ private:
 
 public:
 
-	   	unsigned int numberOfDifferentiatedBasisFunctions = 5;
 
 	   	void readData(void);
 

@@ -85,7 +85,13 @@ void OutputDevice::printMessage(std::string message, double whatToPrint) const{
 
 void OutputDevice::printMessage(std::string message, vec whatToPrint) const{
 	if(ifScreenDisplay){
-		printVector(whatToPrint,message);
+		whatToPrint.print(message);
+	}
+}
+
+void OutputDevice::printMessage(std::string message, rowvec whatToPrint) const{
+	if(ifScreenDisplay){
+		whatToPrint.print(message);
 	}
 }
 

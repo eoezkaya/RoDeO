@@ -94,6 +94,7 @@ void TGEKModel::initializeSurrogateModel(void){
 
 	if(!ifCorrelationFunctionIsInitialized){
 
+		output.printMessage("Initializing the correlation function...");
 		correlationFunction.initialize();
 		ifCorrelationFunctionIsInitialized = true;
 	}
@@ -108,7 +109,6 @@ void TGEKModel::initializeSurrogateModel(void){
 	auxiliaryModel.setBoxConstraints(data.getBoxConstraints());
 	auxiliaryModel.readData();
 	auxiliaryModel.normalizeData();
-	auxiliaryModel.initializeSurrogateModel();
 	auxiliaryModel.setNumberOfTrainingIterations(numberOfTrainingIterations);
 	auxiliaryModel.setNumberOfThreads(numberOfThreads);
 	auxiliaryModel.initializeSurrogateModel();
@@ -236,6 +236,7 @@ void TGEKModel::generateSampleWeights(void){
 		}
 	}
 
+
 }
 
 
@@ -300,14 +301,15 @@ void TGEKModel::prepareTrainingDataForTheKrigingModel(void){
 	unsigned int N = data.getNumberOfSamples();
 	unsigned int dim = data.getDimension();
 
-	mat inputX = data.getInputMatrix();
-	vec y = data.getOutputVector();
+	vec y = rawData.col(dim);
+	mat X = rawData.submat(0, 0, N-1,dim-1);
+
 
 	mat trainingDataForAuxModel(N,dim+1);
 
 	for(unsigned int i=0; i<dim; i++){
 
-		trainingDataForAuxModel.col(i) = inputX.col(i);
+		trainingDataForAuxModel.col(i) = X.col(i);
 	}
 
 	trainingDataForAuxModel.col(dim) = y;
@@ -326,7 +328,6 @@ void TGEKModel::trainTheta(void){
 	unsigned int dim = data.getDimension();
 	vec theta = hyperparameters.head(dim);
 
-	//	theta.print("theta");
 	correlationFunction.setHyperParameters(theta);
 
 	remove(filenameTrainingDataAuxModel.c_str());
@@ -358,11 +359,10 @@ double TGEKModel::interpolate(rowvec x) const{
 	return sum + beta0;
 
 }
-void TGEKModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const {
+void TGEKModel::interpolateWithVariance(rowvec xp,double *fTilde, double *ssqr) const {
 
-	auxiliaryModel.interpolateWithVariance(xp, f_tilde, ssqr);
-	*f_tilde = interpolate(xp);
-
+	auxiliaryModel.interpolateWithVariance(xp, fTilde, ssqr);
+	*fTilde = interpolate(xp);
 }
 
 
@@ -383,11 +383,13 @@ void TGEKModel::updateModelWithNewData(void){
 	readData();
 	normalizeData();
 	initializeSurrogateModel();
+	updateAuxilliaryFields();
 
 }
 
 
 void TGEKModel::addNewSampleToData(rowvec newsample){
+
 
 	unsigned int dim = data.getDimension();
 	assert(newsample.size() == 2*dim+2);
@@ -400,16 +402,14 @@ void TGEKModel::addNewSampleToData(rowvec newsample){
 
 	mat inputData = data.getInputMatrix();
 
+
 	bool flagTooClose= checkifTooCLose(x, inputData);
+
 
 	if(!flagTooClose){
 
 		appendRowVectorToCSVData(newsample, filenameDataInput);
 		updateModelWithNewData();
-
-		rowvec xForKriging = newsample.head(dim+1);
-		auxiliaryModel.addNewSampleToData(xForKriging);
-
 	}
 
 
@@ -461,6 +461,7 @@ void TGEKModel::calculatePhiEntriesForFunctionValues(void) {
 }
 
 void TGEKModel::calculatePhiEntriesForDerivatives(void) {
+
 	unsigned int N = data.getNumberOfSamples();
 	/* last N equations are derivatives */
 	for (unsigned int i = 0; i < N; i++) {
@@ -511,6 +512,7 @@ void TGEKModel::calculatePhiMatrix(void){
 
 	WPhi = weightMatrix*Phi;
 
+
 }
 
 bool TGEKModel::checkPhiMatrix(void){
@@ -531,8 +533,6 @@ bool TGEKModel::checkPhiMatrix(void){
 
 		double error = fabs(sum - ftilde);
 		if(error > 10E-05) return false;
-
-
 
 	}
 
@@ -558,6 +558,7 @@ bool TGEKModel::checkPhiMatrix(void){
 		if(error > 10E-05) return false;
 
 	}
+
 	return true;
 
 }
