@@ -30,6 +30,7 @@
  */
 
 #include "bounds.hpp"
+#include "auxiliary_functions.hpp"
 #include "matrix_vector_operations.hpp"
 #include "random_functions.hpp"
 #include<cassert>
@@ -90,6 +91,7 @@ void Bounds::setBounds(vec lowerBoundsInput, vec upperBoundsInput) {
 	assert(lowerBounds.size() == upperBounds.size());
 
 	dimension = lowerBounds.size();
+	assert(checkIfBoundsAreValid());
 	ifBoundsAreSet = true;
 
 }
@@ -104,6 +106,9 @@ void Bounds::setBounds(double lowerBound, double upperBound) {
 
 	upperBounds =zeros<vec>(dimension);
 	upperBounds.fill(upperBound);
+
+	assert(checkIfBoundsAreValid());
+
 	ifBoundsAreSet = true;
 
 }

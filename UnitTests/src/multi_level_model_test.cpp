@@ -88,11 +88,11 @@ TEST_F(MultiLevelModelTest, bindModels){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 
 	ASSERT_TRUE(testModel.ifSurrogateModelsAreSet);
 
@@ -106,56 +106,16 @@ TEST_F(MultiLevelModelTest, setBoxConstraints){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.setBoxConstraints(boxConstraints);
 
 	ASSERT_TRUE(testModel.ifBoxConstraintsAreSet);
 
 
-
-}
-
-
-TEST_F(MultiLevelModelTest, readHighFidelityData){
-
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
-
-
-	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
-	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
-	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
-	testModel.setIDLowFiModel(ORDINARY_KRIGING);
-	testModel.setIDHiFiModel(ORDINARY_KRIGING);
-	testModel.bindModels();
-	testModel.readHighFidelityData();
-
-	ASSERT_TRUE(testModel.getNumberOfHiFiSamples() == 50);
-
-
-}
-
-TEST_F(MultiLevelModelTest, readLowFidelityData){
-
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
-
-
-	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
-	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
-	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
-	testModel.setIDLowFiModel(ORDINARY_KRIGING);
-	testModel.setIDHiFiModel(ORDINARY_KRIGING);
-	testModel.bindModels();
-	testModel.readLowFidelityData();
-
-	ASSERT_TRUE(testModel.getNumberOfLowFiSamples() == 100);
 
 }
 
@@ -168,16 +128,61 @@ TEST_F(MultiLevelModelTest, readData){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.readData();
 
 	ASSERT_TRUE(testModel.ifDataIsRead);
 
 }
+
+TEST_F(MultiLevelModelTest, readDataWithLowFiTangents){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiTangents();
+
+
+	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
+	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
+
+
+	testModel.setIDLowFiModel(TANGENT);
+	testModel.setIDHiFiModel(ORDINARY_KRIGING);
+	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+//	testModel.setDisplayOn();
+	testModel.readData();
+
+	ASSERT_TRUE(testModel.ifDataIsRead);
+
+}
+
+TEST_F(MultiLevelModelTest, normalizeData){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiTangents();
+
+
+	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
+	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
+
+
+	testModel.setIDLowFiModel(TANGENT);
+	testModel.setIDHiFiModel(ORDINARY_KRIGING);
+	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+	testModel.setBoxConstraints(boxConstraints);
+//	testModel.setDisplayOn();
+	testModel.readData();
+	testModel.prepareAndReadErrorData();
+	testModel.normalizeData();
+
+	ASSERT_TRUE(testModel.ifDataIsRead);
+
+}
+
+
 
 
 
@@ -189,11 +194,11 @@ TEST_F(MultiLevelModelTest, testfindIndexHiFiToLowFiData){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.readData();
 
 	unsigned int index = testModel.findIndexHiFiToLowFiData(2);
@@ -212,27 +217,9 @@ TEST_F(MultiLevelModelTest, testfindIndexHiFiToLowFiData){
 
 }
 
-TEST_F(MultiLevelModelTest, prepareErrorData){
-
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
 
 
-	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
-	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
-	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
-	testModel.setIDLowFiModel(ORDINARY_KRIGING);
-	testModel.setIDHiFiModel(ORDINARY_KRIGING);
-	testModel.bindModels();
-	testModel.readData();
 
-	testModel.prepareErrorData();
-
-
-	ASSERT_TRUE(testModel.ifErrorDataIsSet);
-
-}
 
 TEST_F(MultiLevelModelTest, initializeSurrogateModel){
 
@@ -241,16 +228,18 @@ TEST_F(MultiLevelModelTest, initializeSurrogateModel){
 
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
-	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 
 
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+//	testModel.setDisplayOn();
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.readData();
+	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 
 
@@ -268,13 +257,14 @@ TEST_F(MultiLevelModelTest, testfindNearestNeighbourLowFidelity){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 
 
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.readData();
 	testModel.normalizeData();
@@ -308,13 +298,14 @@ TEST_F(MultiLevelModelTest,findNearestL1DistanceToALowFidelitySample){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 
 
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.readData();
 	testModel.normalizeData();
@@ -344,13 +335,14 @@ TEST_F(MultiLevelModelTest, testfindNearestNeighbourHighFidelity){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 
 
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.readData();
 	testModel.normalizeData();
@@ -383,13 +375,14 @@ TEST_F(MultiLevelModelTest, trainLowFidelityModel){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 
 
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.readData();
 	testModel.normalizeData();
@@ -441,13 +434,14 @@ TEST_F(MultiLevelModelTest, trainErrorModel){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 
 
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.readData();
 	testModel.normalizeData();
@@ -504,13 +498,13 @@ TEST_F(MultiLevelModelTest, testInterpolate){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 
-
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.readData();
 	testModel.normalizeData();
@@ -566,13 +560,14 @@ TEST_F(MultiLevelModelTest, testInterpolateWithVariance){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 
 
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.readData();
 	testModel.normalizeData();
@@ -592,8 +587,8 @@ TEST_F(MultiLevelModelTest, testInterpolateWithVariance){
 	rowvec sampleLF = XLowFi.row(index);
 	rowvec sampleHF = XHiFi.row(someIndex);
 
-//	sampleLF.print();
-//	sampleHF.print();
+	//	sampleLF.print();
+	//	sampleHF.print();
 
 	double f = sampleHF(2);
 
@@ -606,9 +601,9 @@ TEST_F(MultiLevelModelTest, testInterpolateWithVariance){
 
 	testModel.interpolateWithVariance(xp, &ftilde, &ssqr);
 
-//	printScalar(ftilde);
-//	printScalar(f);
-//	printScalar(ssqr);
+	//	printScalar(ftilde);
+	//	printScalar(f);
+	//	printScalar(ssqr);
 
 	double errorInf = fabs(f-ftilde);
 
@@ -626,13 +621,13 @@ TEST_F(MultiLevelModelTest, determineGammaBasedOnData){
 	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
 	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
 	//	testModel.setDisplayOn();
-	testModel.setName("himmelblauModel");
-	testModel.setNameOfInputFileError();
+
+
 	testModel.setIDLowFiModel(ORDINARY_KRIGING);
 	testModel.setIDHiFiModel(ORDINARY_KRIGING);
 
-
 	testModel.bindModels();
+	testModel.setName("himmelblauModel");
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.readData();
 	testModel.normalizeData();
@@ -649,66 +644,90 @@ TEST_F(MultiLevelModelTest, determineGammaBasedOnData){
 }
 
 
+TEST_F(MultiLevelModelTest, testAddNewSampleToData){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+
+	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
+	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
+	//	testModel.setDisplayOn();
 
 
-//
-//
-//
-//TEST_F(MultiLevelModelTest, testAddNewSampleToData){
-//
-//	testModel.initializeSurrogateModel();
-//	//	testModel.setNumberOfTrainingIterations(1000);
-//	//	testModel.setNumberOfMaximumIterationsForGammaTraining(10);
-//	//	testModel.train();
-//
-//	rowvec newLowFiSample(dim+1);
-//	vec x(dim);
-//	x(0) = generateRandomDouble(lowerBounds(0),upperBounds(0) );
-//	x(1) = generateRandomDouble(lowerBounds(1),upperBounds(1) );
-//
-//	double f = HimmelblauLowFi(x);
-//	newLowFiSample(0) = x(0);
-//	newLowFiSample(1) = x(1);
-//	newLowFiSample(2) = f;
-//
-//	testModel.addNewLowFidelitySampleToData(newLowFiSample);
-//
-//	ASSERT_EQ(testModel.getNumberOfLowFiSamples(),201);
-//
-//
-//}
-//
-//TEST_F(MultiLevelModelTest, testAddNewHiFiSampleToData){
-//
-//	testModel.initializeSurrogateModel();
-//	//	testModel.setNumberOfTrainingIterations(1000);
-//	//	testModel.setNumberOfMaximumIterationsForGammaTraining(10);
-//	//	testModel.train();
-//
-//	rowvec newHiFiSample(dim+1);
-//	rowvec newLowFiSample(dim+1);
-//	vec x(dim);
-//	x(0) = generateRandomDouble(lowerBounds(0),upperBounds(0) );
-//	x(1) = generateRandomDouble(lowerBounds(1),upperBounds(1) );
-//
-//	double f = HimmelblauLowFi(x);
-//	newLowFiSample(0) = x(0);
-//	newLowFiSample(1) = x(1);
-//	newLowFiSample(2) = f;
-//
-//	f = Himmelblau(x);
-//	newHiFiSample(0) = x(0);
-//	newHiFiSample(1) = x(1);
-//	newHiFiSample(2) = f;
-//
-//
-//	testModel.addNewLowFidelitySampleToData(newLowFiSample);
-//	testModel.addNewSampleToData(newHiFiSample);
-//
-//	ASSERT_EQ(testModel.getNumberOfHiFiSamples(),51);
-//
-//
-//}
+	testModel.setIDLowFiModel(ORDINARY_KRIGING);
+	testModel.setIDHiFiModel(ORDINARY_KRIGING);
+
+
+	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.readData();
+	testModel.normalizeData();
+
+	testModel.initializeSurrogateModel();
+
+
+	rowvec newLowFiSample(3);
+	vec x(2);
+	x(0) = generateRandomDouble(lb(0),ub(0) );
+	x(1) = generateRandomDouble(lb(1),ub(1) );
+
+	double f = HimmelblauLowFi(x);
+	newLowFiSample(0) = x(0);
+	newLowFiSample(1) = x(1);
+	newLowFiSample(2) = f;
+
+	testModel.addNewLowFidelitySampleToData(newLowFiSample);
+
+	ASSERT_EQ(testModel.getNumberOfLowFiSamples(),101);
+
+
+}
+
+TEST_F(MultiLevelModelTest, testAddNewHiFiSampleToData){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+
+	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
+	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
+	//	testModel.setDisplayOn();
+
+
+	testModel.setIDLowFiModel(ORDINARY_KRIGING);
+	testModel.setIDHiFiModel(ORDINARY_KRIGING);
+
+
+	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.readData();
+	testModel.normalizeData();
+
+	testModel.initializeSurrogateModel();
+
+	rowvec newHiFiSample(3);
+	rowvec newLowFiSample(3);
+	vec x(2);
+	x(0) = generateRandomDouble(lb(0),ub(0) );
+	x(1) = generateRandomDouble(lb(1),ub(1) );
+
+	double f = HimmelblauLowFi(x);
+	newLowFiSample(0) = x(0);
+	newLowFiSample(1) = x(1);
+	newLowFiSample(2) = f;
+
+	f = Himmelblau(x);
+	newHiFiSample(0) = x(0);
+	newHiFiSample(1) = x(1);
+	newHiFiSample(2) = f;
+
+
+	testModel.addNewLowFidelitySampleToData(newLowFiSample);
+	testModel.addNewSampleToData(newHiFiSample);
+
+	ASSERT_EQ(testModel.getNumberOfHiFiSamples(),51);
+
+
+}
 
 
 

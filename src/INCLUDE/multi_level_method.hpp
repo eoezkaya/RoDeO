@@ -40,16 +40,13 @@
 
 using std::string;
 
-
-/* Hyperparameters of the MultiLevelModel =  Hyperparameters of the lowFi Model + Hyperparameters of the error Model + gamma */
-
 class MultiLevelModel : public SurrogateModel{
 
 private:
 
-	string inputFileNameLowFidelityData;
-	string inputFileNameHighFidelityData;
 	string inputFileNameError;
+
+	string filenameDataInputLowFidelity;
 
 	SurrogateModel *lowFidelityModel;
 	SurrogateModel *errorModel;
@@ -60,11 +57,14 @@ private:
 
 	KrigingModel surrogateModelKrigingError;
 	AggregationModel surrogateModelAggregationError;
-	TGEKModel surrogateModelTGEKHiFi;
+	TGEKModel surrogateModelTEMError;
 
 	SURROGATE_MODEL modelIDHiFi;
 	SURROGATE_MODEL modelIDLowFi;
 	SURROGATE_MODEL modelIDError;
+
+
+	SurrogateModelData dataLowFidelity;
 
 
 	mat rawDataHighFidelity;
@@ -74,8 +74,8 @@ private:
 	mat rawDataLowFidelity;
 	mat XLowFidelity;
 
-	unsigned int NLoFi = 0;
-	unsigned int NHiFi = 0;
+	unsigned int numberOfSamplesLowFidelity = 0;
+
 
 	mat rawDataError;
 
@@ -99,6 +99,9 @@ public:
 	bool ifSurrogateModelsAreSet = false;
 	bool ifErrorDataIsSet = false;
 	bool ifBoxConstraintsAreSet = false;
+
+	void setName(std::string);
+	void setDimension(unsigned int dim);
 
 
 	void setNameOfInputFile(string filename);
@@ -128,11 +131,6 @@ public:
 	void setIDLowFiModel(SURROGATE_MODEL);
 
 
-//	void setGradientsOnLowFi(void);
-//	void setGradientsOnHiFi(void);
-//	void setGradientsOffLowFi(void);
-//	void setGradientsOffHiFi(void);
-
 	void setDisplayOn(void);
 	void setDisplayOff(void);
 
@@ -161,12 +159,9 @@ public:
 	void addNewSampleToData(rowvec newsample);
 	void addNewLowFidelitySampleToData(rowvec newsample);
 
-	void readHighFidelityData(void);
-	void readLowFidelityData(void);
-
 	void setDimensionsHiFiandLowFiModels(void);
 
-	void prepareErrorData(void);
+	void prepareAndReadErrorData(void);
 
 	unsigned int findIndexHiFiToLowFiData(unsigned int indexHiFiData) const;
 

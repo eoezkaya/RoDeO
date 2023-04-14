@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, RPTU)
@@ -28,6 +28,8 @@
  *
  *
  */
+
+
 
 #include <armadillo>
 #include <random>
@@ -49,6 +51,34 @@ AggregationModel::AggregationModel():SurrogateModel(){
 	setGradientsOn();
 
 }
+
+void AggregationModel::setBoxConstraints(Bounds boxConstraintsInput){
+
+	assert(boxConstraintsInput.areBoundsSet());
+
+	boxConstraints = boxConstraintsInput;
+	data.setBoxConstraints(boxConstraintsInput);
+}
+
+
+void AggregationModel::readData(void){
+
+	assert(isNotEmpty(filenameDataInput));
+	data.readData(filenameDataInput);
+	ifDataIsRead = true;
+
+}
+
+void AggregationModel::normalizeData(void){
+
+	assert(ifDataIsRead);
+
+	data.normalize();
+	ifNormalized = true;
+}
+
+
+
 
 
 void AggregationModel::setNameOfInputFile(std::string filename){

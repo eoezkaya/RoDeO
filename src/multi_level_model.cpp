@@ -39,19 +39,40 @@
 #include "metric.hpp"
 #include "auxiliary_functions.hpp"
 using namespace arma;
-
 using namespace std;
 
-//MultiLevelModel::MultiLevelModel():SurrogateModel(){}
+void MultiLevelModel::setName(std::string nameGiven){
+
+	assert(isNotEmpty(nameGiven));
+	assert(ifSurrogateModelsAreSet);
+
+	name = nameGiven;
+	string nameLowFiModel = name+"_LowFi";
+	lowFidelityModel->setName(nameLowFiModel);
+	string nameErrorModel = name+"_Error";
+	errorModel->setName(nameErrorModel);
+
+}
+
+void MultiLevelModel::setDimension(unsigned int dim){
+
+	assert(ifSurrogateModelsAreSet);
+	dimension = dim;
+	lowFidelityModel->setDimension(dim);
+	errorModel->setDimension(dim);
+}
+
+
 
 void MultiLevelModel::setNameOfInputFile(string filename){}
 
 void MultiLevelModel::setNameOfInputFileError(void){
-
 	assert(isNotEmpty(name));
-	inputFileNameError = name +"_Error.csv";
-	output.printMessage("Error data is set as ", inputFileNameError);
+	assert(ifSurrogateModelsAreSet);
 
+	inputFileNameError = name +"_Error.csv";
+	errorModel->setNameOfInputFile(inputFileNameError);
+	output.printMessage("Error data is set as ", inputFileNameError);
 }
 
 
@@ -59,7 +80,7 @@ void MultiLevelModel::setNameOfHyperParametersFile(string label){
 
 	assert(isNotEmpty(label));
 
-	hyperparameters_filename = label + "multilevel_hyperparameters.csv";
+	hyperparameters_filename = label;
 
 
 }
@@ -73,26 +94,20 @@ void MultiLevelModel::setNumberOfTrainingIterations(unsigned int nIter){
 }
 
 void MultiLevelModel::setinputFileNameHighFidelityData(string filename){
-
 	assert(isNotEmpty(filename));
-
-	inputFileNameHighFidelityData = filename;
 	filenameDataInput = filename;
-
-	output.printMessage("Name for the high fidelity input data is set as " + inputFileNameHighFidelityData);
+	output.printMessage("Name for the high fidelity input data is set as " + filenameDataInput);
 }
 
 void MultiLevelModel::setinputFileNameLowFidelityData(string filename){
-
 	assert(isNotEmpty(filename));
-
-	inputFileNameLowFidelityData = filename;
-	output.printMessage("Name for the low fidelity input data is set as " + inputFileNameLowFidelityData);
-
+	filenameDataInputLowFidelity = filename;
+	output.printMessage("Name for the low fidelity input data is set as " + filenameDataInputLowFidelity);
 }
 
 
 void MultiLevelModel::setDisplayOn(void){
+	lowFidelityModel->setDisplayOn();
 	output.ifScreenDisplay = true;
 }
 
@@ -112,14 +127,106 @@ void MultiLevelModel::setBoxConstraints(Bounds boxConstraintsInput){
 	assert(ifSurrogateModelsAreSet);
 	assert(boxConstraintsInput.areBoundsSet());
 
-	boxConstraints = boxConstraintsInput;
-
+	data.setBoxConstraints(boxConstraintsInput);
+	dataLowFidelity.setBoxConstraints(boxConstraintsInput);
 	lowFidelityModel->setBoxConstraints(boxConstraintsInput);
 	errorModel->setBoxConstraints(boxConstraintsInput);
-
+	boxConstraints = boxConstraintsInput;
 	ifBoxConstraintsAreSet = true;
+}
+
+
+void MultiLevelModel::readData(void){
+
+	assert(dimension>0);
+	assert(ifSurrogateModelsAreSet);
+	assert(isNotEmpty(filenameDataInput));
+	assert(isNotEmpty(filenameDataInputLowFidelity));
+
+	output.printMessage("Reading data for the multilevel model...");
+
+	data.readData(filenameDataInput);
+	numberOfSamples = data.getNumberOfSamples();
+
+	dataLowFidelity.readData(filenameDataInputLowFidelity);
+	numberOfSamplesLowFidelity = dataLowFidelity.getNumberOfSamples();
+	lowFidelityModel->readData();
+
+	rawDataLowFidelity = dataLowFidelity.getRawData();
+	rawDataHighFidelity = data.getRawData();
+
+	ifDataIsRead = true;
+	prepareAndReadErrorData();
+	output.printMessage("Reading data for the multilevel model is done...");
 
 }
+
+
+void MultiLevelModel::prepareAndReadErrorData(void){
+
+	assert(dimension>0);
+	assert(ifDataIsRead);
+	assert(ifSurrogateModelsAreSet);
+	assert(numberOfSamples>0);
+	assert(numberOfSamplesLowFidelity>0);
+	assert(numberOfSamplesLowFidelity >= numberOfSamples);
+
+	output.printMessage("Preparing error data...");
+
+	setNameOfInputFileError();
+
+	if(modelIDError == ORDINARY_KRIGING){
+		rawDataError = zeros<mat>(numberOfSamples,dimension+1);
+	}
+	if(modelIDError == TANGENT){
+		rawDataError = zeros<mat>(numberOfSamples,2*dimension+2);
+	}
+
+	for(unsigned int i = 0; i < numberOfSamples; i++){
+
+		unsigned int indexLowFi = findIndexHiFiToLowFiData(i);
+
+		double error = rawDataHighFidelity(i,dimension) - rawDataLowFidelity(indexLowFi,dimension);
+
+		for(unsigned int j = 0; j < dimension; j++){
+			rawDataError(i,j) = rawDataHighFidelity(i,j);
+		}
+		rawDataError(i,dimension) = error;
+
+	}
+
+	if(modelIDError == TANGENT){
+
+		for(unsigned int i = 0; i < numberOfSamples; i++){
+
+			unsigned int indexLowFi = findIndexHiFiToLowFiData(i);
+
+			double errorDirectionalDerivative = rawDataHighFidelity(i,dimension+1) - rawDataLowFidelity(indexLowFi,dimension+1);
+
+			rawDataError(i,dimension+1) = errorDirectionalDerivative;
+
+			for(unsigned int j = 0; j < dimension; j++){
+				rawDataError(i,dimension+2+j) = rawDataHighFidelity(i,dimension+2+j);
+			}
+		}
+
+	}
+
+
+	rawDataError.save(inputFileNameError, csv_ascii);
+
+	errorModel->readData();
+
+	output.printMessage("Error data is saved in " + inputFileNameError);
+
+	ifErrorDataIsSet = true;
+
+	output.printMessage("Preparing error data is done...");
+
+}
+
+
+
 
 
 void MultiLevelModel::initializeSurrogateModel(void){
@@ -127,26 +234,17 @@ void MultiLevelModel::initializeSurrogateModel(void){
 	assert(ifBoxConstraintsAreSet);
 	assert(ifSurrogateModelsAreSet);
 	assert(ifDataIsRead);
+	assert(ifNormalized);
 
 	output.printMessage("Initializing the multi-level model...");
 	output.printMessage("\nInitializing the low fidelity model...");
 
-	lowFidelityModel->setNameOfInputFile(inputFileNameLowFidelityData);
-	lowFidelityModel->readData();
-	lowFidelityModel->normalizeData();
 	lowFidelityModel->initializeSurrogateModel();
-
-
 	output.printMessage("\nInitialization of the low fidelity model is done...");
 
 
 	output.printMessage("\nInitializing the error model...");
 
-	prepareErrorData();
-
-	errorModel->setNameOfInputFile(inputFileNameError);
-	errorModel->readData();
-	errorModel->normalizeData();
 	errorModel->initializeSurrogateModel();
 
 	output.printMessage("Initialization of the error model is done...");
@@ -221,12 +319,14 @@ void MultiLevelModel::determineGammaBasedOnData(void){
 	assert(ifDataIsRead);
 	assert(ifBoxConstraintsAreSet);
 
+
+
 	MultiLevelModel auxiliaryModel;
 
 	/* we just copy hyperparameters in this way to avoid model training */
 	auxiliaryModel = *this;
 
-	unsigned int numberOfHiFiSamplesAuxiliaryModel = NHiFi/5;
+	unsigned int numberOfHiFiSamplesAuxiliaryModel = numberOfSamples/5;
 
 	assert(numberOfHiFiSamplesAuxiliaryModel > 0);
 
@@ -237,13 +337,13 @@ void MultiLevelModel::determineGammaBasedOnData(void){
 	unsigned int nCols = rawDataAuxiliaryHiFiSamples.n_cols;
 
 	mat auxiliaryHiFiSamplesTest     = rawDataAuxiliaryHiFiSamples.submat(0,0,numberOfHiFiSamplesAuxiliaryModel-1, nCols-1);
-	mat auxiliaryHiFiSamplesTraining = rawDataAuxiliaryHiFiSamples.submat(numberOfHiFiSamplesAuxiliaryModel,0,NHiFi-1, nCols-1);
+	mat auxiliaryHiFiSamplesTraining = rawDataAuxiliaryHiFiSamples.submat(numberOfHiFiSamplesAuxiliaryModel,0,numberOfSamples-1, nCols-1);
 
 	saveMatToCVSFile(auxiliaryHiFiSamplesTraining,"auxiliaryHiFiSamplesTraining.csv");
 
 	auxiliaryModel.setName("auxiliaryModelForGammaTraining");
 	auxiliaryModel.setinputFileNameHighFidelityData("auxiliaryHiFiSamplesTraining.csv");
-	auxiliaryModel.setinputFileNameLowFidelityData(inputFileNameLowFidelityData);
+	auxiliaryModel.setinputFileNameLowFidelityData(filenameDataInputLowFidelity);
 
 
 
@@ -437,32 +537,13 @@ void MultiLevelModel::interpolateWithVariance(rowvec xp,double *estimatedValue,d
 
 }
 
-
-void MultiLevelModel::readHighFidelityData(void){
-
-	assert(isNotEmpty(inputFileNameHighFidelityData));
-
-	rawDataHighFidelity = readMatFromCVSFile(inputFileNameHighFidelityData);
-	NHiFi =  rawDataHighFidelity.n_rows;
-
-}
-void MultiLevelModel::readLowFidelityData(void){
-
-	assert(isNotEmpty(inputFileNameLowFidelityData));
-
-	rawDataLowFidelity = readMatFromCVSFile(inputFileNameLowFidelityData);
-	NLoFi =  rawDataLowFidelity.n_rows;
-	lowFidelityModel->readData();
-
-}
-
 unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiData) const{
 
-	assert(NLoFi>0);
-	assert(NHiFi>0);
-	assert(NLoFi >= NHiFi);
+	assert(numberOfSamplesLowFidelity>0);
+	assert(numberOfSamples>0);
+	assert(numberOfSamplesLowFidelity >= numberOfSamples);
 	assert(dimension>0);
-	assert(indexHiFiData < NHiFi);
+	assert(indexHiFiData < numberOfSamples);
 
 	unsigned int indexLoFi = 0;
 
@@ -471,7 +552,7 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 	for(unsigned int i=0; i<dimension; i++) x(i) = rawDataHighFidelity(indexHiFiData,i);
 
 	double minNorm = LARGE;
-	for(unsigned int i=0; i < NLoFi; i++){
+	for(unsigned int i=0; i < numberOfSamplesLowFidelity; i++){
 
 		rowvec xp(dimension);
 		for(unsigned int j=0; j<dimension; j++) xp(j) = rawDataLowFidelity(i,j);
@@ -496,79 +577,7 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 
 }
 
-void MultiLevelModel::prepareErrorData(void){
 
-	assert(dimension>0);
-	assert(NHiFi>0);
-	assert(NLoFi>0);
-	assert(NLoFi >= NHiFi);
-
-	output.printMessage("Preparing error data...");
-
-	setNameOfInputFileError();
-
-	if(modelIDError == ORDINARY_KRIGING){
-		rawDataError = zeros<mat>(NHiFi,dimension+1);
-	}
-
-	for(unsigned int i = 0; i < NHiFi; i++){
-
-		unsigned int indexLowFi = findIndexHiFiToLowFiData(i);
-
-		double error = rawDataHighFidelity(i,dimension) - rawDataLowFidelity(indexLowFi,dimension);
-
-		for(unsigned int j = 0; j < dimension; j++){
-			rawDataError(i,j) = rawDataHighFidelity(i,j);
-		}
-		rawDataError(i,dimension) = error;
-
-	}
-
-
-
-
-	//
-	//
-	//	/* if high fidelity data has gradients, low fidelity must also have gradients */
-	//	if(ifHighFidelityDataHasGradients) assert(ifLowFidelityDataHasGradients);
-	//
-	//	if(ifHighFidelityDataHasGradients){
-	//
-	//		rawDataError = zeros<mat>(NHiFi,2*dimHiFi+1);
-	//
-	//	}
-	//	else{
-	//
-	//		rawDataError = zeros<mat>(NHiFi,dimHiFi+1);
-	//
-	//	}
-	//
-
-		/* difference in gradients */
-
-		//			if(ifHighFidelityDataHasGradients){
-		//
-		//				for(unsigned int j = 0; j < dimHiFi; j++){
-		//
-		//					double errorGradient = rawDataHighFidelity(i,dimHiFi+1+j) - rawDataHighFidelity(indexLowFi,dimLoFi+1+j);
-		//
-		//					rawDataError(i,dimHiFi+1+j) = errorGradient;
-		//				}
-		//
-		//			}
-//	}
-	//
-	assert(isNotEmpty(inputFileNameError));
-
-	rawDataError.save(inputFileNameError, csv_ascii);
-
-	output.printMessage("Error data is saved in " + inputFileNameError);
-
-	ifErrorDataIsSet = true;
-
-	output.printMessage("Preparing error data is done...");
-
-}
 
 void MultiLevelModel::setIDHiFiModel(SURROGATE_MODEL id){
 
@@ -623,39 +632,24 @@ void MultiLevelModel::setDimensionsHiFiandLowFiModels(void){
 
 }
 
-void MultiLevelModel::readData(void){
 
-	assert(dimension>0);
-	assert(ifSurrogateModelsAreSet);
-
-	output.printMessage("Reading data for the multilevel model...");
-
-	data.readData(filenameDataInput);
-
-	readHighFidelityData();
-	readLowFidelityData();
-
-
-	XLowFidelity =  rawDataLowFidelity.submat(0,0,NLoFi -1,  dimension -1);
-	XHighFidelity = rawDataHighFidelity.submat(0,0,NHiFi -1, dimension -1);
-
-
-	//	prepareErrorData();
-
-	ifDataIsRead = true;
-	output.printMessage("Reading data for the multilevel model is done...");
-
-
-
-
-}
 
 void MultiLevelModel::normalizeData(void){
 
-	XLowFidelity  = normalizeMatrix(XLowFidelity, boxConstraints);
-	XLowFidelity = (1.0/dimension)*XLowFidelity;
-	XHighFidelity  = normalizeMatrix(XHighFidelity, boxConstraints);
-	XHighFidelity = (1.0/dimension)*XHighFidelity;
+	assert(ifBoxConstraintsAreSet);
+	assert(ifSurrogateModelsAreSet);
+	assert(ifDataIsRead);
+	assert(ifErrorDataIsSet);
+
+	data.normalize();
+	dataLowFidelity.normalize();
+
+	lowFidelityModel->normalizeData();
+	errorModel->normalizeData();
+
+	XLowFidelity = dataLowFidelity.getInputMatrix();
+	XHighFidelity = data.getInputMatrix();
+
 
 	ifNormalized = true;
 }
@@ -663,8 +657,12 @@ void MultiLevelModel::normalizeData(void){
 
 void MultiLevelModel::bindModels(void){
 
-	assert(isNotEmpty(inputFileNameHighFidelityData));
-	assert(isNotEmpty(inputFileNameLowFidelityData));
+	if(!checkifModelIDIsValid(modelIDHiFi)){
+		abortWithErrorMessage("Undefined surrogate model for the high fidelity model");
+	}
+	if(!checkifModelIDIsValid(modelIDLowFi)){
+		abortWithErrorMessage("Undefined surrogate model for the low fidelity model");
+	}
 
 	bindLowFidelityModel();
 	bindErrorModel();
@@ -677,6 +675,7 @@ bool MultiLevelModel::checkifModelIDIsValid(SURROGATE_MODEL id) const{
 	if(id == NONE) return false;
 	if(id == ORDINARY_KRIGING) return true;
 	if(id == UNIVERSAL_KRIGING) return true;
+	if(id == TANGENT) return true;
 
 
 	return false;
@@ -704,17 +703,24 @@ void MultiLevelModel::bindLowFidelityModel(void){
 
 	}
 
-	lowFidelityModel->setNameOfInputFile(inputFileNameLowFidelityData);
+	if(modelIDLowFi == TANGENT){
+
+		output.printMessage("Binding the low fidelity model with the TEM model...");
+		lowFidelityModel = &surrogateModelTGEKLowFi;
+		dataLowFidelity.setDirectionalDerivativesOn();
+
+	}
+
+
+
+	lowFidelityModel->setNameOfInputFile(filenameDataInputLowFidelity);
+	lowFidelityModel->setDimension(dimension);
+
 
 }
 
 void MultiLevelModel::bindErrorModel(void){
 
-	assert(isNotEmpty(inputFileNameError));
-
-	if(!checkifModelIDIsValid(modelIDHiFi)){
-		abortWithErrorMessage("Undefined surrogate model for the high fidelity model");
-	}
 
 	if(modelIDLowFi == ORDINARY_KRIGING && modelIDHiFi == ORDINARY_KRIGING){
 
@@ -734,12 +740,16 @@ void MultiLevelModel::bindErrorModel(void){
 	}
 
 
+	if(modelIDLowFi == TANGENT && modelIDHiFi == TANGENT){
 
+		output.printMessage("Binding the error model with the TEM model...");
+		errorModel = &surrogateModelTEMError;
 
+		modelIDError = TANGENT;
 
+	}
 
-
-
+	errorModel->setDimension(dimension);
 
 }
 
@@ -748,14 +758,13 @@ void MultiLevelModel::bindErrorModel(void){
 
 
 mat MultiLevelModel::getRawDataHighFidelity(void) const{
-
-	assert(NHiFi>0);
+	assert(numberOfSamples>0);
 	return rawDataHighFidelity;
 
 }
 mat MultiLevelModel::getRawDataLowFidelity(void) const{
 
-	assert(NLoFi>0);
+	assert(numberOfSamplesLowFidelity>0);
 	return rawDataLowFidelity;
 }
 
@@ -803,34 +812,32 @@ double MultiLevelModel::findNearestL1DistanceToAHighFidelitySample(rowvec x) con
 
 	return calculateL1norm(diff);
 
-
-
 }
 
 unsigned int MultiLevelModel::getNumberOfLowFiSamples(void) const{
-	return NLoFi;
+	return numberOfSamplesLowFidelity;
 }
 unsigned int MultiLevelModel::getNumberOfHiFiSamples(void) const{
-	return NHiFi;
+	return numberOfSamples;
 }
 
 void MultiLevelModel::addNewSampleToData(rowvec newsample){
 
-
-	assert(isNotEmpty(inputFileNameHighFidelityData));
-	appendRowVectorToCSVData(newsample, inputFileNameHighFidelityData);
+	assert(isNotEmpty(filenameDataInput));
+	appendRowVectorToCSVData(newsample, filenameDataInput);
+	readData();
+	normalizeData();
 	initializeSurrogateModel();
-
-
 
 }
 
 
 void MultiLevelModel::addNewLowFidelitySampleToData(rowvec newsample){
 
-
-	assert(isNotEmpty(inputFileNameLowFidelityData));
-	appendRowVectorToCSVData(newsample, inputFileNameLowFidelityData);
+	assert(isNotEmpty(filenameDataInputLowFidelity));
+	appendRowVectorToCSVData(newsample, filenameDataInputLowFidelity);
+	readData();
+	normalizeData();
 	initializeSurrogateModel();
 
 }

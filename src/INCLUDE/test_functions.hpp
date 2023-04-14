@@ -88,7 +88,7 @@ public:
 
 	void evaluate(Design &d) const;
 
-    TestFunction(std::string name,int dimension);
+	TestFunction(std::string name,int dimension);
 
     void setBoxConstraints(double lb, double ub);
 

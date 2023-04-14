@@ -48,8 +48,7 @@ class SurrogateModel{
 protected:
 
 	unsigned int dimension = 0;
-
-	unsigned int NTest = 0;
+	unsigned int numberOfSamples = 0;
 
 	std::string name;
 	std::string hyperparameters_filename;
@@ -72,6 +71,8 @@ protected:
 	unsigned int numberOfThreads = 1;
 
 	unsigned int minimumNumberOfSamplesForTrainingDataShrinkage = 30;
+
+	Bounds boxConstraints;
 
 
 
@@ -99,23 +100,19 @@ public:
 	void readDataTest(void);
 	void normalizeDataTest(void);
 
-	virtual void readData(void);
-	virtual void normalizeData(void);
+
 
 	void printData(void) const;
 
 	void checkRawData(void) const;
 
-	void setBoxConstraints(vec xmin, vec xmax);
-	void setBoxConstraints(double xmin, double xmax);
-	void setBoxConstraints(Bounds boxConstraintsInput);
+//	void setBoxConstraints(vec xmin, vec xmax);
+//	void setBoxConstraints(double xmin, double xmax);
 
 	void setNumberOfThreads(unsigned int);
 
 	void setWriteWarmStartFileOn(std::string);
 	void setReadWarmStartFileOn(std::string);
-
-	void setBoxConstraintsFromData(void);
 
 	void setGradientsOn(void);
 	void setGradientsOff(void);
@@ -140,6 +137,10 @@ public:
 	virtual void setNameOfHyperParametersFile(string filename) = 0;
 	virtual void setNumberOfTrainingIterations(unsigned int) = 0;
 
+	virtual void setBoxConstraints(Bounds boxConstraintsInput) = 0;
+
+	virtual void readData(void) = 0;
+	virtual void normalizeData(void) = 0;
 	virtual void initializeSurrogateModel(void) = 0;
 	virtual void printSurrogateModel(void) const = 0;
 	virtual void printHyperParameters(void) const = 0;

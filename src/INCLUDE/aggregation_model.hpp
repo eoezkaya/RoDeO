@@ -57,6 +57,11 @@ public:
 	AggregationModel();
 	AggregationModel(std::string);
 
+	void setBoxConstraints(Bounds boxConstraintsInput);
+
+	void readData(void);
+	void normalizeData(void);
+
 	void setNameOfInputFile(std::string);
 	void setNameOfHyperParametersFile(std::string);
 	void setNumberOfTrainingIterations(unsigned int);

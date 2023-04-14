@@ -46,7 +46,10 @@ protected:
 		ub.fill(6.0);
 		lb = zeros<vec>(2);
 		lb.fill(-6.0);
-		testModel.setBoxConstraints(lb, ub);
+
+		Bounds boxConstraints(lb,ub);
+		testModel.setBoxConstraints(boxConstraints);
+		testModel.setDimension(2);
 
 
 	}

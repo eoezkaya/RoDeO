@@ -90,8 +90,11 @@ private:
 
 public:
 
+		void setBoxConstraints(Bounds boxConstraintsInput);
+		void setDimension(unsigned int);
 
 	   	void readData(void);
+	   	void normalizeData(void);
 
 		void setNameOfInputFile(string filename);
 		void setNameOfHyperParametersFile(string filename);

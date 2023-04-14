@@ -65,8 +65,8 @@ void abortIfHasNan(rowvec &v){
 
 	}
 
-
 }
+
 
 void copyVector(vec &a,vec b){
 

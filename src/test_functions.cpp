@@ -140,6 +140,8 @@ void TestFunction::print(void){
 
 }
 
+
+
 void TestFunction::evaluate(Design &d) const{
 
 	rowvec x= d.designParameters;

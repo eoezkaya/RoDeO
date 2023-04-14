@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,14 +20,16 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
  */
+
+
 #include "linear_regression.hpp"
 #include "auxiliary_functions.hpp"
 #include "Rodeo_macros.hpp"
@@ -37,17 +39,48 @@
 using namespace arma;
 
 
-LinearModel::LinearModel():SurrogateModel(){}
+//LinearModel::LinearModel():SurrogateModel(){}
+
+void LinearModel::setBoxConstraints(Bounds boxConstraintsInput){
+
+	assert(boxConstraintsInput.areBoundsSet());
+
+	boxConstraints = boxConstraintsInput;
+	data.setBoxConstraints(boxConstraintsInput);
+}
+
+
+void LinearModel::readData(void){
+
+	assert(isNotEmpty(filenameDataInput));
+	data.readData(filenameDataInput);
+	numberOfSamples = data.getNumberOfSamples();
+
+	ifDataIsRead = true;
+
+}
+
+void LinearModel::normalizeData(void){
+
+	assert(ifDataIsRead);
+
+	data.normalize();
+	ifNormalized = true;
+}
+
 
 void LinearModel::initializeSurrogateModel(void){
 
 	assert(ifDataIsRead);
+	assert(dimension >0);
 
 	output.printMessage("Initializing the linear model...");
 
-	numberOfHyperParameters = data.getDimension()+1;
+	numberOfHyperParameters = dimension+1;
 	weights = zeros<vec>(numberOfHyperParameters);
-	regularizationParam = 10E-6;
+	regularizationParameter  = 10E-6;
+
+	train();
 
 	ifInitialized = true;
 
@@ -71,199 +104,113 @@ void LinearModel::printHyperParameters(void) const{
 
 }
 
+void LinearModel::setRegularizationParameter(double value){
 
-
-
-
-void LinearModel::setRegularizationParam(double value){
-
-	regularizationParam = value;
+	regularizationParameter = value;
 }
 
-double LinearModel::getRegularizationParam(void) const{
-
-	return regularizationParam;
+double LinearModel::getRegularizationParameter(void) const{
+	return regularizationParameter;
 }
-
 vec LinearModel::getWeights(void) const{
-
 	return weights;
 }
 
 void LinearModel::setWeights(vec w){
-
 	weights = w;
 }
-
-
 
 void LinearModel::train(void){
 
 	assert(ifNormalized);
+	assert(ifDataIsRead);
+	assert(dimension>0);
+	assert(numberOfSamples>0);
 
 	output.printMessage("Finding the weights of the linear model...");
 
 
-	if(ifInitialized == false){
-
-		printf("ERROR: Linear regression model must be initialized before training!\n");
-		abort();
-	}
-
-	unsigned int dim = data.getDimension();
-	unsigned int numberOfSamples = data.getNumberOfSamples();
 	mat X = data.getInputMatrix();
-
 	vec y = data.getOutputVector();
-	mat augmented_X(numberOfSamples, dim + 1);
+	mat augmentedX(numberOfSamples, dimension + 1);
 
 	for (unsigned int i = 0; i < numberOfSamples; i++) {
 
-		for (unsigned int j = 0; j <= dim; j++) {
+		for (unsigned int j = 0; j <= dimension; j++) {
 
 			if (j == 0){
 
-				augmented_X(i, j) = 1.0;
+				augmentedX(i, j) = 1.0;
 			}
 
 			else{
 
-				augmented_X(i, j) = X(i, j - 1);
+				augmentedX(i, j) = X(i, j - 1);
 			}
-
-
 		}
 	}
 
-#if 0
-	printf("augmented_X:\n");
-	augmented_X.print();
-#endif
-
-
-
-	if(fabs(regularizationParam) < EPSILON ){
-#if 0
-		printf("Taking pseudo-inverse of augmented data matrix...\n");
-#endif
-		mat psuedo_inverse_X_augmented = pinv(augmented_X);
-
-		//		psuedo_inverse_X_augmented.print();
-
-		weights = psuedo_inverse_X_augmented * y;
-
-	}
-
-	else{
-#if 0
-		printf("Regularization...\n");
-#endif
-		mat XtX = trans(augmented_X)*augmented_X;
-
-		XtX = XtX + regularizationParam*eye(XtX.n_rows,XtX.n_rows);
-
-		weights = inv(XtX)*trans(augmented_X)*y;
-
-	}
-
-	for(unsigned int i=0; i<dim+1;i++ ){
-
-		if(fabs(weights(i)) > 10E5){
-
-			printf("WARNING: Linear regression coefficients are too large= \n");
-			printf("regression_weights(%d) = %10.7f\n",i,weights(i));
-		}
-
-	}
+	mat XT = trans(augmentedX);
+	mat XTX = XT *augmentedX;
+	XTX = XTX + regularizationParameter * eye(dimension+1,dimension+1);
+	weights = inv(XTX)*XT*y;
 
 	output.printMessage("Linear regression weights", weights);
+
+	ifModelTrainingIsDone = true;
 
 
 }
 
-
-
-
 double LinearModel::interpolate(rowvec x ) const{
 
-	unsigned int dim = data.getDimension();
-	double fRegression = 0.0;
-	for(unsigned int i=0; i<dim; i++){
+	double fRegression = weights(0);
+
+	for(unsigned int i=0; i<dimension; i++){
 
 		fRegression += x(i)*weights(i+1);
 	}
 
-	/* add bias term */
-	fRegression += weights(0);
-
 	return fRegression;
 
-
 }
-
-
 
 void LinearModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
 	assert(false);
 }
-double LinearModel::interpolateWithGradients(rowvec xp) const{
-
-	cout << "ERROR: interpolateWithGradients does not exist for LinearModel\n";
-	abort();
-
-
-}
 
 vec LinearModel::interpolateAll(mat X) const{
 
-	unsigned int dim = data.getDimension();
-	unsigned int N = data.getNumberOfSamples();
+	assert(X.n_cols == dimension);
 
-	vec result(N);
+	unsigned int N = X.n_rows;
 
+	vec result(N,fill::zeros);
 
 	for(unsigned int i=0; i<N; i++){
-
-		rowvec x = data.getRowX(i);
-
-
-		double fRegression = 0.0;
-		for(unsigned int j=0; j<dim; j++){
-
-			fRegression += x(j)*weights(j+1);
-		}
-
-		/* add bias term */
-		fRegression += weights(0);
-
-		result(i) = fRegression;
+		result(i) = interpolate(X.row(i));
 	}
 
 	return result;
-
-
 }
-
-
 
 
 void LinearModel::printSurrogateModel(void) const{
 
 	data.print();
-
 	cout<<"Regression weights:\n";
 	trans(weights).print();
 
 }
 
 
-void LinearModel::addNewSampleToData(rowvec newsample){}
+void LinearModel::addNewSampleToData(rowvec newsample){
+
+
+}
 
 void LinearModel::addNewLowFidelitySampleToData(rowvec newsample){
-
-
 	assert(false);
-
 }
 
 
@@ -272,19 +219,14 @@ void LinearModel::setNameOfInputFile(std::string filename){
 	assert(isNotEmpty(filename));
 	filenameDataInput = filename;
 
-
 }
-
-
 
 void LinearModel::setNumberOfTrainingIterations(unsigned int nIters){}
 
 
-void LinearModel::setNameOfHyperParametersFile(std::string label){
+void LinearModel::setNameOfHyperParametersFile(std::string filename){
 
-	assert(isNotEmpty(label));
-
-	string filename = label + "_linear_regression_hyperparameters.csv";
+	assert(isNotEmpty(filename));
 	hyperparameters_filename = filename;
 
 }

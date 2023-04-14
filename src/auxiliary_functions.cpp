@@ -203,8 +203,6 @@ void abortWithErrorMessage(string message){
 
 	std::cout<<"ERROR: "<<message<<"\n";
 	abort();
-
-
 }
 
 

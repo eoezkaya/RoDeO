@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -51,7 +51,11 @@ using namespace arma;
 
 KrigingModel::KrigingModel():SurrogateModel(){}
 
+void KrigingModel::setDimension(unsigned int dim){
 
+	dimension = dim;
+	linearModel.setDimension(dim);
+}
 
 void KrigingModel::setNameOfInputFile(std::string filename){
 
@@ -75,28 +79,66 @@ void KrigingModel::setNameOfHyperParametersFile(std::string filename){
 
 }
 
+void KrigingModel::setDisplayOn(void){
+	data.setDisplayOn();
+	linearModel.setDisplayOn();
+	output.ifScreenDisplay = true;
+}
+
+void KrigingModel::setDisplayOff(void){
+	data.setDisplayOff();
+	linearModel.setDisplayOff();
+	output.ifScreenDisplay = false;
+}
+
+void KrigingModel::setBoxConstraints(Bounds boxConstraintsInput){
+
+	assert(boxConstraintsInput.areBoundsSet());
+
+	if(ifUsesLinearRegression) linearModel.setBoxConstraints(boxConstraintsInput);
+	boxConstraints = boxConstraintsInput;
+	data.setBoxConstraints(boxConstraintsInput);
+}
+
+void KrigingModel::readData(void){
+
+	assert(isNotEmpty(filenameDataInput));
+	data.readData(filenameDataInput);
+
+	if(ifUsesLinearRegression) linearModel.readData();
+	numberOfSamples = data.getNumberOfSamples();
+	ifDataIsRead = true;
+
+}
+
+void KrigingModel::normalizeData(void){
+	assert(ifDataIsRead);
+	data.normalize();
+	if(ifUsesLinearRegression) linearModel.normalizeData();
+	ifNormalized = true;
+}
+
 void KrigingModel::initializeSurrogateModel(void){
 
+	assert(dimension>0);
+	assert(numberOfSamples>0);
 	assert(ifDataIsRead);
 	assert(ifNormalized);
 
 
 	output.printMessage("Initializing the Kriging model...");
 
-	unsigned int dim = data.getDimension();
-	unsigned int numberOfSamples = data.getNumberOfSamples();
+	mat X = data.getInputMatrix();
 
-
-	correlationFunction.setInputSampleMatrix(data.getInputMatrix());
+	correlationFunction.setInputSampleMatrix(X);
 
 	if(!ifCorrelationFunctionIsInitialized){
-
 		correlationFunction.initialize();
 		ifCorrelationFunctionIsInitialized = true;
 	}
 
 
-	numberOfHyperParameters = 2*dim;
+	numberOfHyperParameters = 2*dimension;
 
 
 	R_inv_ys_min_beta = zeros<vec>(numberOfSamples);
@@ -104,24 +146,11 @@ void KrigingModel::initializeSurrogateModel(void){
 	R_inv_ys = zeros<vec>(numberOfSamples);
 	vectorOfOnes= ones<vec>(numberOfSamples);
 
-
 	if(ifUsesLinearRegression){
-
 
 		output.printMessage("Linear model is active for the Kriging model...");
 
-		if(areGradientsOn()) {
-
-			linearModel.setGradientsOn();
-		}
-
-		linearModel.readData();
-		linearModel.setBoxConstraints(data.getBoxConstraints());
-		linearModel.normalizeData();
 		linearModel.initializeSurrogateModel();
-		linearModel.train();
-
-
 		vec ys = data.getOutputVector();
 		mat X = data.getInputMatrix();
 		vec ysLinearRegression = linearModel.interpolateAll(X);
@@ -133,13 +162,63 @@ void KrigingModel::initializeSurrogateModel(void){
 	updateAuxilliaryFields();
 
 	ifInitialized = true;
-#if 0
-	std::cout << "Kriging model initialization is done...\n";
-#endif
 
 }
 
+void KrigingModel::updateAuxilliaryFields(void){
 
+	assert(ifDataIsRead);
+	assert(ifNormalized);
+	assert(ifCorrelationFunctionIsInitialized);
+	assert(numberOfSamples>0);
+	assert(dimension>0);
+
+	correlationFunction.computeCorrelationMatrix();
+	mat R = correlationFunction.getCorrelationMatrix();
+
+	linearSystemCorrelationMatrix.setMatrix(R);
+
+	/* Cholesky decomposition R = L L^T */
+
+	linearSystemCorrelationMatrix.factorize();
+
+
+	R_inv_ys = zeros<vec>(numberOfSamples);
+	R_inv_I = zeros<vec>(numberOfSamples);
+	R_inv_ys_min_beta = zeros<vec>(numberOfSamples);
+	beta0 = 0.0;
+	sigmaSquared = 0.0;
+
+	if(linearSystemCorrelationMatrix.isFactorizationDone()){
+
+		/* solve R x = ys */
+		vec ys = data.getOutputVector();
+
+		R_inv_ys = linearSystemCorrelationMatrix.solveLinearSystem(ys);
+
+		/* solve R x = I */
+
+		R_inv_I = linearSystemCorrelationMatrix.solveLinearSystem(vectorOfOnes);
+
+		beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
+
+		vec ys_min_betaI = ys - beta0*vectorOfOnes;
+
+		/* solve R x = ys-beta0*I */
+
+		R_inv_ys_min_beta = linearSystemCorrelationMatrix.solveLinearSystem( ys_min_betaI);
+
+		sigmaSquared = (1.0 / numberOfSamples) * dot(ys_min_betaI, R_inv_ys_min_beta);
+
+	}
+
+#if 0
+
+	checkAuxilliaryFields();
+
+#endif
+
+}
 
 
 void KrigingModel::printHyperParameters(void) const{
@@ -223,23 +302,12 @@ void KrigingModel::loadHyperParameters(void){
 
 }
 
-double KrigingModel::getyMin(void) const{
-
-	return min(data.getOutputVector());
-
-}
-
 
 vec KrigingModel::getRegressionWeights(void) const{
-
 	return linearModel.getWeights();
-
 }
-
 void KrigingModel::setRegressionWeights(vec weights){
-
 	linearModel.setWeights(weights);
-
 }
 
 void KrigingModel::setEpsilon(double value){
@@ -359,165 +427,12 @@ void KrigingModel::resizeDataObjects(void){
 void KrigingModel::checkAuxilliaryFields(void) const{
 
 	mat R = correlationFunction.getCorrelationMatrix();
-
 	vec ys = data.getOutputVector();
-
 	vec ys_min_betaI = ys - beta0*vectorOfOnes;
-
-
-
 	vec residual2 = ys_min_betaI - R*R_inv_ys_min_beta;
 	printVector(residual2,"residual (ys-betaI - R * R^-1 (ys-beta0I) )");
-
-
 	vec residual3 = vectorOfOnes - R*R_inv_I;
 	printVector(residual3,"residual (I - R * R^-1 I)");
-
-
-}
-
-/* slower but more reliable method */
-//void KrigingModel::updateAuxilliaryFields(void){
-//
-//	assert(ifDataIsRead);
-//
-//	unsigned int N = data.getNumberOfSamples();
-//
-//
-//	correlationFunction.computeCorrelationMatrix();
-//	mat R = correlationFunction.getCorrelationMatrix();
-//
-//
-//	linearSystemCorrelationMatrixSVD.setMatrix(R);
-//
-//	/* SVD decomposition R = U Sigma VT */
-//
-//	linearSystemCorrelationMatrixSVD.factorize();
-//
-//
-//	R_inv_ys = zeros<vec>(N);
-//	R_inv_I = zeros<vec>(N);
-//	R_inv_ys_min_beta = zeros<vec>(N);
-//	beta0 = 0.0;
-//	sigmaSquared = 0.0;
-//
-//	vec ys = data.getOutputVector();
-//	double maxYValue = data.getMaximumOutputVector();
-//	double minYValue = data.getMinimumOutputVector();
-//
-//
-//	bool ifBeta0IsBetweenMinAndMax = false;
-//
-//	double thresholdValue = 10E-14;
-//	linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
-//	while(!ifBeta0IsBetweenMinAndMax){
-//
-//		R_inv_ys = linearSystemCorrelationMatrixSVD.solveLinearSystem(ys);
-//		R_inv_I  = linearSystemCorrelationMatrixSVD.solveLinearSystem(vectorOfOnes);
-//
-//		beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
-//
-//		printScalar(beta0);
-//		printScalar(minYValue);
-//		printScalar(maxYValue);
-//
-//		if(isBetween(beta0,minYValue, maxYValue)) {
-//
-//			ifBeta0IsBetweenMinAndMax = true;
-//
-//		}
-//		else{
-//
-//			thresholdValue = thresholdValue*10;
-//			linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
-//		}
-//
-//
-//
-//	}
-//
-//		thresholdValue = 10E-14;
-//		linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
-//
-//		vec ys_min_betaI = ys - beta0*vectorOfOnes;
-//
-//		/* solve R x = ys-beta0*I */
-//
-//		R_inv_ys_min_beta = linearSystemCorrelationMatrixSVD.solveLinearSystem( ys_min_betaI);
-//
-//		sigmaSquared = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
-//
-//
-//
-//#if 0
-//
-//	checkAuxilliaryFields();
-//
-//#endif
-//
-//}
-
-
-
-
-
-void KrigingModel::updateAuxilliaryFields(void){
-
-	assert(ifDataIsRead);
-
-	unsigned int N = data.getNumberOfSamples();
-
-
-	correlationFunction.computeCorrelationMatrix();
-	mat R = correlationFunction.getCorrelationMatrix();
-
-
-	linearSystemCorrelationMatrix.setMatrix(R);
-
-	/* Cholesky decomposition R = L L^T */
-
-	linearSystemCorrelationMatrix.factorize();
-
-
-	R_inv_ys = zeros<vec>(N);
-	R_inv_I = zeros<vec>(N);
-	R_inv_ys_min_beta = zeros<vec>(N);
-	beta0 = 0.0;
-	sigmaSquared = 0.0;
-
-	if(linearSystemCorrelationMatrix.isFactorizationDone()){
-
-		/* solve R x = ys */
-		vec ys = data.getOutputVector();
-
-		R_inv_ys = linearSystemCorrelationMatrix.solveLinearSystem(ys);
-
-		/* solve R x = I */
-
-		R_inv_I = linearSystemCorrelationMatrix.solveLinearSystem(vectorOfOnes);
-
-		beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
-
-		vec ys_min_betaI = ys - beta0*vectorOfOnes;
-
-		/* solve R x = ys-beta0*I */
-
-		R_inv_ys_min_beta = linearSystemCorrelationMatrix.solveLinearSystem( ys_min_betaI);
-
-		sigmaSquared = (1.0 / N) * dot(ys_min_betaI, R_inv_ys_min_beta);
-
-	}
-
-
-	yMin = data.getMinimumOutputVector();
-
-
-#if 0
-
-	checkAuxilliaryFields();
-
-#endif
-
 }
 
 void KrigingModel::updateModelWithNewData(void){
@@ -548,57 +463,6 @@ double KrigingModel::interpolate(rowvec xp ) const{
 
 }
 
-
-
-//void KrigingModel::calculateExpectedImprovement(CDesignExpectedImprovement &currentDesign) const{
-//
-//	double ftilde = 0.0;
-//	double ssqr   = 0.0;
-//
-//	interpolateWithVariance(currentDesign.dv,&ftilde,&ssqr);
-//
-//#if 0
-//	printf("ftilde = %15.10f, ssqr = %15.10f\n",ftilde,ssqr);
-//#endif
-//
-//	double	sigma = sqrt(ssqr)	;
-//
-//#if 0
-//	printf("standart_ERROR = %15.10f\n",sigma);
-//#endif
-//
-//	double expectedImprovementValue = 0.0;
-//
-//	if(fabs(sigma) > EPSILON){
-//
-//		double improvement = 0.0;
-//		improvement = yMin - ftilde;
-//
-//		double	Z = (improvement)/sigma;
-//#if 0
-//		printf("Z = %15.10f\n",Z);
-//		printf("ymin = %15.10f\n",yMin);
-//#endif
-//
-//		expectedImprovementValue = improvement*cdf(Z,0.0,1.0)+  sigma * pdf(Z,0.0,1.0);
-//
-//
-//	}
-//	else{
-//
-//		expectedImprovementValue = 0.0;
-//
-//	}
-//#if 1
-//	printf("expectedImprovementValue = %20.20f\n",expectedImprovementValue);
-//#endif
-//
-//	currentDesign.objectiveFunctionValue = ftilde;
-//	currentDesign.valueExpectedImprovement = expectedImprovementValue;
-//
-//
-//
-//}
 
 void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const{
 

@@ -1081,26 +1081,26 @@ SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
 
 void RoDeODriver::runSurrogateModelTest(void){
 
-//	SurrogateModelTester surrogateTest;
-//
-//	string problemName = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
-//	surrogateTest.setName(problemName);
-//
-//	string multiLevel  = configKeys.getConfigKeyStringValue("MULTILEVEL_MODEL");
-//
-//
-//	string surrogateModelTypeHiFi = configKeys.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
-//	string filenameTrainingDataHiFi = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
-//
-//
-//	string surrogateModelTypeLowFi;
-//	string filenameTrainingDataLowFi;
-//
-//	if(checkIfOn(multiLevel)){
-//		surrogateModelTypeLowFi   = configKeys.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",1);
-//		filenameTrainingDataLowFi = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",1);
-//	}
-//
+	SurrogateModelTester surrogateTest;
+
+	string problemName = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
+	surrogateTest.setName(problemName);
+
+	string multiLevel  = configKeys.getConfigKeyStringValue("MULTILEVEL_MODEL");
+
+
+	string surrogateModelTypeHiFi = configKeys.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
+	string filenameTrainingDataHiFi = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
+
+
+	string surrogateModelTypeLowFi;
+	string filenameTrainingDataLowFi;
+
+	if(checkIfOn(multiLevel)){
+		surrogateModelTypeLowFi   = configKeys.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",1);
+		filenameTrainingDataLowFi = configKeys.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",1);
+	}
+
 //
 //	surrogateTest.setFileNameTrainingData(surrogateModelTypeHiFi);
 //

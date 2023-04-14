@@ -63,6 +63,8 @@ protected:
 		testFunction.function.filenameTrainingDataLowFidelity = "trainingDataLowFi.csv";
 		testFunction.function.numberOfTrainingSamplesLowFi = 100;
 
+		surrogateTester.setDimension(2);
+
 	}
 
 	void TearDown() override {}
@@ -74,7 +76,7 @@ protected:
 };
 
 
-TEST_F(SurrogateTesterTest, setSurrogateModel){
+TEST_F(SurrogateTesterTest, bindSurrogateModel){
 
 
 	surrogateTester.setName("testModel");
@@ -82,8 +84,8 @@ TEST_F(SurrogateTesterTest, setSurrogateModel){
 	surrogateTester.setFileNameTestData("test.csv");
 	surrogateTester.setSurrogateModel(LINEAR_REGRESSION);
 
-	bool ifSurrogateModelSpecified = surrogateTester.isSurrogateModelSpecified();
-	ASSERT_EQ(ifSurrogateModelSpecified,true);
+	surrogateTester.bindSurrogateModels();
+	ASSERT_EQ(surrogateTester.ifbindSurrogateModelisDone,true);
 
 }
 
@@ -125,8 +127,11 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestMultiLevelOnlyFunctionalVal
 	surrogateTester.setFileNameTestData(testFunction.function.filenameTestData);
 	surrogateTester.setNumberOfTrainingIterations(1000);
 
-	surrogateTester.setSurrogateModel(MULTI_LEVEL);
-	surrogateTester.setDisplayOn();
+	surrogateTester.ifMultiLevel = true;
+	surrogateTester.setSurrogateModel(ORDINARY_KRIGING);
+	surrogateTester.setSurrogateModelLowFi(ORDINARY_KRIGING);
+//	surrogateTester.setDisplayOn();
+	surrogateTester.bindSurrogateModels();
 	surrogateTester.performSurrogateModelTest();
 
 	mat results;
@@ -142,8 +147,6 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestMultiLevelOnlyFunctionalVal
 	remove(testFunction.function.filenameTestData.c_str());
 
 }
-
-
 
 TEST_F(SurrogateTesterTest, performSurrogateModelTestLinearRegression){
 
@@ -161,8 +164,9 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestLinearRegression){
 	surrogateTester.setFileNameTestData(linearTestFunction.function.filenameTestData);
 
 	surrogateTester.setSurrogateModel(LINEAR_REGRESSION);
+	surrogateTester.bindSurrogateModels();
 
-	//	surrogateTester.setDisplayOn();
+//	surrogateTester.setDisplayOn();
 	surrogateTester.performSurrogateModelTest();
 
 	mat results;
@@ -201,7 +205,8 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestOrdinaryKriging){
 
 
 	surrogateTester.setSurrogateModel(ORDINARY_KRIGING);
-	//	surrogateTester.setDisplayOn();
+	surrogateTester.bindSurrogateModels();
+//	surrogateTester.setDisplayOn();
 
 
 	surrogateTester.performSurrogateModelTest();
@@ -219,6 +224,9 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestOrdinaryKriging){
 
 
 }
+
+
+
 
 
 TEST_F(SurrogateTesterTest, performSurrogateModelTestUniversalKriging){
@@ -241,6 +249,7 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestUniversalKriging){
 
 
 	surrogateTester.setSurrogateModel(UNIVERSAL_KRIGING);
+	surrogateTester.bindSurrogateModels();
 	//	surrogateTester.setDisplayOn();
 
 
@@ -276,6 +285,7 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
 	surrogateTester.setNumberOfTrainingIterations(1000);
 
 	surrogateTester.setSurrogateModel(TANGENT);
+	surrogateTester.bindSurrogateModels();
 //	surrogateTester.setDisplayOn();
 	surrogateTester.performSurrogateModelTest();
 

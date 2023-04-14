@@ -44,6 +44,25 @@
 
 using namespace arma;
 
+void TGEKModel::setBoxConstraints(Bounds boxConstraintsInput){
+
+	assert(boxConstraintsInput.areBoundsSet());
+
+	boxConstraints = boxConstraintsInput;
+	data.setBoxConstraints(boxConstraintsInput);
+	auxiliaryModel.setBoxConstraints(boxConstraintsInput);
+	linearModel.setBoxConstraints(boxConstraintsInput);
+}
+
+void TGEKModel::setDimension(unsigned int dim){
+
+	dimension = dim;
+	auxiliaryModel.setDimension(dim);
+	linearModel.setDimension(dim);
+
+}
+
+
 void TGEKModel::readData(void){
 
 	assert(isNotEmpty(filenameDataInput));
@@ -54,6 +73,13 @@ void TGEKModel::readData(void){
 
 }
 
+void TGEKModel::normalizeData(void){
+
+	assert(ifDataIsRead);
+
+	data.normalize();
+	ifNormalized = true;
+}
 
 
 void TGEKModel::setNameOfInputFile(string filename){

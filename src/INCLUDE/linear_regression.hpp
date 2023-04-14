@@ -39,12 +39,17 @@ void train_linear_regression(mat &X, vec &ys, vec &w, double lambda);
 class LinearModel : public SurrogateModel {
 
 	vec weights;
-	double regularizationParam;
+	double regularizationParameter;
 
 public:
 
-	LinearModel();
-	LinearModel(std::string name);
+//	LinearModel();
+//	LinearModel(std::string name);
+
+	void setBoxConstraints(Bounds boxConstraintsInput);
+
+	void readData(void);
+	void normalizeData(void);
 
 	void setNameOfInputFile(std::string);
 	void setNameOfHyperParametersFile(std::string);
@@ -65,8 +70,8 @@ public:
 
 	vec interpolateAll(mat X) const;
 
-	void setRegularizationParam(double value);
-	double getRegularizationParam(void) const;
+	void setRegularizationParameter(double value);
+	double getRegularizationParameter(void) const;
 	vec getWeights(void) const;
 	void setWeights(vec);
 

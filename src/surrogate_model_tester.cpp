@@ -5,7 +5,7 @@
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,15 +20,14 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
  */
-
 
 
 #include "surrogate_model_tester.hpp"
@@ -61,72 +60,129 @@ void SurrogateModelTester::setNumberOfTrainingIterations(unsigned int nIteration
 void SurrogateModelTester::setSurrogateModel(SURROGATE_MODEL modelType){
 
 	surrogateModelType = modelType;
+	ifSurrogateModelSpecified = true;
 
-	switch(modelType) {
-	  case LINEAR_REGRESSION:
+	//	switch(modelType) {
+	//	  case LINEAR_REGRESSION:
+	//
+	//		 surrogateModel = &linearModel;
+	//
+	//	    break;
+	//	  case ORDINARY_KRIGING:
+	//
+	//		  surrogateModel = &krigingModel;
+	//
+	//		  break;
+	//	  case UNIVERSAL_KRIGING:
+	//		  krigingModel.setLinearRegressionOn();
+	//		  surrogateModel = &krigingModel;
+	//
+	//
+	//		  break;
+	//
+	//	  case TANGENT:
+	//
+	//		  surrogateModel = &tangentModel;
+	//
+	//		  break;
+	//
+	//	  case AGGREGATION:
+	//
+	//		  surrogateModel = &aggregationModel;
+	//		  surrogateModel->setGradientsOn();
+	//		  break;
+	//
+	//	  default:
+	//
+	//		  outputToScreen.printErrorMessageAndAbort("Unknown modelType for the surrogate model!");
+	//
+	//	}
+	//
+	//	assert(isNotEmpty(name));
+	//	surrogateModel->setName(name);
+	//
+	//
+	//
+	//	assert(isNotEmpty(fileNameTraingData));
+	//
+	//	surrogateModel->setNameOfInputFile(fileNameTraingData);
+	//
+	//	assert(isNotEmpty(fileNameTestData));
+	//	surrogateModel->setNameOfInputFileTest(fileNameTestData);
+	//
+	//
+	//
+	//	surrogateModel->setNameOfHyperParametersFile(name);
+	//
+	//
+	//
+	//	ifSurrogateModelSpecified = true;
+}
 
-		 surrogateModel = &linearModel;
+void SurrogateModelTester::setSurrogateModelLowFi(SURROGATE_MODEL modelType){
 
-	    break;
-	  case ORDINARY_KRIGING:
+	surrogateModelTypeLowFi = modelType;
+	ifSurrogateModelLowFiSpecified = true;
 
-		  surrogateModel = &krigingModel;
+}
 
-		  break;
-	  case UNIVERSAL_KRIGING:
-		  krigingModel.setLinearRegressionOn();
-		  surrogateModel = &krigingModel;
+void SurrogateModelTester::bindSurrogateModels(void){
+
+	assert(ifSurrogateModelSpecified);
+	assert(isNotEmpty(fileNameTraingData));
+	assert(isNotEmpty(name));
+	assert(isNotEmpty(fileNameTestData));
+	assert(dimension>0);
 
 
-		  break;
 
-	  case TANGENT:
+	if(!ifMultiLevel){
 
-		  surrogateModel = &tangentModel;
+		if(surrogateModelType == LINEAR_REGRESSION ){
+			linearModel.setDimension(dimension);
+			surrogateModel = &linearModel;
+		}
+		if(surrogateModelType == ORDINARY_KRIGING){
+			krigingModel.setDimension(dimension);
+			surrogateModel = &krigingModel;
+		}
+		if(surrogateModelType == UNIVERSAL_KRIGING){
+			krigingModel.setLinearRegressionOn();
+			krigingModel.setDimension(dimension);
+			surrogateModel = &krigingModel;
+		}
+		if(surrogateModelType == TANGENT){
+			tangentModel.setDimension(dimension);
+			surrogateModel = &tangentModel;
+		}
 
-		  break;
+		surrogateModel->setNameOfInputFile(fileNameTraingData);
 
-	  case AGGREGATION:
-
-		  surrogateModel = &aggregationModel;
-		  surrogateModel->setGradientsOn();
-		  break;
-
-	  default:
-
-		  outputToScreen.printErrorMessageAndAbort("Unknown modelType for the surrogate model!");
 
 	}
 
-	assert(isNotEmpty(name));
-	surrogateModel->setName(name);
+	else{
+
+		assert(ifSurrogateModelLowFiSpecified);
+		multilevelModel.setIDHiFiModel(surrogateModelType);
+		multilevelModel.setIDLowFiModel(surrogateModelTypeLowFi);
+		multilevelModel.setinputFileNameHighFidelityData(fileNameTraingData);
+		multilevelModel.setinputFileNameLowFidelityData(fileNameTraingDataLowFidelity);
+		multilevelModel.bindModels();
+		multilevelModel.setDimension(dimension);
+		multilevelModel.setName(name);
 
 
+		surrogateModel = &multilevelModel;
 
-	assert(isNotEmpty(fileNameTraingData));
 
-	surrogateModel->setNameOfInputFile(fileNameTraingData);
+	}
 
-	assert(isNotEmpty(fileNameTestData));
 	surrogateModel->setNameOfInputFileTest(fileNameTestData);
 
-
-
-	surrogateModel->setNameOfHyperParametersFile(name);
-
-
-
-	ifSurrogateModelSpecified = true;
-}
-
-
-bool SurrogateModelTester::isSurrogateModelSpecified(void) const{
-
-	return ifSurrogateModelSpecified;
+	ifbindSurrogateModelisDone = true;
 
 }
-
-
 
 void SurrogateModelTester::setBoxConstraints(Bounds boxConstraintsInput){
 
@@ -141,8 +197,10 @@ Bounds SurrogateModelTester::getBoxConstraints(void) const{
 void SurrogateModelTester::performSurrogateModelTest(void){
 
 	assert(boxConstraints.areBoundsSet());
+	assert(ifbindSurrogateModelisDone);
 
 	outputToScreen.printMessage("Performing surrogate model test...");
+	surrogateModel->setBoxConstraints(boxConstraints);
 
 	outputToScreen.printMessage("Reading training data...");
 	surrogateModel->readData();
@@ -173,7 +231,7 @@ void SurrogateModelTester::setDisplayOn(void){
 	outputToScreen.ifScreenDisplay = true;
 	outputToScreen.printMessage("Setting display on for the surrogate model tester...");
 
-	if(ifSurrogateModelSpecified){
+	if(ifbindSurrogateModelisDone){
 
 		outputToScreen.printMessage("Setting display on for the surrogate model...");
 		surrogateModel->setDisplayOn();

@@ -125,49 +125,12 @@ void SurrogateModel::setDisplayOff(void){
 }
 
 
-void SurrogateModel::setBoxConstraints(Bounds boxConstraintsInput){
-
-	assert(boxConstraintsInput.areBoundsSet());
-
-	data.setBoxConstraints(boxConstraintsInput);
-
-}
-
-
-
-void SurrogateModel::setBoxConstraints(vec xmin, vec xmax){
-
-	Bounds boxConstraints(xmin,xmax);
-	setBoxConstraints(boxConstraints);
-
-}
-
-void SurrogateModel::setBoxConstraints(double xmin, double xmax){
-
-	Bounds boxConstraints(data.getDimension());
-	boxConstraints.setBounds(xmin,xmax);
-
-	setBoxConstraints(boxConstraints);
-
-
-}
-
-
-void SurrogateModel::setBoxConstraintsFromData(void){
-
-
-	data.setBoxConstraintsFromData();
-
-
-}
 
 std::string SurrogateModel::getNameOfHyperParametersFile(void) const{
 
 	return hyperparameters_filename;
 
 }
-
-
 
 
 std::string SurrogateModel::getNameOfInputFile(void) const{
@@ -178,24 +141,14 @@ std::string SurrogateModel::getNameOfInputFile(void) const{
 
 
 unsigned int SurrogateModel::getDimension(void) const{
-
-	return data.getDimension();
-
-
+	return dimension;
 }
-
 unsigned int SurrogateModel::getNumberOfSamples(void) const{
-
-	return data.getNumberOfSamples();
-
-
+	return numberOfSamples;
 }
 
 mat SurrogateModel::getRawData(void) const{
-
 	return data.getRawData();
-
-
 }
 
 mat SurrogateModel::getX(void) const{
@@ -209,14 +162,6 @@ vec SurrogateModel::gety(void) const{
 
 }
 
-void SurrogateModel::readData(void){
-
-	assert(isNotEmpty(filenameDataInput));
-	data.readData(filenameDataInput);
-
-	ifDataIsRead = true;
-
-}
 
 void SurrogateModel::printData(void) const{
 	data.print();
@@ -227,7 +172,7 @@ void SurrogateModel::readDataTest(void){
 	assert(isNotEmpty(filenameDataInputTest));
 
 	data.readDataTest(filenameDataInputTest);
-	ifHasTestData = true;
+
 	ifTestDataIsRead = true;
 }
 
@@ -311,17 +256,6 @@ void SurrogateModel::reduceTrainingData(unsigned howManySamples, double targetVa
 
 }
 
-
-
-
-
-void SurrogateModel::normalizeData(void){
-
-	assert(ifDataIsRead);
-
-	data.normalize();
-	ifNormalized = true;
-}
 
 void SurrogateModel::normalizeDataTest(void){
 
@@ -422,6 +356,8 @@ void SurrogateModel::setNameOfInputFileTest(string filename){
 
 	assert(isNotEmpty(filename));
 	filenameDataInputTest = filename;
+
+	ifHasTestData = true;
 }
 
 void SurrogateModel::setNameOfOutputFileTest(string filename){

@@ -74,9 +74,6 @@ private:
 
 	ExponentialCorrelationFunction correlationFunction;
 
-
-	double yMin = -LARGE;
-
 	void updateWithNewData(void);
 	void updateModelParams(void);
 
@@ -84,10 +81,22 @@ private:
 public:
 
 	KrigingModel();
-	KrigingModel(std::string name);
 
+
+	void readData(void);
+	void normalizeData(void);
+
+	void setBoxConstraints(Bounds boxConstraintsInput);
+
+	void setDimension(unsigned int);
 	void setNameOfInputFile(std::string);
 	void setNameOfHyperParametersFile(std::string);
+
+
+	void setDisplayOn(void);
+	void setDisplayOff(void);
+
+
 
 
 	void setNumberOfTrainingIterations(unsigned int);
@@ -111,7 +120,6 @@ public:
 	void addNewSampleToData(rowvec newsample);
 	void addNewLowFidelitySampleToData(rowvec newsample);
 
-	double getyMin(void) const;
 
 	vec getRegressionWeights(void) const;
 	void setRegressionWeights(vec weights);

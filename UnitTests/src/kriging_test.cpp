@@ -29,9 +29,10 @@
  *
  */
 
+#include "auxiliary_functions.hpp"
 #include "kriging_training.hpp"
 #include "matrix_vector_operations.hpp"
-#include "test_functions.hpp"
+#include "standard_test_functions.hpp"
 #include "test_defines.hpp"
 #include<gtest/gtest.h>
 
@@ -43,20 +44,26 @@ class KrigingModelTest : public ::testing::Test {
 protected:
 	void SetUp() override {
 
+		himmelblauFunction.function.filenameTrainingData = "himmelblau.csv";
+		himmelblauFunction.function.filenameTestData = "himmelblauTest.csv";
+		himmelblauFunction.function.numberOfTrainingSamples = 50;
+		himmelblauFunction.function.numberOfTestSamples = 50;
+
+		lb = zeros<vec>(2);
+		ub = zeros<vec>(2);
+		lb.fill(-6.0);
+		ub.fill( 6.0);
+
+		boxConstraintsHimmelblau.setBounds(lb,ub);
 
 		unsigned int N = 200;
-		generate2DEggholderDataForKrigingModel(N);
-		testModel2D.setName("Eggholder");
-		testModel2D.setNameOfInputFile("Eggholder.csv");
-		testModel2D.readData();
-		testModel2D.setBoxConstraints(0.0, 200.0);
-		testModel2D.normalizeData();
-		testModel2D.setNameOfInputFileTest("EggholderTest.csv");
-		testModel2D.readDataTest();
-		testModel2D.normalizeDataTest();
 
+		testModel2D.setName("Himmelblau");
+		testModel2D.setDimension(2);
+		testModel2D.setNameOfInputFile("himmelblau.csv");
+		testModel2D.setBoxConstraints(boxConstraintsHimmelblau);
+		testModel2D.setNameOfInputFileTest("himmelblauTest.csv");
 
-		testModel2D.initializeSurrogateModel();
 
 		N = 10;
 		mat testData1D(N,2);
@@ -86,76 +93,117 @@ protected:
 
 		testModel1D.setName("testdata1D");
 		testModel1D.setNameOfInputFile("testdata1D.csv");
+		testModel1D.setDimension(1);
 		testModel1D.readData();
-		testModel1D.setBoxConstraints(0.0, 1.0);
+
+		Bounds boxConstraints1DFunction(1);
+		boxConstraints1DFunction.setBounds(0.0,1.0);
+		testModel1D.setBoxConstraints(boxConstraints1DFunction);
 		testModel1D.normalizeData();
 		testModel1D.initializeSurrogateModel();
 
 
-	}
 
-	void TearDown() override {
+		linearTestFunction.function.numberOfTrainingSamples = 20;
+		linearTestFunction.function.numberOfTestSamples = 50;
+		linearTestFunction.function.filenameTrainingData = "linearTF1.csv";
+		linearTestFunction.function.filenameTestData = "linearTF1Test.csv";
 
-		remove("testdata1D.csv");
-		remove("Eggholder.csv");
-		remove("EggholderTest.csv");
-		remove("LinearTF.csv");
-		remove("LinearTFTest.csv");
+		boxConstraintsLinearTestFunction.setDimension(2);
+		boxConstraintsLinearTestFunction.setBounds(-6,6);
 
-
-	}
-
-
-	void generate2DEggholderDataForKrigingModel(unsigned int N){
-
-		TestFunction testFunctionEggholder("Eggholder",2);
-
-		testFunctionEggholder.func_ptr = Eggholder;
-		testFunctionEggholder.setBoxConstraints(0.0,200.0);
-		testFunctionEggholder.numberOfTrainingSamples = N;
-		testFunctionEggholder.filenameTrainingData = "Eggholder.csv";
-		testFunctionEggholder.numberOfTestSamples = N;
-		testFunctionEggholder.filenameTestData = "EggholderTest.csv";
-
-		testFunctionEggholder.generateTrainingSamples();
-		testFunctionEggholder.generateTestSamples();
-
-		trainingDataEggholder = testFunctionEggholder.trainingSamples;
-		testDataEggholder = testFunctionEggholder.testSamples;
+		testModel2DLinear.setLinearRegressionOn();
+		testModel2DLinear.setName("LinearTF");
+		testModel2DLinear.setDimension(2);
+		testModel2DLinear.setNameOfInputFile(linearTestFunction.function.filenameTrainingData);
+		testModel2DLinear.setNameOfInputFileTest(linearTestFunction.function.filenameTestData);
+		testModel2DLinear.setBoxConstraints(boxConstraintsLinearTestFunction);
 
 
 	}
 
-	void generate2DLinearTestFunctionDataForKrigingModel(unsigned int N){
-
-		TestFunction testFunctionLinear("LinearTF1",2);
-
-		testFunctionLinear.func_ptr =  LinearTF1;
-		testFunctionLinear.setBoxConstraints(-10.0,10.0);
-		testFunctionLinear.numberOfTrainingSamples = N;
-		testFunctionLinear.filenameTrainingData = "LinearTF.csv";
-		testFunctionLinear.numberOfTestSamples = N;
-		testFunctionLinear.filenameTestData = "LinearTFTest.csv";
-		trainingDataEggholder = testFunctionLinear.trainingSamples;
-		testDataEggholder = testFunctionLinear.testSamples;
+	void TearDown() override {}
 
 
-	}
+	HimmelblauFunction himmelblauFunction;
+	LinearTestFunction1 linearTestFunction;
 
+	vec ub;
+	vec lb;
 
+	Bounds boxConstraintsHimmelblau;
+	Bounds boxConstraintsLinearTestFunction;
 
 	KrigingModel testModel2D;
 	KrigingModel testModel2DLinear;
 	KrigingModel testModel1D;
 	KrigingHyperParameterOptimizer testOptimizer;
-	mat trainingDataEggholder;
-	mat testDataEggholder;
-	mat trainingDataLinearTestFunction;
-	mat testDataLinearTestFunction;
+
 };
 
 
+TEST_F(KrigingModelTest, constructor) {
+
+	ASSERT_FALSE(testModel2D.ifDataIsRead);
+	ASSERT_FALSE(testModel2D.ifInitialized);
+	ASSERT_FALSE(testModel2D.ifNormalized);
+	ASSERT_TRUE(testModel2D.ifHasTestData);
+	ASSERT_TRUE(testModel2D.getDimension() == 2);
+	std::string filenameDataInput = testModel2D.getNameOfInputFile();
+	ASSERT_TRUE(filenameDataInput == "himmelblau.csv");
+}
+
+TEST_F(KrigingModelTest, readData) {
+	himmelblauFunction.function.generateTrainingSamples();
+	testModel2D.readData();
+	ASSERT_TRUE(testModel2D.ifDataIsRead);
+}
+
+TEST_F(KrigingModelTest, readDataWithLinearModel) {
+	himmelblauFunction.function.generateTrainingSamples();
+	testModel2D.setLinearRegressionOn();
+	testModel2D.readData();
+	ASSERT_TRUE(testModel2D.ifDataIsRead);
+}
+
+TEST_F(KrigingModelTest, normalizeData) {
+	himmelblauFunction.function.generateTrainingSamples();
+	testModel2D.readData();
+	testModel2D.normalizeData();
+	ASSERT_TRUE(testModel2D.ifNormalized);
+}
+TEST_F(KrigingModelTest, normalizeDataWithLinearModel) {
+	himmelblauFunction.function.generateTrainingSamples();
+	testModel2D.setLinearRegressionOn();
+	testModel2D.setBoxConstraints(boxConstraintsHimmelblau);
+	testModel2D.readData();
+	testModel2D.normalizeData();
+	ASSERT_TRUE(testModel2D.ifNormalized);
+}
+
+
+
+TEST_F(KrigingModelTest, initializeSurrogateModel) {
+	himmelblauFunction.function.generateTrainingSamples();
+	//	testModel2D.setDisplayOn();
+	testModel2D.readData();
+	testModel2D.normalizeData();
+	testModel2D.initializeSurrogateModel();
+	ASSERT_TRUE(testModel2D.ifInitialized);
+}
+
+
 TEST_F(KrigingModelTest, updateAuxilliaryFields) {
+
+	himmelblauFunction.function.generateTrainingSamples();
+	himmelblauFunction.function.generateTestSamples();
+
+	testModel2D.readData();
+	testModel2D.readDataTest();
+
+	testModel2D.normalizeData();
+	testModel2D.normalizeDataTest();
+	testModel2D.initializeSurrogateModel();
 
 	vec hyperParameters(4);
 	hyperParameters(0) = 10.0;
@@ -167,7 +215,10 @@ TEST_F(KrigingModelTest, updateAuxilliaryFields) {
 
 	testModel2D.updateAuxilliaryFields();
 
+	//	testModel2D.setDisplayOn();
+	testModel2D.setNameOfInputFileTest("surrogateTestResults.csv");
 	testModel2D.tryOnTestData();
+	testModel2D.saveTestResults();
 
 	mat results;
 	results.load("surrogateTestResults.csv", csv_ascii);
@@ -181,37 +232,6 @@ TEST_F(KrigingModelTest, updateAuxilliaryFields) {
 
 	remove("surrogateTestResults.csv");
 }
-
-
-
-TEST_F(KrigingModelTest, updateModelWithNewData) {
-
-
-	generate2DEggholderDataForKrigingModel(101);
-	testModel2D.updateModelWithNewData();
-
-	unsigned int N = testModel2D.getNumberOfSamples();
-
-	ASSERT_TRUE(N == 101);
-
-}
-
-TEST_F(KrigingModelTest, testIfConstructorWorks) {
-
-	ASSERT_TRUE(testModel2D.ifDataIsRead);
-	ASSERT_TRUE(testModel2D.ifInitialized);
-	ASSERT_TRUE(testModel2D.ifNormalized);
-	ASSERT_TRUE(testModel2D.ifHasTestData);
-	ASSERT_FALSE(testModel2D.areGradientsOn());
-
-	ASSERT_TRUE(testModel2D.getDimension() == 2);
-	std::string filenameDataInput = testModel2D.getNameOfInputFile();
-	ASSERT_TRUE(filenameDataInput == "Eggholder.csv");
-
-
-}
-
-
 
 TEST_F(KrigingModelTest, calculateLikelihood) {
 
@@ -228,7 +248,6 @@ TEST_F(KrigingModelTest, calculateLikelihood) {
 
 
 }
-
 
 TEST_F(KrigingModelTest, inSampleErrorWithoutTraining) {
 
@@ -247,10 +266,31 @@ TEST_F(KrigingModelTest, inSampleErrorWithoutTraining) {
 
 }
 
+TEST_F(KrigingModelTest, updateModelWithNewData) {
 
+	himmelblauFunction.function.numberOfTrainingSamples++;
+	himmelblauFunction.function.generateTrainingSamples();
+
+	testModel2D.readData();
+
+	testModel2D.normalizeData();
+	testModel2D.initializeSurrogateModel();
+
+	testModel2D.updateModelWithNewData();
+
+	ASSERT_TRUE(testModel2D.getNumberOfSamples() == 51);
+
+}
 
 
 TEST_F(KrigingModelTest, testKrigingOptimizerinitializeKrigingModelObject) {
+
+	himmelblauFunction.function.generateTrainingSamples();
+
+	testModel2D.readData();
+
+	testModel2D.normalizeData();
+	testModel2D.initializeSurrogateModel();
 
 	KrigingHyperParameterOptimizer testOptimizer;
 
@@ -262,6 +302,14 @@ TEST_F(KrigingModelTest, testKrigingOptimizerinitializeKrigingModelObject) {
 
 
 TEST_F(KrigingModelTest, testKrigingOptimizertestKrigingOptimizerOptimize) {
+
+	himmelblauFunction.function.generateTrainingSamples();
+
+	testModel2D.readData();
+
+	testModel2D.normalizeData();
+	testModel2D.initializeSurrogateModel();
+
 
 	unsigned int dim = 2;
 
@@ -308,6 +356,13 @@ TEST_F(KrigingModelTest, testKrigingOptimizertestKrigingOptimizerOptimize) {
 
 TEST_F(KrigingModelTest, train) {
 
+	himmelblauFunction.function.generateTrainingSamples();
+
+	testModel2D.readData();
+
+	testModel2D.normalizeData();
+	testModel2D.initializeSurrogateModel();
+
 
 	unsigned int dim = 2;
 
@@ -328,23 +383,16 @@ TEST_F(KrigingModelTest, train) {
 
 }
 
-TEST_F(KrigingModelTest, trainWithWarmStart) {
-
-
-
-	testModel2D.setNumberOfTrainingIterations(1000);
-	testModel2D.setNumberOfThreads(4);
-	testModel2D.setWriteWarmStartFileOn("warmStartFile.csv");
-	testModel2D.train();
-	testModel2D.setReadWarmStartFileOn("warmStartFile.csv");
-	testModel2D.train();
-	ASSERT_TRUE(testModel2D.ifModelTrainingIsDone);
-	remove("warmStartFile.csv");
-}
-
-
 
 TEST_F(KrigingModelTest, calculateOutSampleError) {
+
+
+	himmelblauFunction.function.generateTrainingSamples();
+
+	testModel2D.readData();
+
+	testModel2D.normalizeData();
+	testModel2D.initializeSurrogateModel();
 
 	testModel2D.train();
 
@@ -352,10 +400,9 @@ TEST_F(KrigingModelTest, calculateOutSampleError) {
 
 	EXPECT_LT(errorInSample,10E-06);
 
-	testModel2D.setNameOfInputFileTest("EggholderTest.csv");
 	testModel2D.readDataTest();
 	testModel2D.normalizeDataTest();
-	testModel2D.setNameOfOutputFileTest("EggholderTestResults.csv");
+	testModel2D.setNameOfOutputFileTest("HimmelblauTestResults.csv");
 
 	double errorOutSample = testModel2D.calculateOutSampleError();
 
@@ -369,12 +416,19 @@ TEST_F(KrigingModelTest, calculateOutSampleError) {
 
 TEST_F(KrigingModelTest, saveAndLoadHyperParameters) {
 
+	himmelblauFunction.function.generateTrainingSamples();
+
+	testModel2D.readData();
+
+	testModel2D.normalizeData();
+	testModel2D.initializeSurrogateModel();
+
+
 	testModel2D.setNumberOfTrainingIterations(100);
 	testModel2D.train();
 	//	testModel2D.printHyperParameters();
 
 	testModel2D.saveHyperParameters();
-
 	testModel2D.loadHyperParameters();
 
 
@@ -387,19 +441,15 @@ TEST_F(KrigingModelTest, saveAndLoadHyperParameters) {
 
 TEST_F(KrigingModelTest, linearModel) {
 
-	generate2DLinearTestFunctionDataForKrigingModel(50);
+	linearTestFunction.function.generateTrainingSamples();
+	linearTestFunction.function.generateTestSamples();
 
-	testModel2DLinear.setName("LinearTF");
-	testModel2DLinear.setNameOfInputFile("LinearTF.csv");
 	testModel2DLinear.readData();
-
-	testModel2DLinear.setBoxConstraints(-10.0, 10.0);
 	testModel2DLinear.normalizeData();
-	testModel2DLinear.setLinearRegressionOn();
 	testModel2DLinear.initializeSurrogateModel();
 
 	testModel2DLinear.train();
-	testModel2DLinear.setNameOfInputFileTest("LinearTFTest.csv");
+
 	testModel2DLinear.readDataTest();
 	testModel2DLinear.normalizeDataTest();
 

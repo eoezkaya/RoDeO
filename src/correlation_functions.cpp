@@ -1,13 +1,13 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
- *  file is part of RoDeO
+ * This file is part of RoDeO
  *
  * RoDeO is free software: you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,14 +20,15 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
  */
+
 
 #include <stdio.h>
 #include <math.h>
@@ -48,9 +49,6 @@ using namespace arma;
 
 
 CorrelationFunction::CorrelationFunction(){}
-
-
-
 
 
 mat CorrelationFunction::corrbiquadspline_gekriging(mat &X, vec theta){
@@ -1144,6 +1142,14 @@ double GaussianCorrelationFunctionForGEK::computeCorrelationDotDot(const rowvec 
 	return resultdd;
 
 }
+
+void GaussianCorrelationFunctionForGEK::print(void) const{
+
+	std::cout<<"Theta = \n";
+	theta.print();
+
+}
+
 
 double GaussianCorrelationFunctionForGEK::compute_dR_dxi(const rowvec &xi, const rowvec &xj, unsigned int k) const{
 

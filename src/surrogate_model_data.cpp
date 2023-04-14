@@ -87,31 +87,22 @@ void SurrogateModelData::setDimension(unsigned int value){
 
 
 bool SurrogateModelData::isDataRead(void) const{
-
 	return ifDataIsRead;
-
 }
 
 mat SurrogateModelData::getRawData(void) const{
-
 	return rawData;
-
-
 }
 
 
 void SurrogateModelData::setDisplayOn(void){
 
-	outputToScreen.ifScreenDisplay = true;
-	outputToScreen.printMessage("Setting display on for the SurrogateModelData...");
+	output.ifScreenDisplay = true;
+	output.printMessage("Setting display on for the SurrogateModelData...");
 
 }
-
 void SurrogateModelData::setDisplayOff(void){
-
-	outputToScreen.ifScreenDisplay = false;
-
-
+	output.ifScreenDisplay = false;
 }
 
 void SurrogateModelData::setGradientsOn(void){
@@ -142,28 +133,35 @@ void SurrogateModelData::setDirectionalDerivativesOff(void){
 void SurrogateModelData::readData(string inputFilename){
 
 	assert(isNotEmpty(inputFilename));
-	assert(!(ifDataHasDirectionalDerivatives == true && this->ifDataHasGradients == true));
+	assert(!(ifDataHasDirectionalDerivatives == true && ifDataHasGradients == true));
 
-	outputToScreen.printMessage("Loading data from the file: " + inputFilename);
+	output.printMessage("Loading data from the file: " + inputFilename);
+
 
 	bool status = rawData.load(inputFilename.c_str(), csv_ascii);
 
 	if(status == true)
 	{
-		outputToScreen.printMessage("Data input is done...");
+		output.printMessage("Data input is done...");
 
 	}
 	else
 	{
-		outputToScreen.printErrorMessageAndAbort("Problem with data the input (cvs ascii format), cannot read: " + inputFilename);
+		output.printErrorMessageAndAbort("Problem with data the input (cvs ascii format), cannot read: " + inputFilename);
 
 	}
 
 	numberOfSamples = rawData.n_rows;
-	outputToScreen.printMessage("Number of samples = ", numberOfSamples);
-	outputToScreen.printMessage("Raw data = ", rawData);
+	output.printMessage("Number of samples = ", numberOfSamples);
+	output.printMessage("Raw data = ", rawData);
 
+	if(ifDataHasGradients){
+		output.printMessage("Data has gradients...");
+	}
 
+	if(ifDataHasDirectionalDerivatives){
+		output.printMessage("Data has tangents...");
+	}
 
 	assignDimensionFromData();
 
@@ -185,20 +183,20 @@ void SurrogateModelData::readDataTest(string inputFilename){
 	assert(isNotEmpty(inputFilename));
 	assert(dimension>0);
 
-	outputToScreen.printMessage("Loading test data from the file: " + inputFilename);
+	output.printMessage("Loading test data from the file: " + inputFilename);
 
 	bool status = XrawTest.load(inputFilename.c_str(), csv_ascii);
 	if(status == true)
 	{
-		outputToScreen.printMessage("Data input is done...");
+		output.printMessage("Data input is done...");
 	}
 	else
 	{
-		outputToScreen.printErrorMessageAndAbort("Problem with data the input (cvs ascii format), cannot read: " + inputFilename);
+		output.printErrorMessageAndAbort("Problem with data the input (cvs ascii format), cannot read: " + inputFilename);
 	}
 
 	numberOfTestSamples = XrawTest.n_rows;
-	outputToScreen.printMessage("Number of test samples = ", numberOfTestSamples);
+	output.printMessage("Number of test samples = ", numberOfTestSamples);
 
 	if(XrawTest.n_cols == dimension +1){
 
@@ -211,7 +209,7 @@ void SurrogateModelData::readDataTest(string inputFilename){
 		XTest = XrawTest;
 	}
 	if(XrawTest.n_cols < dimension || XrawTest.n_cols> dimension+1){
-		outputToScreen.printErrorMessageAndAbort("Problem with data the test data (cvs ascii format), too many or too few columns in file: " + inputFilename);
+		output.printErrorMessageAndAbort("Problem with data the test data (cvs ascii format), too many or too few columns in file: " + inputFilename);
 	}
 
 	ifTestDataIsRead = true;
@@ -234,11 +232,11 @@ void SurrogateModelData::assignDimensionFromData(void){
 	}
 
 	if(dimension > 0 && dimensionOfTrainingData!= dimension){
-		outputToScreen.printErrorMessageAndAbort("Dimension of the training data does not match with the specified dimension!");
+		output.printErrorMessageAndAbort("Dimension of the training data does not match with the specified dimension!");
 	}
 
 	dimension = dimensionOfTrainingData;
-	outputToScreen.printMessage("Dimension of the problem is identified as ", dimension);
+	output.printMessage("Dimension of the problem is identified as ", dimension);
 
 }
 
@@ -307,6 +305,11 @@ void SurrogateModelData::normalize(void){
 	normalizeSampleInputMatrix();
 	normalizeDerivativesMatrix();
 
+
+	if(ifDataHasGradients){
+		normalizeGradientMatrix();
+	}
+
 	ifDataIsNormalized = true;
 }
 
@@ -318,7 +321,7 @@ void SurrogateModelData::normalizeSampleInputMatrix(void){
 	assert(boxConstraints.getDimension() == dimension);
 	assert(boxConstraints.areBoundsSet());
 
-	outputToScreen.printMessage("Normalizing and scaling the sample input matrix...");
+	output.printMessage("Normalizing and scaling the sample input matrix...");
 
 	mat XNormalized = X;
 	vec xmin = boxConstraints.getLowerBounds();
@@ -334,6 +337,8 @@ void SurrogateModelData::normalizeSampleInputMatrix(void){
 
 	X = (1.0/dimension)*XNormalized;
 
+
+
 	ifDataIsNormalized = true;
 }
 
@@ -343,7 +348,7 @@ void SurrogateModelData::normalizeSampleInputMatrixTest(void){
 	assert(boxConstraints.areBoundsSet());
 
 
-	outputToScreen.printMessage("Normalizing and scaling the sample input matrix for test...");
+	output.printMessage("Normalizing and scaling the sample input matrix for test...");
 
 	mat XNormalized = XTest;
 	vec xmin = boxConstraints.getLowerBounds();
@@ -383,58 +388,20 @@ void SurrogateModelData::normalizeDerivativesMatrix(void){
 
 void SurrogateModelData::normalizeGradientMatrix(void){
 
-	if(ifDataHasGradients){
-
-
-		assert(ifDataIsRead);
-		assert(boxConstraints.areBoundsSet());
-
-		for(unsigned int i=0; i<dimension; i++){
-
-			vec lb = boxConstraints.getLowerBounds();
-			vec ub = boxConstraints.getUpperBounds();
-			double scalingFactor = ub(i) - lb(i);
-			assert(scalingFactor > 0.0);
-			gradient.row(i) = scalingFactor * gradient.row(i);
-
-
-
-		}
-
-
-	}
-
-}
-
-
-
-void SurrogateModelData::normalizeOutputVector(void){
 	assert(ifDataIsRead);
-	assert(numberOfSamples>0);
-	vec y = getOutputVector();
+	assert(boxConstraints.areBoundsSet());
 
-	double absMax = 0.0;
+	for(unsigned int i=0; i<dimension; i++){
 
-	for(unsigned int i=0; i<numberOfSamples; i++){
-
-		if(fabs(y(i)) > absMax ) absMax = fabs(y(i));
+		vec lb = boxConstraints.getLowerBounds();
+		vec ub = boxConstraints.getUpperBounds();
+		double scalingFactor = ub(i) - lb(i);
+		assert(scalingFactor > 0.0);
+		gradient.row(i) = scalingFactor * gradient.row(i);
 
 	}
 
-	scalingFactorOutput = 1.0/absMax;
-
-	y = y*scalingFactorOutput;
-	setOutputVector(y);
-
 }
-
-
-double SurrogateModelData::getScalingFactorForOutput(void) const{
-
-	return scalingFactorOutput;
-}
-
-
 
 rowvec SurrogateModelData::getRowGradient(unsigned int index) const{
 
@@ -546,10 +513,6 @@ mat SurrogateModelData::getGradientMatrix(void) const{
 }
 
 
-
-
-
-
 void SurrogateModelData::setBoxConstraints(Bounds boxConstraintsInput){
 
 	assert(boxConstraintsInput.areBoundsSet());
@@ -558,34 +521,6 @@ void SurrogateModelData::setBoxConstraints(Bounds boxConstraintsInput){
 
 }
 
-void SurrogateModelData::setBoxConstraintsFromData(void){
-
-
-	outputToScreen.printMessage("setting box constraints from the training data...");
-
-	vec maxofX(dimension);
-	vec minofX(dimension);
-
-
-
-	for(unsigned int i=0; i<dimension; i++){
-
-		minofX(i) = min(Xraw.col(i));
-		maxofX(i) = max(Xraw.col(i));
-
-
-	}
-
-
-
-	boxConstraints.setBounds(minofX,maxofX);
-
-	outputToScreen.printMessage("lower bounds", minofX);
-	outputToScreen.printMessage("upper bounds", maxofX);
-
-
-
-}
 
 
 Bounds SurrogateModelData::getBoxConstraints(void) const{
@@ -594,12 +529,8 @@ Bounds SurrogateModelData::getBoxConstraints(void) const{
 
 }
 
-
-
 bool SurrogateModelData::isDataNormalized(void) const{
-
 	return ifDataIsNormalized;
-
 }
 
 
@@ -609,7 +540,6 @@ void SurrogateModelData::print(void) const{
 	printMatrix(X,"sample input matrix");
 	printVector(y,"sample output vector");
 
-	printScalar(scalingFactorOutput);
 
 	if(ifDataHasGradients){
 

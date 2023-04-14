@@ -110,6 +110,14 @@ LinearTestFunction1::LinearTestFunction1(double lb, double ub):function("LinearT
 
 /***********************************************************************************/
 
+
+
+
+
+
+
+
+
 NonLinear1DTestFunction1::NonLinear1DTestFunction1():function("NonLinear1DTestFunction1", 1){
 
 	function.func_ptr = testFunction1D;
@@ -151,5 +159,8 @@ HimmelblauConstraintFunction2::HimmelblauConstraintFunction2():function("Constra
 	function.setBoxConstraints(-6.0, 6.0);
 
 }
+
+
+
 
 

@@ -65,10 +65,11 @@ private:
 	SurrogateModel *surrogateModel;
 
 	SURROGATE_MODEL surrogateModelType;
+	SURROGATE_MODEL surrogateModelTypeLowFi;
 
 	unsigned int numberOfTrainingIterations = 10000;
 
-	bool ifSurrogateModelSpecified = false;
+
 
 	string fileNameTraingData;
 	string fileNameTraingDataLowFidelity;
@@ -91,8 +92,8 @@ public:
 	void setNumberOfTrainingIterations(unsigned int);
 
 	void setSurrogateModel(SURROGATE_MODEL);
-	bool isSurrogateModelSpecified(void) const;
-
+	void setSurrogateModelLowFi(SURROGATE_MODEL);
+	void bindSurrogateModels(void);
 
 	void setBoxConstraints(Bounds);
 	Bounds getBoxConstraints(void) const;
@@ -104,6 +105,11 @@ public:
 
 
 	void setFileNameTestData(string);
+
+	bool ifSurrogateModelSpecified = false;
+	bool ifSurrogateModelLowFiSpecified = false;
+	bool ifbindSurrogateModelisDone = false;
+	bool ifMultiLevel = false;
 
 	void print(void) const;
 };
