@@ -151,6 +151,47 @@ SURROGATE_MODEL ObjectiveFunction::getSurrogateModelType(void) const{
 	return definition.modelHiFi;
 }
 
+void ObjectiveFunction::bindWithOrdinaryKrigingModel() {
+	output.printMessage(
+			"Binding the surrogate model with the ORDINARY_KRIGING modeĺ...");
+	surrogateModel.setNameOfInputFile(definition.nameHighFidelityTrainingData);
+	surrogate = &surrogateModel;
+}
+
+void ObjectiveFunction::bindWithUniversalKrigingModel() {
+	output.printMessage(
+			"Binding the surrogate model with the UNIVERSAL_KRIGING modeĺ...");
+	surrogateModel.setNameOfInputFile(definition.nameHighFidelityTrainingData);
+	surrogateModel.setLinearRegressionOn();
+	surrogate = &surrogateModel;
+}
+
+void ObjectiveFunction::bindWithAggregationModel() {
+	output.printMessage(
+			"Binding the surrogate model with the Aggregation modeĺ...");
+	surrogateModelGradient.setNameOfInputFile(
+			definition.nameHighFidelityTrainingData);
+	surrogate = &surrogateModelGradient;
+}
+
+void ObjectiveFunction::bindWithTangentEnhancedKrigingModel() {
+	output.printMessage(
+			"Binding the surrogate model with the tangent enhanced modeĺ...");
+	surrogateModelWithTangents.setNameOfInputFile(
+			definition.nameHighFidelityTrainingData);
+	surrogate = &surrogateModelWithTangents;
+}
+
+void ObjectiveFunction::bindWithMultiFidelityModel() {
+	output.printMessage(
+			"Binding the surrogate model with the Multi-fidelity model...");
+	surrogateModelML.setName(definition.name);
+	surrogateModelML.setinputFileNameHighFidelityData(
+			definition.nameHighFidelityTrainingData);
+	surrogateModelML.setinputFileNameLowFidelityData(
+			definition.nameLowFidelityTrainingData);
+	surrogate = &surrogateModelML;
+}
 
 void ObjectiveFunction::bindSurrogateModel(void){
 
@@ -160,45 +201,28 @@ void ObjectiveFunction::bindSurrogateModel(void){
 
 	if(definition.modelHiFi == ORDINARY_KRIGING){
 
-		output.printMessage("Binding the surrogate model with the ORDINARY_KRIGING modeĺ...");
-		surrogateModel.setNameOfInputFile(definition.nameHighFidelityTrainingData);
-		surrogate = &surrogateModel;
+		bindWithOrdinaryKrigingModel();
 	}
 
 	if(definition.modelHiFi == UNIVERSAL_KRIGING){
 
-		output.printMessage("Binding the surrogate model with the UNIVERSAL_KRIGING modeĺ...");
-		surrogateModel.setNameOfInputFile(definition.nameHighFidelityTrainingData);
-		surrogateModel.setLinearRegressionOn();
-		surrogate = &surrogateModel;
+		bindWithUniversalKrigingModel();
 	}
 
 	if(definition.modelHiFi == AGGREGATION){
 
-		output.printMessage("Binding the surrogate model with the Aggregation modeĺ...");
-		surrogateModelGradient.setNameOfInputFile(definition.nameHighFidelityTrainingData);
-		surrogate = &surrogateModelGradient;
-
-
+		bindWithAggregationModel();
 	}
 
 	if(definition.modelHiFi == TANGENT){
-		output.printMessage("Binding the surrogate model with the tangent enhanced modeĺ...");
-		surrogateModelWithTangents.setNameOfInputFile(definition.nameHighFidelityTrainingData);
-		surrogate = &surrogateModelWithTangents;
+		bindWithTangentEnhancedKrigingModel();
 	}
 
 	if(definition.ifMultiLevel){
 
 		if(definition.modelHiFi == ORDINARY_KRIGING && definition.modelLowFi == ORDINARY_KRIGING){
 
-			output.printMessage("Binding the surrogate model with the Multi-fidelity model...");
-
-			surrogateModelML.setName(definition.name);
-			surrogateModelML.setinputFileNameHighFidelityData(definition.nameHighFidelityTrainingData);
-			surrogateModelML.setinputFileNameLowFidelityData(definition.nameLowFidelityTrainingData);
-			surrogate = &surrogateModelML;
-
+			bindWithMultiFidelityModel();
 		}
 
 	}
@@ -300,11 +324,13 @@ void ObjectiveFunction::initializeSurrogate(void){
 
 	assert(ifParameterBoundsAreSet);
 	assert(ifDefinitionIsSet);
+	assert(dim>0);
 
 	bindSurrogateModel();
 
 	assert(boxConstraints.areBoundsSet());
 
+	surrogate->setDimension(dim);
 	surrogate->setBoxConstraints(boxConstraints);
 	surrogate->readData();
 	surrogate->normalizeData();
@@ -505,41 +531,51 @@ rowvec ObjectiveFunction::readOutput(unsigned int howMany) const{
 	return result;
 }
 
+void ObjectiveFunction::readOnlyFunctionalValue(Design &d) const {
+	unsigned int howManyEntriesToRead = 1;
+	rowvec functionalValue(howManyEntriesToRead);
+	functionalValue = readOutput(howManyEntriesToRead);
+	d.trueValue = functionalValue(0);
+}
+
+void ObjectiveFunction::readFunctionalValueAndTangent(Design &d) const {
+	unsigned int howManyEntriesToRead = 2;
+	rowvec resultBuffer(howManyEntriesToRead);
+	resultBuffer = readOutput(howManyEntriesToRead);
+	d.trueValue = resultBuffer(0);
+	d.tangentValue = resultBuffer(1);
+}
+
+void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
+	assert(dim >0);
+
+	unsigned int howManyEntriesToRead = 1 + dim;
+	rowvec resultBuffer(howManyEntriesToRead);
+	resultBuffer = readOutput(howManyEntriesToRead);
+	d.trueValue = resultBuffer(0);
+	rowvec gradient(dim, fill::zeros);
+	unsigned int offset = 1;
+	for (unsigned int i = 0; i < dim; i++) {
+		gradient(i) = resultBuffer(i + offset);
+	}
+	d.gradient = gradient;
+}
 
 void ObjectiveFunction::readOutputDesign(Design &d) const{
 
 	if(evaluationMode.compare("primal") == 0 ){
 
-		rowvec functionalValue(1);
-
-		functionalValue = readOutput(1);
-		d.trueValue = functionalValue(0);
+		readOnlyFunctionalValue(d);
 	}
 
 	if(evaluationMode.compare("tangent") == 0 ){
 
-		rowvec resultBuffer(2);
-
-		resultBuffer = readOutput(2);
-		d.trueValue = resultBuffer(0);
-		d.tangentValue = resultBuffer(1);
-
+		readFunctionalValueAndTangent(d);
 	}
 
 	if(evaluationMode.compare("adjoint") == 0 ){
 
-		rowvec resultBuffer(1+dim);
-
-		resultBuffer = readOutput(1+dim);
-		d.trueValue = resultBuffer(0);
-		rowvec gradient(dim,fill::zeros);
-
-		for(unsigned int i=0; i<dim; i++){
-
-			gradient(i) = resultBuffer(i+1);
-		}
-		d.gradient = gradient;
-
+		readFunctionalValueAndAdjoint(d);
 	}
 
 }

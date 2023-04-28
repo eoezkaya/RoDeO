@@ -475,6 +475,34 @@ uvec findIndicesKMin(const vec &v, unsigned int k){
 
 }
 
+vector<int> returnKMinIndices(const vec &v, unsigned int k){
+
+	unsigned int dim = v.size();
+	assert(dim >= k);
+	vector<int> indices(k);
+
+	vec values(k, fill::zeros);
+	values.fill(LARGE);
+
+	for(unsigned int i=0; i<dim; i++){
+
+		double minThreshold = max(values);
+		unsigned int minThresholdIndex = index_max(values);
+
+		if(v(i) <= minThreshold){
+
+			values(minThresholdIndex) = v(i);
+			indices[minThresholdIndex] = i;
+		}
+
+	}
+
+	return indices;
+
+}
+
+
+
 
 
 mat normalizeMatrix(mat matrixIn){
@@ -724,4 +752,30 @@ mat shuffleRows(mat A){
 	}
 	return result;
 }
+
+
+bool isIntheList(const uvec& list, int element){
+
+	unsigned int dim = list.size();
+
+	for(unsigned int i=0; i<dim; i++){
+		if(element == list(i)) return true;
+	}
+
+	return false;
+}
+
+
+bool isIntheList(const vector<int> &list, int element){
+
+	unsigned int dim = list.size();
+
+	for(unsigned int i=0; i<dim; i++){
+		if(element == list[i]) return true;
+	}
+
+	return false;
+}
+
+
 

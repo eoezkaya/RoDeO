@@ -292,6 +292,7 @@ void TGEKModel::generateRhsForRBFs(void){
 	vec derivatives = data.getDirectionalDerivativesVector();
 	vec y           = data.getOutputVector();
 
+
 	for(unsigned int i=0; i<N; i++){
 		ydot(i) = y(i) - beta0;
 	}

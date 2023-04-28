@@ -60,6 +60,7 @@ public:
 	void printDesign(const Design &d) const;
 	void printIteration(unsigned int iteration) const;
 	void printBoxConstraints(const vec &lb, const vec &ub) const;
+	void printList(std::vector<int> list, std::string msg) const;
 
 
 };

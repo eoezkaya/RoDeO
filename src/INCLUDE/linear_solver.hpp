@@ -49,6 +49,7 @@ private:
 	mat U;
 	vec sigma;
 	mat V;
+	vec rhs;
 
 
 	double thresholdForSingularValues = 1E-12;
@@ -57,12 +58,15 @@ public:
 
 	bool ifFactorizationIsDone = false;
 	bool ifMatrixIsSet = false;
+	bool ifRightHandSideIsSet = false;
 
 	SVDSystem(){};
 
 	void setMatrix(mat);
+	void setRhs(vec);
 	void factorize();
-	vec solveLinearSystem(vec &rhs) const;
+	vec solveLinearSystem(vec &rhs);
+	vec solveLinearSystem(void);
 	double calculateLogAbsDeterminant(void) const;
 	void setThresholdForSingularValues(double value);
 

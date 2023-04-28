@@ -101,6 +101,22 @@ void OutputDevice::printMessage(std::string message, mat whatToPrint) const{
 	}
 }
 
+void OutputDevice::printList(std::vector<int> list, std::string msg) const{
+
+	assert(!list.empty());
+
+	if(ifScreenDisplay){
+		printMessage(msg);
+
+		for (std::vector<int>::const_iterator i = list.begin(); i != list.end(); ++i)
+		std::cout << *i << ' ';
+
+		std::cout <<'\n';
+
+	}
+}
+
+
 void OutputDevice::printDesign(const Design &d) const{
 	if(ifScreenDisplay){
 		d.print();

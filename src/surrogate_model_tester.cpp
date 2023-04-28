@@ -62,61 +62,6 @@ void SurrogateModelTester::setSurrogateModel(SURROGATE_MODEL modelType){
 	surrogateModelType = modelType;
 	ifSurrogateModelSpecified = true;
 
-	//	switch(modelType) {
-	//	  case LINEAR_REGRESSION:
-	//
-	//		 surrogateModel = &linearModel;
-	//
-	//	    break;
-	//	  case ORDINARY_KRIGING:
-	//
-	//		  surrogateModel = &krigingModel;
-	//
-	//		  break;
-	//	  case UNIVERSAL_KRIGING:
-	//		  krigingModel.setLinearRegressionOn();
-	//		  surrogateModel = &krigingModel;
-	//
-	//
-	//		  break;
-	//
-	//	  case TANGENT:
-	//
-	//		  surrogateModel = &tangentModel;
-	//
-	//		  break;
-	//
-	//	  case AGGREGATION:
-	//
-	//		  surrogateModel = &aggregationModel;
-	//		  surrogateModel->setGradientsOn();
-	//		  break;
-	//
-	//	  default:
-	//
-	//		  outputToScreen.printErrorMessageAndAbort("Unknown modelType for the surrogate model!");
-	//
-	//	}
-	//
-	//	assert(isNotEmpty(name));
-	//	surrogateModel->setName(name);
-	//
-	//
-	//
-	//	assert(isNotEmpty(fileNameTraingData));
-	//
-	//	surrogateModel->setNameOfInputFile(fileNameTraingData);
-	//
-	//	assert(isNotEmpty(fileNameTestData));
-	//	surrogateModel->setNameOfInputFileTest(fileNameTestData);
-	//
-	//
-	//
-	//	surrogateModel->setNameOfHyperParametersFile(name);
-	//
-	//
-	//
-	//	ifSurrogateModelSpecified = true;
 }
 
 void SurrogateModelTester::setSurrogateModelLowFi(SURROGATE_MODEL modelType){

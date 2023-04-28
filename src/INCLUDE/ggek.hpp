@@ -47,7 +47,6 @@ class GGEKModel : public SurrogateModel{
 private:
 
 
-	/* Auxiliary vectors */
 	vec vectorOfOnes;
 
 	vec w;
@@ -55,10 +54,11 @@ private:
 	vec sampleWeights;
 	double targetForSampleWeights = 0.0;
 
+	double sigmaThresholdValueForSVD = 10E-12;
+
 	mat Phi;
-	mat WPhi;
 	vec ydot;
-	vec Wydot;
+
 
 	SVDSystem  linearSystemCorrelationMatrixSVD;
 
@@ -67,6 +67,7 @@ private:
 
 	bool ifUsesLinearRegression = false;
 	bool ifCorrelationFunctionIsInitialized = false;
+	bool ifActiveDeritiveSampleIndicesAreCalculated = false;
 
 	double genError;
 
@@ -76,8 +77,10 @@ private:
 	GaussianCorrelationFunctionForGEK correlationFunction;
 
 
-	uvec indicesDifferentiatedBasisFunctions;
+	double targetForDifferentiatedBasis = 0.0;
+	vector<int> indicesDifferentiatedBasisFunctions;
 	unsigned int numberOfDifferentiatedBasisFunctions = 5;
+	mat differentiationDirectionBasis;
 
 	vector<int> indicesOfSamplesWithActiveDerivatives;
 
@@ -86,15 +89,18 @@ private:
 
 	void calculatePhiEntriesForFunctionValues(void);
 	void calculatePhiEntriesForDerivatives(void);
-	void generateRhsForRBFs(void);
+
 	void resetDataObjects(void);
 	void updateModelWithNewData(void);
-
+	void setValuesForFindingDifferentiatedBasisIndex(arma::vec &values);
+	void calculateBeta0();
+	void solveLinearSystem();
 
 public:
 
 	bool ifVaryingSampleWeights = false;
-	bool ifTargerForSampleWeightsIsSet = false;
+	bool ifTargetForSampleWeightsIsSet = false;
+	bool ifTargetForDifferentiatedBasisIsSet = false;
 
 	void setName(string label);
 
@@ -122,6 +128,8 @@ public:
 	void setHyperParameters(vec parameters);
 
 	void updateAuxilliaryFields(void);
+	void assembleLinearSystem(void);
+
 	void train(void);
 	double interpolate(rowvec x) const;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const ;
@@ -141,13 +149,23 @@ public:
 	void generateWeightingMatrix(void);
 	void generateSampleWeights(void);
 
-	mat getWeightMatrix(void) const;
-	vec getSampleWeightsVector(void) const;
+
 
 	void setTargetForSampleWeights(double);
+	void setTargetForDifferentiatedBasis(double value);
 
 	void calculateIndicesOfSamplesWithActiveDerivatives(void);
 
+	void generateRhsForRBFs(void);
+
+	void setDifferentiationDirectionsForDifferentiatedBasis(void);
+
+	vector<int> getIndicesOfDifferentiatedBasisFunctionLocations(void) const;
+
+	mat getWeightMatrix(void) const;
+	vec getSampleWeightsVector(void) const;
+	mat getPhiMatrix(void) const;
+	mat getDifferentiationDirectionsMatrix(void) const;
 };
 
 #endif

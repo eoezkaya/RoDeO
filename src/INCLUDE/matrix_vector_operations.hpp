@@ -89,6 +89,8 @@ void addOneElement(vec &in, double val);
 uvec findIndicesKMax(const vec &v, unsigned int k);
 uvec findIndicesKMin(const vec &v, unsigned int k);
 
+std::vector<int> returnKMinIndices(const vec &v, unsigned int k);
+
 
 void joinMatricesByColumns(mat& A, const mat& B);
 void joinMatricesByRows(mat& A, const mat& B);
@@ -117,5 +119,8 @@ mat shuffleRows(mat A);
 bool isBetween(const vec &v, const vec&a, const vec&b);
 bool isBetween(const rowvec &v, const rowvec&a, const rowvec&b);
 
+
+bool isIntheList(const uvec&, int);
+bool isIntheList(const std::vector<int> &list, int element);
 
 #endif

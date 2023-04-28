@@ -275,33 +275,142 @@ TEST(testMatrixVectorOperations, testMakeUnitRowVector){
 
 }
 
+TEST(testMatrixVectorOperations, isIntheList){
 
-TEST(testMatrixVectorOperations, FindIndicesKMax){
+	uvec list(4);
+	list(0) = 1;
+	list(1) = 6;
+	list(2) = 3;
+	list(3) = 10;
+
+	ASSERT_TRUE(isIntheList(list,10));
+
+}
+
+TEST(testMatrixVectorOperations, isIntheListFalse){
+
+	uvec list(4);
+	list(0) = 1;
+	list(1) = 6;
+	list(2) = 3;
+	list(3) = 10;
+
+	ASSERT_FALSE(isIntheList(list,11));
+
+}
+
+TEST(testMatrixVectorOperations, isIntheListStdVector){
+
+	vector<int> list(4);
+	list[0] = 1;
+	list[1] = 6;
+	list[2] = 3;
+	list[3] = 10;
+
+	ASSERT_TRUE(isIntheList(list,10));
+
+}
+
+TEST(testMatrixVectorOperations, isIntheListStdVectorFalse){
+
+	vector<int> list(4);
+	list[0] = 1;
+	list[1] = 6;
+	list[2] = 3;
+	list[3] = 10;
+
+	ASSERT_FALSE(isIntheList(list,11));
+
+}
+
+
+TEST(testMatrixVectorOperations, returnKMinIndices){
+
+	vec v(6);
+	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
+
+	vector<int> kBest = returnKMinIndices(v,3);
+
+	ASSERT_TRUE(isIntheList(kBest,1));
+	ASSERT_TRUE(isIntheList(kBest,0));
+	ASSERT_TRUE(isIntheList(kBest,5));
+	ASSERT_FALSE(isIntheList(kBest,2));
+	ASSERT_FALSE(isIntheList(kBest,3));
+	ASSERT_FALSE(isIntheList(kBest,4));
+
+}
+
+
+TEST(testMatrixVectorOperations, returnKMinIndices2){
+
+	vec v(10);
+	v(0) =  0.0;
+	v(1) = -12.9;
+	v(2) =  5.23;
+	v(3) =  8.9;
+	v(4) = 11.9;
+	v(5) = 1.912;
+	v(6) = 2.912;
+	v(7) = 3.912;
+	v(8) = 4.912;
+	v(9) = -5.912;
+
+	vector<int> kBest = returnKMinIndices(v,2);
+
+	ASSERT_TRUE(isIntheList(kBest,1));
+	ASSERT_TRUE(isIntheList(kBest,9));
+	ASSERT_FALSE(isIntheList(kBest,0));
+	ASSERT_TRUE(kBest.size() == 2);
+
+
+}
+
+
+TEST(testMatrixVectorOperations, returnKMinIndices3){
+
+	vec v(10);
+	v(0) =  0.0;
+	v(1) =  1.0;
+	v(2) =  2.0;
+	v(3) =  3.0;
+	v(4) =  4.0;
+	v(5) =  5.0;
+	v(6) =  0.0;
+	v(7) =  1.0;
+	v(8) =  2.9;
+	v(9) =  100.0;
+
+	vector<int> kBest = returnKMinIndices(v,4);
+
+	ASSERT_TRUE(isIntheList(kBest,0));
+	ASSERT_TRUE(isIntheList(kBest,1));
+	ASSERT_TRUE(isIntheList(kBest,6));
+	ASSERT_FALSE(isIntheList(kBest,9));
+	ASSERT_TRUE(kBest.size() == 4);
+
+
+}
+
+
+TEST(testMatrixVectorOperations, findIndicesKMax){
 
 	vec v(6);
 	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
 
 	uvec kBest = findIndicesKMax(v,3);
+	ASSERT_TRUE(isIntheList(kBest,4));
 
-	ASSERT_FALSE(isIntheList(2, kBest) == -1);
-	ASSERT_FALSE(isIntheList(3, kBest) == -1);
-	ASSERT_FALSE(isIntheList(4, kBest) == -1);
-	ASSERT_TRUE(isIntheList(0, kBest) == -1);
 
 }
 
 
-TEST(testMatrixVectorOperations, FindIndicesKMin){
+TEST(testMatrixVectorOperations, findIndicesKMin){
 
 	vec v(6);
 	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
 
 	uvec kBest = findIndicesKMin(v,3);
-
-	ASSERT_FALSE(isIntheList(1, kBest) == -1);
-	ASSERT_FALSE(isIntheList(0, kBest) == -1);
-	ASSERT_FALSE(isIntheList(5, kBest) == -1);
-	ASSERT_TRUE(isIntheList(4, kBest) == -1);
+	ASSERT_TRUE(isIntheList(kBest,1));
 
 }
 

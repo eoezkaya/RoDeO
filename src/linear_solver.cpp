@@ -251,7 +251,9 @@ void SVDSystem::factorize(void){
 
 }
 
-vec SVDSystem::solveLinearSystem(vec &rhs) const{
+vec SVDSystem::solveLinearSystem(vec &b){
+
+	setRhs(b);
 
 	assert(ifFactorizationIsDone);
 
@@ -288,6 +290,54 @@ vec SVDSystem::solveLinearSystem(vec &rhs) const{
 
 	return solution;
 }
+
+
+vec SVDSystem::solveLinearSystem(void){
+
+	assert(ifFactorizationIsDone);
+	assert(ifRightHandSideIsSet);
+
+	vec solution(numberOfCols, fill::zeros);
+
+	vec sigmaCut(sigma.size());
+//	sigma.print("sigma");
+
+
+	int numberOfActiveSingularValues = 0;
+	for(unsigned int i=0; i<sigma.size();i++){
+
+		if(sigma(i) < thresholdForSingularValues){
+
+			sigmaCut(i) = 0.0;
+
+		}
+		else{
+
+			sigmaCut(i) = 1.0/sigma(i);
+			numberOfActiveSingularValues++;
+		}
+
+	}
+
+//	sigmaCut.print("sigmaCut");
+
+
+	for(unsigned int i=0; i<numberOfActiveSingularValues; i++){
+
+		solution += dot(U.col(i),rhs)*sigmaCut(i)*V.col(i);
+
+	}
+
+	return solution;
+}
+
+
+void SVDSystem::setRhs(vec input){
+	rhs = input;
+	ifRightHandSideIsSet = true;
+}
+
+
 
 
 void SVDSystem::setThresholdForSingularValues(double value) {

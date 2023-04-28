@@ -84,9 +84,14 @@ class ObjectiveFunction{
 
 
 private:
-
-
-
+	void readOnlyFunctionalValue(Design &d) const;
+	void readFunctionalValueAndTangent(Design &d) const;
+	void readFunctionalValueAndAdjoint(Design &d) const;
+	void bindWithOrdinaryKrigingModel();
+	void bindWithUniversalKrigingModel();
+	void bindWithAggregationModel();
+	void bindWithTangentEnhancedKrigingModel();
+	void bindWithMultiFidelityModel();
 
 protected:
 
