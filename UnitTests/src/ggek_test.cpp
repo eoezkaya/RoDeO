@@ -223,7 +223,12 @@ TEST_F(GGEKModelTest, generateWeightingMatrix) {
 	testModel.generateWeightingMatrix();
 
 	mat W = testModel.getWeightMatrix();
-	ASSERT_TRUE(W.n_cols == N + 4*dim);
+
+	unsigned int Ndot = testModel.getNumberOfSamplesWithActiveGradients();
+	N    = testModel.getNumberOfSamples();
+
+	ASSERT_TRUE(W.n_rows == N+Ndot);
+	ASSERT_TRUE(W.n_cols == N+Ndot);
 
 }
 
@@ -241,6 +246,7 @@ TEST_F(GGEKModelTest, generateRhsForRBFs) {
 	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
 	testModel.ifVaryingSampleWeights = true;
 	testModel.generateWeightingMatrix();
+	testModel.calculateUnitGradientVectors();
 	testModel.generateRhsForRBFs();
 
 
@@ -325,33 +331,11 @@ TEST_F(GGEKModelTest, findIndicesOfDifferentiatedBasisFunctionLocationsWithTarge
 }
 
 
-TEST_F(GGEKModelTest, setDifferentiationDirectionsForDifferentiatedBasis) {
-
-
-	unsigned int N = 6;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
-
-	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
-	//	testModel.setDisplayOn();
-	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
-	testModel.findIndicesOfDifferentiatedBasisFunctionLocations();
-	testModel.setDifferentiationDirectionsForDifferentiatedBasis();
-
-	mat directions = testModel.getDifferentiationDirectionsMatrix();
-
-	ASSERT_TRUE(directions.n_cols ==2);
-	ASSERT_TRUE(directions.n_rows ==4);
-}
-
 
 TEST_F(GGEKModelTest, calculatePhiMatrix) {
 
 
-	unsigned int N = 6;
+	unsigned int N = 27;
 	unsigned int dim = 2;
 	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
 
@@ -362,14 +346,20 @@ TEST_F(GGEKModelTest, calculatePhiMatrix) {
 	//	testModel.setDisplayOn();
 	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
 	testModel.findIndicesOfDifferentiatedBasisFunctionLocations();
-	testModel.setDifferentiationDirectionsForDifferentiatedBasis();
+	testModel.calculateUnitGradientVectors();
+	testModel.generateWeightingMatrix();
 
 	testModel.calculatePhiMatrix();
 
 	mat Phi = testModel.getPhiMatrix();
 
-	ASSERT_TRUE(Phi.n_cols == 6 + 4);
-	ASSERT_TRUE(Phi.n_rows == 6 + 2*4);
+	unsigned int Ndot = testModel.getNumberOfSamplesWithActiveGradients();
+	N    = testModel.getNumberOfSamples();
+
+	vector<int> indicesDifferentiatedBasis = testModel.getIndicesOfDifferentiatedBasisFunctionLocations();
+
+	ASSERT_TRUE(Phi.n_cols == N + indicesDifferentiatedBasis.size());
+	ASSERT_TRUE(Phi.n_rows == N + Ndot);
 
 
 }
@@ -417,7 +407,6 @@ TEST_F(GGEKModelTest, train) {
 
 }
 
-
 TEST_F(GGEKModelTest, interpolate) {
 
 	unsigned int N = 50;
@@ -435,13 +424,35 @@ TEST_F(GGEKModelTest, interpolate) {
 	rowvec x(2);
 	x(0) = 0.1;
 	x(1) = 0.01;
-
-
 	double fVal = testModel.interpolate(x);
 
-
 	ASSERT_TRUE(testModel.ifModelTrainingIsDone);
+}
 
+
+TEST_F(GGEKModelTest, updateModelWithNewData) {
+
+	unsigned int N = 50;
+	unsigned int dim = 2;
+	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
+
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+
+	unsigned int howManySamples = testModel.getNumberOfSamples();
+
+	ASSERT_TRUE( howManySamples == N);
+
+	rowvec newsample(5,fill::randu);
+
+	testModel.addNewSampleToData(newsample);
+
+	howManySamples = testModel.getNumberOfSamples();
+
+	ASSERT_TRUE(howManySamples == N+1);
 
 }
 

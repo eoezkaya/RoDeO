@@ -226,10 +226,7 @@ void RoDeODriver::checkIfProblemDimensionIsSetProperly(void) const{
 
 void RoDeODriver::checkIfBoxConstraintsAreSetPropertly(void) const{
 
-	if(ifDisplayIsOn()){
-
-		std::cout<<"Checking box constraint settings...\n";
-	}
+	output.printMessage("Checking box constraint settings...");
 
 	ConfigKey ub = configKeys.getConfigKey("UPPER_BOUNDS");
 	ConfigKey lb = configKeys.getConfigKey("LOWER_BOUNDS");
@@ -303,15 +300,9 @@ void RoDeODriver::checkIfSurrogateModelTypeIsOK(void) const{
 
 void RoDeODriver::checkIfConstraintsAreProperlyDefined(void) const{
 
-
-	if(ifDisplayIsOn()){
-
-		std::cout<<"Checking constraint function settings...\n";
-	}
-
+	output.printMessage("Checking constraint function settings...");
 
 	for(auto it = std::begin(constraints); it != std::end(constraints); ++it) {
-
 
 		if(it->inequalityType != ">" && it->inequalityType != "<"){
 
@@ -337,15 +328,9 @@ void RoDeODriver::checkSettingsForOptimization(void) const{
 
 }
 
-
-
-
-
 void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 
-	if(ifDisplayIsOn()){
-		std::cout<<"Checking consistency of the configuration parameters...\n";
-	}
+	output.printMessage("Checking consistency of the configuration parameters...");
 
 	checkIfProblemTypeIsSetProperly();
 
@@ -356,7 +341,6 @@ void RoDeODriver::checkConsistencyOfConfigParams(void) const{
 	}
 
 	if(type == "Optimization" || type == "OPTIMIZATION"){
-
 		checkSettingsForOptimization();
 	}
 
@@ -795,31 +779,19 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 
 void RoDeODriver::extractObjectiveFunctionDefinitionFromString(std::string inputString){
 
-	if(ifDisplayIsOn()){
-
-		std::cout<<"Extracting objective function definition\n";
-
-	}
+	output.printMessage("Extracting objective function definition...");
 
 	std::size_t foundObjectiveFunction = inputString.find("OBJECTIVE_FUNCTION");
 	if (foundObjectiveFunction != std::string::npos){
 
-		if(ifDisplayIsOn()){
-
-			std::cout<<"Objective function definition is found\n";
-
-		}
-
+		output.printMessage("Objective function definition is found...");
 
 		std::size_t foundLeftBracket = inputString.find("{", foundObjectiveFunction);
 
 
 		std::string stringBufferObjectiveFunction;
-
 		std::size_t foundRightBracket = inputString.find("}", foundLeftBracket);
-
 		stringBufferObjectiveFunction.assign(inputString,foundLeftBracket+1,foundRightBracket - foundLeftBracket -1);
-
 		parseObjectiveFunctionDefinition(stringBufferObjectiveFunction);
 
 
@@ -936,7 +908,7 @@ ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDef
 
 void RoDeODriver::setOptimizationFeatures(Optimizer &optimizationStudy) const{
 
-	if(ifDisplayIsOn()){
+	if(output.ifScreenDisplay){
 		optimizationStudy.setDisplayOn();
 	}
 
@@ -1058,9 +1030,9 @@ SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
 
 	}
 
-	if(modelName == "GEK" ||  modelName == "GRADIENT_ENHANCED_KRIGING" || modelName == "gek") {
+	if(modelName == "GRADIENT_ENHANCED" || modelName == "gradient_enhanced") {
 
-		return GRADIENT_ENHANCED_KRIGING;
+		return GRADIENT_ENHANCED;
 
 	}
 
@@ -1177,24 +1149,6 @@ void RoDeODriver::run(void){
 	else{
 
 		abortWithErrorMessage("PROBLEM_TYPE is unknown!");
-	}
-
-
-}
-
-bool RoDeODriver::ifDisplayIsOn(void) const{
-
-
-	if(configKeys.ifFeatureIsOn("DISPLAY")){
-
-		return true;
-
-
-	}
-	else{
-
-		return false;
-
 	}
 
 

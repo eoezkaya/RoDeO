@@ -1032,7 +1032,7 @@ double GaussianCorrelationFunctionForGEK::computeCorrelation(const rowvec &x_i, 
 	return exp(-sum);
 }
 
-/* basis function centered at xi and evaluated at xj */
+/* Gaussian basis function centered at x = x_i and evaluated at x = x_j */
 double GaussianCorrelationFunctionForGEK::computeCorrelation(unsigned int i, unsigned int j) const {
 
 	assert(isInputSampleMatrixSet());
@@ -1048,9 +1048,12 @@ double GaussianCorrelationFunctionForGEK::computeCorrelation(unsigned int i, uns
 }
 
 
-/* derivative of the basis function centered at xi and evaluated at xj */
+/* derivative of the basis function centered at x = x_i and evaluated at x = x_j in the
+ * direction d = diffDirection, result is d . nabla_Phi^i(xj)
+ * */
 
-double GaussianCorrelationFunctionForGEK::computeCorrelationDot(unsigned int i, unsigned int j, const rowvec &diffDirection) const {
+double GaussianCorrelationFunctionForGEK::computeCorrelationDot(unsigned int i,
+		unsigned int j, const rowvec &diffDirection) const {
 
 	assert(isInputSampleMatrixSet());
 	rowvec xi = X.row(i);
@@ -1087,10 +1090,8 @@ double GaussianCorrelationFunctionForGEK::computeCorrelationDot(const rowvec &x_
 }
 
 
-
-
-
-double GaussianCorrelationFunctionForGEK::computeCorrelationDotDot(unsigned int i, unsigned int j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const{
+double GaussianCorrelationFunctionForGEK::computeCorrelationDotDot(unsigned int i,
+		unsigned int j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const{
 
 	assert(isInputSampleMatrixSet());
 	rowvec xi = X.row(i);

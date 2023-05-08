@@ -380,7 +380,6 @@ void SurrogateModelData::normalizeDerivativesMatrix(void){
 		assert(scalingFactor > 0.0);
 		directionalDerivatives = scalingFactor * directionalDerivatives;
 
-
 	}
 
 }
@@ -390,16 +389,20 @@ void SurrogateModelData::normalizeGradientMatrix(void){
 
 	assert(ifDataIsRead);
 	assert(boxConstraints.areBoundsSet());
+	assert(dimension>0);
+	assert(gradient.n_cols == dimension);
+
 
 	for(unsigned int i=0; i<dimension; i++){
 
 		vec lb = boxConstraints.getLowerBounds();
 		vec ub = boxConstraints.getUpperBounds();
-		double scalingFactor = ub(i) - lb(i);
+		double scalingFactor = (ub(i) - lb(i))*dimension;
 		assert(scalingFactor > 0.0);
-		gradient.row(i) = scalingFactor * gradient.row(i);
+		gradient.col(i) = scalingFactor * gradient.col(i);
 
 	}
+
 
 }
 

@@ -51,15 +51,13 @@ void TGEKModel::setBoxConstraints(Bounds boxConstraintsInput){
 	boxConstraints = boxConstraintsInput;
 	data.setBoxConstraints(boxConstraintsInput);
 	auxiliaryModel.setBoxConstraints(boxConstraintsInput);
-	linearModel.setBoxConstraints(boxConstraintsInput);
+
 }
 
 void TGEKModel::setDimension(unsigned int dim){
 
 	dimension = dim;
 	auxiliaryModel.setDimension(dim);
-	linearModel.setDimension(dim);
-
 }
 
 
@@ -69,8 +67,12 @@ void TGEKModel::readData(void){
 	data.setDirectionalDerivativesOn();
 	data.readData(filenameDataInput);
 
+	numberOfSamples = data.getNumberOfSamples();
+
 	ifDataIsRead = true;
 
+	prepareTrainingDataForTheKrigingModel();
+	auxiliaryModel.readData();
 }
 
 void TGEKModel::normalizeData(void){
@@ -79,6 +81,8 @@ void TGEKModel::normalizeData(void){
 
 	data.normalize();
 	ifNormalized = true;
+
+	auxiliaryModel.normalizeData();
 }
 
 
@@ -86,8 +90,11 @@ void TGEKModel::setNameOfInputFile(string filename){
 
 	assert(isNotEmpty(filename));
 	filenameDataInput = filename;
+	auxiliaryModel.setNameOfInputFile(filenameTrainingDataAuxModel);
 
 }
+
+
 void TGEKModel::setNameOfHyperParametersFile(string filename){
 
 
@@ -129,14 +136,7 @@ void TGEKModel::initializeSurrogateModel(void){
 	w = ones<vec>(data.getNumberOfSamples() + numberOfDifferentiatedBasisFunctions);
 	initializeHyperParameters();
 
-	prepareTrainingDataForTheKrigingModel();
 
-	auxiliaryModel.setNameOfInputFile(filenameTrainingDataAuxModel);
-	auxiliaryModel.setBoxConstraints(data.getBoxConstraints());
-	auxiliaryModel.readData();
-	auxiliaryModel.normalizeData();
-	auxiliaryModel.setNumberOfTrainingIterations(numberOfTrainingIterations);
-	auxiliaryModel.setNumberOfThreads(numberOfThreads);
 	auxiliaryModel.initializeSurrogateModel();
 
 	ifInitialized = true;
@@ -178,13 +178,53 @@ void  TGEKModel::setHyperParameters(vec parameters){
 }
 
 
-void TGEKModel::updateAuxilliaryFields(void){
+void TGEKModel::calculateIndicesOfSamplesWithActiveDerivatives(void){
+
+	assert(ifDataIsRead);
+	assert(numberOfSamples>0);
+	assert(dimension>0);
+
+	vec derivatives = data.getDirectionalDerivativesVector();
+
+
+	for(unsigned int i=0; i<numberOfSamples; i++){
+
+		bool isVerySmall = false;
+
+		if(fabs(derivatives(i)) < EPSILON) isVerySmall = true;
+
+		if(!isVerySmall){
+			indicesOfSamplesWithActiveDerivatives.push_back(i);
+		}
+	}
+
+	unsigned int howManyActiveSamples = indicesOfSamplesWithActiveDerivatives.size();
+
+	output.printMessage("Number of samples with active tangents = ",howManyActiveSamples);
+
+	if(numberOfDifferentiatedBasisFunctions > howManyActiveSamples){
+
+		output.printMessage("Number of differentiated basis functions is greater than number of samples with active gradients!");
+		output.printMessage("Number of differentiated basis functions is reduced to ", howManyActiveSamples);
+
+		numberOfDifferentiatedBasisFunctions = howManyActiveSamples;
+	}
+
+	string msg = "Indices of samples with active tangents";
+	output.printList(indicesOfSamplesWithActiveDerivatives, msg);
+
+	ifActiveDeritiveSampleIndicesAreCalculated = true;
+
+
+}
+
+void TGEKModel::assembleLinearSystem(void){
 
 	assert(ifDataIsRead);
 	assert(ifNormalized);
-	output.printMessage("Updating auxiliary model variables...");
 
-	auxiliaryModel.updateAuxilliaryFields();
+
+	calculateIndicesOfSamplesWithActiveDerivatives();
 
 	if(numberOfDifferentiatedBasisFunctions > 0){
 
@@ -193,33 +233,51 @@ void TGEKModel::updateAuxilliaryFields(void){
 	}
 
 	generateWeightingMatrix();
-
 	calculatePhiMatrix();
-
-
-
-	unsigned int N = data.getNumberOfSamples();
-
-	output.printMessage("Number of samples = ", N);
-
-	vec ys = data.getOutputVector();
-	double sumys = sum(ys);
-	beta0 = sumys/N;
-
-	output.printMessage("beta0 = ", beta0);
-
-	linearSystemCorrelationMatrixSVD.setMatrix(WPhi);
-	/* SVD decomposition R = U Sigma VT */
-	linearSystemCorrelationMatrixSVD.factorize();
-
+	calculateBeta0();
 	generateRhsForRBFs();
 
-	double thresholdValue = 10E-12;
-	linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(thresholdValue);
+}
 
-	w = linearSystemCorrelationMatrixSVD.solveLinearSystem(Wydot);
+
+void TGEKModel::updateAuxilliaryFields(void){
+
+	assert(ifDataIsRead);
+	assert(ifNormalized);
+	output.printMessage("Updating auxiliary model variables...");
+
+	auxiliaryModel.updateAuxilliaryFields();
+
+
+	assembleLinearSystem();
+
+	solveLinearSystem();
+
 
 }
+
+
+void TGEKModel::solveLinearSystem() {
+
+	assert(Phi.n_rows == numberOfSamples + indicesOfSamplesWithActiveDerivatives.size());
+	assert(Phi.n_cols == numberOfSamples + numberOfDifferentiatedBasisFunctions);
+	assert(ydot.size() == Phi.n_rows);
+
+
+
+	linearSystemCorrelationMatrixSVD.setMatrix(Phi);
+	/* SVD decomposition R = U Sigma VT */
+	linearSystemCorrelationMatrixSVD.factorize();
+	linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(sigmaThresholdValueForSVD);
+	linearSystemCorrelationMatrixSVD.setRhs(ydot);
+	w = linearSystemCorrelationMatrixSVD.solveLinearSystem();
+
+
+	assert(w.size() == numberOfSamples + numberOfDifferentiatedBasisFunctions);
+}
+
+
+
 
 mat TGEKModel::getWeightMatrix(void) const{
 	return weightMatrix;
@@ -232,7 +290,7 @@ vec TGEKModel::getSampleWeightsVector(void) const{
 /* This function generates weights for each sample according to their functional value */
 void TGEKModel::generateSampleWeights(void){
 
-	unsigned int N = data.getNumberOfSamples();
+	unsigned int N = numberOfSamples;
 	sampleWeights = zeros<vec>(N);
 	vec y = data.getOutputVector();
 
@@ -268,45 +326,77 @@ void TGEKModel::generateSampleWeights(void){
 
 void TGEKModel::generateWeightingMatrix(void){
 
+	assert(ifDataIsRead);
+	assert(ifActiveDeritiveSampleIndicesAreCalculated);
+	assert(dimension>0);
+
 	generateSampleWeights();
 
+	unsigned int howManySamplesHaveDerivatives = indicesOfSamplesWithActiveDerivatives.size();
 
-	unsigned int N = data.getNumberOfSamples();
-	weightMatrix = zeros<mat>(2*N, 2*N);
+	unsigned int sizeOfWeightMatrix = numberOfSamples +  howManySamplesHaveDerivatives;
 
-	for(unsigned int i=0; i<N; i++){
+
+	weightMatrix = zeros<mat>(sizeOfWeightMatrix, sizeOfWeightMatrix);
+
+
+	/* weights for functional values */
+	for(unsigned int i=0; i<numberOfSamples; i++){
 		weightMatrix(i,i) = sampleWeights(i);
 	}
-	for(unsigned int i=N; i<2*N; i++){
-		weightMatrix(i,i) = sampleWeights(i-N)*0.5;
-	}
 
+	double weightFactorForDerivatives = 0.5;
+
+	for(unsigned int i=0; i<howManySamplesHaveDerivatives; i++){
+		unsigned int indx = indicesOfSamplesWithActiveDerivatives.at(i);
+		double weight = sampleWeights(indx);
+		weightMatrix(i+numberOfSamples,i+numberOfSamples) = weight* weightFactorForDerivatives;
+	}
 }
 
 
 void TGEKModel::generateRhsForRBFs(void){
 
-	unsigned int N = data.getNumberOfSamples();
-	ydot = zeros<vec>(2*N);
+	assert(numberOfSamples>0);
+
+	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
+	unsigned int N    = numberOfSamples;
+
+	unsigned int sizeOfRhs = N + Ndot;
+
+	ydot = zeros<vec>(sizeOfRhs);
+
 
 	vec derivatives = data.getDirectionalDerivativesVector();
 	vec y           = data.getOutputVector();
-
 
 	for(unsigned int i=0; i<N; i++){
 		ydot(i) = y(i) - beta0;
 	}
 
+	for(unsigned int i=0; i<Ndot; i++){
+		unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
 
-	for(unsigned int i=0; i<N; i++){
-		ydot(N+i) = derivatives(i);
+		double directionalDerivative = derivatives(indx);
+		ydot(i+N) = directionalDerivative;
 	}
 
-	/* Multiply with the weight matrix 2Nx2N * 2N */
+	if(ifVaryingSampleWeights){
 
-	Wydot = weightMatrix*ydot;
+		ydot = weightMatrix*ydot;
+	}
+
 }
 
+
+void TGEKModel::calculateBeta0(void) {
+
+	output.printMessage("Number of samples = ", numberOfSamples);
+	vec ys = data.getOutputVector();
+	double sumys = sum(ys);
+	beta0 = sumys / numberOfSamples;
+	output.printMessage("beta0 = ", beta0);
+}
 
 void TGEKModel::train(void){
 
@@ -325,21 +415,20 @@ void TGEKModel::prepareTrainingDataForTheKrigingModel(void){
 
 	assert(ifDataIsRead);
 	mat rawData = data.getRawData();
-	unsigned int N = data.getNumberOfSamples();
-	unsigned int dim = data.getDimension();
+	unsigned int N = numberOfSamples;
 
-	vec y = rawData.col(dim);
-	mat X = rawData.submat(0, 0, N-1,dim-1);
+	vec y = rawData.col(dimension);
+	mat X = rawData.submat(0, 0, N-1,dimension-1);
 
 
-	mat trainingDataForAuxModel(N,dim+1);
+	mat trainingDataForAuxModel(N,dimension+1);
 
-	for(unsigned int i=0; i<dim; i++){
+	for(unsigned int i=0; i<dimension; i++){
 
 		trainingDataForAuxModel.col(i) = X.col(i);
 	}
 
-	trainingDataForAuxModel.col(dim) = y;
+	trainingDataForAuxModel.col(dimension) = y;
 
 	//	trainingDataForAuxModel.print("trainingDataForAuxModel");
 
@@ -355,6 +444,8 @@ void TGEKModel::trainTheta(void){
 	unsigned int dim = data.getDimension();
 	vec theta = hyperparameters.head(dim);
 
+	//	theta.print("theta");
+
 	correlationFunction.setHyperParameters(theta);
 
 	remove(filenameTrainingDataAuxModel.c_str());
@@ -364,7 +455,7 @@ void TGEKModel::trainTheta(void){
 double TGEKModel::interpolate(rowvec x) const{
 
 
-	unsigned int N = data.getNumberOfSamples();
+	unsigned int N  = numberOfSamples;
 	unsigned int Nd = numberOfDifferentiatedBasisFunctions;
 
 	double sum = 0.0;
@@ -376,7 +467,7 @@ double TGEKModel::interpolate(rowvec x) const{
 
 	for(unsigned int i=0; i<Nd; i++){
 
-		unsigned int index = indicesDifferentiatedBasisFunctions(i);
+		unsigned int index = indicesDifferentiatedBasisFunctions[i];
 		rowvec xi = data.getRowX(index);
 		rowvec diffDirection = data.getRowDifferentiationDirection(index);
 		sum +=w(i+N)*correlationFunction.computeCorrelationDot(xi, x, diffDirection);
@@ -396,8 +487,7 @@ void TGEKModel::interpolateWithVariance(rowvec xp,double *fTilde, double *ssqr) 
 void TGEKModel::resetDataObjects(void){
 
 	Phi.reset();
-	WPhi.reset();
-	Wydot.reset();
+	ydot.reset();
 	beta0 = 0.0;
 	auxiliaryModel.resetDataObjects();
 
@@ -448,18 +538,68 @@ void TGEKModel::addNewLowFidelitySampleToData(rowvec newsample){
 }
 
 
+void TGEKModel::setValuesForFindingDifferentiatedBasisIndex(vec &values) {
+
+	vec y = data.getOutputVector();
+
+	if (ifTargetForDifferentiatedBasisIsSet) {
+		for (unsigned int i = 0; i < numberOfSamples; i++) {
+			values(i) = fabs(y(i) - targetForDifferentiatedBasis);
+		}
+	} else {
+		values = y;
+	}
+	for (unsigned int i = 0; i < numberOfSamples; i++) {
+		if (!isIntheList(indicesOfSamplesWithActiveDerivatives, i)) {
+			values(i) = LARGE;
+		}
+	}
+}
+
+
 void TGEKModel::findIndicesOfDifferentiatedBasisFunctionLocations(void){
 
 	assert(ifDataIsRead);
+	assert(numberOfSamples > 0);
+	assert(numberOfDifferentiatedBasisFunctions < numberOfSamples);
+
+
 	output.printMessage("Finding the indices of differentiated basis functions...");
 	output.printMessage("Number of differentiated basis functions = ",numberOfDifferentiatedBasisFunctions);
-	vec y = data.getOutputVector();
-	indicesDifferentiatedBasisFunctions = findIndicesKMin(y, numberOfDifferentiatedBasisFunctions);
 
-	//	indicesDifferentiatedBasisFunctions.print();
-	//	y.print();
+	vec values(numberOfSamples, fill::zeros);
+	setValuesForFindingDifferentiatedBasisIndex(values);
+	indicesDifferentiatedBasisFunctions = returnKMinIndices(values, numberOfDifferentiatedBasisFunctions);
+
+	string msg = "Indices of samples with differentiated basis functions = ";
+	output.printList(indicesDifferentiatedBasisFunctions, msg);
+
+	/*
+	for (std::vector<int>::const_iterator i = indicesDifferentiatedBasisFunctions.begin(); i != indicesDifferentiatedBasisFunctions.end(); ++i){
+		cout<<"i = "<<*i<<" "<<values(*i)<<"\n";
+
+	}
+	 */
+
 
 }
+
+
+
+
+//
+//void TGEKModel::findIndicesOfDifferentiatedBasisFunctionLocations(void){
+//
+//	assert(ifDataIsRead);
+//	output.printMessage("Finding the indices of differentiated basis functions...");
+//	output.printMessage("Number of differentiated basis functions = ",numberOfDifferentiatedBasisFunctions);
+//	vec y = data.getOutputVector();
+//	indicesDifferentiatedBasisFunctions = findIndicesKMin(y, numberOfDifferentiatedBasisFunctions);
+//
+//	//	indicesDifferentiatedBasisFunctions.print();
+//	//	y.print();
+//
+//}
 
 void TGEKModel::initializeHyperParameters(void){
 
@@ -471,15 +611,15 @@ void TGEKModel::initializeHyperParameters(void){
 }
 
 void TGEKModel::calculatePhiEntriesForFunctionValues(void) {
-	unsigned int N = data.getNumberOfSamples();
+
+	unsigned int N = numberOfSamples;
 	/* first N equations are functional values */
 	for (unsigned int i = 0; i < N; i++) {
 		for (unsigned int j = 0; j < N; j++) {
 			Phi(i, j) = correlationFunction.computeCorrelation(j, i);
 		}
-		for (unsigned int j = 0; j < numberOfDifferentiatedBasisFunctions;
-				j++) {
-			unsigned int index = indicesDifferentiatedBasisFunctions(j);
+		for (unsigned int j = 0; j < numberOfDifferentiatedBasisFunctions;j++) {
+			unsigned int index = indicesDifferentiatedBasisFunctions[j];
 			rowvec d = data.getRowDifferentiationDirection(index);
 			Phi(i, N + j) = correlationFunction.computeCorrelationDot(index, i,
 					d);
@@ -489,62 +629,81 @@ void TGEKModel::calculatePhiEntriesForFunctionValues(void) {
 
 void TGEKModel::calculatePhiEntriesForDerivatives(void) {
 
-	unsigned int N = data.getNumberOfSamples();
-	/* last N equations are derivatives */
-	for (unsigned int i = 0; i < N; i++) {
+
+	unsigned int N    = numberOfSamples;
+	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
+
+	/* last "howManySamplesHaveDerivatives" equations are for directional derivatives */
+	for (unsigned int i = 0; i < Ndot; i++) {
+
+		unsigned int sampleIndex = indicesOfSamplesWithActiveDerivatives[i];
+
+		rowvec directionAtSample = data.getRowDifferentiationDirection(sampleIndex);
+		/* directional derivatives of primary basis functions */
 		for (unsigned int j = 0; j < N; j++) {
-			rowvec d = data.getRowDifferentiationDirection(i);
-			Phi(N + i, j) = correlationFunction.computeCorrelationDot(j, i, d);
+
+			Phi(N + i, j) = correlationFunction.computeCorrelationDot(j, sampleIndex, directionAtSample);
 		}
-		for (unsigned int j = 0; j < numberOfDifferentiatedBasisFunctions;
-				j++) {
-			unsigned int index = indicesDifferentiatedBasisFunctions(j);
-			rowvec d1 = data.getRowDifferentiationDirection(index);
-			rowvec d2 = data.getRowDifferentiationDirection(i);
+
+		/* directional derivatives of differentiated basis functions */
+
+		for (unsigned int j = 0; j < numberOfDifferentiatedBasisFunctions;j++) {
+			unsigned int index = indicesDifferentiatedBasisFunctions[j];
+
+			rowvec directionBasis = data.getRowDifferentiationDirection(index);
 			Phi(N + i, N + j) = correlationFunction.computeCorrelationDotDot(
-					index, i, d1, d2);
+					index, sampleIndex, directionBasis, directionAtSample);
 		}
+
 	}
+
 }
 
-/*
- *
- *
- *  ftilde(x) = phi1(x) * w1 + phi2(x) * w2 + ... + phiN(x) * wN +
- *
- *              dphi1(x) *wN+1 + dphi2(x) *wN+2 + ... + dphiN(x) *wN+Nd
- *
- *
- */
 
 void TGEKModel::calculatePhiMatrix(void){
 
 	assert(ifDataIsRead);
 	assert(ifNormalized);
+	assert(dimension>0);
+	assert(numberOfSamples>0);
+
+	unsigned int N    = numberOfSamples;
+	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
+	unsigned int howManyTotalDataPoints = N + Ndot;
+	unsigned int howManyBasisFunctions = numberOfSamples + numberOfDifferentiatedBasisFunctions;
 
 
 	correlationFunction.setInputSampleMatrix(data.getInputMatrix());
 
-	unsigned int N = data.getNumberOfSamples();
 
-	Phi = zeros<mat>(2*N, N + numberOfDifferentiatedBasisFunctions);
+	Phi = zeros<mat>(howManyTotalDataPoints, howManyBasisFunctions);
 
-	/* first N equations are functional values */
 	calculatePhiEntriesForFunctionValues();
-
-	/* last N equations are derivatives */
 	calculatePhiEntriesForDerivatives();
 
-	/* multiply with the weight matrix */
+	//	assert(checkPhiMatrix());
 
-	WPhi = weightMatrix*Phi;
+	if(ifVaryingSampleWeights){
+		unsigned int sizeOfWeightMatrix = howManyTotalDataPoints;
+		assert(weightMatrix.n_rows == sizeOfWeightMatrix);
+		Phi = weightMatrix*Phi;
+
+	}
+
 
 
 }
 
+
+
 bool TGEKModel::checkPhiMatrix(void){
 
-	unsigned int N = data.getNumberOfSamples();
+
+	unsigned int N    = numberOfSamples;
+	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
+
+
+	double epsilon = 0.0000001;
 
 	for(unsigned int i=0; i<N; i++){
 
@@ -558,27 +717,35 @@ bool TGEKModel::checkPhiMatrix(void){
 
 		}
 
+//		printTwoScalars(sum, ftilde);
+
 		double error = fabs(sum - ftilde);
 		if(error > 10E-05) return false;
 
 	}
 
-	double epsilon = 0.00001;
-	for(unsigned int i=0; i<N; i++){
+	/* directional derivatives */
 
-		rowvec xi = data.getRowX(i);
-		rowvec d = data.getRowDifferentiationDirection(i);
-		rowvec xiPerturbed = xi + epsilon*d;
-		double ftilde = interpolate(xi);
-		double ftildePerturbed = interpolate(xiPerturbed);
 
-		double fdValue = (ftildePerturbed - ftilde)/epsilon;
+	for(unsigned int i=0; i<Ndot; i++){
+
+		unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
+
+		rowvec xi = data.getRowX(indx);
+		rowvec d  = data.getRowDifferentiationDirection(indx);
+
+		rowvec xiPerturbedPlus = xi + epsilon*d;
+		rowvec xiPerturbedMins = xi - epsilon*d;
+		double ftildePerturbedPlus = interpolate(xiPerturbedPlus);
+		double ftildePerturbedMins = interpolate(xiPerturbedMins);
+
+		double fdValue = (ftildePerturbedPlus - ftildePerturbedMins)/(2.0*epsilon);
+
+
 
 		double sum = 0.0;
 		for(unsigned int j=0; j<N+numberOfDifferentiatedBasisFunctions;j++){
-
 			sum +=Phi(N+i,j)*w(j);
-
 		}
 
 		double error = fabs(sum - fdValue);
@@ -589,3 +756,11 @@ bool TGEKModel::checkPhiMatrix(void){
 	return true;
 
 }
+
+unsigned int TGEKModel::getNumberOfSamplesWithActiveGradients(void) const{
+	return indicesOfSamplesWithActiveDerivatives.size();
+
+}
+
+
+

@@ -71,6 +71,7 @@ public:
 	std::string filenameTrainingDataHighFidelity;
 
 	bool ifInputSamplesAreGenerated = false;
+	bool ifSomeAdjointsAreLeftBlank = false;
 
 
 	double noiseLevel = 0.0;

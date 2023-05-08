@@ -47,8 +47,6 @@ class GGEKModel : public SurrogateModel{
 private:
 
 
-	vec vectorOfOnes;
-
 	vec w;
 	mat weightMatrix;
 	vec sampleWeights;
@@ -65,13 +63,11 @@ private:
 	double beta0 = 0.0;
 	double sigmaSquared = 0.0;
 
-	bool ifUsesLinearRegression = false;
+
 	bool ifCorrelationFunctionIsInitialized = false;
 	bool ifActiveDeritiveSampleIndicesAreCalculated = false;
 
-	double genError;
 
-	LinearModel linearModel;
 	KrigingModel auxiliaryModel;
 
 	GaussianCorrelationFunctionForGEK correlationFunction;
@@ -80,10 +76,9 @@ private:
 	double targetForDifferentiatedBasis = 0.0;
 	vector<int> indicesDifferentiatedBasisFunctions;
 	unsigned int numberOfDifferentiatedBasisFunctions = 5;
-	mat differentiationDirectionBasis;
+	mat unitGradientsMatrix;
 
 	vector<int> indicesOfSamplesWithActiveDerivatives;
-
 
 	std::string filenameTrainingDataAuxModel = "auxiliaryData.csv";
 
@@ -98,9 +93,10 @@ private:
 
 public:
 
-	bool ifVaryingSampleWeights = false;
+	bool ifVaryingSampleWeights = true;
 	bool ifTargetForSampleWeightsIsSet = false;
 	bool ifTargetForDifferentiatedBasisIsSet = false;
+
 
 	void setName(string label);
 
@@ -110,7 +106,7 @@ public:
 	void readData(void);
 	void normalizeData(void);
 
-	mat getGradient(void) const;
+
 
 	void setNameOfInputFile(string filename);
 	void setNameOfHyperParametersFile(string filename);
@@ -122,6 +118,8 @@ public:
 
 	void printSurrogateModel(void) const;
 	void printHyperParameters(void) const;
+	void printSampleWeights(void) const;
+
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
 	vec  getHyperParameters(void) const;
@@ -158,10 +156,13 @@ public:
 
 	void generateRhsForRBFs(void);
 
-	void setDifferentiationDirectionsForDifferentiatedBasis(void);
+
+	void calculateUnitGradientVectors(void);
 
 	vector<int> getIndicesOfDifferentiatedBasisFunctionLocations(void) const;
 
+	unsigned int getNumberOfSamplesWithActiveGradients(void) const;
+	mat getGradient(void) const;
 	mat getWeightMatrix(void) const;
 	vec getSampleWeightsVector(void) const;
 	mat getPhiMatrix(void) const;

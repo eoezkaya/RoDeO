@@ -414,6 +414,8 @@ void SurrogateModel::tryOnTestData(void){
 
 			addOneElement(sample,fExact(i));
 			double squaredError = pow((fExact(i) - fTilde),2.0);
+			generalizationError += squaredError;
+
 			addOneElement(sample,squaredError);
 
 			output.printMessage("fExact = ",fExact(i));
@@ -422,6 +424,22 @@ void SurrogateModel::tryOnTestData(void){
 
 		results.row(i) = sample;
 	}
+
+	generalizationError = generalizationError/numberOfTestSamples;
+
 	testResults = results;
+}
+
+void SurrogateModel::printGeneralizationError(void) const{
+
+
+
+	unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
+	string msg = "Generalization error (MSE) = " + std::to_string(generalizationError) + " ";
+	msg += "(Evaluated at " + std::to_string(numberOfTestSamples) + " samples)\n";
+	output.printMessage(msg);
+
+
+
 }
 

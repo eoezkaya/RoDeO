@@ -79,8 +79,6 @@ void SurrogateModelTester::bindSurrogateModels(void){
 	assert(isNotEmpty(fileNameTestData));
 	assert(dimension>0);
 
-
-
 	if(!ifMultiLevel){
 
 		if(surrogateModelType == LINEAR_REGRESSION ){
@@ -100,6 +98,12 @@ void SurrogateModelTester::bindSurrogateModels(void){
 			tangentModel.setDimension(dimension);
 			surrogateModel = &tangentModel;
 		}
+		if(surrogateModelType == GRADIENT_ENHANCED){
+			generalizedGradientEnhancedModel.setDimension(dimension);
+			surrogateModel = &generalizedGradientEnhancedModel;
+		}
+
+
 
 		surrogateModel->setNameOfInputFile(fileNameTraingData);
 
@@ -165,8 +169,7 @@ void SurrogateModelTester::performSurrogateModelTest(void){
 	surrogateModel->tryOnTestData();
 	surrogateModel->saveTestResults();
 
-
-
+	surrogateModel->printGeneralizationError();
 
 }
 

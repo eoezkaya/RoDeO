@@ -145,6 +145,9 @@ void TestFunction::print(void){
 void TestFunction::evaluate(Design &d) const{
 
 	rowvec x= d.designParameters;
+	assert(x.size() == dimension);
+
+
 	if(evaluationSelect == 1){
 
 		assert(func_ptr!=NULL);
@@ -162,6 +165,8 @@ void TestFunction::evaluate(Design &d) const{
 	if(evaluationSelect == 3){
 
 		assert(tan_ptr!=NULL);
+		assert(d.tangentDirection.size() == dimension);
+
 		double fdot;
 		d.trueValue = tan_ptr(x.memptr(), d.tangentDirection.memptr(), &fdot);
 		d.tangentValue = fdot;
@@ -258,10 +263,18 @@ mat TestFunction::generateSamplesWithAdjoints(mat input, unsigned int N) const {
 
 	mat samples(N, 2*dimension+1, fill::zeros);
 
+
 	for (unsigned int i = 0; i < N; i++) {
 		rowvec dv = input.row(i);
 		Design d(dv);
 		evaluate(d);
+
+		if(ifSomeAdjointsAreLeftBlank){
+
+			if(i%2 == 0) d.gradient.fill(0.0);
+
+		}
+
 		rowvec sample(2*dimension +1);
 		copyRowVector(sample,dv);
 		sample(dimension) = d.trueValue;
@@ -739,17 +752,16 @@ double HimmelblauAdj(double *x, double *xb) {
 	double c4 = 1.0;
 	double c5 = 1.0;
 	double c6 = 7.0;
-	double f = 0.0;
-	double fb = 0.0;
+
+
 	double tempb;
 	double tempb0;
-	double Himmelblau;
-	fb = 1.0;
-	tempb = 2.0*pow(c1*(x[0]*x[0])-c3+c2*x[1], 2.0-1)*fb;
-	tempb0 = 2.0*pow(c4*x[0]-c6+c5*(x[1]*x[1]), 2.0-1)*fb;
-	xb[0] = xb[0] + c4*tempb0 + 2*x[0]*c1*tempb;
-	xb[1] = xb[1] + 2*x[1]*c5*tempb0 + c2*tempb;
-	return pow( (c1*x[0]*x[0]+c2*x[1]- c3 ), 2.0 ) + pow( (c4 * x[0]+ c5 * x[1]*x[1]- c6), 2.0 );
+
+	tempb = 2.0*pow(c1*(x[0]*x[0])-c3+c2*x[1], 2.0-1);
+	tempb0 = 2.0*pow(c4*x[0]-c6+c5*(x[1]*x[1]), 2.0-1);
+	xb[0] =  c4*tempb0 + 2*x[0]*c1*tempb;
+	xb[1] =  2*x[1]*c5*tempb0 + c2*tempb;
+	return Himmelblau(x);
 
 }
 

@@ -207,8 +207,11 @@ TEST_F(TGEKModelTest, calculatePhiMatrix) {
 	testModel.setNumberOfDifferentiatedBasisFunctionsUsed(2);
 	testModel.initializeSurrogateModel();
 
+	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
 	testModel.findIndicesOfDifferentiatedBasisFunctionLocations();
+
 	testModel.generateWeightingMatrix();
+	testModel.ifVaryingSampleWeights = false;
 
 	testModel.calculatePhiMatrix();
 
@@ -246,23 +249,20 @@ TEST_F(TGEKModelTest, interpolateWithVariance) {
 
 
 
-
-
-
-
-
 TEST_F(TGEKModelTest, generateSampleWeights) {
 
-	generate2DHimmelblauDataForTGEKModel(10);
+	unsigned int N = 10;
+	generate2DHimmelblauDataForTGEKModel(N);
 
 	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
 	//	testModel.setDisplayOn();
 	testModel.readData();
+	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
 	testModel.generateSampleWeights();
 
 	vec w = testModel.getSampleWeightsVector();
 
-	ASSERT_TRUE(w.size() == 10);
+	ASSERT_TRUE(w.size() == N);
 	double err = fabs(max(w) - 1.0);
 	ASSERT_TRUE(err<10E-10);
 
@@ -271,17 +271,23 @@ TEST_F(TGEKModelTest, generateSampleWeights) {
 
 TEST_F(TGEKModelTest, generateWeightingMatrix) {
 
-	generate2DHimmelblauDataForTGEKModel(5);
+	unsigned int N = 10;
+	generate2DHimmelblauDataForTGEKModel(N);
 
 	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
 	//	testModel.setDisplayOn();
 	testModel.readData();
+	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
 	testModel.generateWeightingMatrix();
 
 	mat W = testModel.getWeightMatrix();
 
-	for(unsigned int i=0; i<5;i++){
-		ASSERT_TRUE(W(i,i) > 0.0);
+	unsigned int Ndot = testModel.getNumberOfSamplesWithActiveGradients();
+
+	ASSERT_TRUE(W.is_diagmat());
+
+	for(unsigned int i=0; i<N+Ndot;i++){
+		ASSERT_TRUE(W(i,i) >= 0.05);
 	}
 }
 
@@ -390,12 +396,6 @@ TEST_F(TGEKModelTest, trainTheta) {
 	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
 	//	testModel.setDisplayOn();
 	testModel.readData();
-
-	//	vec ub(2);
-	//	ub.fill(6.0);
-	//	vec lb(2);
-	//	lb.fill(-6.0);
-	//	testModel.setBoxConstraints(lb, ub);
 	testModel.normalizeData();
 	testModel.setNumberOfTrainingIterations(1000);
 	testModel.initializeSurrogateModel();
@@ -418,12 +418,6 @@ TEST_F(TGEKModelTest, updateAuxilliaryFields) {
 	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
 	//	testModel.setDisplayOn();
 	testModel.readData();
-
-	//	vec ub(2);
-	//	ub.fill(6.0);
-	//	vec lb(2);
-	//	lb.fill(-6.0);
-	//	testModel.setBoxConstraints(lb, ub);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 
@@ -438,11 +432,6 @@ TEST_F(TGEKModelTest, train) {
 	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
 	//	testModel.setDisplayOn();
 	testModel.readData();
-	//	vec ub(2);
-	//	ub.fill(6.0);
-	//	vec lb(2);
-	//	lb.fill(-6.0);
-	//	testModel.setBoxConstraints(lb, ub);
 	testModel.setNumberOfTrainingIterations(1000);
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
@@ -453,46 +442,4 @@ TEST_F(TGEKModelTest, train) {
 }
 
 
-
-
-
-//TEST_F(TGEKModelTest, calculateOutSampleError1DFunction) {
-//
-//	generate1DTestFunctionDataForTGEKModel(10,2000);
-//	trainingData.print();
-//	testData.print();
-//
-//
-//	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
-//	//	testModel.setDisplayOn();
-//	testModel.readData();
-//	vec ub(1); ub.fill(6.0);
-//	vec lb(1); lb.fill(0.0);
-//	testModel.setBoxConstraints(lb, ub);
-//	testModel.setNumberOfTrainingIterations(1000);
-//	testModel.normalizeData();
-//	testModel.initializeSurrogateModel();
-//	testModel.setDisplayOn();
-//	testModel.train();
-//
-//	testModel.printHyperParameters();
-//
-//
-//	testModel.setNameOfInputFileTest("testSamplesHimmelblauTGEK.csv");
-//	testModel.readDataTest();
-//	testModel.normalizeDataTest();
-//
-//
-//
-//	double error = testModel.calculateOutSampleError();
-//
-//	printScalar(error);
-//
-//	testModel.saveTestResults();
-//
-//
-//
-//
-//
-//}
 #endif

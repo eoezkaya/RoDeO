@@ -47,90 +47,107 @@ class TGEKModel : public SurrogateModel{
 private:
 
 
-	   /* Auxiliary vectors */
-	   	vec vectorOfOnes;
+	/* Auxiliary vectors */
+	vec vectorOfOnes;
 
-	   	vec w;
-	   	mat weightMatrix;
-	   	vec sampleWeights;
+	vec w;
+	mat weightMatrix;
+	vec sampleWeights;
 
-	   	mat Phi;
-	   	mat WPhi;
-	   	vec ydot;
-	   	vec Wydot;
+	mat Phi;
+	vec ydot;
 
-	   	SVDSystem  linearSystemCorrelationMatrixSVD;
+	SVDSystem  linearSystemCorrelationMatrixSVD;
 
-	   	double beta0 = 0.0;
-	   	double sigmaSquared = 0.0;
+	double beta0 = 0.0;
+	double sigmaSquared = 0.0;
 
-	   	bool ifUsesLinearRegression = false;
-	   	bool ifCorrelationFunctionIsInitialized = false;
+	double sigmaThresholdValueForSVD = 10E-12;
 
-	   	double genError;
-
-	   	LinearModel linearModel;
-	   	KrigingModel auxiliaryModel;
-
-	   	GaussianCorrelationFunctionForGEK correlationFunction;
+	bool ifUsesLinearRegression = false;
+	bool ifCorrelationFunctionIsInitialized = false;
+	bool ifActiveDeritiveSampleIndicesAreCalculated = false;
 
 
-	   	uvec indicesDifferentiatedBasisFunctions;
-		unsigned int numberOfDifferentiatedBasisFunctions = 5;
+	KrigingModel auxiliaryModel;
+
+	GaussianCorrelationFunctionForGEK correlationFunction;
 
 
-	   	std::string filenameTrainingDataAuxModel = "auxiliaryData.csv";
+	double targetForDifferentiatedBasis = 0.0;
+	vector<int> indicesDifferentiatedBasisFunctions;
+
+//	uvec indicesDifferentiatedBasisFunctions;
+	unsigned int numberOfDifferentiatedBasisFunctions = 0;
+
+	vector<int> indicesOfSamplesWithActiveDerivatives;
+
+
+	std::string filenameTrainingDataAuxModel = "auxiliaryData.csv";
 
 	void calculatePhiEntriesForFunctionValues(void);
 	void calculatePhiEntriesForDerivatives(void);
 	void generateRhsForRBFs(void);
 	void resetDataObjects(void);
 	void updateModelWithNewData(void);
+	void calculateBeta0(void);
+	void setValuesForFindingDifferentiatedBasisIndex(vec &values);
 
 
 public:
 
-		void setBoxConstraints(Bounds boxConstraintsInput);
-		void setDimension(unsigned int);
+	bool ifVaryingSampleWeights = true;
+	bool ifTargetForSampleWeightsIsSet = false;
+	bool ifTargetForDifferentiatedBasisIsSet = false;
 
-	   	void readData(void);
-	   	void normalizeData(void);
+	void setBoxConstraints(Bounds boxConstraintsInput);
+	void setDimension(unsigned int);
 
-		void setNameOfInputFile(string filename);
-		void setNameOfHyperParametersFile(string filename);
-		void setNumberOfTrainingIterations(unsigned int);
-		void setNumberOfDifferentiatedBasisFunctionsUsed(unsigned int n);
+	void readData(void);
+	void normalizeData(void);
 
-		void initializeSurrogateModel(void);
-		void printSurrogateModel(void) const;
-		void printHyperParameters(void) const;
-		void saveHyperParameters(void) const;
-		void loadHyperParameters(void);
-		vec  getHyperParameters(void) const;
-		void setHyperParameters(vec parameters);
+	void setNameOfInputFile(string filename);
+	void setNameOfHyperParametersFile(string filename);
+	void setNumberOfTrainingIterations(unsigned int);
+	void setNumberOfDifferentiatedBasisFunctionsUsed(unsigned int n);
 
-		void updateAuxilliaryFields(void);
-		void train(void);
-		double interpolate(rowvec x) const;
-		void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const ;
+	void initializeSurrogateModel(void);
+	void printSurrogateModel(void) const;
+	void printHyperParameters(void) const;
+	void saveHyperParameters(void) const;
+	void loadHyperParameters(void);
 
-		void addNewSampleToData(rowvec newsample);
-		void addNewLowFidelitySampleToData(rowvec newsample);
+	void setHyperParameters(vec parameters);
+
+	void updateAuxilliaryFields(void);
+	void train(void);
+	double interpolate(rowvec x) const;
+	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const ;
+
+	void addNewSampleToData(rowvec newsample);
+	void addNewLowFidelitySampleToData(rowvec newsample);
 
 
+	void calculateIndicesOfSamplesWithActiveDerivatives(void);
 
-		void findIndicesOfDifferentiatedBasisFunctionLocations(void);
-		void initializeHyperParameters(void);
-		void calculatePhiMatrix(void);
-		bool checkPhiMatrix(void);
+	void findIndicesOfDifferentiatedBasisFunctionLocations(void);
+	void initializeHyperParameters(void);
 
-		void trainTheta(void);
-		void prepareTrainingDataForTheKrigingModel(void);
-		void generateWeightingMatrix(void);
-		void generateSampleWeights(void);
+	void assembleLinearSystem(void);
+	void solveLinearSystem();
 
-		mat getWeightMatrix(void) const;
-		vec getSampleWeightsVector(void) const;
+	void calculatePhiMatrix(void);
+	bool checkPhiMatrix(void);
+
+	void trainTheta(void);
+	void prepareTrainingDataForTheKrigingModel(void);
+	void generateWeightingMatrix(void);
+	void generateSampleWeights(void);
+
+	mat getWeightMatrix(void) const;
+	vec getSampleWeightsVector(void) const;
+	vec  getHyperParameters(void) const;
+	unsigned int getNumberOfSamplesWithActiveGradients(void) const;
 
 
 };

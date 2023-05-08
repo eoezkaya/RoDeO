@@ -58,11 +58,14 @@ void printVector(std::vector<bool> v);
 void printVector(std::vector<double> v);
 
 #define printScalar(name) printScalarValueWithName(#name, (name))
+#define printTwoScalars(name1,name2) printTwoScalarValuesWithNames(#name1, (name1), #name2, (name2))
 
 void printScalarValueWithName(std::string name, int value) ;
 void printScalarValueWithName(std::string name, double value);
 void printScalarValueWithName(std::string name, unsigned int value);
 
+
+void printTwoScalarValuesWithNames(std::string name1, double value1,std::string name2, double value2 );
 
 vec    makeUnitVector(vec x);
 rowvec makeUnitVector(rowvec x);

@@ -42,6 +42,7 @@
 #include "aggregation_model.hpp"
 #include "multi_level_method.hpp"
 #include "tgek.hpp"
+#include "ggek.hpp"
 
 class SurrogateModelTester{
 
@@ -60,6 +61,7 @@ private:
 	AggregationModel aggregationModel;
 	MultiLevelModel multilevelModel;
 	TGEKModel tangentModel;
+	GGEKModel generalizedGradientEnhancedModel;
 
 
 	SurrogateModel *surrogateModel;

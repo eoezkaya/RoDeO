@@ -68,6 +68,13 @@ void abortIfHasNan(rowvec &v){
 }
 
 
+void printTwoScalarValuesWithNames(std::string name1, double value1,std::string name2, double value2 ){
+
+	std::cout<<name1<<" = "<<value1<<" "<<name2<<" = "<<value2<<"\n";
+
+}
+
+
 void copyVector(vec &a,vec b){
 
 	assert(a.size() >= b.size());

@@ -74,6 +74,8 @@ protected:
 
 	Bounds boxConstraints;
 
+	double generalizationError = 0.0;
+
 
 
 
@@ -170,6 +172,8 @@ public:
 	rowvec getRowXRaw(unsigned int index) const;
 
 	void reduceTrainingData(unsigned int, double) const;
+
+	void printGeneralizationError(void) const;
 
 
 };

@@ -148,8 +148,6 @@ public:
 	void runSurrogateModelTest(void);
 
 
-	bool ifDisplayIsOn(void) const;
-
 };
 
 

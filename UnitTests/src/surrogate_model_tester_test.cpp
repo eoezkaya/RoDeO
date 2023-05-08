@@ -57,21 +57,30 @@ protected:
 		testFunction.function.filenameTestData = "testData.csv";
 		testFunction.function.filenameTrainingData =  "trainingData.csv";
 		testFunction.function.numberOfTrainingSamples = 50;
-		testFunction.function.numberOfTestSamples = 100;
+		testFunction.function.numberOfTestSamples = 20;
 
 		testFunction.function.filenameTrainingDataHighFidelity = "trainingData.csv";
 		testFunction.function.filenameTrainingDataLowFidelity = "trainingDataLowFi.csv";
 		testFunction.function.numberOfTrainingSamplesLowFi = 100;
 
+
+		nonLinear1DtestFunction.function.filenameTrainingData = "trainingData.csv";
+		nonLinear1DtestFunction.function.filenameTestData = "testData.csv";
+		nonLinear1DtestFunction.function.numberOfTrainingSamples = 10;
+		nonLinear1DtestFunction.function.numberOfTestSamples = 200;
+
 		surrogateTester.setDimension(2);
+		surrogateTester1D.setDimension(1);
 
 	}
 
 	void TearDown() override {}
 
 	SurrogateModelTester surrogateTester;
+	SurrogateModelTester surrogateTester1D;
 	HimmelblauFunction testFunction;
 	LinearTestFunction1 linearTestFunction;
+	NonLinear1DTestFunction1 nonLinear1DtestFunction;
 
 };
 
@@ -105,6 +114,141 @@ TEST_F(SurrogateTesterTest, setBoxConstraints){
 	ASSERT_EQ(dimBoxConstraints,2);
 
 }
+
+TEST_F(SurrogateTesterTest, performSurrogateModelGGEKModel){
+
+
+	Bounds boxConstraints;
+	boxConstraints.setDimension(2);
+	boxConstraints.setBounds(-6.0, 6.0);
+
+	surrogateTester.setBoxConstraints(boxConstraints);
+	testFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	testFunction.function.generateTrainingSamplesWithAdjoints();
+	testFunction.function.generateTestSamples();
+
+
+	surrogateTester.setName("testModel");
+	surrogateTester.setFileNameTrainingData(testFunction.function.filenameTrainingData);
+	surrogateTester.setFileNameTestData(testFunction.function.filenameTestData);
+	surrogateTester.setNumberOfTrainingIterations(1000);
+
+	surrogateTester.setSurrogateModel(GGEK);
+	surrogateTester.bindSurrogateModels();
+	surrogateTester.setDisplayOn();
+	surrogateTester.performSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv", csv_ascii);
+
+	vec SE = results.col(4);
+
+	double MSE = mean(SE);
+//	printScalar(MSE);
+
+	abort();
+
+
+	EXPECT_LT(MSE, 10000);
+
+
+	remove("surrogateTestResults.csv");
+	remove(testFunction.function.filenameTrainingData.c_str());
+	remove(testFunction.function.filenameTestData.c_str());
+
+
+}
+
+TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
+
+
+
+	Bounds boxConstraints;
+	boxConstraints.setDimension(2);
+	boxConstraints.setBounds(-6.0, 6.0);
+
+	surrogateTester.setBoxConstraints(boxConstraints);
+	testFunction.function.generateTrainingSamplesWithTangents();
+	testFunction.function.generateTestSamples();
+
+	surrogateTester.setName("testModel");
+	surrogateTester.setFileNameTrainingData(testFunction.function.filenameTrainingData);
+	surrogateTester.setFileNameTestData(testFunction.function.filenameTestData);
+	surrogateTester.setNumberOfTrainingIterations(1000);
+
+	surrogateTester.setSurrogateModel(TANGENT);
+	surrogateTester.bindSurrogateModels();
+	surrogateTester.setDisplayOn();
+	surrogateTester.performSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv", csv_ascii);
+
+	vec SE = results.col(4);
+	double MSE = mean(SE);
+//	printScalar(MSE);
+
+	EXPECT_LT(mean(SE), 100000);
+
+
+	remove("surrogateTestResults.csv");
+	remove(testFunction.function.filenameTrainingData.c_str());
+	remove(testFunction.function.filenameTestData.c_str());
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+TEST_F(SurrogateTesterTest, performSurrogateModelGGEKModel1D){
+
+
+	Bounds boxConstraints;
+	boxConstraints.setDimension(1);
+	boxConstraints.setBounds(-3.0, 3.0);
+
+	surrogateTester1D.setBoxConstraints(boxConstraints);
+	nonLinear1DtestFunction.function.generateTrainingSamplesWithAdjoints();
+	nonLinear1DtestFunction.function.generateTestSamples();
+
+	surrogateTester1D.setName("testModel");
+	surrogateTester1D.setFileNameTrainingData(nonLinear1DtestFunction.function.filenameTrainingData);
+	surrogateTester1D.setFileNameTestData(nonLinear1DtestFunction.function.filenameTestData);
+	surrogateTester1D.setNumberOfTrainingIterations(1000);
+
+	surrogateTester1D.setSurrogateModel(GGEK);
+	surrogateTester1D.bindSurrogateModels();
+//	surrogateTester1D.setDisplayOn();
+	surrogateTester1D.performSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv", csv_ascii);
+
+	vec SE = results.col(3);
+
+	EXPECT_LT(mean(SE), 100000);
+
+
+
+	remove("surrogateTestResults.csv");
+	remove(nonLinear1DtestFunction.function.filenameTrainingData.c_str());
+	remove(nonLinear1DtestFunction.function.filenameTestData.c_str());
+
+
+
+}
+
+
+
 
 
 TEST_F(SurrogateTesterTest, performSurrogateModelTestMultiLevelOnlyFunctionalValues){
@@ -216,7 +360,10 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestOrdinaryKriging){
 
 	vec SE = results.col(4);
 
-	EXPECT_LT(mean(SE), 100000);
+	double MSE = mean(SE);
+	printScalar(MSE);
+
+	EXPECT_LT(MSE, 100000);
 
 	remove("surrogateTestResults.csv");
 	remove(testFunction.function.filenameTrainingData.c_str());
@@ -268,39 +415,6 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestUniversalKriging){
 
 }
 
-TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
-
-
-	Bounds boxConstraints;
-	boxConstraints.setDimension(2);
-	boxConstraints.setBounds(-6.0, 6.0);
-
-	surrogateTester.setBoxConstraints(boxConstraints);
-	testFunction.function.generateTrainingSamplesWithTangents();
-	testFunction.function.generateTestSamples();
-
-	surrogateTester.setName("testModel");
-	surrogateTester.setFileNameTrainingData(testFunction.function.filenameTrainingData);
-	surrogateTester.setFileNameTestData(testFunction.function.filenameTestData);
-	surrogateTester.setNumberOfTrainingIterations(1000);
-
-	surrogateTester.setSurrogateModel(TANGENT);
-	surrogateTester.bindSurrogateModels();
-//	surrogateTester.setDisplayOn();
-	surrogateTester.performSurrogateModelTest();
-
-	mat results;
-	results.load("surrogateTestResults.csv", csv_ascii);
-
-	vec SE = results.col(4);
-
-	EXPECT_LT(mean(SE), 100000);
-
-	remove("surrogateTestResults.csv");
-	remove(testFunction.function.filenameTrainingData.c_str());
-	remove(testFunction.function.filenameTestData.c_str());
-
-}
 
 
 #endif

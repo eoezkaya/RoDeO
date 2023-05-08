@@ -153,7 +153,7 @@ bool checkifTooCLose(const rowvec &, const rowvec &, double = 10E-6);
 bool checkifTooCLose(const rowvec &, const mat &,double = 10E-6);
 
 
-#define PRINT_HERE printf("Here : %s(%d)--:\n",__FILE__,__LINE__);
+
 
 
 #endif
