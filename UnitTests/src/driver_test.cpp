@@ -73,7 +73,7 @@ protected:
 TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModel){
 
 	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithAdjoint();
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 	himmelblauFunction.function.generateTestSamples();
 
 	RoDeODriver testDriver;
@@ -89,7 +89,6 @@ TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModel){
 	ASSERT_EQ(results.n_cols, 5);
 	ASSERT_EQ(results.n_rows, 201);
 
-	abort();
 
 }
 
@@ -100,6 +99,7 @@ TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModel){
 
 TEST_F(DriverTest, runSurrogateModelHimmelblauMLModel){
 
+	abort();
 
 	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
 	himmelblauFunction.function.generateTestSamples();

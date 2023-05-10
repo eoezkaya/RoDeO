@@ -68,6 +68,7 @@ void GGEKModel::setBoxConstraints(Bounds boxConstraintsInput){
 void GGEKModel::setDimension(unsigned int dim){
 
 	dimension = dim;
+	data.setDimension(dim);
 	auxiliaryModel.setDimension(dim);
 }
 
@@ -84,8 +85,10 @@ void GGEKModel::setNameOfHyperParametersFile(string filename){
 
 
 }
-void GGEKModel::setNumberOfTrainingIterations(unsigned int){
+void GGEKModel::setNumberOfTrainingIterations(unsigned int N){
 
+	numberOfTrainingIterations = N;
+	auxiliaryModel.setNumberOfTrainingIterations(N);
 
 }
 

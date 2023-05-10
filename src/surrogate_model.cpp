@@ -327,9 +327,7 @@ void SurrogateModel::saveTestResults(void) const{
 	unsigned int dim = data.getDimension();
 
 	for(unsigned int i=0; i<dim; i++){
-
 		header(i) ="x"+std::to_string(i+1);
-
 	}
 
 	header(dim)   = "Estimated value";
@@ -338,6 +336,7 @@ void SurrogateModel::saveTestResults(void) const{
 
 	testResults.save( csv_name(filenameTestResults, header) );
 
+	output.printMessage("Writing results to the file = ", filenameTestResults);
 
 }
 
@@ -432,14 +431,10 @@ void SurrogateModel::tryOnTestData(void){
 
 void SurrogateModel::printGeneralizationError(void) const{
 
-
-
 	unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
 	string msg = "Generalization error (MSE) = " + std::to_string(generalizationError) + " ";
 	msg += "(Evaluated at " + std::to_string(numberOfTestSamples) + " samples)\n";
 	output.printMessage(msg);
-
-
 
 }
 

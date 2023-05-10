@@ -129,6 +129,7 @@ RoDeODriver::RoDeODriver(){
 	availableSurrogateModels.push_back("LINEAR_REGRESSION");
 	availableSurrogateModels.push_back("AGGREGATION");
 	availableSurrogateModels.push_back("TANGENT");
+	availableSurrogateModels.push_back("GRADIENT_ENHANCED");
 
 }
 
@@ -1053,13 +1054,24 @@ SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
 
 void RoDeODriver::runSurrogateModelTest(void){
 
+
+	configKeys.abortifConfigKeyIsNotSet("DIMENSION");
+	configKeys.abortifConfigKeyIsNotSet("LOWER_BOUNDS");
+	configKeys.abortifConfigKeyIsNotSet("UPPER_BOUNDS");
+	configKeys.abortifConfigKeyIsNotSet("PROBLEM_NAME");
+	configKeys.abortifConfigKeyIsNotSet("FILENAME_TRAINING_DATA");
+	configKeys.abortifConfigKeyIsNotSet("FILENAME_TEST_DATA");
+
+
 	SurrogateModelTester surrogateTest;
 
 	string problemName = configKeys.getConfigKeyStringValue("PROBLEM_NAME");
 	surrogateTest.setName(problemName);
 
+
 	int dimension = configKeys.getConfigKeyIntValue("DIMENSION");
 	surrogateTest.setDimension(dimension);
+
 
 	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
 	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
@@ -1100,6 +1112,8 @@ void RoDeODriver::runSurrogateModelTest(void){
 	string filenameTestData = configKeys.getConfigKeyStringValue("FILENAME_TEST_DATA");
 	surrogateTest.setFileNameTestData(filenameTestData);
 
+	surrogateTest.bindSurrogateModels();
+
 	if(configKeys.ifConfigKeyIsSet("NUMBER_OF_TRAINING_ITERATIONS")){
 
 		unsigned int numberOfIterationsForSurrogateModelTraining = configKeys.getConfigKeyIntValue("NUMBER_OF_TRAINING_ITERATIONS");
@@ -1109,7 +1123,12 @@ void RoDeODriver::runSurrogateModelTest(void){
 
 
 
-	surrogateTest.bindSurrogateModels();
+	string isDisplayOn = configKeys.getConfigKeyStringValue("DISPLAY");
+
+	if(checkIfOn(isDisplayOn)){
+		surrogateTest.setDisplayOn();
+	}
+
 
 	surrogateTest.performSurrogateModelTest();
 

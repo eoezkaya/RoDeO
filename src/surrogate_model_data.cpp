@@ -137,7 +137,6 @@ void SurrogateModelData::readData(string inputFilename){
 
 	output.printMessage("Loading data from the file: " + inputFilename);
 
-
 	bool status = rawData.load(inputFilename.c_str(), csv_ascii);
 
 	if(status == true)
@@ -209,6 +208,7 @@ void SurrogateModelData::readDataTest(string inputFilename){
 		XTest = XrawTest;
 	}
 	if(XrawTest.n_cols < dimension || XrawTest.n_cols> dimension+1){
+
 		output.printErrorMessageAndAbort("Problem with data the test data (cvs ascii format), too many or too few columns in file: " + inputFilename);
 	}
 

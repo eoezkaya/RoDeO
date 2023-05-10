@@ -54,6 +54,11 @@ void SurrogateModelTester::setName(string nameInput){
 
 void SurrogateModelTester::setNumberOfTrainingIterations(unsigned int nIterations) {
 	numberOfTrainingIterations = nIterations;
+
+	if(ifbindSurrogateModelisDone){
+		surrogateModel->setNumberOfTrainingIterations(numberOfTrainingIterations);
+	}
+
 }
 
 
@@ -155,6 +160,7 @@ void SurrogateModelTester::performSurrogateModelTest(void){
 	surrogateModel->readData();
 	outputToScreen.printMessage("Reading test data...");
 	surrogateModel->readDataTest();
+
 	surrogateModel->setBoxConstraints(boxConstraints);
 	outputToScreen.printMessage("Data normalization...");
 	surrogateModel->normalizeData();
@@ -165,6 +171,10 @@ void SurrogateModelTester::performSurrogateModelTest(void){
 	outputToScreen.printMessage("Surrogate model training...");
 	surrogateModel->train();
 
+	if(outputToScreen.ifScreenDisplay){
+
+		surrogateModel->setDisplayOn();
+	}
 
 	surrogateModel->tryOnTestData();
 	surrogateModel->saveTestResults();
