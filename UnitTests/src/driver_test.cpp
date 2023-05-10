@@ -70,6 +70,35 @@ protected:
 };
 
 
+TEST_F(DriverTest, runSurrogateModelHimmelblauMLModel){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+	himmelblauFunction.function.generateTestSamples();
+
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauML.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv");
+
+	ASSERT_EQ(results.n_cols, 5);
+	ASSERT_EQ(results.n_rows, 201);
+
+
+	abort();
+
+}
+
+
+
+
+
+
 TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModel){
 
 	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
@@ -96,30 +125,6 @@ TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModel){
 
 
 
-
-TEST_F(DriverTest, runSurrogateModelHimmelblauMLModel){
-
-	abort();
-
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
-	himmelblauFunction.function.generateTestSamples();
-
-	RoDeODriver testDriver;
-
-//	testDriver.setDisplayOn();
-	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblau3.cfg");
-	testDriver.readConfigFile();
-	testDriver.runSurrogateModelTest();
-
-	mat results;
-	results.load("surrogateTestResults.csv");
-
-	ASSERT_EQ(results.n_cols, 5);
-	ASSERT_EQ(results.n_rows, 201);
-
-
-
-}
 
 
 

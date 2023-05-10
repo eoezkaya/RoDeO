@@ -75,6 +75,7 @@ protected:
 	Bounds boxConstraints;
 
 	double generalizationError = 0.0;
+	double standardDeviationOfGeneralizationError = 0.0;
 
 
 

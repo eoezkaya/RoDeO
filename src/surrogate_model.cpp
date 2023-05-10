@@ -369,6 +369,7 @@ void SurrogateModel::tryOnTestData(void){
 
 	assert(ifNormalizedTestData);
 
+
 	output.printMessage("Trying surrogate model on test data...");
 
 	unsigned int dim = data.getDimension();
@@ -384,6 +385,8 @@ void SurrogateModel::tryOnTestData(void){
 	}
 
 	unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
+	vec squaredError(numberOfTestSamples, fill::zeros);
+
 
 	mat results(numberOfTestSamples,numberOfEntries);
 
@@ -412,10 +415,9 @@ void SurrogateModel::tryOnTestData(void){
 		if(data.ifTestDataHasFunctionValues){
 
 			addOneElement(sample,fExact(i));
-			double squaredError = pow((fExact(i) - fTilde),2.0);
-			generalizationError += squaredError;
-
-			addOneElement(sample,squaredError);
+			double error = pow((fExact(i) - fTilde),2.0);
+			squaredError(i) = error;
+			addOneElement(sample,error);
 
 			output.printMessage("fExact = ",fExact(i));
 			output.printMessage("\n");
@@ -424,7 +426,11 @@ void SurrogateModel::tryOnTestData(void){
 		results.row(i) = sample;
 	}
 
-	generalizationError = generalizationError/numberOfTestSamples;
+	if(data.ifTestDataHasFunctionValues){
+
+		generalizationError = mean(squaredError);
+		standardDeviationOfGeneralizationError = stddev(squaredError);
+	}
 
 	testResults = results;
 }
@@ -433,8 +439,9 @@ void SurrogateModel::printGeneralizationError(void) const{
 
 	unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
 	string msg = "Generalization error (MSE) = " + std::to_string(generalizationError) + " ";
-	msg += "(Evaluated at " + std::to_string(numberOfTestSamples) + " samples)\n";
+	msg += "(Evaluated at " + std::to_string(numberOfTestSamples) + " samples)";
 	output.printMessage(msg);
-
+	msg = "standard deviation of the MSE = " + std::to_string(standardDeviationOfGeneralizationError);
+	output.printMessage(msg);
 }
 
