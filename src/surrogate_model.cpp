@@ -331,8 +331,14 @@ void SurrogateModel::saveTestResults(void) const{
 	}
 
 	header(dim)   = "Estimated value";
-	header(dim+1) = "True value";
-	header(dim+2) = "Squared Error";
+
+	if(data.ifTestDataHasFunctionValues){
+
+		header(dim+1) = "True value";
+		header(dim+2) = "Squared Error";
+	}
+
+
 
 	testResults.save( csv_name(filenameTestResults, header) );
 
@@ -392,7 +398,6 @@ void SurrogateModel::tryOnTestData(void){
 
 	vec fExact;
 	if(data.ifTestDataHasFunctionValues){
-
 		fExact = data.getOutputVectorTest();
 	}
 
@@ -432,16 +437,23 @@ void SurrogateModel::tryOnTestData(void){
 		standardDeviationOfGeneralizationError = stddev(squaredError);
 	}
 
+
 	testResults = results;
 }
 
 void SurrogateModel::printGeneralizationError(void) const{
 
-	unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
-	string msg = "Generalization error (MSE) = " + std::to_string(generalizationError) + " ";
-	msg += "(Evaluated at " + std::to_string(numberOfTestSamples) + " samples)";
-	output.printMessage(msg);
-	msg = "standard deviation of the MSE = " + std::to_string(standardDeviationOfGeneralizationError);
-	output.printMessage(msg);
+	if(generalizationError>0.0){
+
+		unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
+		string msg = "Generalization error (MSE) = " + std::to_string(generalizationError) + " ";
+		msg += "(Evaluated at " + std::to_string(numberOfTestSamples) + " samples)";
+		output.printMessage(msg);
+		msg = "standard deviation of the MSE = " + std::to_string(standardDeviationOfGeneralizationError);
+		output.printMessage(msg);
+
+	}
+
+
 }
 
