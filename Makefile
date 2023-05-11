@@ -1,6 +1,7 @@
 TARGET_EXEC := rodeo
 
 BUILD_DIR := ./build
+BUILD_DIR_TEST := ./build_TEST
 SRC_DIRS := ./src
 
 # Find all the C and C++ files we want to compile
@@ -33,7 +34,7 @@ $(BUILD_DIR)/%.cpp.o: %.cpp
 
 .PHONY: clean
 clean:
-	rm -r $(BUILD_DIR)
+	rm -r $(BUILD_DIR) $(BUILD_DIR_TEST)
 
 # Include the .d makefiles. The - at the front suppresses the errors of missing
 # Makefiles. Initially, all the .d files will be missing, and we don't want those

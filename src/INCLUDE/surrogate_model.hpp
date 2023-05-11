@@ -78,6 +78,8 @@ protected:
 	double standardDeviationOfGeneralizationError = 0.0;
 
 
+	vec sampleWeights;
+	double targetForSampleWeights = 0.0;
 
 
 
@@ -90,6 +92,8 @@ public:
 	bool ifModelTrainingIsDone = false;
 	bool ifHasTestData = false;
 	bool ifNormalizedTestData = false;
+	bool ifVaryingSampleWeights = false;
+	bool ifTargetForSampleWeightsIsSet = false;
 
 
 	void setDimension(unsigned int);
@@ -175,6 +179,9 @@ public:
 	void reduceTrainingData(unsigned int, double) const;
 
 	void printGeneralizationError(void) const;
+
+	void generateSampleWeights(void);
+	void printSampleWeights(void) const;
 
 
 };

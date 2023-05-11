@@ -1,6 +1,6 @@
-VERSION = 0.2
-TARGET_EXEC := rodeo
-BUILD_DIR := ./build
+VERSION = 0.3
+TARGET_EXEC := rodeo_test
+BUILD_DIR := ./build_TEST
 SRC_DIRS := ./src ./UnitTests/src
 
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp)

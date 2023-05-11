@@ -66,8 +66,31 @@ protected:
 	HimmelblauFunction himmelblauFunction;
 	HimmelblauConstraintFunction1 constraint1;
 	HimmelblauConstraintFunction2 constraint2;
+	WingweightFunction wingweightFunction;
 
 };
+
+
+TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModelWingweight){
+
+	wingweightFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	wingweightFunction.function.generateTrainingSamplesWithAdjoints();
+	wingweightFunction.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauGGEKwingweight.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv");
+
+
+}
+
+
 
 
 TEST_F(DriverTest, runSurrogateModelHimmelblauMLModel){

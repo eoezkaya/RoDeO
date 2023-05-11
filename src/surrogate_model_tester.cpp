@@ -54,13 +54,11 @@ void SurrogateModelTester::setName(string nameInput){
 
 void SurrogateModelTester::setNumberOfTrainingIterations(unsigned int nIterations) {
 	numberOfTrainingIterations = nIterations;
-
 	if(ifbindSurrogateModelisDone){
 		surrogateModel->setNumberOfTrainingIterations(numberOfTrainingIterations);
+
 	}
-
 }
-
 
 void SurrogateModelTester::setSurrogateModel(SURROGATE_MODEL modelType){
 

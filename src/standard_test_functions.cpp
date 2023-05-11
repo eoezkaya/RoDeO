@@ -161,6 +161,39 @@ HimmelblauConstraintFunction2::HimmelblauConstraintFunction2():function("Constra
 }
 
 
+WingweightFunction::WingweightFunction():function("Himmelblau", 10){
+
+	function.func_ptr = Wingweight;
+	function.adj_ptr  = WingweightAdj;
+
+	Bounds boxConstraints;
+
+	vec lb(10);
+	vec ub(10);
+
+	lb(0) = 150.0; ub(0) = 200.0;
+	lb(1) = 220.0; ub(1) = 300.0;
+	lb(2) = 6.0;   ub(2) = 10.0;
+	lb(3) = -10.0; ub(3) = 10.0;
+	lb(4) = 16.0;  ub(4) = 45.0;
+	lb(5) = 0.5;   ub(5) = 1.0;
+	lb(6) = 0.08;  ub(6) = 0.18;
+	lb(7) = 2.5;   ub(7) = 6.0;
+	lb(8) = 1700.0;ub(8) = 2500.0;
+	lb(9) = 0.025; ub(9) = 0.08;
+
+
+	boxConstraints.setBounds(lb,ub);
+	function.setBoxConstraints(boxConstraints);
+	function.filenameTestData = "wingweightTestData.csv";
+	function.filenameTrainingData = "wingweight.csv";
+
+	function.numberOfTrainingSamples = 50;
+	function.numberOfTestSamples = 100;
+
+}
+
+
 
 
 

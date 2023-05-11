@@ -67,9 +67,6 @@ TestFunction::TestFunction(std::string name,int dim):boxConstraints(dim){
 
 }
 
-
-
-
 void TestFunction::setBoxConstraints(double lb, double ub){
 
 	assert(dimension>0);
@@ -77,10 +74,15 @@ void TestFunction::setBoxConstraints(double lb, double ub){
 	parameterBounds.setBounds(lb, ub);
 
 	boxConstraints = parameterBounds;
-
-
 }
 
+void TestFunction::setBoxConstraints(Bounds bounds){
+	assert(dimension>0);
+	assert(bounds.areBoundsSet());
+	assert(bounds.getDimension() == dimension);
+
+	boxConstraints = bounds;
+}
 
 void TestFunction::evaluateGlobalExtrema(void) const{
 

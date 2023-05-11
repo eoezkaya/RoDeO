@@ -578,8 +578,8 @@ void KrigingModel::train(void){
 		//		parameterOptimizer.setDisplayOn();
 
 		parameterOptimizer.setBounds(boxConstraintsForTheTraining);
-		parameterOptimizer.setNumberOfNewIndividualsInAGeneration(100*2*dim);
-		parameterOptimizer.setNumberOfDeathsInAGeneration(100*dim);
+		parameterOptimizer.setNumberOfNewIndividualsInAGeneration(200*dim);
+		parameterOptimizer.setNumberOfDeathsInAGeneration(180*dim);
 		parameterOptimizer.setInitialPopulationSize(2*dim*100);
 		parameterOptimizer.setMutationProbability(0.1);
 		parameterOptimizer.setMaximumNumberOfGeneratedIndividuals(numberOfTrainingIterations);

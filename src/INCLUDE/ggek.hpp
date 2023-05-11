@@ -49,8 +49,7 @@ private:
 
 	vec w;
 	mat weightMatrix;
-	vec sampleWeights;
-	double targetForSampleWeights = 0.0;
+
 
 	double sigmaThresholdValueForSVD = 10E-12;
 
@@ -75,7 +74,7 @@ private:
 
 	double targetForDifferentiatedBasis = 0.0;
 	vector<int> indicesDifferentiatedBasisFunctions;
-	unsigned int numberOfDifferentiatedBasisFunctions = 5;
+	unsigned int numberOfDifferentiatedBasisFunctions = 20;
 	mat unitGradientsMatrix;
 
 	vector<int> indicesOfSamplesWithActiveDerivatives;
@@ -93,8 +92,7 @@ private:
 
 public:
 
-	bool ifVaryingSampleWeights = true;
-	bool ifTargetForSampleWeightsIsSet = false;
+
 	bool ifTargetForDifferentiatedBasisIsSet = false;
 
 
@@ -118,7 +116,7 @@ public:
 
 	void printSurrogateModel(void) const;
 	void printHyperParameters(void) const;
-	void printSampleWeights(void) const;
+
 
 	void saveHyperParameters(void) const;
 	void loadHyperParameters(void);
@@ -145,7 +143,7 @@ public:
 	void trainTheta(void);
 	void prepareTrainingDataForTheKrigingModel(void);
 	void generateWeightingMatrix(void);
-	void generateSampleWeights(void);
+
 
 
 

@@ -89,6 +89,7 @@ void GGEKModel::setNumberOfTrainingIterations(unsigned int N){
 
 	numberOfTrainingIterations = N;
 	auxiliaryModel.setNumberOfTrainingIterations(N);
+	output.printMessage("Number of training iterations is set to ", numberOfTrainingIterations);
 
 }
 
@@ -173,6 +174,7 @@ void GGEKModel::initializeSurrogateModel(void){
 	numberOfHyperParameters = dimension;
 	w = ones<vec>(numberOfSamples + numberOfDifferentiatedBasisFunctions);
 
+
 	auxiliaryModel.initializeSurrogateModel();
 
 	ifInitialized = true;
@@ -227,7 +229,6 @@ void GGEKModel::assembleLinearSystem(void){
 	if(numberOfDifferentiatedBasisFunctions > 0){
 		findIndicesOfDifferentiatedBasisFunctionLocations();
 	}
-
 
 	generateWeightingMatrix();
 	calculatePhiMatrix();
@@ -432,65 +433,6 @@ void GGEKModel::setTargetForDifferentiatedBasis(double value){
 
 
 
-/* This function generates weights for each sample according to a target value */
-void GGEKModel::generateSampleWeights(void){
-
-	assert(ifDataIsRead);
-	assert(numberOfSamples);
-
-	sampleWeights = zeros<vec>(numberOfSamples);
-	vec y = data.getOutputVector();
-	double targetValue = min(y);
-
-	if(ifTargetForSampleWeightsIsSet){
-		targetValue = targetForSampleWeights;
-
-	}
-
-	vec yWeightCriteria(numberOfSamples, fill::zeros);
-
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		yWeightCriteria(i) = fabs( y(i) - targetValue );
-	}
-
-	vec z(numberOfSamples,fill::zeros);
-	double mu = mean(yWeightCriteria);
-	double sigma = stddev(yWeightCriteria);
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		z(i) = (yWeightCriteria(i) - mu)/sigma;
-	}
-
-	double b = 0.5;
-	double a = 0.5/min(z);
-
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		sampleWeights(i) = a*z(i) + b;
-		if(sampleWeights(i)< 0.1) {
-			sampleWeights(i) = 0.1;
-		}
-	}
-
-	if(output.ifScreenDisplay){
-		printSampleWeights();
-	}
-
-}
-
-
-void GGEKModel::printSampleWeights(void) const{
-
-	assert(numberOfSamples>0);
-	assert(sampleWeights.size() == numberOfSamples);
-
-	vec y = data.getOutputVector();
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		std::cout<<"y("<<i<<") = "<<y(i)<<", w = " << sampleWeights(i) << "\n";
-	}
-}
-
-
-
-
 void GGEKModel::calculateIndicesOfSamplesWithActiveDerivatives(void){
 
 	assert(ifDataIsRead);
@@ -537,7 +479,11 @@ void GGEKModel::generateWeightingMatrix(void){
 	assert(ifActiveDeritiveSampleIndicesAreCalculated);
 	assert(dimension>0);
 
-	generateSampleWeights();
+	sampleWeights = ones<vec>(numberOfSamples);
+
+	if(ifVaryingSampleWeights){
+		generateSampleWeights();
+	}
 
 	unsigned int howManySamplesHaveDerivatives = indicesOfSamplesWithActiveDerivatives.size();
 
@@ -598,12 +544,12 @@ void GGEKModel::generateRhsForRBFs(void){
 
 	}
 
-	if(ifVaryingSampleWeights){
 
-		assert(weightMatrix.n_rows == sizeOfRhs);
-		assert(weightMatrix.n_cols == sizeOfRhs);
-		ydot = weightMatrix*ydot;
-	}
+
+	assert(weightMatrix.n_rows == sizeOfRhs);
+	assert(weightMatrix.n_cols == sizeOfRhs);
+	ydot = weightMatrix*ydot;
+
 
 }
 
@@ -679,12 +625,10 @@ void GGEKModel::calculatePhiMatrix(void){
 
 //	assert(checkPhiMatrix());
 
-	if(ifVaryingSampleWeights){
-		unsigned int sizeOfWeightMatrix = howManyTotalDataPoints;
-		assert(weightMatrix.n_rows == sizeOfWeightMatrix);
-		Phi = weightMatrix*Phi;
 
-	}
+	unsigned int sizeOfWeightMatrix = howManyTotalDataPoints;
+	assert(weightMatrix.n_rows == sizeOfWeightMatrix);
+	Phi = weightMatrix*Phi;
 
 }
 

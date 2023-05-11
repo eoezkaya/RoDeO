@@ -118,6 +118,7 @@ RoDeODriver::RoDeODriver(){
 	configKeys.add(ConfigKey("DISCRETE_VARIABLES","doubleVector") );
 	configKeys.add(ConfigKey("DISCRETE_VARIABLES_VALUE_INCREMENTS","doubleVector") );
 
+	configKeys.add(ConfigKey("TARGET_VALUE_FOR_VARIABLE_SAMPLE_WEIGHTS","string") );
 
 
 #if 0
@@ -1128,6 +1129,9 @@ void RoDeODriver::runSurrogateModelTest(void){
 	if(checkIfOn(isDisplayOn)){
 		surrogateTest.setDisplayOn();
 	}
+
+
+	string targetVariableSampleWeights = configKeys.getConfigKeyStringValue("TARGET_VALUE_FOR_VARIABLE_SAMPLE_WEIGHTS");
 
 
 	surrogateTest.performSurrogateModelTest();

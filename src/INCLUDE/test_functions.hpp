@@ -92,6 +92,7 @@ public:
 	TestFunction(std::string name,int dimension);
 
     void setBoxConstraints(double lb, double ub);
+    void setBoxConstraints(Bounds);
 
 
     void generateSamplesInputTrainingData(void);

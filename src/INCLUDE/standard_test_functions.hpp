@@ -107,5 +107,16 @@ public:
 };
 
 
+class WingweightFunction{
+
+
+public:
+
+	TestFunction function;
+
+	WingweightFunction();
+
+};
+
 
 #endif

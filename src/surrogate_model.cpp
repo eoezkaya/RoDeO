@@ -457,3 +457,64 @@ void SurrogateModel::printGeneralizationError(void) const{
 
 }
 
+/* This function generates weights for each sample according to a target value */
+void SurrogateModel::generateSampleWeights(void){
+
+	output.printMessage("Generating sample weights...");
+
+	assert(ifDataIsRead);
+	assert(numberOfSamples>0);
+
+	vec y = data.getOutputVector();
+	double targetValue = min(y);
+
+	if(ifTargetForSampleWeightsIsSet){
+		targetValue = targetForSampleWeights;
+
+		output.printMessage("Target value for the sample weights = ", targetValue);
+
+	}
+
+	vec yWeightCriteria(numberOfSamples, fill::zeros);
+
+	for(unsigned int i=0; i<numberOfSamples; i++){
+		yWeightCriteria(i) = fabs( y(i) - targetValue );
+	}
+
+	vec z(numberOfSamples,fill::zeros);
+	double mu = mean(yWeightCriteria);
+	double sigma = stddev(yWeightCriteria);
+	for(unsigned int i=0; i<numberOfSamples; i++){
+		z(i) = (yWeightCriteria(i) - mu)/sigma;
+	}
+
+	double b = 0.5;
+	double a = 0.5/min(z);
+
+	for(unsigned int i=0; i<numberOfSamples; i++){
+		sampleWeights(i) = a*z(i) + b;
+		if(sampleWeights(i)< 0.1) {
+			sampleWeights(i) = 0.1;
+		}
+	}
+
+	if(output.ifScreenDisplay){
+		printSampleWeights();
+	}
+
+}
+
+void SurrogateModel::printSampleWeights(void) const{
+
+	assert(numberOfSamples>0);
+	assert(sampleWeights.size() == numberOfSamples);
+
+	vec y = data.getOutputVector();
+	for(unsigned int i=0; i<numberOfSamples; i++){
+		std::cout<<"y("<<i<<") = "<<y(i)<<", w = " << sampleWeights(i) << "\n";
+	}
+}
+
+
+
+
