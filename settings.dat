@@ -1,7 +1,0 @@
-# current working directory
-WORKING_DIRECTORY= /home/eoezkaya/RoDeO/Tests/SurrogateModels/OrdinaryKriging/Himmelblau
-# directory for the python scripts
-PYTHON_DIRECTORY= /home/emre/RoDeO/python
-# name of the configuration file
-CONFIGURATION_FILE= himmelblau.cfg
-
