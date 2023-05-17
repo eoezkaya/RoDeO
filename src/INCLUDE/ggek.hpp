@@ -47,17 +47,10 @@ class GGEKModel : public SurrogateModel{
 private:
 
 
-	vec w;
+	vec weights;
 	mat weightMatrix;
-
-
-	double sigmaThresholdValueForSVD = 10E-12;
-
 	mat Phi;
 	vec ydot;
-
-
-	SVDSystem  linearSystemCorrelationMatrixSVD;
 
 	double beta0 = 0.0;
 	double sigmaSquared = 0.0;
@@ -66,16 +59,16 @@ private:
 	bool ifCorrelationFunctionIsInitialized = false;
 	bool ifActiveDeritiveSampleIndicesAreCalculated = false;
 
+	double weightFactorForDerivatives = 0.5;
+	double thetaFactorForDerivatives = 20.0;
+	double thetaFactor               = 100.0;
+
+	double sigmaThresholdValueForSVD = 10E-012;
+
 
 	KrigingModel auxiliaryModel;
 
 	GaussianCorrelationFunctionForGEK correlationFunction;
-
-
-	double targetForDifferentiatedBasis = 0.0;
-	vector<int> indicesDifferentiatedBasisFunctions;
-	unsigned int numberOfDifferentiatedBasisFunctions = 20;
-	mat unitGradientsMatrix;
 
 	vector<int> indicesOfSamplesWithActiveDerivatives;
 
@@ -93,7 +86,7 @@ private:
 public:
 
 
-	bool ifTargetForDifferentiatedBasisIsSet = false;
+	bool ifUseNoDerivatives = false;
 
 
 	void setName(string label);
@@ -109,7 +102,6 @@ public:
 	void setNameOfInputFile(string filename);
 	void setNameOfHyperParametersFile(string filename);
 	void setNumberOfTrainingIterations(unsigned int);
-	void setNumberOfDifferentiatedBasisFunctionsUsed(unsigned int n);
 
 	void initializeSurrogateModel(void);
 	void initializeCorrelationFunction(void);
@@ -134,18 +126,13 @@ public:
 	void addNewLowFidelitySampleToData(rowvec newsample);
 
 
-
-	void findIndicesOfDifferentiatedBasisFunctionLocations(void);
-
 	void calculatePhiMatrix(void);
 	bool checkPhiMatrix(void);
+	bool checkResidual(void) const;
 
 	void trainTheta(void);
 	void prepareTrainingDataForTheKrigingModel(void);
 	void generateWeightingMatrix(void);
-
-
-
 
 	void setTargetForSampleWeights(double);
 	void setTargetForDifferentiatedBasis(double value);
@@ -154,10 +141,6 @@ public:
 
 	void generateRhsForRBFs(void);
 
-
-	void calculateUnitGradientVectors(void);
-
-	vector<int> getIndicesOfDifferentiatedBasisFunctionLocations(void) const;
 
 	unsigned int getNumberOfSamplesWithActiveGradients(void) const;
 	mat getGradient(void) const;

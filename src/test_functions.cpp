@@ -240,6 +240,27 @@ void TestFunction::generateSamplesInputTestData(void){
 
 }
 
+void TestFunction::generateSamplesInputTestDataCloseToTrainingSamples(void){
+
+	assert(numberOfTestSamples> 0);
+	assert(trainingSamplesInput.n_rows > 0);
+	testSamplesInput = trainingSamplesInput;
+	numberOfTestSamples = trainingSamplesInput.n_rows;
+
+	for(unsigned int i=0; i<trainingSamplesInput.n_rows; i++)
+		for(unsigned int j=0; j<trainingSamplesInput.n_cols; j++) {
+
+			double epsilon = trainingSamplesInput(i,j)*0.001;
+			double perturbation = epsilon*generateRandomDouble(-1.0,1.0);
+			testSamplesInput(i,j)= trainingSamplesInput(i,j)+perturbation;
+		}
+
+	testSamplesInput.print("test samples");
+
+}
+
+
+
 mat TestFunction::generateSamplesWithFunctionalValues(mat input, unsigned int N) const{
 
 	assert(input.n_rows >= N);
@@ -351,6 +372,9 @@ void TestFunction::generateTrainingSamplesWithAdjoints(void){
 	trainingSamples = generateSamplesWithAdjoints(trainingSamplesInput,numberOfTrainingSamples);
 	saveMatToCVSFile(trainingSamples, filenameTrainingData);
 }
+
+
+
 
 
 void TestFunction::generateTrainingSamplesMultiFidelity(void){
@@ -497,7 +521,16 @@ void TestFunction::generateTestSamples(void){
 
 }
 
+void TestFunction::generateTestSamplesCloseToTrainingSamples(void){
 
+	assert(isNotEmpty(filenameTestData));
+
+	evaluationSelect = 1;
+	generateSamplesInputTestDataCloseToTrainingSamples();
+	testSamples = generateSamplesWithFunctionalValues(testSamplesInput,numberOfTestSamples);
+	saveMatToCVSFile(testSamples, filenameTestData);
+
+}
 
 
 
@@ -1643,9 +1676,74 @@ double WingweightAdj(double *x, double *xb) {
 
 
 
+double Alpine02_5D(double *x){
+
+	double prod = 1.0;
+	for(unsigned int i=0; i<5; i++){
+		prod = prod * sqrt(x[i])*sin(x[i]);
+	}
+	return prod;
+}
+
+double Alpine02_5DTangent(double *x, double *xd, double *fdot) {
+	double prod = 1.0;
+	double prodd;
+	double result1;
+	double result1d;
+	prodd = 0.0;
+
+	double temp;
+	for (unsigned int i = 0; i < 5; ++i) {
+		temp = sqrt(x[i]);
+		result1d = (x[i] == 0.0 ? 0.0 : xd[i]/(2.0*temp));
+		result1 = temp;
+		temp = sin(x[i]);
+		prodd = temp*(result1*prodd+prod*result1d) + prod*result1*cos(x[i])*
+				xd[i];
+		prod = prod*result1*temp;
+	}
+
+	*fdot = prodd;
+	return prod;
+}
 
 
 
+double Alpine02_5DAdj(double *x, double *xb) {
+
+	double prod  = 1.0;
+	double prodb = 1.0;
+
+	stack<double> realStack;
+
+	for (int i = 0; i < 5; ++i) {
+		xb[i] = 0.0;
+	}
+
+	for (int i = 0; i < 5; ++i) {
+		realStack.push(prod);
+		prod = prod*sqrt(x[i])*sin(x[i]);
+	}
+
+	double tempb;
+	double temp;
+
+	for (int i = 4; i > -1; --i) {
+
+		prod =  realStack.top();
+		realStack.pop();
+		temp = sqrt(x[i]);
+		tempb = sin(x[i])*prodb;
+		if (x[i] == 0.0)
+			xb[i] = xb[i] + cos(x[i])*prod*temp*prodb;
+		else
+			xb[i] = xb[i] + cos(x[i])*prod*temp*prodb + prod*tempb/(2.0*temp);
+
+		prodb = temp*tempb;
+	}
+
+	return Alpine02_5D(x);
+}
 
 
 

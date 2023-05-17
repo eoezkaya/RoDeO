@@ -49,13 +49,15 @@ private:
 
 	WeightedL1Norm weightedL1norm;
 
+	string filenameTrainingForKrigingModel = "AggModel_primalTrainingData.csv";
+
 
 
 
 public:
 
-	AggregationModel();
-	AggregationModel(std::string);
+
+	void setDimension(unsigned int dim);
 
 	void setBoxConstraints(Bounds boxConstraintsInput);
 
@@ -87,9 +89,6 @@ public:
 	double interpolate(rowvec) const ;
 	double interpolateWithGradients(rowvec) const ;
 	void interpolateWithVariance(rowvec,double *,double *) const;
-
-//	void calculateExpectedImprovement(CDesignExpectedImprovement &) const;
-
 
 	unsigned int findNearestNeighbor(const rowvec &) const;
 	void addNewSampleToData(rowvec);

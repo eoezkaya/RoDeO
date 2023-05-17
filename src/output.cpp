@@ -35,11 +35,11 @@
 
 using std::cout;
 
-OutputDevice::OutputDevice(){
+OutputDevice::OutputDevice(){}
 
-
+void OutputDevice::setDisplayOn(void) {
+	ifScreenDisplay = true;
 }
-
 void OutputDevice::printMessage(string message) const{
 
 	if(ifScreenDisplay){
@@ -82,6 +82,16 @@ void OutputDevice::printMessage(std::string message, double whatToPrint) const{
 		std::cout<<whatToPrint<<"\n";
 	}
 }
+
+void OutputDevice::printMessage(std::string message1, double whatToPrint1,std::string message2, double whatToPrint2 ) const{
+	if(ifScreenDisplay){
+		std::cout<<message1<<" ";
+		std::cout<<whatToPrint1<<" ";
+		std::cout<<message2<<" ";
+		std::cout<<whatToPrint2<<"\n";
+	}
+}
+
 
 void OutputDevice::printMessage(std::string message, vec whatToPrint) const{
 	if(ifScreenDisplay){

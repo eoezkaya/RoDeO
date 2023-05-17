@@ -55,6 +55,7 @@ void KrigingModel::setDimension(unsigned int dim){
 
 	dimension = dim;
 	linearModel.setDimension(dim);
+	data.setDimension(dim);
 }
 
 void KrigingModel::setNameOfInputFile(std::string filename){
@@ -601,7 +602,7 @@ void KrigingModel::train(void){
 			parameterOptimizer.setWarmStartOn();
 		}
 
-
+//		parameterOptimizer.setDisplayOn();
 		parameterOptimizer.optimize();
 
 		EAIndividual bestSolution = parameterOptimizer.getSolution();

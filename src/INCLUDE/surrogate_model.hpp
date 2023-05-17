@@ -92,6 +92,8 @@ public:
 	bool ifModelTrainingIsDone = false;
 	bool ifHasTestData = false;
 	bool ifNormalizedTestData = false;
+
+
 	bool ifVaryingSampleWeights = false;
 	bool ifTargetForSampleWeightsIsSet = false;
 

@@ -32,7 +32,7 @@
 
 #include "aggregation_model.hpp"
 #include "auxiliary_functions.hpp"
-#include "test_functions.hpp"
+#include "standard_test_functions.hpp"
 #include "random_functions.hpp"
 #include "polynomials.hpp"
 #include "test_defines.hpp"
@@ -41,130 +41,211 @@
 
 #include<gtest/gtest.h>
 
-#ifdef TEST_AGGREGATION
+#ifdef AGGREGATION_TEST
 
+class AggregationModelTest: public ::testing::Test {
+protected:
+	void SetUp() override {}
 
-TEST(testAggrregationModel, testfindNearestNeighbor){
-
-	unsigned int dim = 2;
-	unsigned int N = 100;
-	mat samples(N,2*dim+1,fill::randu);
-	saveMatToCVSFile(samples,"AggregationTest.csv");
+	void TearDown() override {}
 
 
 	AggregationModel testModel;
+	HimmelblauFunction himmelblauFunction;
 
-	testModel.readData();
-	Bounds boxConstraints(dim);
-	boxConstraints.setBounds(0.0, 1.0);
+};
 
 
+TEST_F(AggregationModelTest, tryOnTestData){
+
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+	himmelblauFunction.function.generateTestSamplesCloseToTrainingSamples();
+
+	testModel.setDimension(2);
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	Bounds boxConstraints;
+	boxConstraints = himmelblauFunction.function.boxConstraints;
 	testModel.setBoxConstraints(boxConstraints);
+
+
+	testModel.setDisplayOn();
+	testModel.readData();
 	testModel.normalizeData();
+
+
+	testModel.initializeSurrogateModel();
+	testModel.setNumberOfTrainingIterations(20000);
+	testModel.train();
+
+
+	testModel.setNameOfInputFileTest(himmelblauFunction.function.filenameTestData);
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+	testModel.printGeneralizationError();
+
+	abort();
+
+
+}
+
+
+
+
+TEST_F(AggregationModelTest, constructor){
+
+	ASSERT_FALSE(testModel.ifDataIsRead);
+
+}
+
+
+TEST_F(AggregationModelTest, readData){
+
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+	testModel.setDimension(2);
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	//	testModel.setDisplayOn();
+	testModel.readData();
+
+	ASSERT_TRUE(testModel.ifDataIsRead);
+
+}
+
+TEST_F(AggregationModelTest, initializeSurrogateModel){
+
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+
+	testModel.setDimension(2);
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	Bounds boxConstraints;
+	boxConstraints = himmelblauFunction.function.boxConstraints;
+	testModel.setBoxConstraints(boxConstraints);
+
+
+	//	testModel.setDisplayOn();
+	testModel.readData();
+	testModel.normalizeData();
+
+
 	testModel.initializeSurrogateModel();
 
+	ASSERT_TRUE(testModel.ifInitialized);
+}
+
+
+TEST_F(AggregationModelTest, findNearestNeighbor){
+
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+
+	testModel.setDimension(2);
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	Bounds boxConstraints;
+	boxConstraints = himmelblauFunction.function.boxConstraints;
+	testModel.setBoxConstraints(boxConstraints);
+
+
+	//	testModel.setDisplayOn();
+	testModel.readData();
+	testModel.normalizeData();
+
+
+	testModel.initializeSurrogateModel();
 
 	rowvec x = testModel.getRowX(1);
 	unsigned int NNIndex = testModel.findNearestNeighbor(x);
 	ASSERT_EQ(NNIndex,1);
+
 	x = testModel.getRowX(45);
 	x(0) += 0.0001;
 	x(1) -= 0.0001;
 	NNIndex = testModel.findNearestNeighbor(x);
 	ASSERT_EQ(NNIndex,45);
-	remove("AggregationTest.csv");
+
+
 
 }
 
+//TEST_F(AggregationModelTest, determineOptimalL1NormWeights){
+//
+//	unsigned int N = 200;
+//	unsigned int d = 3;
+//	mat samples(N,2*d+1);
+//
+//	/* y = f(x1,x2,x3) = x1^2 */
+//	for (unsigned int i=0; i<N; i++){
+//		rowvec x(2*d+1);
+//		x(0) = generateRandomDouble(0.0,1.0);
+//		x(1) = generateRandomDouble(0.0,1.0);
+//		x(2) = generateRandomDouble(0.0,1.0);
+//
+//		x(3) = 2*x(0)*x(0);
+//
+//		x(4) = 2.0*x(0);
+//		x(5) = 0.0;
+//		x(6) = 0.0;
+//		samples.row(i) = x;
+//
+//	}
+//
+//	samples.save("AggregationTest.csv", csv_ascii);
+//
+//
+//	testModel.setDimension(3);
+//	vec lb(3); vec ub(3);
+//	lb.fill(0.0);
+//	ub.fill(1.0);
+//
+//	Bounds boxConstraints;
+//	boxConstraints.setBounds(lb,ub);
+//
+//	testModel.setBoxConstraints(boxConstraints);
+//
+//	testModel.setNameOfInputFile("AggregationTest.csv");
+//	//	testModel.setDisplayOn();
+//
+//	testModel.readData();
+//	testModel.normalizeData();
+//	testModel.initializeSurrogateModel();
+//	testModel.setNumberOfTrainingIterations(1000);
+//
+//
+//	testModel.determineOptimalL1NormWeights();
+//
+//	vec optimalWeights = testModel.getL1NormWeights();
+//	EXPECT_LT(optimalWeights(1), 0.2);
+//	EXPECT_LT(optimalWeights(2), 0.2);
+//	remove("AggregationTest.csv");
+//
+//}
 
-TEST(testAggrregationModel, testinterpolateWithLinearFunction){
 
-	unsigned int N = 100;
-	unsigned int dim = 2;
+TEST_F(AggregationModelTest, train){
 
-	mat samples(N,2*dim+1);
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
-	/* we construct first test data using a linear function 2*x1 + x2, including gradients */
-	for (unsigned int i=0; i<N; i++){
-		rowvec x(2*dim+1);
-		x(0) = generateRandomDouble(0.0,1.0);
-		x(1) = generateRandomDouble(0.0,1.0);
-
-		x(2) = 2*x(0) + x(1);
-		x(3) = 2.0;
-		x(4) = 1.0;
-		samples.row(i) = x;
-
-	}
+	testModel.setDimension(2);
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	Bounds boxConstraints;
+	boxConstraints = himmelblauFunction.function.boxConstraints;
+	testModel.setBoxConstraints(boxConstraints);
 
 
-	saveMatToCVSFile(samples,"AggregationTest.csv");
-	AggregationModel testModel;
-
+	//	testModel.setDisplayOn();
 	testModel.readData();
-
-	testModel.setBoxConstraints(0.0,1.0);
 	testModel.normalizeData();
+
+
 	testModel.initializeSurrogateModel();
-	testModel.setRho(0.0);
+	testModel.train();
 
-	rowvec xTest(2);
-	xTest.fill(0.25);
-	rowvec xTestNotNormalized = 2.0*xTest;
-
-	double testValue = testModel. interpolate(xTest);
-	double exactValue = 2*xTestNotNormalized(0) + xTestNotNormalized(1);
-	double error = fabs(testValue - exactValue);
-	EXPECT_LT(error, 10E-010);
-
-	remove("AggregationTest.csv");
+	ASSERT_TRUE(testModel.ifModelTrainingIsDone);
 
 }
 
 
-TEST(testAggrregationModel, determineOptimalL1NormWeights){
 
-	unsigned int N = 200;
-	mat samples(N,7);
-
-	/* y = f(x1,x2,x3) = x1^2 */
-	for (unsigned int i=0; i<N; i++){
-		rowvec x(7);
-		x(0) = generateRandomDouble(0.0,1.0);
-		x(1) = generateRandomDouble(0.0,1.0);
-		x(2) = generateRandomDouble(0.0,1.0);
-
-		x(3) = 2*x(0)*x(0);
-		x(4) = 2.0*x(0);
-		x(5) = 0.0;
-		x(6) = 0.0;
-		samples.row(i) = x;
-
-	}
-
-
-	saveMatToCVSFile(samples,"AggregationTest.csv");
-
-
-	AggregationModel testModel;
-
-
-
-	testModel.readData();
-
-	testModel.setBoxConstraints(0.0, 1.0);
-	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
-	testModel.setNumberOfTrainingIterations(1000);
-
-	testModel.determineOptimalL1NormWeights();
-
-	vec optimalWeights = testModel.getL1NormWeights();
-	EXPECT_LT(optimalWeights(1), 0.2);
-	EXPECT_LT(optimalWeights(2), 0.2);
-	remove("AggregationTest.csv");
-
-}
 
 
 #endif

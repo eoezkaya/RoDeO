@@ -56,10 +56,14 @@ void MultiLevelModel::setName(std::string nameGiven){
 
 void MultiLevelModel::setDimension(unsigned int dim){
 
-	assert(ifSurrogateModelsAreSet);
 	dimension = dim;
-	lowFidelityModel->setDimension(dim);
-	errorModel->setDimension(dim);
+
+	if(ifSurrogateModelsAreSet){
+
+		lowFidelityModel->setDimension(dim);
+		errorModel->setDimension(dim);
+	}
+
 }
 
 
@@ -676,12 +680,16 @@ bool MultiLevelModel::checkifModelIDIsValid(SURROGATE_MODEL id) const{
 	if(id == ORDINARY_KRIGING) return true;
 	if(id == UNIVERSAL_KRIGING) return true;
 	if(id == TANGENT) return true;
+	if(id == GRADIENT_ENHANCED) return true;
 
 
 	return false;
 }
 
 void MultiLevelModel::bindLowFidelityModel(void){
+
+	assert(dimension>0);
+	assert(isNotEmpty(filenameDataInputLowFidelity));
 
 	if(!checkifModelIDIsValid(modelIDLowFi)){
 		abortWithErrorMessage("Undefined surrogate model for the low fidelity model");
@@ -691,7 +699,6 @@ void MultiLevelModel::bindLowFidelityModel(void){
 
 		output.printMessage("Binding the low fidelity model with the Ordinary Kriging model...");
 		lowFidelityModel = &surrogateModelKrigingLowFi;
-
 
 	}
 
@@ -711,16 +718,20 @@ void MultiLevelModel::bindLowFidelityModel(void){
 
 	}
 
+	if(modelIDLowFi == GRADIENT_ENHANCED){
 
+		output.printMessage("Binding the low fidelity model with the GGEK model...");
+		lowFidelityModel = &surrogateModelGGEKLowFi;
+		dataLowFidelity.setGradientsOn();
+
+	}
 
 	lowFidelityModel->setNameOfInputFile(filenameDataInputLowFidelity);
 	lowFidelityModel->setDimension(dimension);
 
-
 }
 
 void MultiLevelModel::bindErrorModel(void){
-
 
 	if(modelIDLowFi == ORDINARY_KRIGING && modelIDHiFi == ORDINARY_KRIGING){
 
@@ -730,7 +741,8 @@ void MultiLevelModel::bindErrorModel(void){
 
 	}
 
-	if(modelIDLowFi == TANGENT && modelIDHiFi == ORDINARY_KRIGING){
+	if((modelIDLowFi == TANGENT && modelIDHiFi == ORDINARY_KRIGING)
+	|| (modelIDLowFi == GRADIENT_ENHANCED && modelIDHiFi == ORDINARY_KRIGING)){
 
 		output.printMessage("Binding the error model with the Ordinary Kriging model...");
 		errorModel = &surrogateModelKrigingError;

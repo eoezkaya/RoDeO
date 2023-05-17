@@ -201,6 +201,7 @@ void SurrogateModelData::readDataTest(string inputFilename){
 
 		yTest = XrawTest.col(dimension);
 		XTest = XrawTest.submat(0,0,numberOfTestSamples-1, dimension-1);
+
 		ifTestDataHasFunctionValues = true;
 	}
 
@@ -211,6 +212,7 @@ void SurrogateModelData::readDataTest(string inputFilename){
 
 		output.printErrorMessageAndAbort("Problem with data the test data (cvs ascii format), too many or too few columns in file: " + inputFilename);
 	}
+
 
 	ifTestDataIsRead = true;
 }
@@ -393,6 +395,8 @@ void SurrogateModelData::normalizeGradientMatrix(void){
 	assert(gradient.n_cols == dimension);
 
 
+	gradientRaw = gradient;
+
 	for(unsigned int i=0; i<dimension; i++){
 
 		vec lb = boxConstraints.getLowerBounds();
@@ -409,6 +413,12 @@ void SurrogateModelData::normalizeGradientMatrix(void){
 rowvec SurrogateModelData::getRowGradient(unsigned int index) const{
 
 	return gradient.row(index);
+
+}
+
+rowvec SurrogateModelData::getRowGradientRaw(unsigned int index) const{
+
+	return gradientRaw.row(index);
 
 }
 
@@ -493,28 +503,24 @@ void SurrogateModelData::setOutputVector(vec yIn){
 
 
 mat SurrogateModelData::getInputMatrix(void) const{
-
 	return X;
-
 }
 
+mat SurrogateModelData::getInputMatrixTest(void) const{
+	return XTest;
+}
 
 double SurrogateModelData::getMinimumOutputVector(void) const{
-
 	return min(y);
 }
 
 double SurrogateModelData::getMaximumOutputVector(void) const{
-
 	return max(y);
 }
 
 mat SurrogateModelData::getGradientMatrix(void) const{
-
 	return gradient;
-
 }
-
 
 void SurrogateModelData::setBoxConstraints(Bounds boxConstraintsInput){
 

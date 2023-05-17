@@ -37,6 +37,7 @@
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
 #include "tgek.hpp"
+#include "ggek.hpp"
 
 using std::string;
 
@@ -54,6 +55,7 @@ private:
 	KrigingModel surrogateModelKrigingLowFi;
 	AggregationModel surrogateModelAggregationLowFi;
 	TGEKModel surrogateModelTGEKLowFi;
+	GGEKModel surrogateModelGGEKLowFi;
 
 	KrigingModel surrogateModelKrigingError;
 	AggregationModel surrogateModelAggregationError;

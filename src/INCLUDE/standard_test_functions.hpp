@@ -50,6 +50,25 @@ public:
 };
 
 
+
+class Alpine02_5DFunction{
+
+
+public:
+
+	TestFunction function;
+
+	Alpine02_5DFunction();
+
+};
+
+
+
+
+
+
+
+
 class LinearTestFunction1{
 
 

@@ -1107,6 +1107,7 @@ void RoDeODriver::runSurrogateModelTest(void){
 		surrogateTest.setFileNameTrainingDataLowFidelity(filenameTrainingDataLowFi);
 		surrogateModelTypeLowFi = getSurrogateModelID(surrogateModelLowFi);
 		surrogateTest.setSurrogateModelLowFi(surrogateModelTypeLowFi);
+		surrogateTest.ifMultiLevel = true;
 	}
 
 

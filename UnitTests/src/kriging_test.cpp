@@ -37,7 +37,7 @@
 #include<gtest/gtest.h>
 
 
-#ifdef TEST_KRIGING
+#ifdef KRIGING_TEST
 
 
 class KrigingModelTest : public ::testing::Test {

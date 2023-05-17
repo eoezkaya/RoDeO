@@ -52,55 +52,124 @@ protected:
 		testModel.setDimension(2);
 		testModel.setName("himmelblauModel");
 
+		himmelblauFunction.function.filenameTestData = "himmelblau.csv";
+		himmelblauFunction.function.numberOfTrainingSamples = 20;
+		himmelblauFunction.function.filenameTestData = "himmelblauTest.csv";
+		himmelblauFunction.function.numberOfTestSamples = 100;
+
+		N = himmelblauFunction.function.numberOfTrainingSamples;
+		dim = 2;
+
+		alpine02Function.function.filenameTrainingData = "alpine02.csv";
+		alpine02Function.function.numberOfTrainingSamples = 50;
+		alpine02Function.function.filenameTestData = "alpine02Test.csv";
+		alpine02Function.function.numberOfTestSamples = 50;
 
 	}
 
 	void TearDown() override {}
 
-
-
-	void generate2DHimmelblauDataForGGEKModel(unsigned int N) {
-
-
-		himmelblauFunction.function.filenameTrainingData ="trainingSamplesHimmelblauGGEK.csv";
-		himmelblauFunction.function.numberOfTrainingSamples = N;
-		himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
-
-		himmelblauFunction.function.filenameTestData = "testSamplesHimmelblauTGEK.csv";
-		himmelblauFunction.function.numberOfTestSamples  = N;
-		himmelblauFunction.function.generateTestSamples();
-
-
-	}
-
-	void generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(unsigned int N){
-
-		himmelblauFunction.function.filenameTrainingData ="trainingSamplesHimmelblauGGEK.csv";
-		himmelblauFunction.function.numberOfTrainingSamples = N;
-		himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
-
-		mat data = himmelblauFunction.function.trainingSamples;
-		for(unsigned int i=0; i<N; i++){
-
-			if(i%5 == 0){
-
-				data(i,3) = 0;
-				data(i,4) = 0;
-			}
-		}
-		data.save(himmelblauFunction.function.filenameTrainingData, csv_ascii);
-	}
-
 	GGEKModel testModel;
 
 	HimmelblauFunction himmelblauFunction;
+	Alpine02_5DFunction alpine02Function;
 
 	Bounds boxConstraints;
 
-
-
+	unsigned int N;
+	unsigned int dim;
 
 };
+
+
+TEST_F(GGEKModelTest, tryOnTestDataRAE2882) {
+
+
+
+	Bounds boxConstraintsRAE2822(38);
+	vec lowerBounds(38);
+	vec upperBounds(38);
+	lowerBounds.fill(-0.003);
+	upperBounds.fill( 0.003);
+
+	boxConstraintsRAE2822.setBounds(lowerBounds,upperBounds);
+
+	testModel.setBoxConstraints(boxConstraintsRAE2822);
+	testModel.setName("RAE2822");
+
+	testModel.setDimension(38);
+
+	testModel.setNameOfInputFile("lift.csv");
+	testModel.readData();
+	testModel.normalizeData();
+	testModel.setDisplayOn();
+//	testModel.ifVaryingSampleWeights = true;
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+	testModel.checkResidual();
+
+	testModel.setNameOfInputFileTest("liftTest.csv");
+
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+	testModel.printGeneralizationError();
+
+	abort();
+}
+
+
+
+
+
+TEST_F(GGEKModelTest, tryOnTestData) {
+
+	alpine02Function.function.numberOfTrainingSamples = 300;
+	alpine02Function.function.numberOfTestSamples = 50;
+	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
+	alpine02Function.function.generateTrainingSamplesWithAdjoints();
+
+
+
+	alpine02Function.function.generateTestSamples();
+
+	boxConstraints = alpine02Function.function.boxConstraints;
+
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.setName("Alpine02Model");
+
+	testModel.setDimension(5);
+
+	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+	testModel.setDisplayOn();
+//	testModel.ifVaryingSampleWeights = true;
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+	testModel.checkResidual();
+
+	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);
+
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+	testModel.printGeneralizationError();
+
+	abort();
+}
+
+
+
+
+
+
 
 TEST_F(GGEKModelTest, constructor) {
 
@@ -114,10 +183,7 @@ TEST_F(GGEKModelTest, constructor) {
 
 TEST_F(GGEKModelTest, readData) {
 
-	unsigned int N = 50;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModel(N);
-
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.readData();
 
@@ -132,9 +198,7 @@ TEST_F(GGEKModelTest, readData) {
 
 TEST_F(GGEKModelTest, normalizeData) {
 
-	unsigned int N = 50;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModel(N);
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.readData();
@@ -150,9 +214,7 @@ TEST_F(GGEKModelTest, normalizeData) {
 
 TEST_F(GGEKModelTest, initializeSurrogateModel) {
 
-	unsigned int N = 50;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModel(N);
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.readData();
@@ -170,9 +232,7 @@ TEST_F(GGEKModelTest, initializeSurrogateModel) {
 TEST_F(GGEKModelTest, generateSampleWeights) {
 
 
-	unsigned int N = 52;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModel(N);
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.readData();
@@ -180,6 +240,7 @@ TEST_F(GGEKModelTest, generateSampleWeights) {
 
 	testModel.initializeSurrogateModel();
 
+//	testModel.setDisplayOn();
 	testModel.generateSampleWeights();
 
 	vec w = testModel.getSampleWeightsVector();
@@ -188,15 +249,12 @@ TEST_F(GGEKModelTest, generateSampleWeights) {
 	ASSERT_TRUE(w.size() == N);
 
 
-
 }
 
 TEST_F(GGEKModelTest, calculateIndicesOfSamplesWithActiveDerivatives) {
 
-
-	unsigned int N = 52;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.readData();
@@ -210,15 +268,16 @@ TEST_F(GGEKModelTest, calculateIndicesOfSamplesWithActiveDerivatives) {
 TEST_F(GGEKModelTest, generateWeightingMatrix) {
 
 
-	unsigned int N = 6;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.readData();
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
 	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
+
+	testModel.ifVaryingSampleWeights = true;
 
 	testModel.generateWeightingMatrix();
 
@@ -234,10 +293,8 @@ TEST_F(GGEKModelTest, generateWeightingMatrix) {
 
 TEST_F(GGEKModelTest, generateRhsForRBFs) {
 
-
-	unsigned int N = 6;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.readData();
@@ -246,107 +303,27 @@ TEST_F(GGEKModelTest, generateRhsForRBFs) {
 	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
 	testModel.ifVaryingSampleWeights = true;
 	testModel.generateWeightingMatrix();
-	testModel.calculateUnitGradientVectors();
 	testModel.generateRhsForRBFs();
 
 
 
 }
 
-TEST_F(GGEKModelTest, findIndicesOfDifferentiatedBasisFunctionLocations) {
-
-
-	unsigned int N = 7;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModel(N);
-
-	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
-	testModel.setNumberOfDifferentiatedBasisFunctionsUsed(2);
-	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
-
-	//	testModel.setDisplayOn();
-
-	testModel.findIndicesOfDifferentiatedBasisFunctionLocations();
-
-	vector<int> indices = testModel.getIndicesOfDifferentiatedBasisFunctionLocations();
-
-	vec y = testModel.gety();
-
-	uword i = index_min(y);
-	double min_val_in_y = y(i);
-
-	int indx = i;
-
-	ASSERT_TRUE(indices.size() == 2);
-	ASSERT_TRUE(isIntheList(indices,indx));
-
-
-
-}
-
-
-TEST_F(GGEKModelTest, findIndicesOfDifferentiatedBasisFunctionLocationsWithTargetValue) {
-
-
-	unsigned int N = 7;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModel(N);
-
-	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
-	testModel.setTargetForDifferentiatedBasis(100.0);
-	testModel.readData();
-	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
-	testModel.setNumberOfDifferentiatedBasisFunctionsUsed(2);
-	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
-
-	//	testModel.setDisplayOn();
-
-	testModel.findIndicesOfDifferentiatedBasisFunctionLocations();
-
-	vector<int> indices = testModel.getIndicesOfDifferentiatedBasisFunctionLocations();
-
-	vec y = testModel.gety();
-
-	for(unsigned i=0; i<N; i++){
-
-		y(i) = fabs(y(i) - 100.0);
-
-	}
-
-
-	uword i = index_min(y);
-	double min_val_in_y = y(i);
-
-	int indx = i;
-
-	ASSERT_TRUE(indices.size() == 2);
-	ASSERT_TRUE(isIntheList(indices,indx));
-
-
-
-}
-
-
 
 TEST_F(GGEKModelTest, calculatePhiMatrix) {
 
-
-	unsigned int N = 27;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.readData();
 	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
+
 	//	testModel.setDisplayOn();
 	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
-	testModel.findIndicesOfDifferentiatedBasisFunctionLocations();
-	testModel.calculateUnitGradientVectors();
+
+	testModel.initializeSurrogateModel();
+
 	testModel.generateWeightingMatrix();
 
 	testModel.calculatePhiMatrix();
@@ -356,25 +333,25 @@ TEST_F(GGEKModelTest, calculatePhiMatrix) {
 	unsigned int Ndot = testModel.getNumberOfSamplesWithActiveGradients();
 	N    = testModel.getNumberOfSamples();
 
-	vector<int> indicesDifferentiatedBasis = testModel.getIndicesOfDifferentiatedBasisFunctionLocations();
-
-	ASSERT_TRUE(Phi.n_cols == N + indicesDifferentiatedBasis.size());
+	ASSERT_TRUE(Phi.n_cols == N + Ndot);
 	ASSERT_TRUE(Phi.n_rows == N + Ndot);
 
+
+	ASSERT_TRUE(testModel.checkPhiMatrix());
 
 }
 
 
 TEST_F(GGEKModelTest, assembleLinearSystem) {
 
-	unsigned int N = 50;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.readData();
 	testModel.normalizeData();
+	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
 	testModel.initializeSurrogateModel();
 
 	testModel.assembleLinearSystem();
@@ -388,11 +365,12 @@ TEST_F(GGEKModelTest, assembleLinearSystem) {
 }
 
 
+
+
 TEST_F(GGEKModelTest, train) {
 
-	unsigned int N = 50;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
@@ -402,6 +380,7 @@ TEST_F(GGEKModelTest, train) {
 
 	testModel.train();
 
+	ASSERT_TRUE(testModel.checkResidual());
 	ASSERT_TRUE(testModel.ifModelTrainingIsDone);
 
 
@@ -409,9 +388,8 @@ TEST_F(GGEKModelTest, train) {
 
 TEST_F(GGEKModelTest, interpolate) {
 
-	unsigned int N = 50;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
@@ -430,11 +408,14 @@ TEST_F(GGEKModelTest, interpolate) {
 }
 
 
+
+
+
+
 TEST_F(GGEKModelTest, updateModelWithNewData) {
 
-	unsigned int N = 50;
-	unsigned int dim = 2;
-	generate2DHimmelblauDataForGGEKModelWithSomeZeroGradients(N);
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 
 	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);

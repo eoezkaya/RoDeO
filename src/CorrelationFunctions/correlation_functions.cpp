@@ -813,128 +813,6 @@ mat  CorrelationFunctionBase::getCorrelationMatrixDot(void) const{
 
 }
 
-void ExponentialCorrelationFunction::setTheta(vec input){
-
-	assert(input.empty() == false);
-	theta = input;
-
-}
-
-void ExponentialCorrelationFunction::setGamma(vec input){
-
-	assert(input.empty() == false);
-	gamma = input;
-
-}
-
-void ExponentialCorrelationFunction::setHyperParameters(vec input){
-
-	assert(input.empty() == false);
-	assert(dim>0);
-	setTheta(input.head(dim));
-	setGamma(input.tail(dim));
-
-}
-
-vec ExponentialCorrelationFunction::getHyperParameters(void) const{
-
-	assert(dim>0);
-	vec hyperParameters(2*dim);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		hyperParameters(i) = theta(i);
-
-	}
-
-	for(unsigned int i=0; i<dim; i++){
-
-		hyperParameters(i+dim) = gamma(i);
-
-	}
-
-	return hyperParameters;
-}
-
-
-
-bool ExponentialCorrelationFunction::checkIfParametersAreSetProperly(void) const{
-
-	if(gamma.size() != dim) {
-
-		std::cout<<"gamma size = "<<gamma.size() <<"\n";
-		return false;
-	}
-	if(theta.size() != dim) {
-
-		std::cout<<"theta size = "<<theta.size() <<"\n";
-		return false;
-	}
-
-	if(gamma.max() > 2.0) {
-
-		std::cout<<"gamma max = "<<gamma.max() <<"\n";
-
-		return false;
-	}
-	if(gamma.min() < 0.0) {
-
-		std::cout<<"gamma min = "<<gamma.min() <<"\n";
-		return false;
-	}
-
-	if(theta.max() > 20.0) {
-
-		std::cout<<"theta max = "<<theta.max() <<"\n";
-
-		return false;
-	}
-	if(theta.min() < 0.0) {
-
-		std::cout<<"theta min = "<<theta.min() <<"\n";
-
-		return false;
-	}
-
-	return true;
-}
-
-
-double ExponentialCorrelationFunction::computeCorrelation(const rowvec &x_i, const rowvec &x_j) const {
-
-	double sum = 0.0;
-	for (unsigned int k = 0; k < dim; k++) {
-
-		double exponentialPart = pow(fabs(x_i(k) - x_j(k)), gamma(k));
-		sum += theta(k) * exponentialPart;
-	}
-
-	double correlation = exp(-sum);
-	return correlation;
-}
-
-void ExponentialCorrelationFunction::initialize(void){
-
-	assert(dim>0);
-	vec thetaInit(dim); thetaInit.fill(1.0);
-	vec gammaInit(dim); gammaInit.fill(2.0);
-
-	setTheta(thetaInit);
-	setGamma(gammaInit);
-
-
-}
-
-void ExponentialCorrelationFunction::print(void) const{
-
-	std::cout<<"Exponential correlation function = \n";
-	theta.print("theta:");
-	gamma.print("theta:");
-	printScalar(epsilon);
-
-
-
-}
 
 
 
@@ -986,6 +864,8 @@ bool  BiQuadraticSplineCorrelationFunction::checkIfParametersAreSetProperly(void
 }
 
 
+/*********************************************************************************/
+
 void GaussianCorrelationFunctionForGEK::initialize(void){
 
 	assert(dim>0);
@@ -997,8 +877,17 @@ void GaussianCorrelationFunctionForGEK::initialize(void){
 void GaussianCorrelationFunctionForGEK::setHyperParameters(vec input){
 
 	assert(input.empty() == false);
-	theta = input;
+	theta = input ;
+	thetaDifferentiated = theta * thetaScalingUpFactor ;
 
+
+
+}
+
+void GaussianCorrelationFunctionForGEK::setThetaScalingUpFactor(double value){
+
+	assert(value > 0.0);
+	thetaScalingUpFactor = value;
 
 }
 
@@ -1014,21 +903,19 @@ bool GaussianCorrelationFunctionForGEK::checkIfParametersAreSetProperly(void) co
 
 	if(theta.size() != dim) return false;
 
-	if(theta.max() > 20.0) return false;
-	if(theta.min() < 0.0) return false;
-
 	return true;
 }
 
 
-double GaussianCorrelationFunctionForGEK::computeCorrelation(const rowvec &x_i, const rowvec &x_j) const {
+double GaussianCorrelationFunctionForGEK::computeCorrelation(const rowvec &xi, const rowvec &xj) const {
+
 
 	double sum = 0.0;
 	for (unsigned int k = 0; k < dim; k++) {
-
-		sum += theta(k) * pow(fabs(x_i(k) - x_j(k)), 2.0);
+		double r = (xi(k) - xj(k))*(xi(k) - xj(k));
+		double prod = theta(k)*r;
+		sum += prod;
 	}
-
 	return exp(-sum);
 }
 
@@ -1048,6 +935,10 @@ double GaussianCorrelationFunctionForGEK::computeCorrelation(unsigned int i, uns
 }
 
 
+
+
+
+
 /* derivative of the basis function centered at x = x_i and evaluated at x = x_j in the
  * direction d = diffDirection, result is d . nabla_Phi^i(xj)
  * */
@@ -1061,6 +952,8 @@ double GaussianCorrelationFunctionForGEK::computeCorrelationDot(unsigned int i,
 
 	double sumd = 0.0;
 	double sum  = 0.0;
+
+
 	for (unsigned int k = 0; k < dim; k++) {
 
 		sumd += -2.0*theta(k) * (xi(k) - xj(k))*diffDirection(k);
@@ -1072,6 +965,63 @@ double GaussianCorrelationFunctionForGEK::computeCorrelationDot(unsigned int i,
 	return -1.0*exp(-sum)*sumd;
 
 }
+
+
+double GaussianCorrelationFunctionForGEK::computeDifferentiatedCorrelation(unsigned int i,
+		unsigned int j, const rowvec &diffDirection) const {
+
+	assert(isInputSampleMatrixSet());
+	rowvec xi = X.row(i);
+	rowvec xj = X.row(j);
+
+	double sumd = 0.0;
+	double sum  = 0.0;
+
+
+	for (unsigned int k = 0; k < dim; k++) {
+
+		sumd += -2.0*thetaDifferentiated(k) * (xi(k) - xj(k))*diffDirection(k);
+		sum  += thetaDifferentiated(k) * pow(fabs(xi(k) - xj(k)), 2.0);
+	}
+
+	double correlation = exp(-sum);
+
+	return -1.0*exp(-sum)*sumd;
+
+}
+
+
+double GaussianCorrelationFunctionForGEK::computeDifferentiatedCorrelationDot(unsigned int i,
+		unsigned int j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const{
+
+
+	rowvec xi = X.row(i);
+	rowvec xj = X.row(j);
+
+	double td = 0.0;
+	double t = 0.0;
+	double td0 = 0.0;
+	double tdd = 0.0;
+	double temp;
+	for (unsigned int i = 0; i < dim; i++) {
+		temp = 2.0*thetaDifferentiated(i)*firstDiffDirection(i);
+		tdd = tdd + temp*secondDiffDirection(i);
+		td = td - temp*(xi(i)-xj(i));
+		td0 = td0 - thetaDifferentiated(i)*2.0*(xi(i)-xj(i))*secondDiffDirection(i);
+		t += thetaDifferentiated(i)*(xi(i)-xj(i))*(xi(i)-xj(i));
+
+	}
+	temp = exp(-t);
+	double resultd = -(temp*td);
+	double resultdd = -(temp*tdd-td*exp(-t)*td0);
+
+	return resultdd;
+
+}
+
+
+
+
 
 double GaussianCorrelationFunctionForGEK::computeCorrelationDot(const rowvec &x_i, const rowvec &x_j, const rowvec &diffDirection) const {
 
@@ -1088,6 +1038,26 @@ double GaussianCorrelationFunctionForGEK::computeCorrelationDot(const rowvec &x_
 	return -1.0*exp(-sum)*sumd;
 
 }
+
+double GaussianCorrelationFunctionForGEK::computeDifferentiatedCorrelation(const rowvec &x_i, const rowvec &x_j, const rowvec &diffDirection) const {
+
+
+
+	double sumd = 0.0;
+	double sum  = 0.0;
+	for (unsigned int k = 0; k < dim; k++) {
+
+		sumd += -2.0*thetaDifferentiated(k) * (x_i(k) - x_j(k))*diffDirection(k);
+		sum  += thetaDifferentiated(k) * pow(fabs(x_i(k) - x_j(k)), 2.0);
+	}
+
+	double correlation = exp(-sum);
+
+	return -1.0*exp(-sum)*sumd;
+
+}
+
+
 
 
 double GaussianCorrelationFunctionForGEK::computeCorrelationDotDot(unsigned int i,
@@ -1152,145 +1122,145 @@ void GaussianCorrelationFunctionForGEK::print(void) const{
 }
 
 
-double GaussianCorrelationFunctionForGEK::compute_dR_dxi(const rowvec &xi, const rowvec &xj, unsigned int k) const{
-
-	double result = 0.0;
-
-	double R = computeCorrelation(xi, xj);
-	result= -2.0*theta(k)* (xi(k)-xj(k))* R;
-	return result;
-
-}
-
-double GaussianCorrelationFunctionForGEK::compute_dR_dxj(const rowvec &xi, const rowvec &xj, unsigned int k) const{
-
-	double result = 0.0;
-
-	double R = computeCorrelation(xi, xj);
-	result= 2.0*theta(k)* (xi(k)-xj(k))* R;
-	return result;
-
-}
-double GaussianCorrelationFunctionForGEK::compute_d2R_dxl_dxk(const rowvec & xi, const rowvec & xj, unsigned int k,unsigned int l) const{
-
-	double dx;
-
-	double R = computeCorrelation(xi, xj);
-
-	if (k == l){
-
-		dx = 2.0*theta(k)*(-2.0*theta(k)*pow((xi(k)-xj(k)),2.0)+1.0)*R;
-	}
-	if (k != l) {
-
-		dx = -4.0*theta(k)*theta(l)*(xi(k)-xj(k))*(xi(l)-xj(l))*R;
-	}
-
-	return dx;
-}
-
-
-void GaussianCorrelationFunctionForGEK::computeCorrelationMatrixDotForrester(void) {
-
-	unsigned int numberOfSamples = N;
-
-	int k = dim;
-
-	mat Psi=zeros(numberOfSamples,numberOfSamples);
-	mat PsiDot=zeros(numberOfSamples,numberOfSamples);
-
-
-	mat Rfull;
-
-	for(int row = -1; row < k; row++){
-
-		if(row == -1){ /* first row */
-
-			for(unsigned int i=0; i<numberOfSamples;i++){
-				for(unsigned int j=i+1;j<numberOfSamples;j++){
-
-					Psi(i,j)= computeCorrelation(X.row(i), X.row(j));
-
-				}
-			}
-
-			Psi = Psi+ trans(Psi)+ eye(numberOfSamples,numberOfSamples);
-
-			Rfull=Psi;
-
-
-			PsiDot=zeros(numberOfSamples,numberOfSamples);
-			for(int l=0;l<k; l++){
-
-
-				for(unsigned int i=0; i<numberOfSamples;i++){
-					for(unsigned int j=0;j<numberOfSamples;j++){
-						PsiDot(i,j)=2.0*theta(l)* (X(i,l)-X(j,l))*Psi(i,j);
-
-					}
-				}
-				Rfull = join_rows(Rfull,PsiDot);
-
-			}
-
-		}
-
-		else{ /* other rows */
-
-			mat Rrow;
-
-			PsiDot=zeros(numberOfSamples,numberOfSamples);
-
-			for(unsigned int i=0; i<numberOfSamples;i++){
-				for(unsigned int j=0;j<numberOfSamples;j++){
-
-					PsiDot(i,j)=-2.0*theta(row)* (X(i,row)-X(j,row))*Psi(i,j);
-
-				}
-			}
-
-			Rrow = PsiDot;
-
-			for(int l=0; l<k;l++){
-				mat PsiDot2=zeros(numberOfSamples,numberOfSamples);
-
-				if(l == row){
-					for(unsigned int i=0; i<numberOfSamples;i++){
-						for(unsigned int j=0;j<numberOfSamples;j++){
-							PsiDot2(i,j)=
-									(2.0*theta(l)-4.0*theta(l)*theta(l)* pow((X(i,l)-X(j,l)),2.0))*Psi(i,j);
-
-						}
-					}
-
-				}
-
-				else{
-
-
-					for(unsigned int i=0; i<numberOfSamples;i++){
-						for(unsigned int j=0;j<numberOfSamples;j++){
-
-							PsiDot2(i,j)=
-									(-4.0*theta(row)*theta(l)*(X(i,row)-X(j,row))*(X(i,l)-X(j,l)))*Psi(i,j);
-
-						}
-					}
-				}
-
-				Rrow = join_rows(Rrow,PsiDot2);
-			}
-
-			Rfull = join_cols(Rfull,Rrow);
-		}
-
-	} /* end of for loop for rows */
-
-
-
-	correlationMatrixDot  = Rfull + epsilon * eye(numberOfSamples*(k+1),numberOfSamples*(k+1));
-
-
-
-} /* end of compute_R_matrix_GEK */
+//double GaussianCorrelationFunctionForGEK::compute_dR_dxi(const rowvec &xi, const rowvec &xj, unsigned int k) const{
+//
+//	double result = 0.0;
+//
+//	double R = computeCorrelation(xi, xj);
+//	result= -2.0*theta(k)* (xi(k)-xj(k))* R;
+//	return result;
+//
+//}
+//
+//double GaussianCorrelationFunctionForGEK::compute_dR_dxj(const rowvec &xi, const rowvec &xj, unsigned int k) const{
+//
+//	double result = 0.0;
+//
+//	double R = computeCorrelation(xi, xj);
+//	result= 2.0*theta(k)* (xi(k)-xj(k))* R;
+//	return result;
+//
+//}
+//double GaussianCorrelationFunctionForGEK::compute_d2R_dxl_dxk(const rowvec & xi, const rowvec & xj, unsigned int k,unsigned int l) const{
+//
+//	double dx;
+//
+//	double R = computeCorrelation(xi, xj);
+//
+//	if (k == l){
+//
+//		dx = 2.0*theta(k)*(-2.0*theta(k)*pow((xi(k)-xj(k)),2.0)+1.0)*R;
+//	}
+//	if (k != l) {
+//
+//		dx = -4.0*theta(k)*theta(l)*(xi(k)-xj(k))*(xi(l)-xj(l))*R;
+//	}
+//
+//	return dx;
+//}
+//
+//
+//void GaussianCorrelationFunctionForGEK::computeCorrelationMatrixDotForrester(void) {
+//
+//	unsigned int numberOfSamples = N;
+//
+//	int k = dim;
+//
+//	mat Psi=zeros(numberOfSamples,numberOfSamples);
+//	mat PsiDot=zeros(numberOfSamples,numberOfSamples);
+//
+//
+//	mat Rfull;
+//
+//	for(int row = -1; row < k; row++){
+//
+//		if(row == -1){ /* first row */
+//
+//			for(unsigned int i=0; i<numberOfSamples;i++){
+//				for(unsigned int j=i+1;j<numberOfSamples;j++){
+//
+//					Psi(i,j)= computeCorrelation(X.row(i), X.row(j));
+//
+//				}
+//			}
+//
+//			Psi = Psi+ trans(Psi)+ eye(numberOfSamples,numberOfSamples);
+//
+//			Rfull=Psi;
+//
+//
+//			PsiDot=zeros(numberOfSamples,numberOfSamples);
+//			for(int l=0;l<k; l++){
+//
+//
+//				for(unsigned int i=0; i<numberOfSamples;i++){
+//					for(unsigned int j=0;j<numberOfSamples;j++){
+//						PsiDot(i,j)=2.0*theta(l)* (X(i,l)-X(j,l))*Psi(i,j);
+//
+//					}
+//				}
+//				Rfull = join_rows(Rfull,PsiDot);
+//
+//			}
+//
+//		}
+//
+//		else{ /* other rows */
+//
+//			mat Rrow;
+//
+//			PsiDot=zeros(numberOfSamples,numberOfSamples);
+//
+//			for(unsigned int i=0; i<numberOfSamples;i++){
+//				for(unsigned int j=0;j<numberOfSamples;j++){
+//
+//					PsiDot(i,j)=-2.0*theta(row)* (X(i,row)-X(j,row))*Psi(i,j);
+//
+//				}
+//			}
+//
+//			Rrow = PsiDot;
+//
+//			for(int l=0; l<k;l++){
+//				mat PsiDot2=zeros(numberOfSamples,numberOfSamples);
+//
+//				if(l == row){
+//					for(unsigned int i=0; i<numberOfSamples;i++){
+//						for(unsigned int j=0;j<numberOfSamples;j++){
+//							PsiDot2(i,j)=
+//									(2.0*theta(l)-4.0*theta(l)*theta(l)* pow((X(i,l)-X(j,l)),2.0))*Psi(i,j);
+//
+//						}
+//					}
+//
+//				}
+//
+//				else{
+//
+//
+//					for(unsigned int i=0; i<numberOfSamples;i++){
+//						for(unsigned int j=0;j<numberOfSamples;j++){
+//
+//							PsiDot2(i,j)=
+//									(-4.0*theta(row)*theta(l)*(X(i,row)-X(j,row))*(X(i,l)-X(j,l)))*Psi(i,j);
+//
+//						}
+//					}
+//				}
+//
+//				Rrow = join_rows(Rrow,PsiDot2);
+//			}
+//
+//			Rfull = join_cols(Rfull,Rrow);
+//		}
+//
+//	} /* end of for loop for rows */
+//
+//
+//
+//	correlationMatrixDot  = Rfull + epsilon * eye(numberOfSamples*(k+1),numberOfSamples*(k+1));
+//
+//
+//
+//} /* end of compute_R_matrix_GEK */
 

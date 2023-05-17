@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with RoDEO.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, RPTU)
@@ -29,43 +29,48 @@
  *
  */
 
-#ifndef OUTPUT_HPP
-#define OUTPUT_HPP
 
-#include<string>
-#include<matrix_vector_operations.hpp>
-#include "design.hpp"
 
-using std::string;
+#ifndef EXP_CORRELATION_FUNCTION_HPP
+#define EXP_CORRELATION_FUNCTION_HPP
 
-class OutputDevice{
+#include <armadillo>
+#include "correlation_functions.hpp"
+using namespace arma;
+
+
+class ExponentialCorrelationFunction : public CorrelationFunctionBase{
+
+private:
+
+
+	vec thetaParameters;
+	vec gammaParameters;
+
 
 
 public:
 
-	bool ifScreenDisplay = false;
 
-	OutputDevice();
-	void setDisplayOn(void);
+	void setTheta(vec);
+	void setGamma(vec);
 
-	void printMessage(string) const;
-	void printErrorMessageAndAbort(string message) const;
+	void print(void) const;
 
-	void printMessage(string, string) const;
-	void printMessage(string, int) const;
-	void printMessage(string, unsigned int) const;
-	void printMessage(string, double) const;
-	void printMessage(string, double,string message2, double ) const;
-	void printMessage(std::string, vec) const;
-	void printMessage(std::string message, rowvec whatToPrint) const;
-	void printMessage(std::string message, mat whatToPrint) const;
-	void printDesign(const Design &d) const;
-	void printIteration(unsigned int iteration) const;
-	void printBoxConstraints(const vec &lb, const vec &ub) const;
-	void printList(std::vector<int> list, std::string msg) const;
+
+	void initialize(void);
+	void setHyperParameters(vec);
+	vec getHyperParameters(void) const;
+	double computeCorrelation(const rowvec &, const rowvec &) const;
+	double computeCorrelationDot(const rowvec &xi, const rowvec &xj, const rowvec &direction) const;
+	double computeCorrelationDotDot(const rowvec &xi,
+			const rowvec &xj, const rowvec &direction2, const rowvec &direction1);
+
+
+	bool checkIfParametersAreSetProperly(void) const;
+
 
 
 };
 
 #endif
-

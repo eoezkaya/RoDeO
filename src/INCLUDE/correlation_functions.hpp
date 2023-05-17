@@ -126,34 +126,7 @@ public:
 
 };
 
-class ExponentialCorrelationFunction : public CorrelationFunctionBase{
 
-private:
-
-
-	vec theta;
-	vec gamma;
-
-
-
-public:
-
-
-	void setTheta(vec);
-	void setGamma(vec);
-
-	void print(void) const;
-
-
-	void initialize(void);
-	void setHyperParameters(vec);
-	vec getHyperParameters(void) const;
-	double computeCorrelation(const rowvec &, const rowvec &) const;
-	bool checkIfParametersAreSetProperly(void) const;
-
-
-
-};
 
 
 class BiQuadraticSplineCorrelationFunction : public CorrelationFunctionBase{
@@ -170,8 +143,6 @@ public:
 	double computeCorrelation(const rowvec &, const rowvec &) const;
 	bool checkIfParametersAreSetProperly(void) const;
 
-
-
 };
 
 
@@ -181,6 +152,8 @@ private:
 
 
 	vec theta;
+	vec thetaDifferentiated ;
+	double thetaScalingUpFactor         =  1.0;
 
 
 public:
@@ -190,22 +163,30 @@ public:
 	void setHyperParameters(vec);
 	vec getHyperParameters(void) const;
 
-	double computeCorrelation(const rowvec &, const rowvec &) const;
 	bool checkIfParametersAreSetProperly(void) const;
 
+	double computeCorrelation(const rowvec &, const rowvec &) const;
 	double computeCorrelationDot(const rowvec &x_i, const rowvec &x_j, const rowvec &diffDirection) const;
 	double computeCorrelationDotDot(const rowvec &x_i, const rowvec &x_j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const;
-	double compute_dR_dxi(const rowvec &xi, const rowvec &xj, unsigned int k) const;
-	double compute_dR_dxj(const rowvec &xi, const rowvec &xj, unsigned int k) const;
-	double compute_d2R_dxl_dxk(const rowvec &, const rowvec &, unsigned int ,unsigned int) const;
 
 	double computeCorrelation(unsigned int i, unsigned int j) const;
 	double computeCorrelationDot(unsigned int i, unsigned int j, const rowvec &diffDirection) const;
 	double computeCorrelationDotDot(unsigned int i, unsigned int j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const;
 
 
+	double computeDifferentiatedCorrelation(unsigned int i,
+			unsigned int j, const rowvec &diffDirection) const;
 
-	void computeCorrelationMatrixDotForrester(void);
+
+	double computeDifferentiatedCorrelationDot(unsigned int i,
+			unsigned int j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const;
+
+
+	double computeDifferentiatedCorrelation(const rowvec &x_i, const rowvec &x_j, const rowvec &diffDirection) const ;
+
+
+
+	void setThetaScalingUpFactor(double);
 
 	void print(void) const;
 

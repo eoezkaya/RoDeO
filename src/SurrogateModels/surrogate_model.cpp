@@ -401,20 +401,23 @@ void SurrogateModel::tryOnTestData(void){
 		fExact = data.getOutputVectorTest();
 	}
 
+	mat XTest = data.getInputMatrixTest();
+
 
 	for(unsigned int i=0; i<numberOfTestSamples; i++){
 
-		rowvec xp = data.getRowXTest(i);
-		rowvec x  = data.getRowXRawTest(i);
+		rowvec xp          = data.getRowXTest(i);
+		rowvec dataRow     = data.getRowXRawTest(i);
 
 		output.printMessage("\n");
+		rowvec x = dataRow.head(dimension);
 		output.printMessage("x = ",x);
 
 
 		double fTilde = interpolate(xp);
-		output.printMessage("fTilde = ",fTilde);
 
-		rowvec sample = x.head(dim);
+
+		rowvec sample = x;
 		addOneElement(sample,fTilde);
 
 		if(data.ifTestDataHasFunctionValues){
@@ -424,8 +427,13 @@ void SurrogateModel::tryOnTestData(void){
 			squaredError(i) = error;
 			addOneElement(sample,error);
 
-			output.printMessage("fExact = ",fExact(i));
+			output.printMessage("f(x) = ",fExact(i), "estimate = ", fTilde);
+			output.printMessage("Squared error = ", error);
 			output.printMessage("\n");
+		}
+		else{
+
+			output.printMessage("fTilde = ",fTilde);
 		}
 
 		results.row(i) = sample;
@@ -464,6 +472,8 @@ void SurrogateModel::generateSampleWeights(void){
 
 	assert(ifDataIsRead);
 	assert(numberOfSamples>0);
+
+	sampleWeights = zeros<vec>(numberOfSamples);
 
 	vec y = data.getOutputVector();
 	double targetValue = min(y);

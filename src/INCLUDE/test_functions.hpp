@@ -96,9 +96,12 @@ public:
 
 
     void generateSamplesInputTrainingData(void);
+
     void generateSamplesInputTestData(void);
+    void generateSamplesInputTestDataCloseToTrainingSamples(void);
 
     void generateTestSamples(void);
+    void generateTestSamplesCloseToTrainingSamples(void);
 
     void generateTrainingSamples(void);
     void generateTrainingSamplesWithAdjoints(void);
@@ -228,6 +231,13 @@ double BoreholeAdj(double *x, double *xb);
 
 double Wingweight(double *x);
 double WingweightAdj(double *xin, double *xb);
+
+
+double Alpine02_5D(double *x);
+double Alpine02_5DAdj(double *x, double *xb);
+double Alpine02_5DTangent(double *x, double *xd, double *fdot);
+
+
 
 
 

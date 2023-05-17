@@ -46,25 +46,49 @@ using std::cout;
 #include "auxiliary_functions.hpp"
 #include "linear_regression.hpp"
 
-AggregationModel::AggregationModel():SurrogateModel(){
 
-	setGradientsOn();
+void AggregationModel::setDimension(unsigned int dim){
+
+	dimension = dim;
+	data.setDimension(dim);
+	krigingModel.setDimension(dim);
 
 }
+
 
 void AggregationModel::setBoxConstraints(Bounds boxConstraintsInput){
 
 	assert(boxConstraintsInput.areBoundsSet());
+	assert(boxConstraintsInput.getDimension() == dimension);
 
 	boxConstraints = boxConstraintsInput;
 	data.setBoxConstraints(boxConstraintsInput);
+
+	krigingModel.setBoxConstraints(boxConstraintsInput);
+
 }
 
 
 void AggregationModel::readData(void){
 
 	assert(isNotEmpty(filenameDataInput));
+	assert(dimension>0);
+
+	data.setGradientsOn();
 	data.readData(filenameDataInput);
+	numberOfSamples = data.getNumberOfSamples();
+
+	mat rawTrainingData = data.getRawData();
+	mat trainingDataFortheKrigingModel = rawTrainingData.submat(0, 0, numberOfSamples-1, dimension);
+
+	//	rawTrainingData.print("rawData");
+	//	trainingDataFortheKrigingModel.print("rawDataKriging");
+
+	trainingDataFortheKrigingModel.save(filenameTrainingForKrigingModel, csv_ascii);
+
+	krigingModel.setNameOfInputFile(filenameTrainingForKrigingModel);
+	krigingModel.readData();
+
 	ifDataIsRead = true;
 
 }
@@ -74,6 +98,8 @@ void AggregationModel::normalizeData(void){
 	assert(ifDataIsRead);
 
 	data.normalize();
+	krigingModel.normalizeData();
+
 	ifNormalized = true;
 }
 
@@ -84,12 +110,7 @@ void AggregationModel::normalizeData(void){
 void AggregationModel::setNameOfInputFile(std::string filename){
 
 	assert(isNotEmpty(filename));
-
 	filenameDataInput  = filename;
-	krigingModel.setNameOfInputFile(filename);
-
-
-
 }
 
 void AggregationModel::setNumberOfTrainingIterations(unsigned int nIters){
@@ -115,7 +136,7 @@ void AggregationModel::setNameOfHyperParametersFile(std::string label){
 
 void AggregationModel::determineRhoBasedOnData(void){
 
-	output.printMessage("Determining the hyperparameter rho for the aggregation model...");
+	output.printMessage("Determining the hyper-parameter rho for the aggregation model...");
 
 	unsigned int numberOfProbes = 1000;
 	unsigned int dim = data.getDimension();
@@ -171,6 +192,8 @@ void AggregationModel::determineRhoBasedOnData(void){
 
 	rho = -2.0*log(0.0001)/ (max(probeDistances) * averageNormGrad);
 
+	output.printMessage("rho = ", rho);
+
 
 
 
@@ -178,28 +201,21 @@ void AggregationModel::determineRhoBasedOnData(void){
 
 void AggregationModel::initializeSurrogateModel(void){
 
+	assert(ifDataIsRead);
+	assert(ifNormalized);
+	assert(dimension>0);
+	assert(numberOfSamples>0);
 
-	unsigned int dim = data.getDimension();
-
-	krigingModel.setGradientsOn();
-	krigingModel.readData();
-	krigingModel.setBoxConstraints(data.getBoxConstraints());
-
-	krigingModel.normalizeData();
 	krigingModel.initializeSurrogateModel();
 
-
-	numberOfHyperParameters = dim + 1;
-
-	weightedL1norm.initialize(dim);
+	numberOfHyperParameters = dimension + 1;
+	weightedL1norm.initialize(dimension);
 
 	ifInitialized = true;
 
 #if 0
 	printSurrogateModel();
 #endif
-
-
 
 }
 
@@ -329,43 +345,35 @@ vec AggregationModel::getL1NormWeights(void) const{
 }
 
 
-void AggregationModel::determineOptimalL1NormWeights(void){
-
-	output.printMessage("Determining optimal weights for the L1 norm...");
-
-	prepareTrainingAndTestData();
-
-	weightedL1norm.findOptimalWeights();
-
-	output.printMessage("Optimal weights for the L1 norm", weightedL1norm.getWeights());
-
-}
+//void AggregationModel::determineOptimalL1NormWeights(void){
+//
+//	output.printMessage("Determining optimal weights for the L1 norm...");
+//
+//	prepareTrainingAndTestData();
+//
+//	weightedL1norm.findOptimalWeights();
+//
+//	output.printMessage("Optimal weights for the L1 norm", weightedL1norm.getWeights());
+//
+//}
 
 
 void AggregationModel::train(void){
 
+	assert(ifDataIsRead);
+	assert(ifNormalized);
+	assert(ifInitialized);
+
 	output.printMessage("Training the aggregation model: ", name);
-
-	if(!ifInitialized){
-
-		initializeSurrogateModel();
-	}
-
-	loadHyperParameters();
-
 
 	krigingModel.train();
 
+	//	printHyperParameters();
 
-//	printHyperParameters();
-
-
-	determineOptimalL1NormWeights();
-
+//	determineOptimalL1NormWeights();
 	determineRhoBasedOnData();
 
-	saveHyperParameters();
-
+	ifModelTrainingIsDone = true;
 
 }
 
@@ -393,18 +401,25 @@ double AggregationModel::calculateDualModelEstimate(const rowvec &x, int index) 
 
 	vec y = data.getOutputVector();
 
-	double yNearestPoint = y(index);
-
-
-	rowvec gradNearestPoint = data.getRowGradient(index);
-	rowvec xNearestPointRaw = data.getRowXRaw(index);
-
-
 	Bounds boxConstraints = data.getBoxConstraints();
 
 	vec xmin = boxConstraints.getLowerBounds();
 	vec xmax = boxConstraints.getUpperBounds();
 	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
+
+
+	double yNearestPoint = y(index);
+
+
+	rowvec gradNearestPoint = data.getRowGradientRaw(index);
+	rowvec xNearestPointRaw = data.getRowXRaw(index);
+
+	xp.print("xp = ");
+	xNearestPointRaw.print("x nearest = ");
+	gradNearestPoint.print("grad nearest");
+	printScalar(yNearestPoint);
+
+
 
 	rowvec xDiffRaw = xp - xNearestPointRaw;
 
@@ -419,8 +434,12 @@ double AggregationModel::interpolate(rowvec x) const{
 	double estimateKrigingModel = krigingModel.interpolate(x);
 	double estimateDualModel = calculateDualModelEstimate(x,indexNearestPoint);
 
+	printTwoScalars(estimateKrigingModel, estimateDualModel);
+
 	double w2 = calculateDualModelWeight(x,indexNearestPoint);
 	double w1 = 1.0 - w2;
+
+	printTwoScalars(w1, w2);
 
 	return w1*estimateKrigingModel + w2 * estimateDualModel;
 

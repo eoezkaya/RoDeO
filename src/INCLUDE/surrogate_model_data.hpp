@@ -55,6 +55,7 @@ protected:
 	mat X;
 	mat Xraw;
 	mat gradient;
+	mat gradientRaw;
 	vec y;
 
 	vec directionalDerivatives;
@@ -123,10 +124,14 @@ public:
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXTest(unsigned int index) const;
 	rowvec getRowRawData(unsigned int index) const;
+
 	rowvec getRowGradient(unsigned int index) const;
+	rowvec getRowGradientRaw(unsigned int index) const;
+
 	rowvec getRowDifferentiationDirection(unsigned int index) const;
 
 	mat getInputMatrix(void) const;
+	mat getInputMatrixTest(void) const;
 
 	rowvec getRowXRaw(unsigned int index) const;
 	rowvec getRowXRawTest(unsigned int index) const;

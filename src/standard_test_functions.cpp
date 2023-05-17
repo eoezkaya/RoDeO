@@ -52,7 +52,7 @@ HimmelblauFunction::HimmelblauFunction():function("Himmelblau", 2){
 
 	function.numberOfTrainingSamples = 50;
 	function.numberOfTestSamples = 100;
-	function.numberOfTrainingSamplesLowFi = 100;
+	function.numberOfTrainingSamplesLowFi = 0;
 
 
 }
@@ -73,7 +73,7 @@ HimmelblauFunction::HimmelblauFunction(double lb, double ub):function("Himmelbla
 
 	function.numberOfTrainingSamples = 50;
 	function.numberOfTestSamples = 100;
-	function.numberOfTrainingSamplesLowFi = 100;
+	function.numberOfTrainingSamplesLowFi = 0;
 
 	function.setBoxConstraints(lb, ub);
 
@@ -194,6 +194,31 @@ WingweightFunction::WingweightFunction():function("Himmelblau", 10){
 }
 
 
+Alpine02_5DFunction::Alpine02_5DFunction():function("Alpine02_5D", 5){
 
+	function.func_ptr = Alpine02_5D;
+	function.adj_ptr  = Alpine02_5DAdj;
+	function.tan_ptr  = Alpine02_5DTangent;
+	Bounds boxConstraints;
+
+	vec lb(5);
+	vec ub(5);
+
+	lb(0) = 0.0; ub(0) = 10.0;
+	lb(1) = 0.0; ub(1) = 10.0;
+	lb(2) = 0.0; ub(2) = 10.0;
+	lb(3) = 0.0; ub(3) = 10.0;
+	lb(4) = 0.0; ub(4) = 10.0;
+
+
+	boxConstraints.setBounds(lb,ub);
+	function.setBoxConstraints(boxConstraints);
+	function.filenameTestData = "alpine02_5DTestData.csv";
+	function.filenameTrainingData = "alpine02_5D.csv";
+
+	function.numberOfTrainingSamples = 50;
+	function.numberOfTestSamples = 100;
+
+}
 
 

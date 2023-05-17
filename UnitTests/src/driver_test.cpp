@@ -46,9 +46,11 @@ protected:
 	void SetUp() override {
 
 		himmelblauFunction.function.filenameTrainingData = "himmelblau.csv";
+		himmelblauFunction.function.filenameTrainingDataHighFidelity = "himmelblau.csv";
+		himmelblauFunction.function.filenameTrainingDataLowFidelity =  "himmelblauLowFi.csv";
 		himmelblauFunction.function.filenameTestData = "himmelblauTest.csv";
 		himmelblauFunction.function.numberOfTrainingSamples = 50;
-		himmelblauFunction.function.numberOfTrainingSamplesLowFi = 100;
+		himmelblauFunction.function.numberOfTrainingSamplesLowFi = 200;
 		himmelblauFunction.function.numberOfTestSamples = 200;
 
 		constraint1.function.filenameTrainingData = "constraint1.csv";
@@ -57,6 +59,8 @@ protected:
 		constraint2.function.filenameTrainingData = "constraint2.csv";
 		constraint2.function.numberOfTrainingSamples = 40;
 
+		alpine02Function.function.numberOfTrainingSamples = 100;
+
 	}
 
 
@@ -64,6 +68,7 @@ protected:
 	void TearDown() override {	}
 
 	HimmelblauFunction himmelblauFunction;
+	Alpine02_5DFunction alpine02Function;
 	HimmelblauConstraintFunction1 constraint1;
 	HimmelblauConstraintFunction2 constraint2;
 	WingweightFunction wingweightFunction;
@@ -71,22 +76,75 @@ protected:
 };
 
 
-TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModelWingweight){
+TEST_F(DriverTest, runSurrogateModelHimmelblauAggregationModel){
 
-	wingweightFunction.function.ifSomeAdjointsAreLeftBlank = true;
-	wingweightFunction.function.generateTrainingSamplesWithAdjoints();
-	wingweightFunction.function.generateTestSamples();
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = false;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+	himmelblauFunction.function.generateTestSamples();
 
 	RoDeODriver testDriver;
 
 	testDriver.setDisplayOn();
-	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauGGEKwingweight.cfg");
+	testDriver.setConfigFilename("himmelblauAgg.cfg");
 	testDriver.readConfigFile();
 	testDriver.runSurrogateModelTest();
 
 	mat results;
 	results.load("surrogateTestResults.csv");
 
+	ASSERT_EQ(results.n_cols, 5);
+	ASSERT_EQ(results.n_rows, 201);
+
+	abort();
+}
+
+
+
+TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModel){
+
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = false;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+	himmelblauFunction.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauGGEK.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv");
+
+	ASSERT_EQ(results.n_cols, 5);
+	ASSERT_EQ(results.n_rows, 201);
+
+	abort();
+}
+
+
+
+TEST_F(DriverTest, runSurrogateModelHimmelblauMLModelWithLowFiAdjoint){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+	himmelblauFunction.function.generateTestSamples();
+
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("himmelblauMLLowFiAdj.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv");
+
+	ASSERT_EQ(results.n_cols, 5);
+	ASSERT_EQ(results.n_rows, 201);
+
+
+	abort();
 
 }
 
@@ -122,33 +180,65 @@ TEST_F(DriverTest, runSurrogateModelHimmelblauMLModel){
 
 
 
-TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModel){
 
-	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
-	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
-	himmelblauFunction.function.generateTestSamples();
+TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModelAlpine02){
+	alpine02Function.function.generateTrainingSamplesWithAdjoints();
+	alpine02Function.function.generateTestSamples();
 
 	RoDeODriver testDriver;
 
 	testDriver.setDisplayOn();
-	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauGGEK.cfg");
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauGGEKAlpine02.cfg");
 	testDriver.readConfigFile();
 	testDriver.runSurrogateModelTest();
 
 	mat results;
 	results.load("surrogateTestResults.csv");
 
-	ASSERT_EQ(results.n_cols, 5);
-	ASSERT_EQ(results.n_rows, 201);
-
+	abort();
 
 }
 
 
 
+TEST_F(DriverTest, runSurrogateModelHimmelblauOrdinaryKrigingAlpine02){
+	alpine02Function.function.generateTrainingSamples();
+	alpine02Function.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauOKAlpine02.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv");
+
+	abort();
+
+}
 
 
 
+TEST_F(DriverTest, runSurrogateModelHimmelblauGGEKModelWingweight){
+
+	wingweightFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	wingweightFunction.function.generateTrainingSamplesWithAdjoints();
+	wingweightFunction.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauGGEKwingweight.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv");
+
+
+}
 
 
 TEST_F(DriverTest, runSurrogateModelHimmelblauTangentModel){

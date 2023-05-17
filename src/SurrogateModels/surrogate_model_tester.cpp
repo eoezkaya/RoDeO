@@ -82,7 +82,11 @@ void SurrogateModelTester::bindSurrogateModels(void){
 	assert(isNotEmpty(fileNameTestData));
 	assert(dimension>0);
 
+	outputToScreen.ifScreenDisplay = true;
+
 	if(!ifMultiLevel){
+
+		outputToScreen.printMessage("Multi-Fidelity feature is not active...");
 
 		if(surrogateModelType == LINEAR_REGRESSION ){
 			linearModel.setDimension(dimension);
@@ -115,19 +119,19 @@ void SurrogateModelTester::bindSurrogateModels(void){
 
 	else{
 
+		outputToScreen.printMessage("Multi-Fidelity feature is active...");
 		assert(ifSurrogateModelLowFiSpecified);
+		multilevelModel.setDimension(dimension);
 		multilevelModel.setIDHiFiModel(surrogateModelType);
 		multilevelModel.setIDLowFiModel(surrogateModelTypeLowFi);
 		multilevelModel.setinputFileNameHighFidelityData(fileNameTraingData);
 		multilevelModel.setinputFileNameLowFidelityData(fileNameTraingDataLowFidelity);
 		multilevelModel.bindModels();
+		/* TODO correct this ugly thing */
 		multilevelModel.setDimension(dimension);
 		multilevelModel.setName(name);
 
-
 		surrogateModel = &multilevelModel;
-
-
 	}
 
 	surrogateModel->setNameOfInputFileTest(fileNameTestData);

@@ -154,6 +154,123 @@ TEST_F(HimmelblauTest, testAdjoint){
 
 }
 
+class Alpine02_5DTest : public ::testing::Test {
+protected:
+	void SetUp() override {}
+
+	void TearDown() override {}
+
+
+	Alpine02_5DFunction testFun;
+
+};
+
+TEST_F(Alpine02_5DTest, constructor){
+
+	ASSERT_EQ(testFun.function.dimension,5);
+
+}
+
+TEST_F(Alpine02_5DTest, testTangent){
+
+	Design d(5);
+	testFun.function.evaluationSelect = 3;
+
+	rowvec x(5);
+	x(0) = 1.3; x(1) = 3.2; x(2) = 4.7; x(3) = 8.0; x(4) = 2.5;
+	d.designParameters = x;
+
+	rowvec dir(5);
+	dir(0) = 1; dir(1) = 2; dir(2) = -1; dir(3) = 1; dir(4) = 0.0;
+
+	d.tangentDirection = dir;
+
+	testFun.function.evaluate(d);
+
+	double tangentValue = d.tangentValue;
+	double value = d.trueValue;
+
+	double expectedValue = Alpine02_5D(x.memptr());
+
+	double error = fabs(expectedValue - value);
+	EXPECT_LT(error, 10E-10);
+
+	double epsilon = 10E-6;
+	rowvec xp = x + epsilon*dir;
+	rowvec xm = x - epsilon*dir;
+
+	double fp = Alpine02_5D(xp.memptr());
+	double fm = Alpine02_5D(xm.memptr());
+
+	double fdValue = (fp - fm)/(2.0*epsilon);
+
+	error = fabs(fdValue - tangentValue);
+	EXPECT_LT(error, 10E-6);
+
+}
+
+
+TEST_F(Alpine02_5DTest, testAdjoint){
+
+	Design d(5);
+	testFun.function.evaluationSelect = 2;
+
+	rowvec x(5);
+	x(0) = 1.3; x(1) = 3.2; x(2) = 4.7; x(3) = 8.0; x(4) = 2.5;
+	d.designParameters = x;
+
+
+	testFun.function.evaluate(d);
+
+	rowvec gradient = d.gradient;
+
+
+	rowvec dir(5,fill::zeros);
+	dir(0) = 1.0;
+
+	double epsilon = 10E-6;
+	rowvec xp = x + epsilon*dir;
+	rowvec xm = x - epsilon*dir;
+
+	double fp = Alpine02_5D(xp.memptr());
+	double fm = Alpine02_5D(xm.memptr());
+
+	double fdValue = (fp - fm)/(2.0*epsilon);
+	double gradValue = gradient(0);
+
+	double error = fabs(fdValue - gradValue);
+	EXPECT_LT(error, 10E-6);
+
+	dir.fill(0.0);
+	dir(1) = 1.0;
+	xp = x + epsilon*dir;
+	xm = x - epsilon*dir;
+
+	fp = Alpine02_5D(xp.memptr());
+	fm = Alpine02_5D(xm.memptr());
+
+	fdValue = (fp - fm)/(2.0*epsilon);
+
+	error = fabs(fdValue - gradient(1));
+	EXPECT_LT(error, 10E-6);
+
+	dir.fill(0.0);
+	dir(0) = 0.5; dir(1) = -0.2;
+
+	d.tangentDirection = dir;
+
+	testFun.function.evaluationSelect = 3;
+	testFun.function.evaluate(d);
+
+	double tangentValue = d.tangentValue;
+	double directionalDerivative = dot(dir,gradient);
+
+	error = fabs(tangentValue - directionalDerivative);
+	EXPECT_LT(error, 10E-10);
+
+}
+
+
 
 
 #endif

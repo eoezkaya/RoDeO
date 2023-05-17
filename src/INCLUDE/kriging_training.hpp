@@ -43,7 +43,7 @@
 #include "design.hpp"
 #include "linear_solver.hpp"
 #include "ea_optimizer.hpp"
-#include "correlation_functions.hpp"
+#include "exponential_correlation_function.hpp"
 using namespace arma;
 
 
