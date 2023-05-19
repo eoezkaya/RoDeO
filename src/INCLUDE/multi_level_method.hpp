@@ -83,17 +83,12 @@ private:
 
 	Bounds boxConstraints;
 
-
-	double gamma = 1.0;
-	unsigned int maxIterationsForGammaTraining = 1000;
+	double alpha = 1.0;
 
 
 	bool checkifModelIDIsValid(SURROGATE_MODEL id) const;
 	void bindLowFidelityModel(void);
 	void bindErrorModel(void);
-
-
-
 
 public:
 
@@ -149,7 +144,9 @@ public:
 
 
 	void determineGammaBasedOnData(void);
+	void determineAlpha(void);
 
+	double getAlpha(void) const;
 
 
 	double interpolate(rowvec x) const ;
@@ -175,16 +172,7 @@ public:
 	mat getRawDataError(void) const;
 
 
-	unsigned int findNearestNeighbourLowFidelity(rowvec x) const;
-	unsigned int findNearestNeighbourHighFidelity(rowvec x) const;
-
-	double findNearestL1DistanceToALowFidelitySample(rowvec x) const;
-	double findNearestL1DistanceToAHighFidelitySample(rowvec x) const;
-
-
 	void setNumberOfThreads(unsigned int);
-
-
 
 };
 

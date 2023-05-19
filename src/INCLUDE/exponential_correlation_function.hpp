@@ -46,6 +46,7 @@ private:
 
 	vec thetaParameters;
 	vec gammaParameters;
+	double alpha = 1.0;
 
 
 
@@ -54,6 +55,7 @@ public:
 
 	void setTheta(vec);
 	void setGamma(vec);
+	void setAlpha(double);
 
 	void print(void) const;
 
@@ -62,10 +64,7 @@ public:
 	void setHyperParameters(vec);
 	vec getHyperParameters(void) const;
 	double computeCorrelation(const rowvec &, const rowvec &) const;
-	double computeCorrelationDot(const rowvec &xi, const rowvec &xj, const rowvec &direction) const;
-	double computeCorrelationDotDot(const rowvec &xi,
-			const rowvec &xj, const rowvec &direction2, const rowvec &direction1);
-
+	double computeCorrelationDot(const rowvec &, const rowvec &, const rowvec &) const;
 
 	bool checkIfParametersAreSetProperly(void) const;
 

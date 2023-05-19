@@ -38,7 +38,7 @@
 #include<gtest/gtest.h>
 
 
-#ifdef TEST_DRIVER
+#ifdef DRIVER_TEST
 
 
 class DriverTest : public ::testing::Test {
@@ -74,6 +74,32 @@ protected:
 	WingweightFunction wingweightFunction;
 
 };
+
+TEST_F(DriverTest, runSurrogateModelHimmelblauMLModel){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+	himmelblauFunction.function.generateTestSamples();
+
+	RoDeODriver testDriver;
+
+	testDriver.setDisplayOn();
+	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauML.cfg");
+	testDriver.readConfigFile();
+	testDriver.runSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv");
+
+	ASSERT_EQ(results.n_cols, 5);
+	ASSERT_EQ(results.n_rows, 201);
+
+
+	abort();
+
+}
+
+
+
 
 
 TEST_F(DriverTest, runSurrogateModelHimmelblauAggregationModel){
@@ -151,29 +177,6 @@ TEST_F(DriverTest, runSurrogateModelHimmelblauMLModelWithLowFiAdjoint){
 
 
 
-TEST_F(DriverTest, runSurrogateModelHimmelblauMLModel){
-
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
-	himmelblauFunction.function.generateTestSamples();
-
-
-	RoDeODriver testDriver;
-
-	testDriver.setDisplayOn();
-	testDriver.setConfigFilename("testConfigFileSurrogateTestHimmelblauML.cfg");
-	testDriver.readConfigFile();
-	testDriver.runSurrogateModelTest();
-
-	mat results;
-	results.load("surrogateTestResults.csv");
-
-	ASSERT_EQ(results.n_cols, 5);
-	ASSERT_EQ(results.n_rows, 201);
-
-
-	abort();
-
-}
 
 
 

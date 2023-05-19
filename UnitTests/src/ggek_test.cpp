@@ -37,7 +37,7 @@
 #include "test_defines.hpp"
 #include<gtest/gtest.h>
 
-#ifdef TEST_GGEK_MODEL
+#ifdef GGEK_MODEL_TEST
 
 class GGEKModelTest: public ::testing::Test {
 protected:
@@ -116,6 +116,7 @@ TEST_F(GGEKModelTest, tryOnTestDataRAE2882) {
 	testModel.normalizeDataTest();
 
 	testModel.tryOnTestData();
+	testModel.saveTestResults();
 	testModel.printGeneralizationError();
 
 	abort();
@@ -127,14 +128,12 @@ TEST_F(GGEKModelTest, tryOnTestDataRAE2882) {
 
 TEST_F(GGEKModelTest, tryOnTestData) {
 
-	alpine02Function.function.numberOfTrainingSamples = 300;
+	alpine02Function.function.numberOfTrainingSamples = 50;
 	alpine02Function.function.numberOfTestSamples = 50;
-	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
+//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
 	alpine02Function.function.generateTrainingSamplesWithAdjoints();
 
-
-
-	alpine02Function.function.generateTestSamples();
+	alpine02Function.function.generateTestSamplesCloseToTrainingSamples();
 
 	boxConstraints = alpine02Function.function.boxConstraints;
 
@@ -152,7 +151,11 @@ TEST_F(GGEKModelTest, tryOnTestData) {
 	testModel.initializeSurrogateModel();
 
 	testModel.train();
-	testModel.checkResidual();
+//	ASSERT_TRUE(testModel.checkPhiMatrix());
+
+
+
+	ASSERT_TRUE(testModel.checkResidual());
 
 	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);
 
@@ -173,6 +176,7 @@ TEST_F(GGEKModelTest, tryOnTestData) {
 
 TEST_F(GGEKModelTest, constructor) {
 
+	abort();
 	ASSERT_FALSE(testModel.ifDataIsRead);
 	ASSERT_FALSE(testModel.ifInitialized);
 	ASSERT_FALSE(testModel.ifNormalized);

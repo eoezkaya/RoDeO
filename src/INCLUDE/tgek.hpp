@@ -35,7 +35,7 @@
 #include "Rodeo_macros.hpp"
 #include "surrogate_model.hpp"
 #include "kriging_training.hpp"
-#include "correlation_functions.hpp"
+#include "gaussian_correlation_function.hpp"
 #include "linear_regression.hpp"
 #include "linear_solver.hpp"
 using namespace arma;
@@ -71,7 +71,7 @@ private:
 
 	KrigingModel auxiliaryModel;
 
-	GaussianCorrelationFunctionForGEK correlationFunction;
+	GaussianCorrelationFunction correlationFunction;
 
 
 	double targetForDifferentiatedBasis = 0.0;

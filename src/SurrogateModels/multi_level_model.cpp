@@ -119,12 +119,6 @@ void MultiLevelModel::setDisplayOff(void){
 	output.ifScreenDisplay = false;
 }
 
-void  MultiLevelModel::setGamma(double value){
-	gamma = value;
-}
-double  MultiLevelModel::getGamma(void) const{
-	return gamma;
-}
 
 void MultiLevelModel::setBoxConstraints(Bounds boxConstraintsInput){
 
@@ -177,6 +171,9 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 
 	output.printMessage("Preparing error data...");
 
+	determineAlpha();
+
+
 	setNameOfInputFileError();
 
 	if(modelIDError == ORDINARY_KRIGING){
@@ -190,7 +187,7 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 
 		unsigned int indexLowFi = findIndexHiFiToLowFiData(i);
 
-		double error = rawDataHighFidelity(i,dimension) - rawDataLowFidelity(indexLowFi,dimension);
+		double error = rawDataHighFidelity(i,dimension) - alpha*rawDataLowFidelity(indexLowFi,dimension);
 
 		for(unsigned int j = 0; j < dimension; j++){
 			rawDataError(i,j) = rawDataHighFidelity(i,j);
@@ -205,7 +202,7 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 
 			unsigned int indexLowFi = findIndexHiFiToLowFiData(i);
 
-			double errorDirectionalDerivative = rawDataHighFidelity(i,dimension+1) - rawDataLowFidelity(indexLowFi,dimension+1);
+			double errorDirectionalDerivative = rawDataHighFidelity(i,dimension+1) - alpha*rawDataLowFidelity(indexLowFi,dimension+1);
 
 			rawDataError(i,dimension+1) = errorDirectionalDerivative;
 
@@ -301,13 +298,6 @@ void MultiLevelModel::updateAuxilliaryFields(void){
 
 }
 
-void MultiLevelModel::setNumberOfMaximumIterationsForGammaTraining(unsigned int value){
-
-	maxIterationsForGammaTraining = value;
-
-
-}
-
 
 void MultiLevelModel::setNumberOfThreads(unsigned int nThreads){
 
@@ -317,96 +307,6 @@ void MultiLevelModel::setNumberOfThreads(unsigned int nThreads){
 
 
 }
-
-void MultiLevelModel::determineGammaBasedOnData(void){
-
-	assert(ifDataIsRead);
-	assert(ifBoxConstraintsAreSet);
-
-
-
-	MultiLevelModel auxiliaryModel;
-
-	/* we just copy hyperparameters in this way to avoid model training */
-	auxiliaryModel = *this;
-
-	unsigned int numberOfHiFiSamplesAuxiliaryModel = numberOfSamples/5;
-
-	assert(numberOfHiFiSamplesAuxiliaryModel > 0);
-
-	mat rawDataAuxiliaryHiFiSamples =  rawDataHighFidelity;
-	rawDataAuxiliaryHiFiSamples = shuffle(rawDataAuxiliaryHiFiSamples);
-
-
-	unsigned int nCols = rawDataAuxiliaryHiFiSamples.n_cols;
-
-	mat auxiliaryHiFiSamplesTest     = rawDataAuxiliaryHiFiSamples.submat(0,0,numberOfHiFiSamplesAuxiliaryModel-1, nCols-1);
-	mat auxiliaryHiFiSamplesTraining = rawDataAuxiliaryHiFiSamples.submat(numberOfHiFiSamplesAuxiliaryModel,0,numberOfSamples-1, nCols-1);
-
-	saveMatToCVSFile(auxiliaryHiFiSamplesTraining,"auxiliaryHiFiSamplesTraining.csv");
-
-	auxiliaryModel.setName("auxiliaryModelForGammaTraining");
-	auxiliaryModel.setinputFileNameHighFidelityData("auxiliaryHiFiSamplesTraining.csv");
-	auxiliaryModel.setinputFileNameLowFidelityData(filenameDataInputLowFidelity);
-
-
-
-	auxiliaryModel.setBoxConstraints(boxConstraints);
-
-	auxiliaryModel.initializeSurrogateModel();
-
-	vec lb = boxConstraints.getLowerBounds();
-	vec ub = boxConstraints.getUpperBounds();
-
-	mat XTest = auxiliaryHiFiSamplesTest.submat(0, 0, numberOfHiFiSamplesAuxiliaryModel-1,  nCols-2);
-	vec yTest = auxiliaryHiFiSamplesTest.col(nCols-1);
-
-
-
-	double gammaMax = 10.0;
-	double gammaMin =  0.0;
-	double deltaGamma = (gammaMax - gammaMin)/ maxIterationsForGammaTraining;
-
-	double gammaToSet = 0.0;
-	double bestGamma = 0.0;
-	double bestSE = LARGE;
-
-	for(unsigned int iterGamma=0; iterGamma<maxIterationsForGammaTraining; ++iterGamma){
-
-		auxiliaryModel.setGamma(gammaToSet);
-		double SE = 0.0;
-		for(unsigned int i=0; i<numberOfHiFiSamplesAuxiliaryModel; ++i){
-
-			rowvec x = XTest.row(i);
-			rowvec xNormalized = normalizeRowVector(x,lb,ub);
-
-			double fTilde = auxiliaryModel.interpolate(xNormalized);
-			double f = yTest(i);
-
-			SE += ( f - fTilde) * ( f - fTilde);
-
-		}
-
-		if(SE < bestSE){
-
-			bestSE = SE;
-			bestGamma = gammaToSet;
-
-		}
-
-
-		gammaToSet +=deltaGamma;
-
-	}
-
-	output.printMessage("Gamma training is done...");
-	output.printMessage("Best value for gamma = " , bestGamma );
-	setGamma(bestGamma);
-
-}
-
-
-
 
 void MultiLevelModel::trainLowFidelityModel(void){
 
@@ -439,54 +339,47 @@ void MultiLevelModel::train(void){
 	lowFidelityModel->train();
 	errorModel->train();
 
-	determineGammaBasedOnData();
+}
+
+void MultiLevelModel::determineAlpha(void){
+
+	assert(ifDataIsRead);
+	assert(numberOfSamples>0);
+	assert(numberOfSamplesLowFidelity>0);
+
+	vec yHiFi = data.getOutputVector();
+	vec yTemp = dataLowFidelity.getOutputVector();
+	vec yLowFi(numberOfSamples, fill::zeros);
+
+	for(unsigned int i=0; i<numberOfSamples; i++){
+		unsigned int index = findIndexHiFiToLowFiData(i);
+		yLowFi(i) = yTemp(index);
+	}
+
+	alpha = dot(yLowFi,yHiFi)/dot(yLowFi,yLowFi);
 }
 
 
-
+double MultiLevelModel::getAlpha(void) const{
+	return alpha;
+}
 
 
 
 double MultiLevelModel::interpolate(rowvec x) const{
 
 	double result = 0.0;
-	double alpha = 1.0;
 
 	double lowFidelityEstimate = lowFidelityModel->interpolate(x);
 	double errorEstimate = errorModel->interpolate(x);
 #if 0
 	cout<<"lowFidelityEstimate ="<<lowFidelityEstimate<<"\n";
 	cout<<"errorEstimate ="<<errorEstimate<<"\n";
+	printScalar(alpha);
 #endif
 
-
-	double distanceToHF = findNearestL1DistanceToAHighFidelitySample(x);
-	double distanceToLF = findNearestL1DistanceToALowFidelitySample(x);
-
-#if 0
-	cout<<"distToHF ="<<distanceToHF<<"\n";
-	cout<<"distToLF ="<<distanceToLF<<"\n";
-
-#endif
-
-
-	if(distanceToLF < distanceToHF){
-
-		alpha = exp(-gamma*distanceToHF);
-#if 0
-		cout<<"alpha = "<<alpha<<"\n";
-		cout<<"gamma = "<<gamma<<"\n";
-#endif
-
-
-	}
-
-
-	result = lowFidelityEstimate + alpha*errorEstimate;
-	double resultWithoutAlpha = lowFidelityEstimate + errorEstimate;
-
+	result = alpha*lowFidelityEstimate + errorEstimate;
 	return result;
-
 }
 
 
@@ -512,31 +405,7 @@ void MultiLevelModel::interpolateWithVariance(rowvec xp,double *estimatedValue,d
 	lowFidelityModel->interpolateWithVariance(xp,&lowFidelityEstimate,sigmaSquared);
 	double errorEstimate = errorModel->interpolate(xp);
 
-
-	double distanceToHF = findNearestL1DistanceToAHighFidelitySample(xp);
-	double distanceToLF = findNearestL1DistanceToALowFidelitySample(xp);
-
-#if 0
-	cout<<"distToHF ="<<distanceToHF<<"\n";
-	cout<<"distToLF ="<<distanceToLF<<"\n";
-
-#endif
-
-	double alpha = 1.0;
-
-	if(distanceToLF < distanceToHF){
-
-		alpha = exp(-gamma*distanceToHF);
-#if 0
-		cout<<"alpha = "<<alpha<<"\n";
-		cout<<"gamma = "<<gamma<<"\n";
-#endif
-
-
-	}
-
-
-	*estimatedValue = lowFidelityEstimate + alpha * errorEstimate;
+	*estimatedValue = alpha*lowFidelityEstimate +  errorEstimate;
 
 
 }
@@ -553,7 +422,10 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 
 	rowvec x(dimension);
 
-	for(unsigned int i=0; i<dimension; i++) x(i) = rawDataHighFidelity(indexHiFiData,i);
+	for(unsigned int i=0; i<dimension; i++) {
+
+		x(i) = rawDataHighFidelity(indexHiFiData,i);
+	}
 
 	double minNorm = LARGE;
 	for(unsigned int i=0; i < numberOfSamplesLowFidelity; i++){
@@ -566,7 +438,7 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 		double normdx = calculateL1norm(dx);
 
 
-		if(normdx <minNorm){
+		if(normdx < minNorm){
 
 			minNorm = normdx;
 			indexLoFi = i;
@@ -574,6 +446,10 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 	}
 
 	if(minNorm > 10E-10){
+
+		x.print("x = ");
+		std::cout<<"Index in the high-fidelity training data = "<< indexHiFiData << "\n";
+
 		abortWithErrorMessage("A high fidelity data point does not exist in the low fidelity data!");
 	}
 
@@ -593,48 +469,6 @@ void MultiLevelModel::setIDLowFiModel(SURROGATE_MODEL id){
 	modelIDLowFi = id;
 }
 
-
-
-
-void MultiLevelModel::setDimensionsHiFiandLowFiModels(void){
-
-	//	unsigned int nColsLoFiData = this->rawDataLowFidelity.n_cols;
-	//	unsigned int nColsHiFiData = this->rawDataHighFidelity.n_cols;
-	//
-	//
-	//	if(this->ifLowFidelityDataHasGradients){
-	//
-	//		dimLoFi = (nColsLoFiData-1)/2;
-	//
-	//	}
-	//	else{
-	//
-	//		dimLoFi = nColsLoFiData-1;
-	//	}
-	//
-	//	if(this->ifHighFidelityDataHasGradients){
-	//
-	//		dimHiFi = (nColsHiFiData-1)/2;
-	//
-	//	}
-	//	else{
-	//
-	//		dimHiFi = nColsHiFiData-1;
-	//	}
-	//
-	//
-	//	if(dimHiFi != dimLoFi){
-	//
-	//		cout<<"ERROR: dimHiFi != dimLoFi!\n";
-	//		cout<<"dimHiFi = "<<dimHiFi<<"\n";
-	//		cout<<"dimLoFi = "<<dimLoFi<<"\n";
-	//		abort();
-	//
-	//	}
-	//
-	//	data.setDimension(dimHiFi);
-
-}
 
 
 
@@ -788,43 +622,6 @@ mat MultiLevelModel::getRawDataError(void) const{
 
 
 
-unsigned int MultiLevelModel::findNearestNeighbourLowFidelity(rowvec x) const{
-
-	return findNearestNeighborL1(x, XLowFidelity);
-
-}
-
-unsigned int MultiLevelModel::findNearestNeighbourHighFidelity(rowvec x) const{
-
-	return findNearestNeighborL1(x, XHighFidelity);
-
-
-}
-
-
-double MultiLevelModel::findNearestL1DistanceToALowFidelitySample(rowvec x) const{
-
-	unsigned int indx =  findNearestNeighborL1(x, XLowFidelity);
-
-	rowvec xp = XLowFidelity.row(indx);
-	rowvec diff = x- xp;
-
-	return calculateL1norm(diff);
-
-
-
-}
-
-double MultiLevelModel::findNearestL1DistanceToAHighFidelitySample(rowvec x) const{
-
-	unsigned int indx =  findNearestNeighborL1(x, XHighFidelity);
-
-	rowvec xp = XHighFidelity.row(indx);
-	rowvec diff = x- xp;
-
-	return calculateL1norm(diff);
-
-}
 
 unsigned int MultiLevelModel::getNumberOfLowFiSamples(void) const{
 	return numberOfSamplesLowFidelity;

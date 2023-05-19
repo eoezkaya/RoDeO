@@ -558,8 +558,9 @@ void KrigingModel::train(void){
 	vec lb(2*dim,fill::zeros);
 	vec ub(2*dim);
 
-	for(unsigned int i=0; i<dim; i++)     ub(i) = 10.0;
+	for(unsigned int i=0; i<dim; i++)     ub(i) = 20.0;
 	for(unsigned int i=dim; i<2*dim; i++) ub(i) = 2.0;
+	for(unsigned int i=dim; i<2*dim; i++) lb(i) = 1.0;
 
 	boxConstraintsForTheTraining.setBounds(lb,ub);
 	double globalBestL1error = LARGE;

@@ -31,11 +31,14 @@
 
 #ifndef GGEK_HPP
 #define GGEK_HPP
+
+
 #include <armadillo>
 #include "Rodeo_macros.hpp"
 #include "surrogate_model.hpp"
 #include "kriging_training.hpp"
-#include "correlation_functions.hpp"
+#include "exponential_correlation_function.hpp"
+#include "gaussian_correlation_function.hpp"
 #include "linear_regression.hpp"
 #include "linear_solver.hpp"
 using namespace arma;
@@ -60,15 +63,14 @@ private:
 	bool ifActiveDeritiveSampleIndicesAreCalculated = false;
 
 	double weightFactorForDerivatives = 0.5;
-	double thetaFactorForDerivatives = 20.0;
-	double thetaFactor               = 100.0;
 
 	double sigmaThresholdValueForSVD = 10E-012;
 
 
 	KrigingModel auxiliaryModel;
 
-	GaussianCorrelationFunctionForGEK correlationFunction;
+	ExponentialCorrelationFunction correlationFunction;
+	GaussianCorrelationFunction differentiatedCorrelationFunction;
 
 	vector<int> indicesOfSamplesWithActiveDerivatives;
 

@@ -40,6 +40,14 @@
 using namespace arma;
 
 
+void ExponentialCorrelationFunction::setAlpha(double value){
+
+	assert(value>0.0);
+	alpha = value;
+
+
+}
+
 
 
 void ExponentialCorrelationFunction::setTheta(vec input){
@@ -140,6 +148,7 @@ double ExponentialCorrelationFunction::computeCorrelation(const rowvec &xi, cons
 	}
 
 	double correlation = exp(-sum);
+	assert(!isinf(correlation));
 	return correlation;
 }
 
@@ -149,6 +158,9 @@ double ExponentialCorrelationFunction::computeCorrelationDot(const rowvec &xi, c
     double sumd = 0.0;
     double fabs0 = 0.0;
     double fabs0d = 0.0;
+
+    if(norm(xi-xj)<EPSILON) return 0.0;
+
 
     for (int k = 0; k < dim; ++k) {
         if (xi(k) - xj(k) >= 0.0) {
@@ -167,53 +179,11 @@ double ExponentialCorrelationFunction::computeCorrelationDot(const rowvec &xi, c
     double correlationd;
     correlationd = -(exp(-sum)*sumd);
 
+    assert(!isinf(sumd));
+    assert(!isinf(sum));
+
     return correlationd;
 }
-
-
-double ExponentialCorrelationFunction::computeCorrelationDotDot(const rowvec &xi,
-		const rowvec &xj, const rowvec &direction2, const rowvec &direction1){
-    double sum = 0.0;
-    double sumd0;
-    double sumd = 0.0;
-    double sumdd;
-    double fabs0 = 0.0;
-    double fabs0d0;
-    double fabs0d = 0.0;
-    double temp;
-    sumd0 = 0.0;
-    sumdd = 0.0;
-    for (int k = 0; k < dim; ++k) {
-        double tempd;
-        double temp;
-        if (xi(k) - xj(k) >= 0.0) {
-            fabs0d = -direction1(k);
-            fabs0d0 = -direction2(k);
-            fabs0 = xi(k) - xj(k);
-        } else {
-            fabs0d = direction1(k);
-            fabs0d0 = direction2(k);
-            fabs0 = -(xi(k)-xj(k));
-        }
-        double exponentialPart = pow(fabs0, gammaParameters(k));
-        double exponentialPartd0 = (fabs0 <= 0.0 && (gammaParameters(k) == 0.0 || gammaParameters(k) != (int)gammaParameters(k)) ? 0.0 : gammaParameters(k)*pow(fabs0, (gammaParameters(k)-1))*fabs0d0
-        );
-        temp = gammaParameters(k) - 1;
-        tempd = (fabs0 <= 0.0 && (temp == 0.0 || temp != (int)temp) ? 0.0 :
-            temp*pow(fabs0, (temp-1))*fabs0d0);
-        double exponentialPartd = gammaParameters(k)*fabs0d*pow(fabs0, temp);
-        double exponentialPartdd = gammaParameters(k)*fabs0d*tempd;
-        sumdd = sumdd + thetaParameters(k)*exponentialPartdd;
-        sumd = sumd + thetaParameters(k)*exponentialPartd;
-        sumd0 = sumd0 + thetaParameters(k)*exponentialPartd0;
-        sum += thetaParameters(k)*exponentialPart;
-    }
-    temp = exp(-sum);
-    double correlationdd = -(temp*sumdd-sumd*exp(-sum)*sumd0);
-    return correlationdd;
-}
-
-
 
 
 
@@ -226,6 +196,7 @@ void ExponentialCorrelationFunction::initialize(void){
 
 	setTheta(thetaInit);
 	setGamma(gammaInit);
+	setAlpha(1.0);
 
 
 }

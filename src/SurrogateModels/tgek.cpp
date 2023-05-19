@@ -615,14 +615,16 @@ void TGEKModel::calculatePhiEntriesForFunctionValues(void) {
 	unsigned int N = numberOfSamples;
 	/* first N equations are functional values */
 	for (unsigned int i = 0; i < N; i++) {
+		rowvec xi = data.getRowX(i);
 		for (unsigned int j = 0; j < N; j++) {
-			Phi(i, j) = correlationFunction.computeCorrelation(j, i);
+			rowvec xj = data.getRowX(j);
+			Phi(i, j) = correlationFunction.computeCorrelation(xj, xi);
 		}
 		for (unsigned int j = 0; j < numberOfDifferentiatedBasisFunctions;j++) {
 			unsigned int index = indicesDifferentiatedBasisFunctions[j];
+			rowvec xAtindex = data.getRowX(index);
 			rowvec d = data.getRowDifferentiationDirection(index);
-			Phi(i, N + j) = correlationFunction.computeCorrelationDot(index, i,
-					d);
+			Phi(i, N + j) = correlationFunction.computeCorrelationDot(xAtindex, xi,d);
 		}
 	}
 }
@@ -637,22 +639,23 @@ void TGEKModel::calculatePhiEntriesForDerivatives(void) {
 	for (unsigned int i = 0; i < Ndot; i++) {
 
 		unsigned int sampleIndex = indicesOfSamplesWithActiveDerivatives[i];
+		rowvec xAtsampleIndex = data.getRowX(sampleIndex);
 
 		rowvec directionAtSample = data.getRowDifferentiationDirection(sampleIndex);
 		/* directional derivatives of primary basis functions */
 		for (unsigned int j = 0; j < N; j++) {
-
-			Phi(N + i, j) = correlationFunction.computeCorrelationDot(j, sampleIndex, directionAtSample);
+			rowvec xj = data.getRowX(j);
+			Phi(N + i, j) = correlationFunction.computeCorrelationDot(xj, xAtsampleIndex, directionAtSample);
 		}
 
 		/* directional derivatives of differentiated basis functions */
 
 		for (unsigned int j = 0; j < numberOfDifferentiatedBasisFunctions;j++) {
 			unsigned int index = indicesDifferentiatedBasisFunctions[j];
-
+			rowvec xAtindex = data.getRowX(index);
 			rowvec directionBasis = data.getRowDifferentiationDirection(index);
 			Phi(N + i, N + j) = correlationFunction.computeCorrelationDotDot(
-					index, sampleIndex, directionBasis, directionAtSample);
+					xAtindex, xAtsampleIndex, directionBasis, directionAtSample);
 		}
 
 	}

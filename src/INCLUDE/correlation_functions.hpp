@@ -38,41 +38,6 @@
 #include "correlation_functions.hpp"
 using namespace arma;
 
-class CorrelationFunction{
-
-private:
-
-
-	vec theta;             // hyper-parameter
-	mat X;                 // input samples
-	mat xtest;             // test samples
-	mat correlationMatrix;
-	mat correlationVec;
-
-	bool ifInputSampleMatrixIsSet = false;
-
-public:
-
-	CorrelationFunction();
-
-	void setInputSampleMatrix(mat);
-
-	void corrgaussian_gekriging(mat &X, vec theta);
-	mat corrbiquadspline_gekriging(mat &X,vec theta);
-
-	void corrgaussian_gekriging_vec(mat &xtest, mat &X, vec theta);
-	void corrbiquadspline_gekriging_vec(mat &xtest,mat &X, vec theta);
-
-	void corrgaussian_kriging(mat &X,vec theta);
-	void corrbiquadspline_kriging(mat &X,vec theta);
-
-	void corrgaussian_kriging_vec(mat &xtest,mat &X,vec theta);
-	void corrbiquadspline_kriging_vec(mat &xtest,mat &X,vec theta);
-
-	bool isInputSampleMatrixSet(void) const;
-
-
-};
 
 
 class CorrelationFunctionBase{
@@ -84,7 +49,7 @@ protected:
 	unsigned int N = 0;
 	unsigned int dim = 0;
 	mat correlationMatrix;
-	mat correlationMatrixDot;
+
 	vec correlationVec;
 
 	double epsilon = 10E-012;
@@ -99,100 +64,21 @@ public:
 	void setInputSampleMatrix(mat);
 	void setEpsilon(double);
 	void setDimension(unsigned int);
-	virtual void setHyperParameters(vec) = 0;
+
 
 	bool isInputSampleMatrixSet(void) const;
 
 	mat getCorrelationMatrix(void) const;
-	mat getCorrelationMatrixDot(void) const;
 
 	void computeCorrelationMatrix(void);
-	void computeCorrelationMatrixDot(void);
 
-	mat compute_dCorrelationMatrixdxi(unsigned int k) const;
-	mat compute_dCorrelationMatrixdxj(unsigned int k) const;
-	mat compute_d2CorrelationMatrix_dxk_dxl(unsigned int k, unsigned l) const;
-
-
-	virtual double compute_dR_dxi(const rowvec &, const rowvec &, unsigned int) const;
-	virtual double compute_dR_dxj(const rowvec &, const rowvec &, unsigned int) const;
-	virtual double compute_d2R_dxl_dxk(const rowvec &, const rowvec &, unsigned int ,unsigned int) const;
 
 	vec computeCorrelationVector(const rowvec &x) const;
 
+	virtual void setHyperParameters(vec) = 0;
 	virtual double computeCorrelation(const rowvec &x_i, const rowvec &x_j) const = 0;
-	virtual bool checkIfParametersAreSetProperly(void) const = 0;
-
 
 };
-
-
-
-
-class BiQuadraticSplineCorrelationFunction : public CorrelationFunctionBase{
-
-private:
-
-
-	vec theta;
-
-
-public:
-
-	void setHyperParameters(vec);
-	double computeCorrelation(const rowvec &, const rowvec &) const;
-	bool checkIfParametersAreSetProperly(void) const;
-
-};
-
-
-class GaussianCorrelationFunctionForGEK : public CorrelationFunctionBase{
-
-private:
-
-
-	vec theta;
-	vec thetaDifferentiated ;
-	double thetaScalingUpFactor         =  1.0;
-
-
-public:
-
-	void initialize(void);
-
-	void setHyperParameters(vec);
-	vec getHyperParameters(void) const;
-
-	bool checkIfParametersAreSetProperly(void) const;
-
-	double computeCorrelation(const rowvec &, const rowvec &) const;
-	double computeCorrelationDot(const rowvec &x_i, const rowvec &x_j, const rowvec &diffDirection) const;
-	double computeCorrelationDotDot(const rowvec &x_i, const rowvec &x_j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const;
-
-	double computeCorrelation(unsigned int i, unsigned int j) const;
-	double computeCorrelationDot(unsigned int i, unsigned int j, const rowvec &diffDirection) const;
-	double computeCorrelationDotDot(unsigned int i, unsigned int j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const;
-
-
-	double computeDifferentiatedCorrelation(unsigned int i,
-			unsigned int j, const rowvec &diffDirection) const;
-
-
-	double computeDifferentiatedCorrelationDot(unsigned int i,
-			unsigned int j, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const;
-
-
-	double computeDifferentiatedCorrelation(const rowvec &x_i, const rowvec &x_j, const rowvec &diffDirection) const ;
-
-
-
-	void setThetaScalingUpFactor(double);
-
-	void print(void) const;
-
-
-};
-
 
 
 

@@ -151,7 +151,10 @@ void GGEKModel::initializeCorrelationFunction(void){
 	if(!ifCorrelationFunctionIsInitialized){
 		correlationFunction.setDimension(dimension);
 		correlationFunction.initialize();
-		correlationFunction.setThetaScalingUpFactor(thetaFactorForDerivatives);
+
+		differentiatedCorrelationFunction.setDimension(dimension);
+		differentiatedCorrelationFunction.initialize();
+
 		ifCorrelationFunctionIsInitialized = true;
 	}
 
@@ -259,6 +262,11 @@ void GGEKModel::solveLinearSystem() {
 	weights = linearSystemCorrelationMatrixSVD.solveLinearSystem();
 
 
+	trans(weights).print("w");
+
+
+	Phi.print("Phi");
+
 }
 
 void GGEKModel::updateAuxilliaryFields(void){
@@ -279,6 +287,7 @@ void GGEKModel::train(void){
 	assert(ifNormalized);
 	assert(ifInitialized);
 
+
 	trainTheta();
 	updateAuxilliaryFields();
 
@@ -289,16 +298,25 @@ void GGEKModel::train(void){
 
 void GGEKModel::trainTheta(void){
 
+	assert(dimension>0);
+
 	auxiliaryModel.train();
 
 	vec hyperparameters = auxiliaryModel.getHyperParameters();
+	assert(hyperparameters.size() == 2*dimension);
+
 	vec theta = hyperparameters.head(dimension);
+	vec gamma = hyperparameters.tail(dimension);
 
-//	theta.print("theta");
 
-	theta = thetaFactor*theta;
+	theta.print("theta");
+	gamma.print("gamma");
 
-	correlationFunction.setHyperParameters(theta);
+	correlationFunction.setHyperParameters(hyperparameters);
+
+
+	theta = 100*theta;
+	differentiatedCorrelationFunction.setHyperParameters(theta);
 
 
 }
@@ -326,14 +344,19 @@ double GGEKModel::interpolate(rowvec x) const{
 		rowvec xi = data.getRowX(index);
 		rowvec grad = gradientsMatrix.row(index);
 		rowvec diffDirection = makeUnitVector(grad);
-		r(N+i) = correlationFunction.computeDifferentiatedCorrelation(xi, x, diffDirection);
+
+		r(N+i) = differentiatedCorrelationFunction.computeCorrelationDot(xi, x, diffDirection);
 		sum +=weights(N+i)*r(N+i);
 	}
 
-	trans(r).print("r");
+	std::cout<<"\n\n";
+	trans(r.head(N)).print("rPrimal");
+	trans(r.tail(Nd)).print("rDual");
+	std::cout<<"\n\n";
 
 
-	return sum + beta0;
+	return this->auxiliaryModel.interpolate(x);
+//	return sum + beta0;
 }
 
 
@@ -493,22 +516,27 @@ void GGEKModel::calculatePhiEntriesForFunctionValues(void) {
 	/* first N equations are functional values */
 	for (unsigned int i = 0; i < N; i++) {
 
+		rowvec xi = data.getRowX(i);
+
 		for (unsigned int j = 0; j < N; j++) {
-			Phi(i, j) = correlationFunction.computeCorrelation(j, i);
+			rowvec xj = data.getRowX(j);
+			Phi(i, j) = correlationFunction.computeCorrelation(xj, xi);
 		}
 
 
 		for (unsigned int j = 0; j < Ndot;j++) {
 			unsigned int index = indicesOfSamplesWithActiveDerivatives[j];
+			rowvec xAtIndex = data.getRowX(index);
 			rowvec g = gradients.row(index);
 			rowvec d = makeUnitVector(g);
 
-			Phi(i, N + j) = correlationFunction.computeDifferentiatedCorrelation(index, i,
-					d);
+			Phi(i, N + j) = differentiatedCorrelationFunction.computeCorrelationDot(xAtIndex, xi,d);
 		}
 
 
 	}
+
+
 }
 
 void GGEKModel::calculatePhiEntriesForDerivatives(void) {
@@ -521,24 +549,31 @@ void GGEKModel::calculatePhiEntriesForDerivatives(void) {
 	/* last "howManySamplesHaveDerivatives" equations are for directional derivatives */
 	for (unsigned int i = 0; i < Ndot; i++) {
 
+
+
 		unsigned int sampleIndex = indicesOfSamplesWithActiveDerivatives[i];
+		rowvec xAtsampleIndex = data.getRowX(sampleIndex);
+
 		rowvec grad = gradients.row(sampleIndex);
 		rowvec directionAtSample = makeUnitVector(grad);
 
 		/* directional derivatives of primary basis functions */
 		for (unsigned int j = 0; j < N; j++) {
-
-			Phi(N + i, j) = correlationFunction.computeCorrelationDot(j, sampleIndex, directionAtSample);
+			rowvec xj = data.getRowX(j);
+			Phi(N + i, j) = correlationFunction.computeCorrelationDot(xj, xAtsampleIndex, directionAtSample);
 		}
 
 		/* directional derivatives of differentiated basis functions */
 
 		for (unsigned int j = 0; j < Ndot;j++) {
 			unsigned int index = indicesOfSamplesWithActiveDerivatives[j];
+			rowvec xAtindex = data.getRowX(index);
+
 			rowvec g = gradients.row(index);
 			rowvec directionBasis = makeUnitVector(g);
-			Phi(N + i, N + j) = correlationFunction.computeDifferentiatedCorrelationDot(
-					index, sampleIndex, directionBasis, directionAtSample);
+
+			Phi(N + i, N + j) = differentiatedCorrelationFunction.computeCorrelationDotDot(
+					xAtindex, xAtsampleIndex, directionBasis, directionAtSample);
 		}
 
 	}
@@ -584,8 +619,6 @@ void GGEKModel::calculatePhiMatrix(void){
 		Phi = weightMatrix*Phi;
 	}
 
-
-
 }
 
 bool GGEKModel::checkResidual(void) const{
@@ -602,6 +635,7 @@ bool GGEKModel::checkResidual(void) const{
 
 bool GGEKModel::checkPhiMatrix(void){
 
+	Phi.print("Phi");
 
 	unsigned int N    = numberOfSamples;
 	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
@@ -624,6 +658,7 @@ bool GGEKModel::checkPhiMatrix(void){
 
 		}
 
+		printTwoScalars(sum, ftilde);
 		double error = fabs(sum - ftilde);
 		if(error > 10E-05) return false;
 

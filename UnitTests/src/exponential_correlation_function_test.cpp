@@ -109,12 +109,74 @@ TEST_F(ExpCorrelationFunctionTest, testComputeCorrelationDot){
 
 		double fdValue = (Rp - Rm)/(2.0*eps);
 		double error = fabs(fdValue - Rdot);
-//		printTwoScalars(fdValue, Rdot);
+		//		printTwoScalars(fdValue, Rdot);
 		EXPECT_LT(error,10E-6);
 
 	}
 
 }
+
+//TEST_F(ExpCorrelationFunctionTest, testComputeCorrelationDotDot){
+//
+//	testCorrelationFunction.initialize();
+//	const double eps = 10E-010;
+//
+//	for(unsigned int i=0; i<1000; i++){
+//
+//		vec gamma(3,fill::randu);
+//		gamma = 2*gamma;
+//		testCorrelationFunction.setGamma(gamma);
+//
+//		rowvec x1(3,fill::randu);
+//		rowvec x2(3,fill::randu);
+//		rowvec diffDirection1(3,fill::randu);
+//		rowvec diffDirection2(3,fill::randu);
+//
+//		rowvec x2p = x2 + eps*diffDirection2;
+//		rowvec x2m = x2 - eps*diffDirection2;
+//
+//		double Rp = testCorrelationFunction.computeCorrelationDot(x1,x2p,diffDirection1);
+//		double Rm = testCorrelationFunction.computeCorrelationDot(x1,x2m,diffDirection1 );
+//		double Rdot = testCorrelationFunction.computeCorrelationDotDot(x1, x2, diffDirection1,diffDirection2);
+//
+//		double fdValue = (Rp - Rm)/(2.0*eps);
+//		double error = fabs(fdValue - Rdot);
+//		//		printTwoScalars(fdValue, Rdot);
+//		EXPECT_LT(error,10E-4);
+//
+//	}
+//}
+//
+//TEST_F(ExpCorrelationFunctionTest, testComputeDifferentitaedCorrelationDotAtZero){
+//
+//	testCorrelationFunction.initialize();
+//
+//
+//	const double eps = 10E-010;
+//
+//
+//
+//	vec gamma(3,fill::randu);
+//	gamma = 2*gamma;
+//	testCorrelationFunction.setGamma(gamma);
+//
+//	rowvec x1(3,fill::randu);
+//	rowvec x2 = x1 + 0.0000001;
+//	rowvec x3 = x1;
+//	rowvec diffDirection1(3,fill::randu);
+//	rowvec diffDirection2(3,fill::randu);
+//
+//	double Rdot1 = testCorrelationFunction.computeCorrelationDot(x1, x2, diffDirection);
+//
+//	printScalar(Rdot1);
+//
+//}
+
+
+
+
+
+
 
 
 #endif
