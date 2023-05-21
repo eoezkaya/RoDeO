@@ -396,9 +396,6 @@ double MultiLevelModel::interpolateError(rowvec x) const{
 }
 
 
-
-
-
 void MultiLevelModel::interpolateWithVariance(rowvec xp,double *estimatedValue,double *sigmaSquared) const{
 
 	double lowFidelityEstimate;

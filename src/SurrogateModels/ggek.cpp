@@ -93,6 +93,13 @@ void GGEKModel::setNumberOfTrainingIterations(unsigned int N){
 
 }
 
+void GGEKModel::setThetaFactor(double value){
+	assert(value>=1.0);
+	thetaFactor = value;
+}
+
+
+
 void GGEKModel::readData(void){
 
 	assert(isNotEmpty(filenameDataInput));
@@ -208,8 +215,6 @@ void GGEKModel::printSurrogateModel(void) const{
 }
 void GGEKModel::printHyperParameters(void) const{
 
-	vec hyperParameters = correlationFunction.getHyperParameters();
-	hyperParameters.print("theta = ");
 
 }
 void GGEKModel::saveHyperParameters(void) const{
@@ -220,6 +225,38 @@ void GGEKModel::loadHyperParameters(void){
 
 
 }
+
+void GGEKModel::updateCorrelationFunctions(void){
+
+	assert(dimension>0);
+	assert(theta.size() == dimension);
+	assert(gamma.size() == dimension);
+
+	vec hyperParametersForPrimalBasis = joinVectors(theta, gamma);
+	assert(hyperParametersForPrimalBasis.size() == 2*dimension);
+
+	correlationFunction.setHyperParameters(hyperParametersForPrimalBasis);
+	vec thetaForDualBasis = thetaFactor * theta;
+	assert(thetaForDualBasis.size() == dimension);
+	differentiatedCorrelationFunction.setHyperParameters(thetaForDualBasis);
+
+}
+
+
+void GGEKModel::setHyperParameters(vec parameters){
+
+	assert(parameters.size() == 2*dimension);
+	theta = parameters.head(dimension);
+	gamma = parameters.tail(dimension);
+
+	correlationFunction.setHyperParameters(parameters);
+
+	differentiatedCorrelationFunction.setHyperParameters(thetaFactor*theta);
+
+
+}
+
+
 
 void GGEKModel::assembleLinearSystem(void){
 
@@ -261,12 +298,6 @@ void GGEKModel::solveLinearSystem() {
 
 	weights = linearSystemCorrelationMatrixSVD.solveLinearSystem();
 
-
-	trans(weights).print("w");
-
-
-	Phi.print("Phi");
-
 }
 
 void GGEKModel::updateAuxilliaryFields(void){
@@ -289,6 +320,8 @@ void GGEKModel::train(void){
 
 
 	trainTheta();
+	determineThetaCoefficientForDualBasis();
+
 	updateAuxilliaryFields();
 
 	ifModelTrainingIsDone = true;
@@ -305,19 +338,117 @@ void GGEKModel::trainTheta(void){
 	vec hyperparameters = auxiliaryModel.getHyperParameters();
 	assert(hyperparameters.size() == 2*dimension);
 
-	vec theta = hyperparameters.head(dimension);
-	vec gamma = hyperparameters.tail(dimension);
+	theta = hyperparameters.head(dimension);
+	gamma = hyperparameters.tail(dimension);
 
-
+/*
 	theta.print("theta");
 	gamma.print("gamma");
+*/
 
 	correlationFunction.setHyperParameters(hyperparameters);
 
 
-	theta = 100*theta;
-	differentiatedCorrelationFunction.setHyperParameters(theta);
+	vec thetaForDualBasis = thetaFactor*theta;
+	differentiatedCorrelationFunction.setHyperParameters(thetaForDualBasis);
 
+
+}
+
+void GGEKModel::determineThetaCoefficientForDualBasis(void){
+
+	assert(ifDataIsRead);
+	assert(dimension>0);
+	assert(theta.size() == dimension);
+	assert(gamma.size() == dimension);
+	assert(boxConstraints.areBoundsSet());
+
+	output.printMessage("Estimation for the theta amplification factor...");
+
+	GGEKModel auxiliaryModelForThetaCoefficient;
+	auxiliaryModelForThetaCoefficient.setDimension(dimension);
+	auxiliaryModelForThetaCoefficient.setBoxConstraints(boxConstraints);
+
+	mat rawData = data.getRawData();
+
+	unsigned int howManyTrainingSamplesToUse = numberOfSamples/2;
+	assert(howManyTrainingSamplesToUse>0);
+
+	rawData = shuffleRows(rawData);
+
+
+	mat halfData = rawData.submat(0, 0, howManyTrainingSamplesToUse -1, rawData.n_cols-1);
+	halfData.save("trainingDataForTheThetaAuxModel.csv", csv_ascii);
+
+	mat secondhalfData = rawData.submat(howManyTrainingSamplesToUse, 0, numberOfSamples-1, dimension);
+	secondhalfData.save("testDataForTheThetaAuxModel.csv", csv_ascii);
+
+	assert(halfData.n_cols == 2*dimension+1);
+	assert(secondhalfData.n_cols == dimension+1);
+	assert(halfData.n_rows + secondhalfData.n_rows  == numberOfSamples);
+
+	auxiliaryModelForThetaCoefficient.setNameOfInputFile("trainingDataForTheThetaAuxModel.csv");
+	auxiliaryModelForThetaCoefficient.setNameOfInputFileTest("testDataForTheThetaAuxModel.csv");
+
+	auxiliaryModelForThetaCoefficient.readData();
+	auxiliaryModelForThetaCoefficient.normalizeData();
+
+	auxiliaryModelForThetaCoefficient.readDataTest();
+	auxiliaryModelForThetaCoefficient.normalizeDataTest();
+
+	auxiliaryModelForThetaCoefficient.initializeSurrogateModel();
+	auxiliaryModelForThetaCoefficient.assembleLinearSystem();
+
+
+	vec hyperParameters = joinVectors(theta,gamma);
+	assert(hyperParameters.size() == 2*dimension);
+
+	double exponentStart = 0.0;
+	double exponentEnd   = 3.0;
+	double deltaExponent = (exponentEnd-exponentStart)/ numberOfIterationsToDetermineThetaFactor;
+
+	double bestMSE = LARGE;
+	double bestFactor = 1.0;
+
+
+	double exponent = exponentStart;
+
+	for(unsigned int i=0; i<numberOfIterationsToDetermineThetaFactor; i++){
+
+
+		double valueToTry = pow(10.0,exponent);
+
+		auxiliaryModelForThetaCoefficient.setThetaFactor(valueToTry);
+		auxiliaryModelForThetaCoefficient.setHyperParameters(hyperParameters);
+
+		auxiliaryModelForThetaCoefficient.calculatePhiMatrix();
+		auxiliaryModelForThetaCoefficient.solveLinearSystem();
+		auxiliaryModelForThetaCoefficient.tryOnTestData();
+
+		double MSE = auxiliaryModelForThetaCoefficient.generalizationError;
+		assert(MSE > 0.0);
+
+		if(MSE < bestMSE){
+
+			bestMSE = MSE;
+			bestFactor = valueToTry;
+		}
+
+		exponent +=deltaExponent;
+	}
+
+//	printTwoScalars(bestMSE, bestFactor);
+
+	thetaFactor = bestFactor;
+
+	output.printMessage("optimized theta factor = ", thetaFactor);
+
+	updateCorrelationFunctions();
+
+	ifThetaFactorOptimizationIsDone = true;
+
+	remove("trainingDataForTheThetaAuxModel.csv");
+	remove("testDataForTheThetaAuxModel.csv");
 
 }
 
@@ -349,14 +480,14 @@ double GGEKModel::interpolate(rowvec x) const{
 		sum +=weights(N+i)*r(N+i);
 	}
 
-	std::cout<<"\n\n";
-	trans(r.head(N)).print("rPrimal");
-	trans(r.tail(Nd)).print("rDual");
-	std::cout<<"\n\n";
+//	std::cout<<"\n\n";
+//	trans(r.head(N)).print("rPrimal");
+//	trans(r.tail(Nd)).print("rDual");
+//	std::cout<<"\n\n";
 
 
-	return this->auxiliaryModel.interpolate(x);
-//	return sum + beta0;
+//	return this->auxiliaryModel.interpolate(x);
+	return sum + beta0;
 }
 
 
@@ -602,6 +733,7 @@ void GGEKModel::calculatePhiMatrix(void){
 	correlationFunction.setInputSampleMatrix(data.getInputMatrix());
 
 
+	if(Phi.n_rows>0) Phi.reset();
 	Phi = zeros<mat>(howManyTotalDataPoints, howManyBasisFunctions);
 
 	calculatePhiEntriesForFunctionValues();
@@ -635,7 +767,7 @@ bool GGEKModel::checkResidual(void) const{
 
 bool GGEKModel::checkPhiMatrix(void){
 
-	Phi.print("Phi");
+//	Phi.print("Phi");
 
 	unsigned int N    = numberOfSamples;
 	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();

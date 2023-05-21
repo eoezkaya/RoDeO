@@ -98,6 +98,8 @@ std::vector<int> returnKMinIndices(const vec &v, unsigned int k);
 void joinMatricesByColumns(mat& A, const mat& B);
 void joinMatricesByRows(mat& A, const mat& B);
 
+vec joinVectors(const vec& v1, const vec & v2);
+
 vec convertToVector(rowvec &);
 rowvec convertToRowVector(vec &);
 

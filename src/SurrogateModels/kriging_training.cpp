@@ -141,7 +141,6 @@ void KrigingModel::initializeSurrogateModel(void){
 
 	numberOfHyperParameters = 2*dimension;
 
-
 	R_inv_ys_min_beta = zeros<vec>(numberOfSamples);
 	R_inv_I= zeros<vec>(numberOfSamples);
 	R_inv_ys = zeros<vec>(numberOfSamples);

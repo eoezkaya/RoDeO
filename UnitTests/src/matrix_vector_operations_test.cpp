@@ -37,7 +37,7 @@
 #include<gtest/gtest.h>
 
 
-#ifdef TEST_MATRIX_VECTOR_OPS
+#ifdef MATRIX_VECTOR_OPS_TEST
 
 
 TEST(testMatrixVectorOperations, isEqualRowVector){
@@ -254,6 +254,22 @@ TEST(testMatrixVectorOperations, joinMatricesByRows){
 
 
 }
+
+TEST(testMatrixVectorOperations, joinVectors){
+
+	vec v1(4,fill::randu);
+	vec v2(3,fill::randu);
+
+	vec v3 = joinVectors(v1,v2);
+
+	ASSERT_TRUE(v3.size() == v1.size() + v2.size());
+	ASSERT_EQ(v3(3),v1(3));
+	ASSERT_EQ(v3(4),v2(0));
+	ASSERT_EQ(v3(6),v2(2));
+
+}
+
+
 
 TEST(testMatrixVectorOperations, testMakeUnitVector){
 

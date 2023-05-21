@@ -66,6 +66,10 @@ private:
 
 	double sigmaThresholdValueForSVD = 10E-012;
 
+	double thetaFactor = 1.0;
+	unsigned int numberOfIterationsToDetermineThetaFactor = 1000;
+	vec theta;
+	vec gamma;
 
 	KrigingModel auxiliaryModel;
 
@@ -84,26 +88,29 @@ private:
 	void setValuesForFindingDifferentiatedBasisIndex(arma::vec &values);
 	void calculateBeta0();
 	void solveLinearSystem();
+	void updateCorrelationFunctions(void);
+
 
 public:
 
 
 	bool ifUseNoDerivatives = false;
+	bool ifThetaFactorOptimizationIsDone = false;
 
 
 	void setName(string label);
-
 	void setBoxConstraints(Bounds boxConstraintsInput);
 	void setDimension(unsigned int);
+	void setNameOfInputFile(string filename);
+	void setNameOfHyperParametersFile(string filename);
+	void setNumberOfTrainingIterations(unsigned int);
+	void setThetaFactor(double);
 
 	void readData(void);
 	void normalizeData(void);
 
 
 
-	void setNameOfInputFile(string filename);
-	void setNameOfHyperParametersFile(string filename);
-	void setNumberOfTrainingIterations(unsigned int);
 
 	void initializeSurrogateModel(void);
 	void initializeCorrelationFunction(void);
@@ -133,6 +140,9 @@ public:
 	bool checkResidual(void) const;
 
 	void trainTheta(void);
+	void determineThetaCoefficientForDualBasis(void);
+
+
 	void prepareTrainingDataForTheKrigingModel(void);
 	void generateWeightingMatrix(void);
 

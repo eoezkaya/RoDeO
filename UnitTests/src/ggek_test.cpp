@@ -53,7 +53,7 @@ protected:
 		testModel.setName("himmelblauModel");
 
 		himmelblauFunction.function.filenameTestData = "himmelblau.csv";
-		himmelblauFunction.function.numberOfTrainingSamples = 20;
+		himmelblauFunction.function.numberOfTrainingSamples = 50;
 		himmelblauFunction.function.filenameTestData = "himmelblauTest.csv";
 		himmelblauFunction.function.numberOfTestSamples = 100;
 
@@ -80,6 +80,77 @@ protected:
 	unsigned int dim;
 
 };
+
+
+TEST_F(GGEKModelTest, tryOnTestData) {
+
+	alpine02Function.function.numberOfTrainingSamples = 100;
+	alpine02Function.function.numberOfTestSamples = 50;
+//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
+	alpine02Function.function.generateTrainingSamplesWithAdjoints();
+
+	alpine02Function.function.generateTestSamples();
+
+	boxConstraints = alpine02Function.function.boxConstraints;
+
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.setName("Alpine02Model");
+
+	testModel.setDimension(5);
+
+	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+	testModel.setDisplayOn();
+//	testModel.ifVaryingSampleWeights = true;
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+//	ASSERT_TRUE(testModel.checkPhiMatrix());
+
+
+	ASSERT_TRUE(testModel.checkResidual());
+
+	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);
+
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+	testModel.printGeneralizationError();
+
+	abort();
+}
+
+
+
+
+TEST_F(GGEKModelTest, determineThetaCoefficientForDualBasis) {
+
+	alpine02Function.function.generateTrainingSamplesWithAdjoints();
+
+	boxConstraints =  alpine02Function.function.boxConstraints;
+	testModel.setName("Alpine02");
+	testModel.setDimension(5);
+	testModel.setBoxConstraints(boxConstraints);
+
+
+	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+
+	testModel.trainTheta();
+	testModel.determineThetaCoefficientForDualBasis();
+
+	ASSERT_TRUE(testModel.ifThetaFactorOptimizationIsDone);
+
+
+}
+
+
+
 
 
 TEST_F(GGEKModelTest, tryOnTestDataRAE2882) {
@@ -126,47 +197,6 @@ TEST_F(GGEKModelTest, tryOnTestDataRAE2882) {
 
 
 
-TEST_F(GGEKModelTest, tryOnTestData) {
-
-	alpine02Function.function.numberOfTrainingSamples = 50;
-	alpine02Function.function.numberOfTestSamples = 50;
-//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
-	alpine02Function.function.generateTrainingSamplesWithAdjoints();
-
-	alpine02Function.function.generateTestSamplesCloseToTrainingSamples();
-
-	boxConstraints = alpine02Function.function.boxConstraints;
-
-	testModel.setBoxConstraints(boxConstraints);
-	testModel.setName("Alpine02Model");
-
-	testModel.setDimension(5);
-
-	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-	testModel.setDisplayOn();
-//	testModel.ifVaryingSampleWeights = true;
-
-	testModel.initializeSurrogateModel();
-
-	testModel.train();
-//	ASSERT_TRUE(testModel.checkPhiMatrix());
-
-
-
-	ASSERT_TRUE(testModel.checkResidual());
-
-	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);
-
-	testModel.readDataTest();
-	testModel.normalizeDataTest();
-
-	testModel.tryOnTestData();
-	testModel.printGeneralizationError();
-
-	abort();
-}
 
 
 

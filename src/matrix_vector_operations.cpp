@@ -132,7 +132,6 @@ void copyRowVector(rowvec &a,rowvec b, unsigned int indx){
 		a(i) = b(i-indx);
 	}
 
-
 }
 
 vec convertToVector(rowvec &in){
@@ -188,6 +187,31 @@ void joinMatricesByRows(mat& A, const mat& B){
 	A.insert_rows(A.n_rows, B);
 
 }
+
+vec joinVectors(const vec& v1, const vec & v2){
+
+	assert(v1.size()>0);
+	assert(v2.size()>0);
+	unsigned int size = v1.size() + v2.size();
+
+	vec result(size);
+
+
+	for(unsigned int i=0; i<size;i++){
+
+		if(i<v1.size()){
+			result(i) = v1(i);
+		}
+		else{
+			result(i) = v2(i-v1.size());
+		}
+
+	}
+
+	return result;
+
+}
+
 
 void appendMatrixToCSVData(const mat& A, std::string fileName){
 
