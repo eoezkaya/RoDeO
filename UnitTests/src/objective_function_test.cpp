@@ -144,7 +144,7 @@ TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModel){
 
 	setDefinitionForCase5();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setEvaluationMode("adjointLowFi");
+	objFunTest.setDataAddMode("adjointLowFidelity");
 
 //	objFunTest.setDisplayOn();
 	objFunTest.initializeSurrogate();
@@ -189,7 +189,7 @@ TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModelOnlyPrimalSolution){
 
 	setDefinitionForCase5();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setEvaluationMode("primalLowFi");
+	objFunTest.setDataAddMode("primalLowFidelity");
 
 //	objFunTest.setDisplayOn();
 	objFunTest.initializeSurrogate();
@@ -208,6 +208,7 @@ TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModelOnlyPrimalSolution){
 	ASSERT_EQ(lastRow(2),2.67);
 	ASSERT_EQ(lastRow(3),0.0);
 	ASSERT_EQ(lastRow(4),0.0);
+
 
 	remove(filenameTrainingData.c_str());
 	remove(filenameTrainingDataLowFi.c_str());
@@ -525,7 +526,7 @@ TEST_F(ObjectiveFunctionTest, evaluateDesignLowFi){
 	objFunTest.setEvaluationMode("primalLowFi");
 	objFunTest.evaluateDesign(d);
 
-	EXPECT_EQ(d.trueValueLowFidelity,   100.7401899893);
+	EXPECT_EQ(d.trueValueLowFidelity,   63.3025834400);
 
 	remove(definition.designVectorFilename.c_str());
 	remove(definition.outputFilename.c_str());
@@ -674,7 +675,7 @@ TEST_F(ObjectiveFunctionTest, addDesignToData){
 	d.trueValue = 2.4;
 
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setEvaluationMode("primal");
+	objFunTest.setDataAddMode("primal");
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
 
@@ -709,7 +710,7 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataGGEKModel){
 
 	setDefinitionForCase2();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setEvaluationMode("primal");
+	objFunTest.setDataAddMode("primal");
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
 
@@ -760,7 +761,7 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataTangentModel){
 
 	setDefinitionForCase3();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setEvaluationMode("primal");
+	objFunTest.setDataAddMode("primal");
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
 
@@ -811,7 +812,7 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataWithMultiFidelity){
 
 	//	objFunTest.setDisplayOn();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setEvaluationMode("primal");
+	objFunTest.setDataAddMode("primalBoth");
 	objFunTest.initializeSurrogate();
 
 	objFunTest.addDesignToData(d);
@@ -845,6 +846,72 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataWithMultiFidelity){
 }
 
 
+TEST_F(ObjectiveFunctionTest, addDesignToDataWithMultiFidelityGGEKModelLowFi){
+
+	himmelblauFunction.function.numberOfTrainingSamples = 20;
+	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+	trainingData = himmelblauFunction.function.trainingSamples;
+	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValue = 2.4;
+	d.trueValueLowFidelity = 2.67;
+	rowvec gradientLowFi(2);
+	gradientLowFi(0) = -88.9;
+	gradientLowFi(1) =  3.2;
+	d.gradientLowFidelity = gradientLowFi;
+
+	setDefinitionForCase5();
+
+	//	objFunTest.setDisplayOn();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDataAddMode("primalHiFiAdjointLowFi");
+	objFunTest.initializeSurrogate();
+
+	objFunTest.addDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingData, csv_ascii);
+
+	//	newData.print("HiFi data");
+
+	mat newDataLowFi;
+	newDataLowFi.load(filenameTrainingDataLowFi, csv_ascii);
+
+	//	newDataLowFi.print("LowFi data");
+
+	ASSERT_TRUE(newData.n_rows      == trainingData.n_rows+1);
+	ASSERT_TRUE(newDataLowFi.n_rows == trainingDataLowFi.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.4);
+
+	lastRow = newDataLowFi.row(newDataLowFi.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.67);
+	ASSERT_EQ(lastRow(3),-88.9);
+	ASSERT_EQ(lastRow(4),3.2);
+
+	remove(filenameTrainingData.c_str());
+	remove(filenameTrainingDataLowFi.c_str());
+
+}
+
+
+
+
+
+
+
 TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataWithMultiFidelity){
 
 	himmelblauFunction.function.numberOfTrainingSamples = 20;
@@ -866,7 +933,7 @@ TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataWithMultiFidelity){
 
 	//	objFunTest.setDisplayOn();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setEvaluationMode("primalLowFi");
+	objFunTest.setDataAddMode("primalLowFidelity");
 	objFunTest.initializeSurrogate();
 
 	objFunTest.addLowFidelityDesignToData(d);
@@ -918,7 +985,7 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataTangent){
 
 	setDefinitionForCase3();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setEvaluationMode("tangent");
+	objFunTest.setDataAddMode("tangent");
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
 
@@ -956,7 +1023,7 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataAdjoint){
 
 	setDefinitionForCase2();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setEvaluationMode("adjoint");
+	objFunTest.setDataAddMode("adjoint");
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
 

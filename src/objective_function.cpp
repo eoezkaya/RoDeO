@@ -130,14 +130,16 @@ void ObjectiveFunctionDefinition::print(void) const{
 ObjectiveFunction::ObjectiveFunction(){}
 
 void ObjectiveFunction::setEvaluationMode(std::string mode){
-
 	assert(isNotEmpty(mode));
-
 	evaluationMode = mode;
 }
 
 
+void ObjectiveFunction::setDataAddMode(std::string mode){
 
+	assert(isNotEmpty(mode));
+	addDataMode = mode;
+}
 
 void ObjectiveFunction::setDimension(unsigned int dimension){
 	dim = dimension;
@@ -200,6 +202,7 @@ void ObjectiveFunction::bindWithMultiFidelityModel() {
 	surrogateModelML.setinputFileNameLowFidelityData(definition.nameLowFidelityTrainingData);
 
 	assert(dim>0);
+
 	/* TODO modify this ugly code */
 	surrogateModelML.setDimension(dim);
 	surrogateModelML.bindModels();
@@ -210,6 +213,7 @@ void ObjectiveFunction::bindWithMultiFidelityModel() {
 	surrogateModelML.setName(definition.name);
 
 	surrogate = &surrogateModelML;
+
 }
 
 void ObjectiveFunction::bindSurrogateModelSingleFidelity() {
@@ -477,20 +481,20 @@ void ObjectiveFunction::addDesignToData(Design &d){
 
 	assert((isNotEmpty(definition.nameHighFidelityTrainingData)));
 	assert(ifInitialized);
-	assert(isNotEmpty(evaluationMode));
+	assert(isNotEmpty(addDataMode));
 
 
 	if(definition.ifMultiLevel == false){
 
 		rowvec newsample;
 
-		if(evaluationMode.compare("primal") == 0 ){
+		if(addDataMode.compare("primal") == 0 ){
 			newsample = d.constructSampleObjectiveFunction();
 		}
-		if(evaluationMode.compare("tangent") == 0 ){
+		if(addDataMode.compare("tangent") == 0 ){
 			newsample = d.constructSampleObjectiveFunctionWithTangent();
 		}
-		if(evaluationMode.compare("adjoint") == 0 ){
+		if(addDataMode.compare("adjoint") == 0 ){
 			newsample = d.constructSampleObjectiveFunctionWithGradient();
 		}
 
@@ -503,7 +507,7 @@ void ObjectiveFunction::addDesignToData(Design &d){
 		rowvec newsampleHiFi;
 		rowvec newsampleLowFi;
 
-		if(evaluationMode.compare("primal") == 0 ){
+		if(addDataMode.compare("primalBoth") == 0 ){
 
 			newsampleHiFi = d.constructSampleObjectiveFunction();
 			newsampleLowFi = d.constructSampleObjectiveFunctionLowFi();
@@ -516,6 +520,22 @@ void ObjectiveFunction::addDesignToData(Design &d){
 
 		}
 
+		if(addDataMode.compare("primalHiFiAdjointLowFi") == 0 ){
+
+			newsampleHiFi  = d.constructSampleObjectiveFunction();
+			newsampleLowFi = d.constructSampleObjectiveFunctionWithGradientLowFi();
+
+			assert(newsampleLowFi.size() >0);
+			assert(newsampleHiFi.size()  >0);
+
+			surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
+			surrogate->addNewSampleToData(newsampleHiFi);
+
+		}
+
+
+
+
 	}
 
 }
@@ -524,26 +544,26 @@ void ObjectiveFunction::addLowFidelityDesignToData(Design &d){
 
 	assert((isNotEmpty(definition.nameLowFidelityTrainingData)));
 	assert(ifInitialized);
-	assert(isNotEmpty(evaluationMode));
+	assert(isNotEmpty(addDataMode));
 	assert(definition.ifMultiLevel == true);
 
 	rowvec newsampleLowFi;
 
-	if(evaluationMode.compare("primalLowFi") == 0 ){
+	if(addDataMode.compare("primalLowFidelity") == 0 ){
 		newsampleLowFi = d.constructSampleObjectiveFunctionLowFi();
 		assert(newsampleLowFi.size()>0);
 		surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
 
 	}
 
-	if(evaluationMode.compare("adjointLowFi") == 0 ){
+	if(addDataMode.compare("adjointLowFidelity") == 0 ){
 
 		newsampleLowFi = d.constructSampleObjectiveFunctionWithGradientLowFi();
 		assert(newsampleLowFi.size()>0);
 		surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
 	}
 
-	if(evaluationMode.compare("tangentLowFi") == 0 ){
+	if(addDataMode.compare("tangentLowFidelity") == 0 ){
 
 		newsampleLowFi = d.constructSampleObjectiveFunctionWithTangentLowFi();
 		assert(newsampleLowFi.size()>0);

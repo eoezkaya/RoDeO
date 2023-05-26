@@ -101,6 +101,8 @@ protected:
 
 
 	std::string evaluationMode;
+	std::string addDataMode;
+
 	ObjectiveFunctionDefinition definition;
 
 
@@ -142,6 +144,7 @@ public:
 	bool isMultiFidelityActive(void) const;
 
 	void setEvaluationMode(std::string);
+	void setDataAddMode(std::string mode);
 
 
 	void bindSurrogateModel(void);

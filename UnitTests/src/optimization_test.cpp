@@ -163,9 +163,21 @@ protected:
 		definition.ifMultiLevel = true;
 		objFunHimmelblau.setParametersByDefinition(definition);
 		testOptimizer.addObjectFunction(objFunHimmelblau);
-
-
 	}
+
+	void prepareObjectiveFunctionWithMLLowFiAdjoint(void){
+
+		compileWithCpp("himmelblau.cpp", definition.executableName);
+		compileWithCpp("himmelblauAdjointLowFi.cpp", definition.executableNameLowFi);
+		himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+
+		definition.ifMultiLevel = true;
+		definition.modelHiFi = ORDINARY_KRIGING;
+		definition.modelLowFi = GRADIENT_ENHANCED;
+		objFunHimmelblau.setParametersByDefinition(definition);
+		testOptimizer.addObjectFunction(objFunHimmelblau);
+	}
+
 
 
 	void prepareFirstConstraint(void){
@@ -266,6 +278,30 @@ TEST_F(OptimizationTest, setOptimizationHistory){
 
 }
 
+TEST_F(OptimizationTest, EGOUnconstrainedWithMLLowFiAdjoint){
+
+	prepareObjectiveFunctionWithMLLowFiAdjoint();
+
+
+	testOptimizer.setBoxConstraints(boxConstraints);
+
+	testOptimizer.setDisplayOn();
+	testOptimizer.setMaximumNumberOfIterations(50);
+	testOptimizer.EfficientGlobalOptimization();
+
+	mat results;
+	results.load("himmelblau.csv", csv_ascii);
+
+	vec objectiveFunctionValues = results.col(2);
+
+	double minObjFun = min(objectiveFunctionValues);
+
+	EXPECT_LT(minObjFun, 5.0);
+
+	abort();
+
+
+}
 
 
 
@@ -289,10 +325,13 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithML){
 
 	EXPECT_LT(minObjFun, 5.0);
 
-	abort();
-
-
 }
+
+
+
+
+
+
 
 
 

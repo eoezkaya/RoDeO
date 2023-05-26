@@ -1100,7 +1100,19 @@ void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
 			objFun.evaluateDesign(currentBestDesign);
 			objFun.setEvaluationMode("primalLowFi");
 			objFun.evaluateDesign(currentBestDesign);
+			objFun.setDataAddMode("primalBoth");
+
+			objFun.addDesignToData(currentBestDesign);
+
+		}
+
+		if(typeHiFi == ORDINARY_KRIGING && typeLowFi == GRADIENT_ENHANCED){
+
 			objFun.setEvaluationMode("primal");
+			objFun.evaluateDesign(currentBestDesign);
+			objFun.setEvaluationMode("adjointLowFi");
+			objFun.evaluateDesign(currentBestDesign);
+			objFun.setDataAddMode("primalHiFiAdjointLowFi");
 
 			objFun.addDesignToData(currentBestDesign);
 
@@ -1115,17 +1127,19 @@ void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
 
 			currentBestDesign.generateRandomDifferentiationDirection();
 			objFun.setEvaluationMode("tangent");
+			objFun.setDataAddMode("tangent");
 
 		}
 		else if(type == GRADIENT_ENHANCED){
 
 			objFun.setEvaluationMode("adjoint");
-
+			objFun.setDataAddMode("adjoint");
 		}
 
 		else{
 
 			objFun.setEvaluationMode("primal");
+			objFun.setDataAddMode("primal");
 
 		}
 
@@ -1148,10 +1162,9 @@ void Optimizer::EfficientGlobalOptimization(void){
 		print();
 	}
 
-
 	output.ifScreenDisplay = true;
-	initializeSurrogates();
 
+	initializeSurrogates();
 
 	if(!isHistoryFileInitialized){
 
@@ -1214,7 +1227,6 @@ void Optimizer::EfficientGlobalOptimization(void){
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
 		cout<<"Acquisition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
 #endif
-
 
 
 		roundDiscreteParameters(best_dv);
