@@ -139,6 +139,7 @@ public:
 	bool ifDefinitionIsSet = false;
 	bool ifSurrogateModelIsDefined = false;
 
+	bool isMultiFidelityActive(void) const;
 
 	void setEvaluationMode(std::string);
 
@@ -148,7 +149,10 @@ public:
 	void initializeSurrogate(void);
 	void trainSurrogate(void);
 	void printSurrogate(void) const;
+
+
 	SURROGATE_MODEL getSurrogateModelType(void) const;
+	SURROGATE_MODEL getSurrogateModelTypeLowFi(void) const;
 
 	KrigingModel     getSurrogateModel(void) const;
 	GGEKModel getSurrogateModelGradient(void) const;

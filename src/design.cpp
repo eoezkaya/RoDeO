@@ -328,6 +328,10 @@ void Design::print(void) const{
 	printVector(designParameters);
 	std::cout<<"Function value = "<<trueValue<<"\n";
 
+	if(fabs(trueValueLowFidelity) > 0.0 ){
+		std::cout<<"Function value Low Fidelity = "<<trueValueLowFidelity<<"\n";
+	}
+
 	if(!gradient.is_zero() && gradient.size() > 0){
 		printVector(gradient,"gradient vector");
 	}

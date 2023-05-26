@@ -147,9 +147,16 @@ unsigned int ObjectiveFunction::getDimension(void) const{
 }
 
 
+bool ObjectiveFunction::isMultiFidelityActive(void) const{
+	return definition.ifMultiLevel;
+}
+
 
 SURROGATE_MODEL ObjectiveFunction::getSurrogateModelType(void) const{
 	return definition.modelHiFi;
+}
+SURROGATE_MODEL ObjectiveFunction::getSurrogateModelTypeLowFi(void) const{
+	return definition.modelLowFi;
 }
 
 void ObjectiveFunction::bindWithOrdinaryKrigingModel() {

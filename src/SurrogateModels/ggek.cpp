@@ -188,6 +188,9 @@ void GGEKModel::initializeSurrogateModel(void){
 	auxiliaryModel.setDimension(dimension);
 	auxiliaryModel.initializeSurrogateModel();
 
+	updateAuxilliaryFields();
+
+
 	ifInitialized = true;
 
 

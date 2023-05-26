@@ -1089,31 +1089,51 @@ void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
 	/* now make a simulation for the most promising design */
 
 
-	SURROGATE_MODEL type = objFun.getSurrogateModelType();
+	if(objFun.isMultiFidelityActive()){
 
-	if(type == TANGENT){
+		SURROGATE_MODEL typeHiFi = objFun.getSurrogateModelType();
+		SURROGATE_MODEL typeLowFi = objFun.getSurrogateModelTypeLowFi();
 
-		currentBestDesign.generateRandomDifferentiationDirection();
-		objFun.setEvaluationMode("tangent");
+		if(typeHiFi == ORDINARY_KRIGING && typeLowFi == ORDINARY_KRIGING){
 
-	}
-	else if(type == GRADIENT_ENHANCED){
+			objFun.setEvaluationMode("primal");
+			objFun.evaluateDesign(currentBestDesign);
+			objFun.setEvaluationMode("primalLowFi");
+			objFun.evaluateDesign(currentBestDesign);
+			objFun.setEvaluationMode("primal");
 
-		objFun.setEvaluationMode("adjoint");
+			objFun.addDesignToData(currentBestDesign);
+
+		}
 
 	}
 
 	else{
 
-		objFun.setEvaluationMode("primal");
+		SURROGATE_MODEL type = objFun.getSurrogateModelType();
+		if(type == TANGENT){
+
+			currentBestDesign.generateRandomDifferentiationDirection();
+			objFun.setEvaluationMode("tangent");
+
+		}
+		else if(type == GRADIENT_ENHANCED){
+
+			objFun.setEvaluationMode("adjoint");
+
+		}
+
+		else{
+
+			objFun.setEvaluationMode("primal");
+
+		}
+
+
+		objFun.evaluateDesign(currentBestDesign);
+		objFun.addDesignToData(currentBestDesign);
 
 	}
-
-
-	objFun.evaluateDesign(currentBestDesign);
-	objFun.addDesignToData(currentBestDesign);
-
-
 
 }
 
@@ -1192,7 +1212,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 		printf("The most promising design (not normalized):\n");
 		best_dv.print();
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
-		cout<<"Acqusition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
+		cout<<"Acquisition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
 #endif
 
 

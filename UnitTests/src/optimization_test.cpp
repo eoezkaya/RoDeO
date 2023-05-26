@@ -266,6 +266,36 @@ TEST_F(OptimizationTest, setOptimizationHistory){
 
 }
 
+
+
+
+TEST_F(OptimizationTest, EGOUnconstrainedWithML){
+
+	prepareObjectiveFunctionWithML();
+
+
+	testOptimizer.setBoxConstraints(boxConstraints);
+
+	testOptimizer.setDisplayOn();
+	testOptimizer.setMaximumNumberOfIterations(50);
+	testOptimizer.EfficientGlobalOptimization();
+
+	mat results;
+	results.load("himmelblau.csv", csv_ascii);
+
+	vec objectiveFunctionValues = results.col(2);
+
+	double minObjFun = min(objectiveFunctionValues);
+
+	EXPECT_LT(minObjFun, 5.0);
+
+	abort();
+
+
+}
+
+
+
 TEST_F(OptimizationTest, EGOUnconstrainedWithGGEKModel){
 
 	prepareObjectiveFunctionWithAdjoint();
@@ -285,44 +315,18 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithGGEKModel){
 
 	EXPECT_LT(minObjFun, 5.0);
 
-	abort();
-
-
 }
 
 
 
 
 
-TEST_F(OptimizationTest, EGOUnconstrainedWithML){
 
-	prepareObjectiveFunctionWithML();
-
-
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	testOptimizer.setDisplayOn();
-	testOptimizer.setMaximumNumberOfIterations(50);
-	//	testOptimizer.setZoomInOn();
-	//	testOptimizer.setHowOftenZoomIn(10);
-	testOptimizer.EfficientGlobalOptimization();
-
-	mat results;
-	results.load("himmelblau.csv", csv_ascii);
-
-	vec objectiveFunctionValues = results.col(2);
-
-	double minObjFun = min(objectiveFunctionValues);
-
-	EXPECT_LT(minObjFun, 5.0);
-
-	abort();
-
-
-}
 
 
 TEST_F(OptimizationTest, EGOUnconstrained){
+
+	abort();
 
 	prepareObjectiveFunction();
 

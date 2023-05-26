@@ -617,9 +617,6 @@ mat MultiLevelModel::getRawDataError(void) const{
 	return rawDataError;
 }
 
-
-
-
 unsigned int MultiLevelModel::getNumberOfLowFiSamples(void) const{
 	return numberOfSamplesLowFidelity;
 }

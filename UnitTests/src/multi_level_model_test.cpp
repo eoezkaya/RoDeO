@@ -73,7 +73,142 @@ protected:
 };
 
 
+TEST_F(MultiLevelModelTest, testAddNewSampleToData){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+
+	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
+	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
+	//	testModel.setDisplayOn();
+
+
+	testModel.setIDLowFiModel(ORDINARY_KRIGING);
+	testModel.setIDHiFiModel(ORDINARY_KRIGING);
+
+
+	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.readData();
+	testModel.normalizeData();
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+
+
+	double x[2]; x[0] = 0.45; x[1] = -3.45;
+
+	double fHiFi  = himmelblauFunction.function.func_ptr(x);
+	double fLowFi = himmelblauFunction.function.func_ptrLowFi(x);
+
+	rowvec newLowFiSample(3);
+	rowvec newHiFiSample(3);
+
+
+	newLowFiSample(0) = x[0];
+	newLowFiSample(1) = x[1];
+	newLowFiSample(2) = fLowFi;
+	newHiFiSample(0) = x[0];
+	newHiFiSample(1) = x[1];
+	newHiFiSample(2) = fHiFi;
+
+	testModel.addNewLowFidelitySampleToData(newLowFiSample);
+	testModel.addNewSampleToData(newHiFiSample);
+
+	ASSERT_EQ(testModel.getNumberOfLowFiSamples(),101);
+
+
+	rowvec xp(2); xp(0) = x[0]; xp(1) = x[1];
+
+	xp = xp+0.00001;
+	xp = normalizeRowVector(xp,lb,ub);
+
+	double fTildeLowFi = testModel.interpolateLowFi(xp);
+//	printTwoScalars(fTildeLowFi, fLowFi);
+	double fTildeHiFi = testModel.interpolate(xp);
+//	printTwoScalars(fTildeHiFi, fHiFi);
+
+	double errorLowFi = fabs(fTildeLowFi - fLowFi)/fLowFi;
+	EXPECT_LT(errorLowFi, 0.01);
+	double errorHiFi = fabs(fTildeHiFi - fHiFi)/fHiFi;
+	EXPECT_LT(errorHiFi, 0.01);
+
+}
+
+TEST_F(MultiLevelModelTest, testAddNewSampleToDataWithGGEKLoWFiModel){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+
+	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
+	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
+	//	testModel.setDisplayOn();
+
+
+	testModel.setIDLowFiModel(GRADIENT_ENHANCED);
+	testModel.setIDHiFiModel(ORDINARY_KRIGING);
+
+
+	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.readData();
+	testModel.normalizeData();
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+
+
+	double x[2]; x[0] = 0.45; x[1] = -3.45;
+
+	double xb[2];
+
+	double fHiFi  = himmelblauFunction.function.func_ptr(x);
+	double fLowFi = himmelblauFunction.function.adj_ptrLowFi(x,xb);
+
+	rowvec newLowFiSample(5);
+	rowvec newHiFiSample(3);
+
+
+	newLowFiSample(0) = x[0];
+	newLowFiSample(1) = x[1];
+	newLowFiSample(2) = fLowFi;
+	newLowFiSample(3) = xb[0];
+	newLowFiSample(4) = xb[1];
+
+	newHiFiSample(0) = x[0];
+	newHiFiSample(1) = x[1];
+	newHiFiSample(2) = fHiFi;
+
+	testModel.addNewLowFidelitySampleToData(newLowFiSample);
+	testModel.addNewSampleToData(newHiFiSample);
+
+	ASSERT_EQ(testModel.getNumberOfLowFiSamples(),101);
+
+
+	rowvec xp(2); xp(0) = x[0]; xp(1) = x[1];
+
+	xp = xp+0.00001;
+	xp = normalizeRowVector(xp,lb,ub);
+
+	double fTildeLowFi = testModel.interpolateLowFi(xp);
+//	printTwoScalars(fTildeLowFi, fLowFi);
+	double fTildeHiFi = testModel.interpolate(xp);
+//	printTwoScalars(fTildeHiFi, fHiFi);
+
+	double errorLowFi = fabs(fTildeLowFi - fLowFi)/fLowFi;
+	EXPECT_LT(errorLowFi, 0.01);
+	double errorHiFi = fabs(fTildeHiFi - fHiFi)/fHiFi;
+	EXPECT_LT(errorHiFi, 0.01);
+
+
+}
+
+
+
 TEST_F(MultiLevelModelTest, determineAlpha){
+
 
 	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
 
@@ -562,44 +697,7 @@ TEST_F(MultiLevelModelTest, testInterpolateWithVariance){
 
 
 
-TEST_F(MultiLevelModelTest, testAddNewSampleToData){
 
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
-
-	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
-	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
-	//	testModel.setDisplayOn();
-
-
-	testModel.setIDLowFiModel(ORDINARY_KRIGING);
-	testModel.setIDHiFiModel(ORDINARY_KRIGING);
-
-
-	testModel.bindModels();
-	testModel.setName("himmelblauModel");
-	testModel.setBoxConstraints(boxConstraints);
-	testModel.readData();
-	testModel.normalizeData();
-
-	testModel.initializeSurrogateModel();
-
-
-	rowvec newLowFiSample(3);
-	vec x(2);
-	x(0) = generateRandomDouble(lb(0),ub(0) );
-	x(1) = generateRandomDouble(lb(1),ub(1) );
-
-	double f = HimmelblauLowFi(x);
-	newLowFiSample(0) = x(0);
-	newLowFiSample(1) = x(1);
-	newLowFiSample(2) = f;
-
-	testModel.addNewLowFidelitySampleToData(newLowFiSample);
-
-	ASSERT_EQ(testModel.getNumberOfLowFiSamples(),101);
-
-
-}
 
 TEST_F(MultiLevelModelTest, testAddNewHiFiSampleToData){
 
