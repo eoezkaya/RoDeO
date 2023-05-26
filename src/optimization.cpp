@@ -1097,6 +1097,11 @@ void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
 		objFun.setEvaluationMode("tangent");
 
 	}
+	else if(type == GRADIENT_ENHANCED){
+
+		objFun.setEvaluationMode("adjoint");
+
+	}
 
 	else{
 
@@ -1123,7 +1128,10 @@ void Optimizer::EfficientGlobalOptimization(void){
 		print();
 	}
 
+
+	output.ifScreenDisplay = true;
 	initializeSurrogates();
+
 
 	if(!isHistoryFileInitialized){
 
@@ -1180,12 +1188,13 @@ void Optimizer::EfficientGlobalOptimization(void){
 		double estimatedBestdv = objFun.interpolate(best_dvNorm);
 
 
-#if 0
+#if 1
 		printf("The most promising design (not normalized):\n");
 		best_dv.print();
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
 		cout<<"Acqusition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
 #endif
+
 
 
 		roundDiscreteParameters(best_dv);

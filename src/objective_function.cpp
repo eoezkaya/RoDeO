@@ -113,11 +113,12 @@ void ObjectiveFunctionDefinition::print(void) const{
 	std::cout<< "Multilevel = "<<ifMultiLevel<<"\n";
 
 	if(ifMultiLevel){
+
 		std::cout<< "Low fidelity model = " << "\n";
-		std::cout<< "\tTraining data = " << nameHighFidelityTrainingData << "\n";;
-		std::cout<< "\tExecutable = " << executableName << "\n";
+		std::cout<< "\tTraining data = " << nameLowFidelityTrainingData << "\n";;
+		std::cout<< "\tExecutable = " << executableNameLowFi << "\n";
 		std::cout<< "\tPath = " << path << "\n";
-		std::cout<< "\tSurrogate model = " << modelHiFi << "\n";
+		std::cout<< "\tSurrogate model = " << modelLowFi << "\n";
 
 	}
 
@@ -166,31 +167,57 @@ void ObjectiveFunction::bindWithUniversalKrigingModel() {
 	surrogate = &surrogateModel;
 }
 
-void ObjectiveFunction::bindWithAggregationModel() {
+void ObjectiveFunction::bindWithGradientEnhancedModel() {
 	output.printMessage(
-			"Binding the surrogate model with the Aggregation modeĺ...");
+			"Binding the surrogate model with the GRADIENT_ENHANCED modeĺ...");
 	surrogateModelGradient.setNameOfInputFile(
 			definition.nameHighFidelityTrainingData);
 	surrogate = &surrogateModelGradient;
 }
 
 void ObjectiveFunction::bindWithTangentEnhancedKrigingModel() {
+
 	output.printMessage(
-			"Binding the surrogate model with the tangent enhanced modeĺ...");
+			"Binding the surrogate model with the TANGENT modeĺ...");
 	surrogateModelWithTangents.setNameOfInputFile(
 			definition.nameHighFidelityTrainingData);
 	surrogate = &surrogateModelWithTangents;
 }
 
 void ObjectiveFunction::bindWithMultiFidelityModel() {
-	output.printMessage(
-			"Binding the surrogate model with the Multi-fidelity model...");
+
+	surrogateModelML.setIDHiFiModel(definition.modelHiFi);
+	surrogateModelML.setIDLowFiModel(definition.modelLowFi);
+
+	surrogateModelML.setinputFileNameHighFidelityData(definition.nameHighFidelityTrainingData);
+	surrogateModelML.setinputFileNameLowFidelityData(definition.nameLowFidelityTrainingData);
+
+	assert(dim>0);
+	/* TODO modify this ugly code */
+	surrogateModelML.setDimension(dim);
+	surrogateModelML.bindModels();
+	surrogateModelML.setDimension(dim);
+
+	output.printMessage("Binding the surrogate model with the Multi-fidelity model...");
+
 	surrogateModelML.setName(definition.name);
-	surrogateModelML.setinputFileNameHighFidelityData(
-			definition.nameHighFidelityTrainingData);
-	surrogateModelML.setinputFileNameLowFidelityData(
-			definition.nameLowFidelityTrainingData);
+
 	surrogate = &surrogateModelML;
+}
+
+void ObjectiveFunction::bindSurrogateModelSingleFidelity() {
+	if (definition.modelHiFi == ORDINARY_KRIGING) {
+		bindWithOrdinaryKrigingModel();
+	}
+	if (definition.modelHiFi == UNIVERSAL_KRIGING) {
+		bindWithUniversalKrigingModel();
+	}
+	if (definition.modelHiFi == GRADIENT_ENHANCED) {
+		bindWithGradientEnhancedModel();
+	}
+	if (definition.modelHiFi == TANGENT) {
+		bindWithTangentEnhancedKrigingModel();
+	}
 }
 
 void ObjectiveFunction::bindSurrogateModel(void){
@@ -198,33 +225,11 @@ void ObjectiveFunction::bindSurrogateModel(void){
 	assert(ifDefinitionIsSet);
 	assert(definition.modelHiFi != NONE);
 
-
-	if(definition.modelHiFi == ORDINARY_KRIGING){
-
-		bindWithOrdinaryKrigingModel();
-	}
-
-	if(definition.modelHiFi == UNIVERSAL_KRIGING){
-
-		bindWithUniversalKrigingModel();
-	}
-
-	if(definition.modelHiFi == AGGREGATION){
-
-		bindWithAggregationModel();
-	}
-
-	if(definition.modelHiFi == TANGENT){
-		bindWithTangentEnhancedKrigingModel();
-	}
-
 	if(definition.ifMultiLevel){
-
-		if(definition.modelHiFi == ORDINARY_KRIGING && definition.modelLowFi == ORDINARY_KRIGING){
-
-			bindWithMultiFidelityModel();
-		}
-
+		bindWithMultiFidelityModel();
+	}
+	else{
+		bindSurrogateModelSingleFidelity();
 	}
 
 	ifSurrogateModelIsDefined = true;
@@ -309,7 +314,7 @@ KrigingModel ObjectiveFunction::getSurrogateModel(void) const{
 	return surrogateModel;
 }
 
-AggregationModel ObjectiveFunction::getSurrogateModelGradient(void) const{
+GGEKModel ObjectiveFunction::getSurrogateModelGradient(void) const{
 	return surrogateModelGradient;
 }
 MultiLevelModel ObjectiveFunction::getSurrogateModelML(void) const{
@@ -326,6 +331,7 @@ void ObjectiveFunction::initializeSurrogate(void){
 	assert(ifDefinitionIsSet);
 	assert(dim>0);
 
+
 	bindSurrogateModel();
 
 	assert(boxConstraints.areBoundsSet());
@@ -334,6 +340,7 @@ void ObjectiveFunction::initializeSurrogate(void){
 	surrogate->setBoxConstraints(boxConstraints);
 	surrogate->readData();
 	surrogate->normalizeData();
+
 	surrogate->initializeSurrogateModel();
 	surrogate->setNumberOfTrainingIterations(numberOfIterationsForSurrogateTraining);
 
@@ -441,72 +448,105 @@ void ObjectiveFunction::calculateProbabilityOfImprovement(DesignForBayesianOptim
 
 }
 
+std::string ObjectiveFunction::getExecutionCommand(string path, string exename) const{
 
-
-
-std::string ObjectiveFunction::getExecutionCommand(void) const{
+	assert(isNotEmpty(exename));
 
 	std::string runCommand;
 
-	if(isNotEmpty(definition.path)) {
-		runCommand = definition.path +"/" + definition.executableName;
+	if(isNotEmpty(path)) {
+		runCommand = path +"/" + exename;
 	}
 	else{
-		runCommand = "./" + definition.executableName;
+		runCommand = "./" + exename;
 	}
 	return runCommand;
 }
 
-std::string ObjectiveFunction::getExecutionCommandLowFi(void) const{
 
-	assert(definition.ifMultiLevel);
-	assert(isNotEmpty(definition.executableNameLowFi));
 
-	std::string runCommand;
-	if(isNotEmpty(definition.pathLowFi)) {
-		runCommand = definition.pathLowFi +"/" + definition.executableNameLowFi;
-	}
-	else{
-		runCommand = "./" + definition.executableNameLowFi;
-	}
-	return runCommand;
-}
 
 void ObjectiveFunction::addDesignToData(Design &d){
 
 	assert((isNotEmpty(definition.nameHighFidelityTrainingData)));
 	assert(ifInitialized);
+	assert(isNotEmpty(evaluationMode));
 
-	rowvec newsample;
 
-	if(evaluationMode.compare("primal") == 0 ){
-		newsample = d.constructSampleObjectiveFunction();
-	}
-	if(evaluationMode.compare("tangent") == 0 ){
-		newsample = d.constructSampleObjectiveFunctionWithTangent();
-	}
-	if(evaluationMode.compare("adjoint") == 0 ){
-		newsample = d.constructSampleObjectiveFunctionWithGradient();
-	}
+	if(definition.ifMultiLevel == false){
 
-	assert(newsample.size()>0);
-	surrogate->addNewSampleToData(newsample);
+		rowvec newsample;
+
+		if(evaluationMode.compare("primal") == 0 ){
+			newsample = d.constructSampleObjectiveFunction();
+		}
+		if(evaluationMode.compare("tangent") == 0 ){
+			newsample = d.constructSampleObjectiveFunctionWithTangent();
+		}
+		if(evaluationMode.compare("adjoint") == 0 ){
+			newsample = d.constructSampleObjectiveFunctionWithGradient();
+		}
+
+		assert(newsample.size()>0);
+		surrogate->addNewSampleToData(newsample);
+
+	}
+	else{
+
+		rowvec newsampleHiFi;
+		rowvec newsampleLowFi;
+
+		if(evaluationMode.compare("primal") == 0 ){
+
+			newsampleHiFi = d.constructSampleObjectiveFunction();
+			newsampleLowFi = d.constructSampleObjectiveFunctionLowFi();
+
+			assert(newsampleLowFi.size() >0);
+			assert(newsampleHiFi.size() >0);
+
+			surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
+			surrogate->addNewSampleToData(newsampleHiFi);
+
+		}
+
+	}
 
 }
 
 void ObjectiveFunction::addLowFidelityDesignToData(Design &d){
 
+	assert((isNotEmpty(definition.nameLowFidelityTrainingData)));
+	assert(ifInitialized);
+	assert(isNotEmpty(evaluationMode));
+	assert(definition.ifMultiLevel == true);
 
-	assert(false);
-//	rowvec newsample;
-//
-//	if(ifGradientAvailable){
-//		newsample = d.constructSampleObjectiveFunctionWithGradient();
-//	}
-//	else{
-//		newsample = d.constructSampleObjectiveFunction();
-//	}
-//	surrogate->addNewLowFidelitySampleToData(newsample);
+	rowvec newsampleLowFi;
+
+	if(evaluationMode.compare("primalLowFi") == 0 ){
+		newsampleLowFi = d.constructSampleObjectiveFunctionLowFi();
+		assert(newsampleLowFi.size()>0);
+		surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
+
+	}
+
+	if(evaluationMode.compare("adjointLowFi") == 0 ){
+
+		newsampleLowFi = d.constructSampleObjectiveFunctionWithGradientLowFi();
+		assert(newsampleLowFi.size()>0);
+		surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
+	}
+
+	if(evaluationMode.compare("tangentLowFi") == 0 ){
+
+		newsampleLowFi = d.constructSampleObjectiveFunctionWithTangentLowFi();
+		assert(newsampleLowFi.size()>0);
+		surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
+	}
+
+
+
+
+
 }
 
 
@@ -535,15 +575,43 @@ void ObjectiveFunction::readOnlyFunctionalValue(Design &d) const {
 	unsigned int howManyEntriesToRead = 1;
 	rowvec functionalValue(howManyEntriesToRead);
 	functionalValue = readOutput(howManyEntriesToRead);
-	d.trueValue = functionalValue(0);
+
+	if(isHiFiEvaluation()){
+
+		d.trueValue = functionalValue(0);
+	}
+
+	if(isLowFiEvaluation()){
+
+		d.trueValueLowFidelity = functionalValue(0);
+	}
+
+
 }
+
+
 
 void ObjectiveFunction::readFunctionalValueAndTangent(Design &d) const {
 	unsigned int howManyEntriesToRead = 2;
 	rowvec resultBuffer(howManyEntriesToRead);
 	resultBuffer = readOutput(howManyEntriesToRead);
-	d.trueValue = resultBuffer(0);
-	d.tangentValue = resultBuffer(1);
+
+	if(isHiFiEvaluation()){
+
+		d.trueValue = resultBuffer(0);
+		d.tangentValue = resultBuffer(1);
+	}
+
+	if(isLowFiEvaluation()){
+
+		d.trueValueLowFidelity = resultBuffer(0);
+		d.tangentValueLowFidelity = resultBuffer(1);
+	}
+
+
+
+
+
 }
 
 void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
@@ -552,31 +620,44 @@ void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
 	unsigned int howManyEntriesToRead = 1 + dim;
 	rowvec resultBuffer(howManyEntriesToRead);
 	resultBuffer = readOutput(howManyEntriesToRead);
-	d.trueValue = resultBuffer(0);
 	rowvec gradient(dim, fill::zeros);
 	unsigned int offset = 1;
 	for (unsigned int i = 0; i < dim; i++) {
 		gradient(i) = resultBuffer(i + offset);
 	}
-	d.gradient = gradient;
+
+	if(isHiFiEvaluation()){
+
+		d.trueValue = resultBuffer(0);
+		d.gradient = gradient;
+
+	}
+	if(isLowFiEvaluation()){
+
+		d.trueValueLowFidelity = resultBuffer(0);
+		d.gradientLowFidelity = gradient;
+
+	}
+
 }
 
 void ObjectiveFunction::readOutputDesign(Design &d) const{
 
-	if(evaluationMode.compare("primal") == 0 ){
+	if(evaluationMode.compare("primal") == 0 || evaluationMode.compare("primalLowFi") == 0){
 
 		readOnlyFunctionalValue(d);
 	}
 
-	if(evaluationMode.compare("tangent") == 0 ){
+	if(evaluationMode.compare("tangent") == 0 || evaluationMode.compare("tangentLowFi") == 0 ){
 
 		readFunctionalValueAndTangent(d);
 	}
 
-	if(evaluationMode.compare("adjoint") == 0 ){
+	if(evaluationMode.compare("adjoint") == 0 || evaluationMode.compare("adjointLowFi") == 0){
 
 		readFunctionalValueAndAdjoint(d);
 	}
+
 
 }
 
@@ -596,7 +677,7 @@ void ObjectiveFunction::writeDesignVariablesToFile(Design &d) const{
 		outputFileStream << d.designParameters(i) << std::endl;
 	}
 
-	if(evaluationMode.compare("tangent") == 0){
+	if(evaluationMode.compare("tangent") == 0 || evaluationMode.compare("tangentLowFi") == 0){
 
 		assert(d.tangentDirection.size() == dim);
 		for(unsigned int i=0; i<dim; i++) {
@@ -618,17 +699,50 @@ void ObjectiveFunction::evaluateDesign(Design &d){
 	readOutputDesign(d);
 
 }
+
+
+bool ObjectiveFunction::isHiFiEvaluation(void) const{
+
+	if(evaluationMode.compare("primal") == 0 ) return true;
+	if(evaluationMode.compare("adjoint") == 0 ) return true;
+	if(evaluationMode.compare("tangent") == 0 ) return true;
+	return false;
+}
+
+bool ObjectiveFunction::isLowFiEvaluation(void) const{
+
+	if(evaluationMode.compare("primalLowFi") == 0 ) return true;
+	if(evaluationMode.compare("adjointLowFi") == 0 ) return true;
+	if(evaluationMode.compare("tangentLowFi") == 0 ) return true;
+	return false;
+}
+
+
 void ObjectiveFunction::evaluateObjectiveFunction(void){
 
-	assert(isNotEmpty(definition.executableName));
 	assert(isNotEmpty(definition.designVectorFilename));
 
-	std::string runCommand = getExecutionCommand();
+	std::string runCommand;
+	if(isHiFiEvaluation()){
+
+		assert(isNotEmpty(definition.executableName));
+
+		runCommand = getExecutionCommand(definition.path, definition.executableName);
+
+	}
+	if(isLowFiEvaluation()){
+
+		assert(isNotEmpty(definition.executableNameLowFi));
+		runCommand = getExecutionCommand(definition.pathLowFi, definition.executableNameLowFi);
+	}
 
 	output.printMessage("Calling executable for the objective function:", definition.name);
+
 	system(runCommand.c_str());
 
 }
+
+
 double ObjectiveFunction::interpolate(rowvec x) const{
 	return surrogate->interpolate(x);
 }

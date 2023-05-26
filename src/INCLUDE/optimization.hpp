@@ -107,7 +107,7 @@ public:
 
 	unsigned int maxNumberOfSamplesLowFidelity = 0;
 
-	unsigned int howOftenTrainModels = 10;
+	unsigned int howOftenTrainModels = 100000;
 	unsigned int howOftenZoomIn = 10;
 	double minDeltaXForZoom;
 

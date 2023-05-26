@@ -89,9 +89,13 @@ private:
 	void readFunctionalValueAndAdjoint(Design &d) const;
 	void bindWithOrdinaryKrigingModel();
 	void bindWithUniversalKrigingModel();
-	void bindWithAggregationModel();
+	void bindWithGradientEnhancedModel();
 	void bindWithTangentEnhancedKrigingModel();
 	void bindWithMultiFidelityModel();
+
+	bool isHiFiEvaluation(void) const;
+	bool isLowFiEvaluation(void) const;
+	void bindSurrogateModelSingleFidelity();
 
 protected:
 
@@ -104,7 +108,7 @@ protected:
 
 
 	KrigingModel surrogateModel;
-	AggregationModel surrogateModelGradient;
+	GGEKModel surrogateModelGradient;
 	MultiLevelModel surrogateModelML;
 	TGEKModel       surrogateModelWithTangents;
 
@@ -147,7 +151,7 @@ public:
 	SURROGATE_MODEL getSurrogateModelType(void) const;
 
 	KrigingModel     getSurrogateModel(void) const;
-	AggregationModel getSurrogateModelGradient(void) const;
+	GGEKModel getSurrogateModelGradient(void) const;
 	MultiLevelModel  getSurrogateModelML(void) const;
 	TGEKModel        getSurrogateModelTangent(void) const;
 
@@ -191,13 +195,11 @@ public:
 	void evaluateDesign(Design &d);
 	void evaluateObjectiveFunction(void);
 
-
 	void writeDesignVariablesToFile(Design &d) const;
 
 
 	rowvec readOutput(unsigned int) const;
 	void readOutputDesign(Design &) const;
-
 
 
 	void addDesignToData(Design &d);
@@ -208,8 +210,7 @@ public:
 	pair<double, double> interpolateWithVariance(rowvec x) const;
 
 	void print(void) const;
-	std::string getExecutionCommand(void) const;
-	std::string getExecutionCommandLowFi(void) const;
+	std::string getExecutionCommand(string, string) const;
 
 
 	void reduceTrainingDataFiles(unsigned int, double) const;

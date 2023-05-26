@@ -5,7 +5,7 @@
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -23,7 +23,7 @@
  * General Public License along with CoDiPack.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -38,7 +38,7 @@
 #include "test_defines.hpp"
 
 
-#ifdef TEST_OBJECTIVE_FUNCTION
+#ifdef OBJECTIVE_FUNCTION_TEST
 
 
 class ObjectiveFunctionTest : public ::testing::Test {
@@ -58,9 +58,12 @@ protected:
 
 		definition.designVectorFilename = "dv.dat";
 		definition.executableName = "himmelblau";
+		definition.executableNameLowFi = "himmelblauLowFi";
 		definition.outputFilename = "objFunVal.dat";
+		definition.outputFilenameLowFi = "objFunVal.dat";
 		definition.name= "himmelblau";
 		definition.nameHighFidelityTrainingData = filenameTrainingData;
+		definition.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
 
 	}
 
@@ -86,7 +89,7 @@ protected:
 
 	void setDefinitionForCase2(void){
 
-		definition.modelHiFi = AGGREGATION;
+		definition.modelHiFi = GRADIENT_ENHANCED;
 	}
 	void setDefinitionForCase3(void){
 
@@ -94,14 +97,127 @@ protected:
 	}
 
 	void setDefinitionForCase4(void){
+		/* In this case both models are Kriging */
 		definition.ifMultiLevel = true;
 		definition.executableNameLowFi = "himmelblauLowFi";
 		definition.outputFilenameLowFi = "objFunValLowFi.dat";
 		definition.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
 	}
 
+	void setDefinitionForCase5(void){
+		/* In this case HiFi model is Kriging and LowFi model is GGEK*/
+
+		definition.ifMultiLevel = true;
+		definition.modelHiFi  = ORDINARY_KRIGING;
+		definition.modelLowFi = GRADIENT_ENHANCED;
+		definition.executableNameLowFi = "himmelblauLowFi";
+		definition.outputFilenameLowFi = "objFun.dat";
+		definition.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
+	}
+
+
 
 };
+
+
+
+TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModel){
+
+	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
+	himmelblauFunction.function.numberOfTrainingSamples = 20;
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValueLowFidelity = 2.67;
+	rowvec gradientLowFi(2);
+	gradientLowFi(0) = -18.9;
+	gradientLowFi(1) = -22.4;
+	d.gradientLowFidelity = gradientLowFi;
+
+
+	setDefinitionForCase5();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("adjointLowFi");
+
+//	objFunTest.setDisplayOn();
+	objFunTest.initializeSurrogate();
+	objFunTest.addLowFidelityDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingDataLowFi, csv_ascii);
+
+//	newData.print("newData");
+
+	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.67);
+	ASSERT_EQ(lastRow(3),-18.9);
+	ASSERT_EQ(lastRow(4),-22.4);
+
+	remove(filenameTrainingData.c_str());
+	remove(filenameTrainingDataLowFi.c_str());
+
+}
+
+
+TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModelOnlyPrimalSolution){
+
+	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
+	himmelblauFunction.function.numberOfTrainingSamples = 20;
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValueLowFidelity = 2.67;
+
+
+	setDefinitionForCase5();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("primalLowFi");
+
+//	objFunTest.setDisplayOn();
+	objFunTest.initializeSurrogate();
+	objFunTest.addLowFidelityDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingDataLowFi, csv_ascii);
+
+//	newData.print("newData");
+
+	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.67);
+	ASSERT_EQ(lastRow(3),0.0);
+	ASSERT_EQ(lastRow(4),0.0);
+
+	remove(filenameTrainingData.c_str());
+	remove(filenameTrainingDataLowFi.c_str());
+
+}
+
+
+
+
+
 
 TEST_F(ObjectiveFunctionTest, testConstructor) {
 
@@ -192,7 +308,7 @@ TEST_F(ObjectiveFunctionTest, initializeSurrogateCase2) {
 	setDefinitionForCase2();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.initializeSurrogate();
-	AggregationModel testModel = objFunTest.getSurrogateModelGradient();
+	GGEKModel testModel = objFunTest.getSurrogateModelGradient();
 
 	mat rawData = testModel.getRawData();
 
@@ -200,7 +316,6 @@ TEST_F(ObjectiveFunctionTest, initializeSurrogateCase2) {
 	ASSERT_TRUE(ifDataIsConsistent);
 	/* check dimension */
 	ASSERT_EQ(testModel.getDimension(), 2);
-	ASSERT_TRUE(testModel.areGradientsOn());
 	ASSERT_TRUE(testModel.ifDataIsRead);
 
 	remove(filenameTrainingData.c_str());
@@ -213,6 +328,7 @@ TEST_F(ObjectiveFunctionTest, initializeSurrogateCase3) {
 
 	setDefinitionForCase3();
 	objFunTest.setParametersByDefinition(definition);
+
 	objFunTest.initializeSurrogate();
 	TGEKModel testModel = objFunTest.getSurrogateModelTangent();
 
@@ -230,9 +346,12 @@ TEST_F(ObjectiveFunctionTest, initializeSurrogateCase3) {
 
 TEST_F(ObjectiveFunctionTest, initializeSurrogateCase4) {
 
+	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 100;
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
 	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
 	trainingData = himmelblauFunction.function.trainingSamples;
 	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+
 
 	setDefinitionForCase4();
 	objFunTest.setParametersByDefinition(definition);
@@ -390,7 +509,37 @@ TEST_F(ObjectiveFunctionTest, evaluateDesign){
 
 }
 
+TEST_F(ObjectiveFunctionTest, evaluateDesignLowFi){
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+
+	compileWithCpp("himmelblauLowFidelity.cpp", definition.executableNameLowFi);
+
+	definition.ifMultiLevel = true;
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("primalLowFi");
+	objFunTest.evaluateDesign(d);
+
+	EXPECT_EQ(d.trueValueLowFidelity,   100.7401899893);
+
+	remove(definition.designVectorFilename.c_str());
+	remove(definition.outputFilename.c_str());
+	remove(definition.executableNameLowFi.c_str());
+}
+
+
+
+
+
+
+
 TEST_F(ObjectiveFunctionTest, evaluateDesignAdjoint){
+
 
 	Design d(2);
 
@@ -417,7 +566,37 @@ TEST_F(ObjectiveFunctionTest, evaluateDesignAdjoint){
 
 }
 
+
+TEST_F(ObjectiveFunctionTest, evaluateDesignAdjointLowFi){
+
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+
+	compileWithCpp("himmelblauAdjointLowFi.cpp", definition.executableNameLowFi);
+
+
+
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("adjointLowFi");
+	objFunTest.evaluateDesign(d);
+
+	EXPECT_EQ(d.trueValueLowFidelity,  63.3025834400);
+	EXPECT_EQ(d.gradientLowFidelity(0),  -74.8981800000);
+	EXPECT_EQ(d.gradientLowFidelity(1),  -7.1264304000);
+
+	remove(definition.designVectorFilename.c_str());
+	remove(definition.outputFilename.c_str());
+	remove(definition.executableName.c_str());
+
+}
+
 TEST_F(ObjectiveFunctionTest, evaluateDesignTangent){
+
 
 	Design d(2);
 
@@ -447,6 +626,38 @@ TEST_F(ObjectiveFunctionTest, evaluateDesignTangent){
 
 
 }
+
+
+TEST_F(ObjectiveFunctionTest, evaluateDesignTangentLowFi){
+
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	rowvec diffDirection(2);
+	diffDirection(0) = 1.0;
+	diffDirection(1) = 0.0;
+	d.tangentDirection = diffDirection;
+
+	compileWithCpp("himmelblauTangentLowFi.cpp", definition.executableNameLowFi);
+
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("tangentLowFi");
+	objFunTest.evaluateDesign(d);
+
+	EXPECT_EQ(d.trueValueLowFidelity,  63.3025834400);
+	EXPECT_EQ(d.tangentValueLowFidelity,  -74.8981800000);
+
+
+	remove(definition.designVectorFilename.c_str());
+	remove(definition.outputFilename.c_str());
+	remove(definition.executableName.c_str());
+
+}
+
 
 TEST_F(ObjectiveFunctionTest, addDesignToData){
 
@@ -479,8 +690,212 @@ TEST_F(ObjectiveFunctionTest, addDesignToData){
 
 	remove(filenameTrainingData.c_str());
 
+}
+
+
+TEST_F(ObjectiveFunctionTest, addDesignToDataGGEKModel){
+
+
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+	trainingData = himmelblauFunction.function.trainingSamples;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValue = 2.4;
+
+	setDefinitionForCase2();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("primal");
+	objFunTest.initializeSurrogate();
+	objFunTest.addDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingData, csv_ascii);
+
+	//	newData.print("newData");
+
+
+
+	ASSERT_TRUE(newData.n_rows == trainingData.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.4);
+	ASSERT_EQ(lastRow(3),0.0);
+	ASSERT_EQ(lastRow(4),0.0);
+
+	remove(filenameTrainingData.c_str());
+
 
 }
+
+
+
+
+
+
+
+
+
+
+
+TEST_F(ObjectiveFunctionTest, addDesignToDataTangentModel){
+
+
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+	trainingData = himmelblauFunction.function.trainingSamples;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValue = 2.4;
+
+	setDefinitionForCase3();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("primal");
+	objFunTest.initializeSurrogate();
+	objFunTest.addDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingData, csv_ascii);
+
+	//	newData.print("newData");
+
+
+
+	ASSERT_TRUE(newData.n_rows == trainingData.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.4);
+	ASSERT_EQ(lastRow(3),0.0);
+	ASSERT_EQ(lastRow(4),0.0);
+	ASSERT_EQ(lastRow(5),0.0);
+
+	remove(filenameTrainingData.c_str());
+
+
+}
+
+
+
+
+
+TEST_F(ObjectiveFunctionTest, addDesignToDataWithMultiFidelity){
+
+	himmelblauFunction.function.numberOfTrainingSamples = 20;
+	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+	trainingData = himmelblauFunction.function.trainingSamples;
+	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValue = 2.4;
+	d.trueValueLowFidelity = 2.67;
+
+	definition.ifMultiLevel = true;
+
+	//	objFunTest.setDisplayOn();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("primal");
+	objFunTest.initializeSurrogate();
+
+	objFunTest.addDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingData, csv_ascii);
+
+	//	newData.print("HiFi data");
+
+	mat newDataLowFi;
+	newDataLowFi.load(filenameTrainingDataLowFi, csv_ascii);
+
+	//	newDataLowFi.print("LowFi data");
+
+	ASSERT_TRUE(newData.n_rows      == trainingData.n_rows+1);
+	ASSERT_TRUE(newDataLowFi.n_rows == trainingDataLowFi.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.4);
+
+	lastRow = newDataLowFi.row(newDataLowFi.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.67);
+
+	remove(filenameTrainingData.c_str());
+	remove(filenameTrainingDataLowFi.c_str());
+
+}
+
+
+TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataWithMultiFidelity){
+
+	himmelblauFunction.function.numberOfTrainingSamples = 20;
+	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+	trainingData = himmelblauFunction.function.trainingSamples;
+	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValue = 2.4;
+	d.trueValueLowFidelity = 2.67;
+
+	definition.ifMultiLevel = true;
+
+	//	objFunTest.setDisplayOn();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setEvaluationMode("primalLowFi");
+	objFunTest.initializeSurrogate();
+
+	objFunTest.addLowFidelityDesignToData(d);
+
+	mat newDataLowFi;
+	newDataLowFi.load(filenameTrainingDataLowFi, csv_ascii);
+
+	//	newDataLowFi.print("LowFi data");
+
+
+	ASSERT_TRUE(newDataLowFi.n_rows == trainingDataLowFi.n_rows+1);
+
+	rowvec lastRow = newDataLowFi.row(newDataLowFi.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.67);
+
+	remove(filenameTrainingData.c_str());
+	remove(filenameTrainingDataLowFi.c_str());
+
+}
+
+
+
+
+
+
+
+
 
 TEST_F(ObjectiveFunctionTest, addDesignToDataTangent){
 
@@ -559,6 +974,7 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataAdjoint){
 	remove(filenameTrainingData.c_str());
 
 }
+
 
 
 

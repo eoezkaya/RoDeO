@@ -107,12 +107,11 @@ void Design::generateRandomDifferentiationDirection(void) {
 rowvec Design::constructSampleObjectiveFunction(void) const{
 
 	rowvec sample(dimension+1);
-
 	copyRowVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = trueValue;
-
 	return sample;
 }
+
 
 rowvec Design::constructSampleObjectiveFunctionLowFi(void) const{
 
@@ -177,7 +176,7 @@ rowvec Design::constructSampleObjectiveFunctionWithGradientLowFi(void) const{
 	rowvec sample(2*dimension+1);
 
 	copyRowVectorFirstKElements(sample,designParameters, dimension);
-	sample(dimension) = trueValue;
+	sample(dimension) = trueValueLowFidelity;
 
 	for(unsigned int i=0; i<dimension; i++){
 		sample(dimension+1+i) = gradientLowFidelity(i);

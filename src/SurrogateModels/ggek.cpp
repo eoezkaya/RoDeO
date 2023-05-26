@@ -341,10 +341,10 @@ void GGEKModel::trainTheta(void){
 	theta = hyperparameters.head(dimension);
 	gamma = hyperparameters.tail(dimension);
 
-/*
+	/*
 	theta.print("theta");
 	gamma.print("gamma");
-*/
+	 */
 
 	correlationFunction.setHyperParameters(hyperparameters);
 
@@ -437,7 +437,7 @@ void GGEKModel::determineThetaCoefficientForDualBasis(void){
 		exponent +=deltaExponent;
 	}
 
-//	printTwoScalars(bestMSE, bestFactor);
+	//	printTwoScalars(bestMSE, bestFactor);
 
 	thetaFactor = bestFactor;
 
@@ -480,13 +480,6 @@ double GGEKModel::interpolate(rowvec x) const{
 		sum +=weights(N+i)*r(N+i);
 	}
 
-//	std::cout<<"\n\n";
-//	trans(r.head(N)).print("rPrimal");
-//	trans(r.tail(Nd)).print("rDual");
-//	std::cout<<"\n\n";
-
-
-//	return this->auxiliaryModel.interpolate(x);
 	return sum + beta0;
 }
 
@@ -497,13 +490,6 @@ void GGEKModel::interpolateWithVariance(rowvec xp,double *fTilde,double *ssqr) c
 	auxiliaryModel.interpolateWithVariance(xp, fTilde, ssqr);
 	*fTilde = interpolate(xp);
 
-
-}
-
-
-void GGEKModel::addNewLowFidelitySampleToData(rowvec newsample){
-
-	assert(false);
 
 }
 
@@ -560,11 +546,6 @@ void GGEKModel::generateWeightingMatrix(void){
 
 		unsigned int sizeOfWeightMatrix = numberOfSamples +  howManySamplesHaveDerivatives;
 
-		if(ifUseNoDerivatives){
-			sizeOfWeightMatrix = numberOfSamples;
-		}
-
-
 		weightMatrix = zeros<mat>(sizeOfWeightMatrix, sizeOfWeightMatrix);
 
 
@@ -574,16 +555,11 @@ void GGEKModel::generateWeightingMatrix(void){
 		}
 
 
-		if(!ifUseNoDerivatives){
-
-			for(unsigned int i=0; i<howManySamplesHaveDerivatives; i++){
-				unsigned int indx = indicesOfSamplesWithActiveDerivatives.at(i);
-				double weight = sampleWeights(indx);
-				weightMatrix(i+numberOfSamples,i+numberOfSamples) = weight* weightFactorForDerivatives;
-			}
-
+		for(unsigned int i=0; i<howManySamplesHaveDerivatives; i++){
+			unsigned int indx = indicesOfSamplesWithActiveDerivatives.at(i);
+			double weight = sampleWeights(indx);
+			weightMatrix(i+numberOfSamples,i+numberOfSamples) = weight* weightFactorForDerivatives;
 		}
-
 
 	}
 }
@@ -600,8 +576,6 @@ void GGEKModel::generateRhsForRBFs(void){
 	unsigned int N    = numberOfSamples;
 
 	unsigned int sizeOfRhs = N + Ndot;
-	if(ifUseNoDerivatives) sizeOfRhs = N;
-
 
 	ydot = zeros<vec>(sizeOfRhs);
 
@@ -615,18 +589,14 @@ void GGEKModel::generateRhsForRBFs(void){
 
 	/* then directional derivatives */
 
-	if(!ifUseNoDerivatives){
+	for(unsigned int i=0; i<Ndot; i++){
+		unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
+		rowvec grad = gradients.row(indx);
+		rowvec d    = makeUnitVector(grad);
 
-		for(unsigned int i=0; i<Ndot; i++){
-			unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
-			rowvec grad = gradients.row(indx);
-			rowvec d    = makeUnitVector(grad);
+		double directionalDerivative = dot(d,grad);
 
-			double directionalDerivative = dot(d,grad);
-
-			ydot(i+N) = directionalDerivative;
-
-		}
+		ydot(i+N) = directionalDerivative;
 
 	}
 
@@ -723,25 +693,12 @@ void GGEKModel::calculatePhiMatrix(void){
 	unsigned int howManyTotalDataPoints = numberOfSamples + howManySamplesHaveDerivatives;
 	unsigned int howManyBasisFunctions = numberOfSamples + howManySamplesHaveDerivatives;
 
-	if(ifUseNoDerivatives){
-
-		howManyTotalDataPoints = numberOfSamples;
-		howManyBasisFunctions = numberOfSamples;
-	}
-
-
-	correlationFunction.setInputSampleMatrix(data.getInputMatrix());
-
 
 	if(Phi.n_rows>0) Phi.reset();
 	Phi = zeros<mat>(howManyTotalDataPoints, howManyBasisFunctions);
 
 	calculatePhiEntriesForFunctionValues();
-
-	if(!ifUseNoDerivatives){
-
-		calculatePhiEntriesForDerivatives();
-	}
+	calculatePhiEntriesForDerivatives();
 
 
 	if(ifVaryingSampleWeights){
@@ -757,7 +714,7 @@ bool GGEKModel::checkResidual(void) const{
 
 	vec residual = ydot - Phi*weights;
 
-	residual.print("residual");
+//	residual.print("residual");
 
 	if(norm(residual) < 10E-3) return true;
 
@@ -767,7 +724,6 @@ bool GGEKModel::checkResidual(void) const{
 
 bool GGEKModel::checkPhiMatrix(void){
 
-//	Phi.print("Phi");
 
 	unsigned int N    = numberOfSamples;
 	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
@@ -790,7 +746,9 @@ bool GGEKModel::checkPhiMatrix(void){
 
 		}
 
-		printTwoScalars(sum, ftilde);
+		sum+=beta0;
+
+//		printTwoScalars(sum, ftilde);
 		double error = fabs(sum - ftilde);
 		if(error > 10E-05) return false;
 
@@ -843,13 +801,16 @@ void GGEKModel::resetDataObjects(void){
 
 void GGEKModel::addNewSampleToData(rowvec newsample){
 
+	assert(newsample.size() > 0);
 
-	assert(newsample.size() == 2*dimension+1);
+	rowvec sampleToAdd(2*dimension+1, fill::zeros);
+	copyRowVector(sampleToAdd, newsample);
+
 	Bounds boxConstraints = data.getBoxConstraints();
 
 	vec lb = boxConstraints.getLowerBounds();
 	vec ub = boxConstraints.getUpperBounds();
-	rowvec x = newsample.head(dimension);
+	rowvec x = sampleToAdd.head(dimension);
 	x = normalizeRowVector(x, lb, ub);
 
 	mat inputData = data.getInputMatrix();
@@ -860,10 +821,17 @@ void GGEKModel::addNewSampleToData(rowvec newsample){
 
 	if(!flagTooClose){
 
-		appendRowVectorToCSVData(newsample, filenameDataInput);
+		appendRowVectorToCSVData(sampleToAdd, filenameDataInput);
 		updateModelWithNewData();
 	}
 
+
+}
+
+
+void GGEKModel::addNewLowFidelitySampleToData(rowvec newsample){
+
+	assert(false);
 
 }
 

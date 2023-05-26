@@ -136,6 +136,27 @@ TEST_F(MultiLevelModelTest, bindModels){
 
 }
 
+TEST_F(MultiLevelModelTest, bindModelsWithAdjointLowFi){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+
+	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
+	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
+	//	testModel.setDisplayOn();
+
+	testModel.setIDLowFiModel(GRADIENT_ENHANCED);
+	testModel.setIDHiFiModel(ORDINARY_KRIGING);
+	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+
+	ASSERT_TRUE(testModel.ifSurrogateModelsAreSet);
+
+
+}
+
+
+
+
 TEST_F(MultiLevelModelTest, setBoxConstraints){
 
 	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();

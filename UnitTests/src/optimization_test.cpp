@@ -40,7 +40,7 @@
 
 
 
-#ifdef TEST_OPTIMIZATION
+#ifdef OPTIMIZATION_TEST
 
 
 class OptimizationTest : public ::testing::Test {
@@ -95,6 +95,8 @@ protected:
 
 
 		himmelblauFunction.function.filenameTrainingData = "himmelblau.csv";
+		himmelblauFunction.function.filenameTrainingDataHighFidelity = "himmelblau.csv";
+		himmelblauFunction.function.filenameTrainingDataLowFidelity = "himmelblauLowFi.csv";
 		himmelblauFunction.function.numberOfTrainingSamples = 50;
 		himmelblauFunction.function.numberOfTrainingSamplesLowFi = 100;
 
@@ -125,6 +127,21 @@ protected:
 
 	}
 
+	void prepareObjectiveFunctionWithAdjoint(void){
+
+		compileWithCpp("himmelblauAdjoint.cpp", definition.executableName);
+
+		himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+		definition.modelHiFi = GRADIENT_ENHANCED;
+		objFunHimmelblau.setParametersByDefinition(definition);
+		testOptimizer.addObjectFunction(objFunHimmelblau);
+
+
+	}
+
+
+
+
 	void prepareObjectiveFunctionWithTangent(void){
 
 		compileWithCpp("himmelblauTangent.cpp", definition.executableName);
@@ -146,9 +163,6 @@ protected:
 		definition.ifMultiLevel = true;
 		objFunHimmelblau.setParametersByDefinition(definition);
 		testOptimizer.addObjectFunction(objFunHimmelblau);
-
-
-		abort();
 
 
 	}
@@ -252,15 +266,45 @@ TEST_F(OptimizationTest, setOptimizationHistory){
 
 }
 
-TEST_F(OptimizationTest, EGOUnconstrainedWithML){
+TEST_F(OptimizationTest, EGOUnconstrainedWithGGEKModel){
 
-	prepareObjectiveFunctionWithML();
+	prepareObjectiveFunctionWithAdjoint();
+
 	testOptimizer.setBoxConstraints(boxConstraints);
 
 	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(50);
-	testOptimizer.setZoomInOn();
-	testOptimizer.setHowOftenZoomIn(10);
+	testOptimizer.EfficientGlobalOptimization();
+
+	mat results;
+	results.load("himmelblau.csv", csv_ascii);
+
+	vec objectiveFunctionValues = results.col(2);
+
+	double minObjFun = min(objectiveFunctionValues);
+
+	EXPECT_LT(minObjFun, 5.0);
+
+	abort();
+
+
+}
+
+
+
+
+
+TEST_F(OptimizationTest, EGOUnconstrainedWithML){
+
+	prepareObjectiveFunctionWithML();
+
+
+	testOptimizer.setBoxConstraints(boxConstraints);
+
+	testOptimizer.setDisplayOn();
+	testOptimizer.setMaximumNumberOfIterations(50);
+	//	testOptimizer.setZoomInOn();
+	//	testOptimizer.setHowOftenZoomIn(10);
 	testOptimizer.EfficientGlobalOptimization();
 
 	mat results;
@@ -381,7 +425,7 @@ TEST_F(OptimizationTest, reduceTrainingDataFiles){
 	testOptimizer.setOptimizationHistory();
 	testOptimizer.setZoomInOn();
 	testOptimizer.setZoomFactor(0.5);
-//	testOptimizer.setDisplayOn();
+	//	testOptimizer.setDisplayOn();
 	testOptimizer.zoomInDesignSpace();
 	testOptimizer.reduceBoxConstraints();
 
@@ -412,7 +456,7 @@ TEST_F(OptimizationTest, EGOConstrained){
 	testOptimizer.setZoomInOn();
 	testOptimizer.setMaximumNumberOfIterations(100);
 	testOptimizer.setHowOftenZoomIn(20);
-//	testOptimizer.setDisplayOn();
+	//	testOptimizer.setDisplayOn();
 	testOptimizer.setBoxConstraints(boxConstraints);
 	testOptimizer.EfficientGlobalOptimization();
 

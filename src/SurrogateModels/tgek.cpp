@@ -507,14 +507,18 @@ void TGEKModel::updateModelWithNewData(void){
 
 void TGEKModel::addNewSampleToData(rowvec newsample){
 
+	assert(newsample.size() > 0);
+	assert(dimension>0);
 
-	unsigned int dim = data.getDimension();
-	assert(newsample.size() == 2*dim+2);
+	rowvec sampleToAdd(2*dimension+2, fill::zeros);
+	copyRowVector(sampleToAdd, newsample);
+
+
 	Bounds boxConstraints = data.getBoxConstraints();
 
 	vec lb = boxConstraints.getLowerBounds();
 	vec ub = boxConstraints.getUpperBounds();
-	rowvec x = newsample.head(dim);
+	rowvec x = sampleToAdd.head(dimension);
 	x = normalizeRowVector(x, lb, ub);
 
 	mat inputData = data.getInputMatrix();
@@ -525,7 +529,7 @@ void TGEKModel::addNewSampleToData(rowvec newsample){
 
 	if(!flagTooClose){
 
-		appendRowVectorToCSVData(newsample, filenameDataInput);
+		appendRowVectorToCSVData(sampleToAdd, filenameDataInput);
 		updateModelWithNewData();
 	}
 

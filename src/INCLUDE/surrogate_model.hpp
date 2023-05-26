@@ -74,7 +74,7 @@ protected:
 
 	Bounds boxConstraints;
 
-	double generalizationError = 0.0;
+
 	double standardDeviationOfGeneralizationError = 0.0;
 
 
@@ -98,9 +98,11 @@ public:
 	bool ifTargetForSampleWeightsIsSet = false;
 
 
-	void setDimension(unsigned int);
+	virtual void setDimension(unsigned int);
 
 	mat testResults;
+
+	double generalizationError = 0.0;
 
 	SurrogateModel();
 
@@ -114,9 +116,6 @@ public:
 	void printData(void) const;
 
 	void checkRawData(void) const;
-
-//	void setBoxConstraints(vec xmin, vec xmax);
-//	void setBoxConstraints(double xmin, double xmax);
 
 	void setNumberOfThreads(unsigned int);
 
@@ -141,6 +140,7 @@ public:
 
 	void setNameOfInputFileTest(string filename);
 	void setNameOfOutputFileTest(string filename);
+
 
 	virtual void setNameOfInputFile(string filename) = 0;
 	virtual void setNameOfHyperParametersFile(string filename) = 0;

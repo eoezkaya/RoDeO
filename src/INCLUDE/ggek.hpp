@@ -93,8 +93,6 @@ private:
 
 public:
 
-
-	bool ifUseNoDerivatives = false;
 	bool ifThetaFactorOptimizationIsDone = false;
 
 

@@ -82,131 +82,11 @@ protected:
 };
 
 
-TEST_F(GGEKModelTest, tryOnTestData) {
-
-	alpine02Function.function.numberOfTrainingSamples = 100;
-	alpine02Function.function.numberOfTestSamples = 50;
-//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
-	alpine02Function.function.generateTrainingSamplesWithAdjoints();
-
-	alpine02Function.function.generateTestSamples();
-
-	boxConstraints = alpine02Function.function.boxConstraints;
-
-	testModel.setBoxConstraints(boxConstraints);
-	testModel.setName("Alpine02Model");
-
-	testModel.setDimension(5);
-
-	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-	testModel.setDisplayOn();
-//	testModel.ifVaryingSampleWeights = true;
-
-	testModel.initializeSurrogateModel();
-
-	testModel.train();
-//	ASSERT_TRUE(testModel.checkPhiMatrix());
-
-
-	ASSERT_TRUE(testModel.checkResidual());
-
-	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);
-
-	testModel.readDataTest();
-	testModel.normalizeDataTest();
-
-	testModel.tryOnTestData();
-	testModel.printGeneralizationError();
-
-	abort();
-}
-
-
-
-
-TEST_F(GGEKModelTest, determineThetaCoefficientForDualBasis) {
-
-	alpine02Function.function.generateTrainingSamplesWithAdjoints();
-
-	boxConstraints =  alpine02Function.function.boxConstraints;
-	testModel.setName("Alpine02");
-	testModel.setDimension(5);
-	testModel.setBoxConstraints(boxConstraints);
-
-
-	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
-
-	testModel.trainTheta();
-	testModel.determineThetaCoefficientForDualBasis();
-
-	ASSERT_TRUE(testModel.ifThetaFactorOptimizationIsDone);
-
-
-}
-
-
-
-
-
-TEST_F(GGEKModelTest, tryOnTestDataRAE2882) {
-
-
-
-	Bounds boxConstraintsRAE2822(38);
-	vec lowerBounds(38);
-	vec upperBounds(38);
-	lowerBounds.fill(-0.003);
-	upperBounds.fill( 0.003);
-
-	boxConstraintsRAE2822.setBounds(lowerBounds,upperBounds);
-
-	testModel.setBoxConstraints(boxConstraintsRAE2822);
-	testModel.setName("RAE2822");
-
-	testModel.setDimension(38);
-
-	testModel.setNameOfInputFile("lift.csv");
-	testModel.readData();
-	testModel.normalizeData();
-	testModel.setDisplayOn();
-//	testModel.ifVaryingSampleWeights = true;
-
-	testModel.initializeSurrogateModel();
-
-	testModel.train();
-	testModel.checkResidual();
-
-	testModel.setNameOfInputFileTest("liftTest.csv");
-
-	testModel.readDataTest();
-	testModel.normalizeDataTest();
-
-	testModel.tryOnTestData();
-	testModel.saveTestResults();
-	testModel.printGeneralizationError();
-
-	abort();
-}
-
-
-
-
-
-
-
-
-
-
 
 
 TEST_F(GGEKModelTest, constructor) {
 
-	abort();
+
 	ASSERT_FALSE(testModel.ifDataIsRead);
 	ASSERT_FALSE(testModel.ifInitialized);
 	ASSERT_FALSE(testModel.ifNormalized);
@@ -445,10 +325,79 @@ TEST_F(GGEKModelTest, interpolate) {
 
 
 
+TEST_F(GGEKModelTest, tryOnTestData) {
+
+	alpine02Function.function.numberOfTrainingSamples = 50;
+	alpine02Function.function.numberOfTestSamples = 50;
+//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
+	alpine02Function.function.generateTrainingSamplesWithAdjoints();
+
+	alpine02Function.function.generateTestSamples();
+
+	boxConstraints = alpine02Function.function.boxConstraints;
+
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.setName("Alpine02Model");
+
+	testModel.setDimension(5);
+
+	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+//	testModel.setDisplayOn();
+//	testModel.ifVaryingSampleWeights = true;
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+	ASSERT_TRUE(testModel.checkPhiMatrix());
+	ASSERT_TRUE(testModel.checkResidual());
+
+
+	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);
+
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+//	testModel.printGeneralizationError();
+
+	double MSE = testModel.generalizationError;
+
+	ASSERT_TRUE(MSE>0.0);
+
+}
+
+
+
+
+TEST_F(GGEKModelTest, determineThetaCoefficientForDualBasis) {
+
+
+	alpine02Function.function.generateTrainingSamplesWithAdjoints();
+
+	boxConstraints =  alpine02Function.function.boxConstraints;
+	testModel.setName("Alpine02");
+	testModel.setDimension(5);
+	testModel.setBoxConstraints(boxConstraints);
+
+
+	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+
+	testModel.trainTheta();
+	testModel.determineThetaCoefficientForDualBasis();
+
+	ASSERT_TRUE(testModel.ifThetaFactorOptimizationIsDone);
+
+
+}
+
 
 TEST_F(GGEKModelTest, updateModelWithNewData) {
 
-	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
 	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 
 
@@ -456,12 +405,20 @@ TEST_F(GGEKModelTest, updateModelWithNewData) {
 	testModel.readData();
 	testModel.normalizeData();
 	testModel.initializeSurrogateModel();
+	testModel.train();
 
 	unsigned int howManySamples = testModel.getNumberOfSamples();
 
 	ASSERT_TRUE( howManySamples == N);
 
-	rowvec newsample(5,fill::randu);
+	double x[2]; x[0] = 1.34; x[1] = 0.88;
+
+	double f = himmelblauFunction.function.func_ptr(x);
+
+	rowvec newsample(3,fill::randu);
+	newsample(0) = x[0];
+	newsample(1) = x[1];
+	newsample(2) = f;
 
 	testModel.addNewSampleToData(newsample);
 
@@ -469,10 +426,23 @@ TEST_F(GGEKModelTest, updateModelWithNewData) {
 
 	ASSERT_TRUE(howManySamples == N+1);
 
+	mat PhiNew = testModel.getPhiMatrix();
+
+	ASSERT_TRUE(PhiNew.n_cols == 2*N+1);
+	ASSERT_TRUE(PhiNew.n_rows == 2*N+1);
+
+	Bounds boxConstraints = himmelblauFunction.function.boxConstraints;
+	vec lb = boxConstraints.getLowerBounds();
+	vec ub = boxConstraints.getUpperBounds();
+	rowvec xp(2); xp(0) = x[0]; xp(1) = x[1];
+
+	xp = xp + 0.0001;
+	xp = normalizeRowVector(xp,lb,ub);
+	double ftilde = testModel.interpolate(xp);
+
+	double error  = fabs(ftilde - f)/f;
+	EXPECT_LT(error, 0.05);
+
 }
-
-
-
-
 
 #endif
