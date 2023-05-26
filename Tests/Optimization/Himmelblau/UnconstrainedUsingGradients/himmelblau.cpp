@@ -25,8 +25,7 @@ fclose(inp);
 
 double result = HimmelblauAdj(x, xb);
 FILE *outp = fopen("objFunVal.dat","w");
-fprintf(outp,"himmelblau_function = %15.10f\n",result);
-fprintf(outp,"himmelblau_gradient = %15.10f, %15.10f\n",xb[0],xb[1]);
+fprintf(outp,"%15.10f %15.10f %15.10f\n",result,xb[0],xb[1]);
 fclose(outp);
 
 return 0;

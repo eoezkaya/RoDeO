@@ -330,8 +330,6 @@ TEST_F(OptimizationTest, EGOUnconstrained){
 
 	testOptimizer.setDisplayOn();
 	testOptimizer.setZoomInOn();
-	testOptimizer.setMaximumNumberOfIterations(50);
-	testOptimizer.setHowOftenZoomIn(10);
 	testOptimizer.EfficientGlobalOptimization();
 
 	mat results;
@@ -357,8 +355,6 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithTangent){
 
 	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(50);
-	testOptimizer.setZoomInOn();
-	testOptimizer.setHowOftenZoomIn(10);
 	testOptimizer.EfficientGlobalOptimization();
 
 	mat results;
