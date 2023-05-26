@@ -33,7 +33,7 @@ fscanf(inp,"%lf",&x[1]);
 fclose(inp);
 
 double result = HimmelblauAdjLowFi(x, xb);
-FILE *outp = fopen("objFunVal.dat","w");
+FILE *outp = fopen("objFunValLowFi.dat","w");
 fprintf(outp,"%15.10f %15.10f %15.10f\n",result,xb[0],xb[1]);
 fclose(outp);
 
