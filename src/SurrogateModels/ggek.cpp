@@ -549,6 +549,7 @@ void GGEKModel::generateWeightingMatrix(void){
 
 		unsigned int sizeOfWeightMatrix = numberOfSamples +  howManySamplesHaveDerivatives;
 
+		weightMatrix.reset();
 		weightMatrix = zeros<mat>(sizeOfWeightMatrix, sizeOfWeightMatrix);
 
 
@@ -580,6 +581,7 @@ void GGEKModel::generateRhsForRBFs(void){
 
 	unsigned int sizeOfRhs = N + Ndot;
 
+	ydot.reset();
 	ydot = zeros<vec>(sizeOfRhs);
 
 	mat gradients 	= data.getGradientMatrix();
@@ -697,7 +699,7 @@ void GGEKModel::calculatePhiMatrix(void){
 	unsigned int howManyBasisFunctions = numberOfSamples + howManySamplesHaveDerivatives;
 
 
-	if(Phi.n_rows>0) Phi.reset();
+	Phi.reset();
 	Phi = zeros<mat>(howManyTotalDataPoints, howManyBasisFunctions);
 
 	calculatePhiEntriesForFunctionValues();

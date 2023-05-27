@@ -639,6 +639,7 @@ void ObjectiveFunction::readFunctionalValueAndTangent(Design &d) const {
 }
 
 void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
+
 	assert(dim >0);
 
 	unsigned int howManyEntriesToRead = 1 + dim;
@@ -647,8 +648,8 @@ void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
 	rowvec gradient(dim, fill::zeros);
 	unsigned int offset = 1;
 
-
 	if(isHiFiEvaluation()){
+
 		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
 		for (unsigned int i = 0; i < dim; i++) {
 				gradient(i) = resultBuffer(i + offset);

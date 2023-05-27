@@ -141,10 +141,6 @@ void KrigingModel::initializeSurrogateModel(void){
 
 	numberOfHyperParameters = 2*dimension;
 
-	R_inv_ys_min_beta = zeros<vec>(numberOfSamples);
-	R_inv_I= zeros<vec>(numberOfSamples);
-	R_inv_ys = zeros<vec>(numberOfSamples);
-	vectorOfOnes= ones<vec>(numberOfSamples);
 
 	if(ifUsesLinearRegression){
 
@@ -186,10 +182,13 @@ void KrigingModel::updateAuxilliaryFields(void){
 	R_inv_ys.reset();
 	R_inv_I.reset();
 	R_inv_ys_min_beta.reset();
+	vectorOfOnes.reset();
 
-	R_inv_ys = zeros<vec>(numberOfSamples);
-	R_inv_I = zeros<vec>(numberOfSamples);
 	R_inv_ys_min_beta = zeros<vec>(numberOfSamples);
+	R_inv_I= zeros<vec>(numberOfSamples);
+	R_inv_ys = zeros<vec>(numberOfSamples);
+	vectorOfOnes= ones<vec>(numberOfSamples);
+
 	beta0 = 0.0;
 	sigmaSquared = 0.0;
 
@@ -606,7 +605,7 @@ void KrigingModel::train(void){
 			parameterOptimizer.setWarmStartOn();
 		}
 
-//		parameterOptimizer.setDisplayOn();
+		//		parameterOptimizer.setDisplayOn();
 		parameterOptimizer.optimize();
 
 		EAIndividual bestSolution = parameterOptimizer.getSolution();

@@ -1049,6 +1049,7 @@ void Optimizer::setOptimizationHistory(void){
 
 	mat inputObjectiveFunction = trainingDataObjectiveFunction.submat(0, 0, N-1, dimension-1 );
 
+	optimizationHistory.reset();
 	optimizationHistory = zeros<mat>(N,dimension + numberOfConstraints +3);
 
 	for(unsigned int i=0; i<dimension; i++){

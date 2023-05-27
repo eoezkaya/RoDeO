@@ -41,6 +41,9 @@ CholeskySystem::CholeskySystem(unsigned int dim){
 
 	dimension = dim;
 
+	A.reset();
+	L.reset();
+
 	A = zeros<mat>(dim,dim);
 	L = zeros<mat>(dim,dim);
 
@@ -51,6 +54,9 @@ CholeskySystem::CholeskySystem(unsigned int dim){
 void CholeskySystem::setDimension(unsigned int dim){
 
 	dimension = dim;
+
+	A.reset();
+	L.reset();
 
 	A = zeros<mat>(dim,dim);
 	L = zeros<mat>(dim,dim);
@@ -125,6 +131,7 @@ void CholeskySystem::setMatrix(mat input){
 	A = input;
 
 	dimension = input.n_rows;
+	L.reset();
 	L = zeros<mat>(dimension,dimension);
 
 	ifMatrixIsSet = true;

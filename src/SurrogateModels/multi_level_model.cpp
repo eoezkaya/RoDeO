@@ -176,6 +176,8 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 
 	setNameOfInputFileError();
 
+	rawDataError.reset();
+
 	if(modelIDError == ORDINARY_KRIGING){
 		rawDataError = zeros<mat>(numberOfSamples,dimension+1);
 	}
