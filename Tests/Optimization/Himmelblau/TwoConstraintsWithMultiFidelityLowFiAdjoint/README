@@ -1,0 +1,37 @@
+In this example, the Himmelblau test function is minimized with two constraints. 
+
+The Himmelblau function is given as
+
+f(x1,x2) = (x1^2+x2-11.0)^2 + (x1+x2^2-7.0)^2
+
+It has four identical local minima
+
+f(3.0,2.0)              = 0.0
+f(-2.805118, 3.131312)  = 0.0
+f(-3.779319, -3.283186) = 0.0
+f(3.584428, -1.848126)  = 0.0
+
+
+The box constraints for x1 and x2 are given as
+
+-6.0 < x1 < 6.0
+-6.0 < x2 < 6.0
+
+The first constraint is given as 
+
+c1(x1,x2) = x1*x1 + x2*x2 < 10.0
+
+The second constraint is given as
+
+c2(x1,x2) = x1 + x2 > 2.0
+
+The Himmelblau function is implemented in the c-file "himmelblau.cpp" and writes the output to a file "objFunVal.dat". 
+The low-fidelity adjoint model for the same function is implemented in the c-file "himmelblauAdjointLowFi.cpp". This function evaluates the Himmelblau function with an error, as well as the gradient vector of the low-fidelity function.
+
+The first constraint is implemented in the c-file constraint1.cpp. It writes the value of c1(x1,x2) in the output file constraintFunction1.dat. 
+Similarly, the second constraint is implemented in the c-file constraint2.cpp. It writes the value of c2(x1,x2) in the output file constraintFunction2.dat.
+
+
+
+
+

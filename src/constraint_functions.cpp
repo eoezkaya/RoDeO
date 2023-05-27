@@ -187,7 +187,7 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 	if(evaluationMode.compare("primal") == 0 ){
 
 		rowvec functionalValue(1);
-		functionalValue = readOutput(1);
+		functionalValue = readOutput(definitionConstraint.outputFilename, 1);
 
 		assert(d.constraintTrueValues.size() > getID());
 		d.constraintTrueValues(getID()) = functionalValue(0);
@@ -197,7 +197,7 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 
 		rowvec resultBuffer(2);
 
-		resultBuffer = readOutput(2);
+		resultBuffer = readOutput(definitionConstraint.outputFilename, 2);
 		d.trueValue = resultBuffer(0);
 		d.tangentValue = resultBuffer(1);
 	}
@@ -206,7 +206,7 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 
 		rowvec resultBuffer(1+dim);
 
-		resultBuffer = readOutput(1+dim);
+		resultBuffer = readOutput(definitionConstraint.outputFilename, 1+dim);
 
 		int id = definitionConstraint.ID;
 		assert(id>=0);

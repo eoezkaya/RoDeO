@@ -577,13 +577,13 @@ void ObjectiveFunction::addLowFidelityDesignToData(Design &d){
 }
 
 
-rowvec ObjectiveFunction::readOutput(unsigned int howMany) const{
+rowvec ObjectiveFunction::readOutput(string filename, unsigned int howMany) const{
 
-	assert(isNotEmpty(definition.outputFilename));
+	assert(isNotEmpty(filename));
 
 	rowvec result(howMany,fill::zeros);
 
-	std::ifstream inputFileStream(definition.outputFilename);
+	std::ifstream inputFileStream(filename);
 
 	if (!inputFileStream.is_open()) {
 		abortWithErrorMessage("There was a problem opening the output file!\n");
@@ -601,15 +601,16 @@ rowvec ObjectiveFunction::readOutput(unsigned int howMany) const{
 void ObjectiveFunction::readOnlyFunctionalValue(Design &d) const {
 	unsigned int howManyEntriesToRead = 1;
 	rowvec functionalValue(howManyEntriesToRead);
-	functionalValue = readOutput(howManyEntriesToRead);
+
 
 	if(isHiFiEvaluation()){
-
+		functionalValue = readOutput(definition.outputFilename,howManyEntriesToRead);
 		d.trueValue = functionalValue(0);
 	}
 
 	if(isLowFiEvaluation()){
 
+		functionalValue = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
 		d.trueValueLowFidelity = functionalValue(0);
 	}
 
@@ -621,23 +622,19 @@ void ObjectiveFunction::readOnlyFunctionalValue(Design &d) const {
 void ObjectiveFunction::readFunctionalValueAndTangent(Design &d) const {
 	unsigned int howManyEntriesToRead = 2;
 	rowvec resultBuffer(howManyEntriesToRead);
-	resultBuffer = readOutput(howManyEntriesToRead);
+
 
 	if(isHiFiEvaluation()){
-
+		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
 		d.trueValue = resultBuffer(0);
 		d.tangentValue = resultBuffer(1);
 	}
 
 	if(isLowFiEvaluation()){
-
+		resultBuffer = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
 		d.trueValueLowFidelity = resultBuffer(0);
 		d.tangentValueLowFidelity = resultBuffer(1);
 	}
-
-
-
-
 
 }
 
@@ -646,21 +643,25 @@ void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
 
 	unsigned int howManyEntriesToRead = 1 + dim;
 	rowvec resultBuffer(howManyEntriesToRead);
-	resultBuffer = readOutput(howManyEntriesToRead);
+
 	rowvec gradient(dim, fill::zeros);
 	unsigned int offset = 1;
-	for (unsigned int i = 0; i < dim; i++) {
-		gradient(i) = resultBuffer(i + offset);
-	}
+
 
 	if(isHiFiEvaluation()){
-
+		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
+		for (unsigned int i = 0; i < dim; i++) {
+				gradient(i) = resultBuffer(i + offset);
+		}
 		d.trueValue = resultBuffer(0);
 		d.gradient = gradient;
 
 	}
 	if(isLowFiEvaluation()){
-
+		resultBuffer = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
+		for (unsigned int i = 0; i < dim; i++) {
+				gradient(i) = resultBuffer(i + offset);
+		}
 		d.trueValueLowFidelity = resultBuffer(0);
 		d.gradientLowFidelity = gradient;
 

@@ -204,8 +204,8 @@ public:
 
 	void writeDesignVariablesToFile(Design &d) const;
 
+	rowvec readOutput(string filename, unsigned int howMany) const;
 
-	rowvec readOutput(unsigned int) const;
 	void readOutputDesign(Design &) const;
 
 

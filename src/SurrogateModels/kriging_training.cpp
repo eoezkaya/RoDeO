@@ -183,6 +183,10 @@ void KrigingModel::updateAuxilliaryFields(void){
 	linearSystemCorrelationMatrix.factorize();
 
 
+	R_inv_ys.reset();
+	R_inv_I.reset();
+	R_inv_ys_min_beta.reset();
+
 	R_inv_ys = zeros<vec>(numberOfSamples);
 	R_inv_I = zeros<vec>(numberOfSamples);
 	R_inv_ys_min_beta = zeros<vec>(numberOfSamples);

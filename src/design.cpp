@@ -336,6 +336,11 @@ void Design::print(void) const{
 		printVector(gradient,"gradient vector");
 	}
 
+	if(!gradientLowFidelity.is_zero() && gradientLowFidelity.size() > 0){
+			printVector(gradientLowFidelity,"gradient vector (Low Fi)");
+	}
+
+
 	if(constraintTrueValues.size() > 0){
 		constraintTrueValues.print("constraint values");
 	}

@@ -1,14 +1,15 @@
-In this example, the Himmelblau test function is minimized without any constraint. The Himmelblau
-function is given as
+In this example, the Himmelblau test function is minimized without any constraint. 
+
+The Himmelblau function is given as
 
 f(x1,x2) = (x1^2+x2-11.0)^2 + (x1+x2^2-7.0)^2
 
-It has four identical local minima
+This function has four identical local minima
 
-f(3.0,2.0) = 0.0
-f(-2.805118, 3.131312) = 0.0
-f(-3.779319, -3.283186) = 0.0
-f(3.584428, -1.848126) = 0.0
+f(3.0,        2.0)       = 0.0
+f(-2.805118,  3.131312)  = 0.0
+f(-3.779319, -3.283186)  = 0.0
+f(3.584428,  -1.848126)  = 0.0
 
 
 The box constraints for x1 and x2 are given as
@@ -23,4 +24,8 @@ a file "objFunVal.dat". The low-fidelity adjoint model for the same function is 
 writes its ouput to the file: "objFunValLowFi.dat".   The settings for the optimization can be found in
 the configuration file "himmelblau.cfg".
 
+Initial training data for the surrogate models are: "himmelblauTrainingData.csv" and "himmelblauLowFiTrainingData.csv". 
+
 To run the test case, run the python file "runOptimization.py" in terminal: python runOptimization.py 
+
+The samples generated in the optimization are in the file "optimizationHistory.csv". The best design is always written to the file "globalOptimumDesign".
