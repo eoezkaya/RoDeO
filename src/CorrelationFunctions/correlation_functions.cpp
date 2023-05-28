@@ -65,6 +65,7 @@ void CorrelationFunctionBase::setInputSampleMatrix(mat input){
 	X = input;
 	N = X.n_rows;
 	dim = X.n_cols;
+	correlationMatrix.reset();
 	correlationMatrix = zeros<mat>(N,N);
 	ifInputSampleMatrixIsSet = true;
 

@@ -77,6 +77,7 @@ void Optimizer::setDimension(unsigned int dim){
 	upperBounds.zeros(dimension);
 	initializeBoundsForAcquisitionFunctionMaximization();
 	iterMaxAcquisitionFunction = dimension*10000;
+
 	minDeltaXForZoom = 0.01/dimension;
 	globalOptimalDesign.setDimension(dim);
 }
@@ -1117,6 +1118,7 @@ void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
 
 			objFun.addDesignToData(currentBestDesign);
 
+
 		}
 
 	}
@@ -1238,10 +1240,10 @@ void Optimizer::EfficientGlobalOptimization(void){
 		currentBestDesign.saveDesignVector(designVectorFileName);
 		currentBestDesign.isDesignFeasible = true;
 
-
 		/* now make a simulation for the most promising design */
 
 		evaluateObjectiveFunction(currentBestDesign);
+
 
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 
@@ -1256,6 +1258,10 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 		addConstraintValuesToData(currentBestDesign);
 		updateOptimizationHistory(currentBestDesign);
+
+
+
+
 
 		findTheGlobalOptimalDesign();
 

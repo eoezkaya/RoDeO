@@ -131,6 +131,7 @@ void CholeskySystem::setMatrix(mat input){
 	A = input;
 
 	dimension = input.n_rows;
+
 	L.reset();
 	L = zeros<mat>(dimension,dimension);
 

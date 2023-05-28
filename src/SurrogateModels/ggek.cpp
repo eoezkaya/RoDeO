@@ -178,11 +178,13 @@ void GGEKModel::initializeSurrogateModel(void){
 
 	output.printMessage("Initializing the generalized gradient enhanced Kriging model...");
 
-	mat X = data.getInputMatrix();
-	correlationFunction.setInputSampleMatrix(X);
+	resetDataObjects();
+
 	initializeCorrelationFunction();
 
 	numberOfHyperParameters = dimension;
+
+
 	weights = ones<vec>(numberOfSamples + indicesOfSamplesWithActiveDerivatives.size());
 
 	auxiliaryModel.setDimension(dimension);
@@ -549,7 +551,6 @@ void GGEKModel::generateWeightingMatrix(void){
 
 		unsigned int sizeOfWeightMatrix = numberOfSamples +  howManySamplesHaveDerivatives;
 
-		weightMatrix.reset();
 		weightMatrix = zeros<mat>(sizeOfWeightMatrix, sizeOfWeightMatrix);
 
 
@@ -581,7 +582,6 @@ void GGEKModel::generateRhsForRBFs(void){
 
 	unsigned int sizeOfRhs = N + Ndot;
 
-	ydot.reset();
 	ydot = zeros<vec>(sizeOfRhs);
 
 	mat gradients 	= data.getGradientMatrix();
@@ -698,8 +698,6 @@ void GGEKModel::calculatePhiMatrix(void){
 	unsigned int howManyTotalDataPoints = numberOfSamples + howManySamplesHaveDerivatives;
 	unsigned int howManyBasisFunctions = numberOfSamples + howManySamplesHaveDerivatives;
 
-
-	Phi.reset();
 	Phi = zeros<mat>(howManyTotalDataPoints, howManyBasisFunctions);
 
 	calculatePhiEntriesForFunctionValues();

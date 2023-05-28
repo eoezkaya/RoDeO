@@ -513,7 +513,7 @@ void ObjectiveFunction::addDesignToData(Design &d){
 			newsampleLowFi = d.constructSampleObjectiveFunctionLowFi();
 
 			assert(newsampleLowFi.size() >0);
-			assert(newsampleHiFi.size() >0);
+			assert(newsampleHiFi.size()  >0);
 
 			surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
 			surrogate->addNewSampleToData(newsampleHiFi);

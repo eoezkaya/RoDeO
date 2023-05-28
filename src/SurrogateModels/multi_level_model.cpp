@@ -234,6 +234,7 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 
 void MultiLevelModel::initializeSurrogateModel(void){
 
+
 	assert(ifBoxConstraintsAreSet);
 	assert(ifSurrogateModelsAreSet);
 	assert(ifDataIsRead);
@@ -244,7 +245,6 @@ void MultiLevelModel::initializeSurrogateModel(void){
 
 	lowFidelityModel->initializeSurrogateModel();
 	output.printMessage("\nInitialization of the low fidelity model is done...");
-
 
 	output.printMessage("\nInitializing the error model...");
 
@@ -643,6 +643,7 @@ void MultiLevelModel::addNewLowFidelitySampleToData(rowvec newsample){
 	appendRowVectorToCSVData(newsample, filenameDataInputLowFidelity);
 	readData();
 	normalizeData();
+
 	initializeSurrogateModel();
 
 }
