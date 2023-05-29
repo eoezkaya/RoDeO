@@ -391,7 +391,7 @@ double MultiLevelModel::interpolate(rowvec x) const{
 
 	double lowFidelityEstimate = lowFidelityModel->interpolate(x);
 	double errorEstimate = errorModel->interpolate(x);
-#if 1
+#if 0
 	cout<<"lowFidelityEstimate ="<<lowFidelityEstimate<<"\n";
 	cout<<"errorEstimate ="<<errorEstimate<<"\n";
 	printScalar(alpha);
