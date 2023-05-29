@@ -100,6 +100,12 @@ public:
 	void setBoxConstraints(Bounds boxConstraintsInput);
 	void setDimension(unsigned int);
 	void setNameOfInputFile(string filename);
+
+
+	void setWriteWarmStartFileFlag(bool flag);
+	void setReadWarmStartFileFlag(bool flag);
+
+
 	void setNameOfHyperParametersFile(string filename);
 	void setNumberOfTrainingIterations(unsigned int);
 	void setThetaFactor(double);
@@ -133,6 +139,7 @@ public:
 	void addNewLowFidelitySampleToData(rowvec newsample);
 
 
+	void resetPhiMatrix(void);
 	void calculatePhiMatrix(void);
 	bool checkPhiMatrix(void);
 	bool checkResidual(void) const;

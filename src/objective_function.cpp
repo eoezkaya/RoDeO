@@ -165,6 +165,7 @@ void ObjectiveFunction::bindWithOrdinaryKrigingModel() {
 	output.printMessage(
 			"Binding the surrogate model with the ORDINARY_KRIGING modeĺ...");
 	surrogateModel.setNameOfInputFile(definition.nameHighFidelityTrainingData);
+	surrogateModel.setName(definition.name);
 	surrogate = &surrogateModel;
 }
 
@@ -181,7 +182,9 @@ void ObjectiveFunction::bindWithGradientEnhancedModel() {
 			"Binding the surrogate model with the GRADIENT_ENHANCED modeĺ...");
 	surrogateModelGradient.setNameOfInputFile(
 			definition.nameHighFidelityTrainingData);
+	surrogateModelGradient.setName(definition.name);
 	surrogate = &surrogateModelGradient;
+
 }
 
 void ObjectiveFunction::bindWithTangentEnhancedKrigingModel() {
@@ -367,6 +370,12 @@ void ObjectiveFunction::initializeSurrogate(void){
 void ObjectiveFunction::trainSurrogate(void){
 
 	assert(ifInitialized);
+
+
+
+	if(ifWarmStart){
+		surrogate->setReadWarmStartFileFlag(true);
+	}
 
 	surrogate->train();
 }

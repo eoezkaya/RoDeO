@@ -93,6 +93,7 @@ void SurrogateModelTester::bindSurrogateModels(void){
 			surrogateModel = &linearModel;
 		}
 		if(surrogateModelType == ORDINARY_KRIGING){
+			krigingModel.setName(name);
 			krigingModel.setDimension(dimension);
 			surrogateModel = &krigingModel;
 		}
@@ -106,6 +107,7 @@ void SurrogateModelTester::bindSurrogateModels(void){
 			surrogateModel = &tangentModel;
 		}
 		if(surrogateModelType == GRADIENT_ENHANCED){
+			generalizedGradientEnhancedModel.setName(name);
 			generalizedGradientEnhancedModel.setDimension(dimension);
 			surrogateModel = &generalizedGradientEnhancedModel;
 		}
@@ -171,6 +173,12 @@ void SurrogateModelTester::performSurrogateModelTest(void){
 	surrogateModel->initializeSurrogateModel();
 	surrogateModel->setNumberOfTrainingIterations(numberOfTrainingIterations);
 	outputToScreen.printMessage("Surrogate model training...");
+
+	if(ifReadWarmStart){
+
+		surrogateModel->setReadWarmStartFileFlag(true);
+	}
+
 	surrogateModel->train();
 
 	if(outputToScreen.ifScreenDisplay){

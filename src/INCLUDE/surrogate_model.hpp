@@ -51,12 +51,12 @@ protected:
 	unsigned int numberOfSamples = 0;
 
 	std::string name;
-	std::string hyperparameters_filename;
+
+	std::string filenameHyperparameters;
 	std::string filenameDataInput;
 	std::string filenameDataInputTest;
 	std::string filenameTestResults = "surrogateTestResults.csv";
-	std::string filenameForWarmStartModelTraining;
-	std::string filenameForWriteWarmStart;
+
 
 	unsigned int numberOfHyperParameters  = 0;
 	unsigned int numberOfTrainingIterations  = 10000;
@@ -65,7 +65,9 @@ protected:
 	OutputDevice output;
 
 	bool ifHasGradientData = false;
-	bool ifWriteWarmStartFile = false;
+
+
+	bool ifWriteWarmStartFile = true;
 	bool ifReadWarmStartFile = false;
 
 	unsigned int numberOfThreads = 1;
@@ -106,7 +108,7 @@ public:
 
 	SurrogateModel();
 
-	void setName(std::string);
+	virtual void setName(std::string);
 
 	void readDataTest(void);
 	void normalizeDataTest(void);
@@ -119,8 +121,8 @@ public:
 
 	void setNumberOfThreads(unsigned int);
 
-	void setWriteWarmStartFileOn(std::string);
-	void setReadWarmStartFileOn(std::string);
+	virtual void setWriteWarmStartFileFlag(bool);
+	virtual void setReadWarmStartFileFlag(bool);
 
 	void setGradientsOn(void);
 	void setGradientsOff(void);

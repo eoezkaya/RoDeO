@@ -108,6 +108,8 @@ public:
 
 	void setFileNameTestData(string);
 
+	bool ifReadWarmStart = false;
+
 	bool ifSurrogateModelSpecified = false;
 	bool ifSurrogateModelLowFiSpecified = false;
 	bool ifbindSurrogateModelisDone = false;

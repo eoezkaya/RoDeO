@@ -52,6 +52,7 @@ void MultiLevelModel::setName(std::string nameGiven){
 	string nameErrorModel = name+"_Error";
 	errorModel->setName(nameErrorModel);
 
+
 }
 
 void MultiLevelModel::setDimension(unsigned int dim){
@@ -83,8 +84,7 @@ void MultiLevelModel::setNameOfInputFileError(void){
 void MultiLevelModel::setNameOfHyperParametersFile(string label){
 
 	assert(isNotEmpty(label));
-
-	hyperparameters_filename = label;
+	filenameHyperparameters= label;
 
 
 }
@@ -171,7 +171,8 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 
 	output.printMessage("Preparing error data...");
 
-	determineAlpha();
+//	determineAlpha();
+	alpha = 0.0;
 
 
 	setNameOfInputFileError();
@@ -188,6 +189,7 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 	for(unsigned int i = 0; i < numberOfSamples; i++){
 
 		unsigned int indexLowFi = findIndexHiFiToLowFiData(i);
+
 
 		double error = rawDataHighFidelity(i,dimension) - alpha*rawDataLowFidelity(indexLowFi,dimension);
 
@@ -277,9 +279,28 @@ void MultiLevelModel::printHyperParameters(void) const{
 
 
 }
+
+void MultiLevelModel::setWriteWarmStartFileFlag(bool flag){
+	lowFidelityModel->setWriteWarmStartFileFlag(flag);
+	errorModel->setWriteWarmStartFileFlag(flag);
+
+
+}
+void MultiLevelModel::setReadWarmStartFileFlag(bool flag){
+
+	lowFidelityModel->setReadWarmStartFileFlag(flag);
+	errorModel->setReadWarmStartFileFlag(flag);
+
+}
+
+
+
+
 void MultiLevelModel::saveHyperParameters(void) const{
 
 
+	lowFidelityModel->saveHyperParameters();
+	errorModel->saveHyperParameters();
 
 
 
@@ -316,8 +337,6 @@ void MultiLevelModel::trainLowFidelityModel(void){
 
 	output.printMessage("Training the low fidelity model...");
 	lowFidelityModel->train();
-	lowFidelityModel->setNameOfHyperParametersFile("lowFidelityModel");
-
 }
 
 
@@ -327,8 +346,6 @@ void MultiLevelModel::trainErrorModel(void){
 
 	output.printMessage("Training the error model...");
 	errorModel->train();
-	errorModel->setNameOfHyperParametersFile("errorModel");
-	errorModel->saveHyperParameters();
 
 }
 
@@ -374,7 +391,7 @@ double MultiLevelModel::interpolate(rowvec x) const{
 
 	double lowFidelityEstimate = lowFidelityModel->interpolate(x);
 	double errorEstimate = errorModel->interpolate(x);
-#if 0
+#if 1
 	cout<<"lowFidelityEstimate ="<<lowFidelityEstimate<<"\n";
 	cout<<"errorEstimate ="<<errorEstimate<<"\n";
 	printScalar(alpha);
@@ -426,6 +443,7 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 		x(i) = rawDataHighFidelity(indexHiFiData,i);
 	}
 
+
 	double minNorm = LARGE;
 	for(unsigned int i=0; i < numberOfSamplesLowFidelity; i++){
 
@@ -451,6 +469,7 @@ unsigned int MultiLevelModel::findIndexHiFiToLowFiData(unsigned int indexHiFiDat
 
 		abortWithErrorMessage("A high fidelity data point does not exist in the low fidelity data!");
 	}
+
 
 	return indexLoFi;
 

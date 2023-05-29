@@ -104,6 +104,11 @@ public:
 	void setNameOfInputFile(string filename);
 	void setNameOfInputFileError(void);
 
+	void setWriteWarmStartFileFlag(bool);
+	void setReadWarmStartFileFlag(bool);
+
+
+
 	void setNameOfHyperParametersFile(string filename);
 	void setNumberOfTrainingIterations(unsigned int);
 

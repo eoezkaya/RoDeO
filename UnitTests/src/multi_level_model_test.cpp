@@ -73,7 +73,52 @@ protected:
 };
 
 
+TEST_F(MultiLevelModelTest, ifsaveHyperparametersWorks){
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
+
+	testModel.setinputFileNameHighFidelityData("himmelblauHiFi.csv");
+	testModel.setinputFileNameLowFidelityData("himmelblauLowFi.csv");
+	//	testModel.setDisplayOn();
+
+
+	testModel.setIDLowFiModel(ORDINARY_KRIGING);
+	testModel.setIDHiFiModel(ORDINARY_KRIGING);
+
+	testModel.bindModels();
+	testModel.setName("himmelblauModel");
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.readData();
+	testModel.normalizeData();
+
+	testModel.initializeSurrogateModel();
+
+	testModel.setNumberOfTrainingIterations(1000);
+
+	remove("himmelblauModel_LowFi_hyperparameters.csv");
+	remove("himmelblauModel_Error_hyperparameters.csv");
+
+	testModel.train();
+
+	vec hyperParamLowFi;
+	hyperParamLowFi.load("himmelblauModel_LowFi_hyperparameters.csv", csv_ascii);
+
+	ASSERT_TRUE(hyperParamLowFi.size() == 4);
+
+	vec hyperParamError;
+	hyperParamError.load("himmelblauModel_Error_hyperparameters.csv", csv_ascii);
+
+	ASSERT_TRUE(hyperParamLowFi.size() == 4);
+
+
+}
+
+
+
+
 TEST_F(MultiLevelModelTest, testAddNewSampleToData){
+
+	abort();
 
 	himmelblauFunction.function.generateTrainingSamplesMultiFidelity();
 

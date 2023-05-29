@@ -678,6 +678,8 @@ void Optimizer::findTheGlobalOptimalDesign(void){
  */
 void Optimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
 
+	output.printMessage("Searching the best potential design...");
+
 	assert(ifSurrogatesAreInitialized);
 
 	vec &lb = lowerBoundsForAcqusitionFunctionMaximization;

@@ -76,7 +76,7 @@ void KrigingModel::setNumberOfTrainingIterations(unsigned int nIters){
 void KrigingModel::setNameOfHyperParametersFile(std::string filename){
 
 	assert(isNotEmpty(filename));
-	hyperparameters_filename = filename;
+	filenameHyperparameters = filename;
 
 }
 
@@ -268,28 +268,38 @@ vec KrigingModel::getHyperParameters(void) const{
 
 void KrigingModel::saveHyperParameters(void) const{
 
+	assert(isNotEmpty(filenameHyperparameters));
+	output.printMessage("Saving hyperparameters into the file: ", filenameHyperparameters);
 
-	if(!hyperparameters_filename.empty()){
+	vec saveBuffer = correlationFunction.getHyperParameters();
+	saveBuffer.save(filenameHyperparameters,csv_ascii);
 
-		output.printMessage("Saving hyperparameters into the file: ", hyperparameters_filename);
-
-		unsigned int dim = data.getDimension();
-
-		vec saveBuffer(numberOfHyperParameters);
-
-		saveBuffer = correlationFunction.getHyperParameters();
-		saveBuffer.save(hyperparameters_filename,csv_ascii);
-
-	}
 
 }
 
 void KrigingModel::loadHyperParameters(void){
 
+	assert(dimension > 0);
+
 	vec loadBuffer;
-	bool ifLoadIsOK =  loadBuffer.load(hyperparameters_filename,csv_ascii);
+	bool ifLoadIsOK =  loadBuffer.load(filenameHyperparameters,csv_ascii);
+
+
+	output.ifScreenDisplay = true;
+	if(!ifLoadIsOK){
+
+		string msg = "Hyperparameter file: " + filenameHyperparameters + " cannot be loaded!";
+		abortWithErrorMessage(msg);
+	}
+	else{
+
+		string msg = "Loading hyperparameter file: " + filenameHyperparameters;
+		output.printMessage(msg);
+	}
+	output.ifScreenDisplay = false;
 
 	unsigned int numberOfEntriesInTheBuffer = loadBuffer.size();
+
 
 	if(ifLoadIsOK && numberOfEntriesInTheBuffer == numberOfHyperParameters) {
 
@@ -297,6 +307,9 @@ void KrigingModel::loadHyperParameters(void){
 
 		vec theta = loadBuffer.head(dim);
 		vec gamma = loadBuffer.tail(dim);
+
+//		theta.print("theta");
+//		gamma.print("gamma");
 
 		correlationFunction.setTheta(theta);
 		correlationFunction.setGamma(gamma);
@@ -381,7 +394,7 @@ void KrigingModel::printSurrogateModel(void) const{
 	cout<< "Number of input parameters: "<<data.getDimension() <<"\n";
 
 
-	printf("hyperparameters_filename: %s\n",hyperparameters_filename.c_str());
+	printf("hyperparameters_filename: %s\n",filenameHyperparameters.c_str());
 	printf("input_filename: %s\n",filenameDataInput.c_str());
 	printf("max_number_of_kriging_iterations = %d\n",this->numberOfTrainingIterations);
 
@@ -552,89 +565,95 @@ void KrigingModel::train(void){
 
 	assert(ifInitialized);
 
-	unsigned int dim = data.getDimension();
-	assert(dim>0);
+	if(ifReadWarmStartFile){
+
+		loadHyperParameters();
+
+	}
+	else{
 
 
-	Bounds boxConstraintsForTheTraining(2*dim);
-	vec lb(2*dim,fill::zeros);
-	vec ub(2*dim);
+		unsigned int dim = data.getDimension();
+		assert(dim>0);
 
-	for(unsigned int i=0; i<dim; i++)     ub(i) = 20.0;
-	for(unsigned int i=dim; i<2*dim; i++) ub(i) = 2.0;
-	for(unsigned int i=dim; i<2*dim; i++) lb(i) = 1.0;
 
-	boxConstraintsForTheTraining.setBounds(lb,ub);
-	double globalBestL1error = LARGE;
+		Bounds boxConstraintsForTheTraining(2*dim);
+		vec lb(2*dim,fill::zeros);
+		vec ub(2*dim);
 
-	KrigingHyperParameterOptimizer bestOptimizer;
-	omp_set_num_threads(numberOfThreads);
+		for(unsigned int i=0; i<dim; i++)     ub(i) = 20.0;
+		for(unsigned int i=dim; i<2*dim; i++) ub(i) = 2.0;
+		for(unsigned int i=dim; i<2*dim; i++) lb(i) = 1.0;
 
-	numberOfTrainingIterations = numberOfTrainingIterations/numberOfThreads;
+		boxConstraintsForTheTraining.setBounds(lb,ub);
+		double globalBestL1error = LARGE;
+
+		KrigingHyperParameterOptimizer bestOptimizer;
+		omp_set_num_threads(numberOfThreads);
+
+		numberOfTrainingIterations = numberOfTrainingIterations/numberOfThreads;
 
 #pragma omp parallel for
-	for(unsigned int thread = 0; thread< numberOfThreads; thread++){
+		for(unsigned int thread = 0; thread< numberOfThreads; thread++){
 
-		KrigingHyperParameterOptimizer parameterOptimizer;
+			KrigingHyperParameterOptimizer parameterOptimizer;
 
-		parameterOptimizer.setDimension(2*dim);
-		parameterOptimizer.initializeKrigingModelObject(*this);
-		//		parameterOptimizer.setDisplayOn();
+			parameterOptimizer.setDimension(2*dim);
+			parameterOptimizer.initializeKrigingModelObject(*this);
+			//		parameterOptimizer.setDisplayOn();
 
-		parameterOptimizer.setBounds(boxConstraintsForTheTraining);
-		parameterOptimizer.setNumberOfNewIndividualsInAGeneration(200*dim);
-		parameterOptimizer.setNumberOfDeathsInAGeneration(180*dim);
-		parameterOptimizer.setInitialPopulationSize(2*dim*100);
-		parameterOptimizer.setMutationProbability(0.1);
-		parameterOptimizer.setMaximumNumberOfGeneratedIndividuals(numberOfTrainingIterations);
-
-		unsigned int numberOfGenerations = numberOfTrainingIterations/(200.0*dim);
-
-		if(numberOfGenerations == 0){
-
-			numberOfGenerations = 1;
-		}
-		parameterOptimizer.setNumberOfGenerations(numberOfGenerations);
+			parameterOptimizer.setBounds(boxConstraintsForTheTraining);
+			parameterOptimizer.setNumberOfNewIndividualsInAGeneration(200*dim);
+			parameterOptimizer.setNumberOfDeathsInAGeneration(180*dim);
+			parameterOptimizer.setInitialPopulationSize(2*dim*100);
+			parameterOptimizer.setMutationProbability(0.1);
+			parameterOptimizer.setMaximumNumberOfGeneratedIndividuals(numberOfTrainingIterations);
 
 
-		if(ifReadWarmStartFile){
 
-			assert(isNotEmpty(filenameForWarmStartModelTraining));
 
-			parameterOptimizer.setFilenameWarmStart(filenameForWarmStartModelTraining);
-			parameterOptimizer.setWarmStartOn();
-		}
+			unsigned int numberOfGenerations = numberOfTrainingIterations/(200.0*dim);
 
-		//		parameterOptimizer.setDisplayOn();
-		parameterOptimizer.optimize();
+			if(numberOfGenerations == 0){
 
-		EAIndividual bestSolution = parameterOptimizer.getSolution();
-		vec optimizedHyperParameters = bestSolution.getGenes();
+				numberOfGenerations = 1;
+			}
+			parameterOptimizer.setNumberOfGenerations(numberOfGenerations);
+
+			//		parameterOptimizer.printSettings();
+
+			parameterOptimizer.optimize();
+
+			EAIndividual bestSolution = parameterOptimizer.getSolution();
+			vec optimizedHyperParameters = bestSolution.getGenes();
 
 
 #pragma omp critical
-		{
+			{
 
-			double bestSolutionLikelihood = bestSolution.getObjectiveFunctionValue();
-			if( bestSolutionLikelihood  < globalBestL1error){
+				double bestSolutionLikelihood = bestSolution.getObjectiveFunctionValue();
+				if( bestSolutionLikelihood  < globalBestL1error){
 
-				bestOptimizer = parameterOptimizer;
-				globalBestL1error = bestSolutionLikelihood ;
+					bestOptimizer = parameterOptimizer;
+					globalBestL1error = bestSolutionLikelihood ;
+				}
 			}
 		}
+
+		omp_set_num_threads(1);
+
+
+		correlationFunction.setHyperParameters(bestOptimizer.getBestDesignVector());
+
+		if(ifWriteWarmStartFile){
+			saveHyperParameters();
+		}
+
 	}
-
-	omp_set_num_threads(1);
-
-	if(ifWriteWarmStartFile){
-
-		bestOptimizer.setFilenameWarmStart(filenameForWriteWarmStart);
-		bestOptimizer.writeWarmRestartFile();
-	}
-
-	correlationFunction.setHyperParameters(bestOptimizer.getBestDesignVector());
-
 	updateAuxilliaryFields();
+
+
+
 	ifModelTrainingIsDone = true;
 
 }

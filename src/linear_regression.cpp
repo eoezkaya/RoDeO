@@ -88,13 +88,15 @@ void LinearModel::initializeSurrogateModel(void){
 
 void LinearModel::saveHyperParameters(void) const  {
 
-	weights.save(hyperparameters_filename, csv_ascii);
+	assert(isNotEmpty(filenameHyperparameters));
+	weights.save(filenameHyperparameters, csv_ascii);
 
 }
 
 void LinearModel::loadHyperParameters(void){
 
-	weights.load(hyperparameters_filename, csv_ascii);
+	assert(isNotEmpty(filenameHyperparameters));
+	weights.load(filenameHyperparameters, csv_ascii);
 
 }
 
@@ -227,7 +229,7 @@ void LinearModel::setNumberOfTrainingIterations(unsigned int nIters){}
 void LinearModel::setNameOfHyperParametersFile(std::string filename){
 
 	assert(isNotEmpty(filename));
-	hyperparameters_filename = filename;
+	filenameHyperparameters = filename;
 
 }
 

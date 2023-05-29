@@ -134,8 +134,8 @@ public:
 
 	ObjectiveFunction();
 
-	bool ifDoErequired = true;
 	bool ifWarmStart = false;
+
 	bool ifInitialized = false;
 	bool ifParameterBoundsAreSet = false;
 	bool ifDefinitionIsSet = false;

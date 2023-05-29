@@ -70,6 +70,7 @@ RoDeODriver::RoDeODriver(){
 
 	configKeysObjectiveFunction.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
 	configKeysObjectiveFunction.add(ConfigKey("MULTILEVEL_MODEL","string") );
+	configKeysObjectiveFunction.add(ConfigKey("WARM_START","string") );
 
 
 	/* Keywords for constraints */
@@ -84,6 +85,7 @@ RoDeODriver::RoDeODriver(){
 	configKeysConstraintFunction.add(ConfigKey("SURROGATE_MODEL","stringVector") );
 	configKeysConstraintFunction.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
 	configKeysConstraintFunction.add(ConfigKey("MULTILEVEL_MODEL","string") );
+	configKeysConstraintFunction.add(ConfigKey("WARM_START","string") );
 	configKeysConstraintFunction.add(ConfigKey("FILENAME_TRAINING_DATA","stringVector") );
 
 
@@ -103,6 +105,7 @@ RoDeODriver::RoDeODriver(){
 	configKeys.add(ConfigKey("FILENAME_TRAINING_DATA","stringVector") );
 	configKeys.add(ConfigKey("FILENAME_TEST_DATA","string") );
 	configKeys.add(ConfigKey("SURROGATE_MODEL","stringVector") );
+	configKeys.add(ConfigKey("WARM_START","string") );
 
 
 
@@ -546,6 +549,15 @@ ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
 
 	objFunc.setNumberOfTrainingIterationsForSurrogateModel(nIterForSurrogateTraining);
 
+
+	string isWarmStartOn = configKeysObjectiveFunction.getConfigKeyStringValue("WARM_START");
+
+	if(checkIfOn(isWarmStartOn)){
+		objFunc.ifWarmStart	 = true;
+	}
+
+
+
 	return objFunc;
 
 
@@ -904,6 +916,13 @@ ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDef
 
 	constraintFunc.setNumberOfTrainingIterationsForSurrogateModel(nIterForSurrogateTraining);
 
+	string isWarmStartOn = configKeysConstraintFunction.getConfigKeyStringValue("WARM_START");
+
+	if(checkIfOn(isWarmStartOn)){
+		constraintFunc.ifWarmStart	 = true;
+	}
+
+
 	return constraintFunc;
 
 }
@@ -1133,6 +1152,13 @@ void RoDeODriver::runSurrogateModelTest(void){
 
 
 	string targetVariableSampleWeights = configKeys.getConfigKeyStringValue("TARGET_VALUE_FOR_VARIABLE_SAMPLE_WEIGHTS");
+
+
+	string isWarmStartOn = configKeys.getConfigKeyStringValue("WARM_START");
+
+	if(checkIfOn(isWarmStartOn)){
+		surrogateTest.ifReadWarmStart = true;
+	}
 
 
 	surrogateTest.performSurrogateModelTest();

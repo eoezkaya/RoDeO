@@ -55,6 +55,7 @@ void SurrogateModel::setName(std::string nameInput){
 	assert(isNotEmpty(nameInput));
 
 	name = nameInput;
+	filenameHyperparameters = name + "_hyperparameters.csv";
 
 }
 
@@ -92,21 +93,13 @@ bool SurrogateModel::areGradientsOn(void) const{
 
 }
 
-void SurrogateModel::setWriteWarmStartFileOn(std::string filename){
+void SurrogateModel::setWriteWarmStartFileFlag(bool flag){
 
-	assert(isNotEmpty(filename));
-
-	filenameForWriteWarmStart = filename;
-	ifWriteWarmStartFile = true;
-
+	ifWriteWarmStartFile = flag;
 }
 
-
-void SurrogateModel::setReadWarmStartFileOn(std::string filename){
-
-	assert(isNotEmpty(filename));
-	filenameForWarmStartModelTraining = filename;
-	ifReadWarmStartFile = true;
+void SurrogateModel::setReadWarmStartFileFlag(bool flag){
+	ifReadWarmStartFile = flag;
 
 }
 
@@ -128,7 +121,7 @@ void SurrogateModel::setDisplayOff(void){
 
 std::string SurrogateModel::getNameOfHyperParametersFile(void) const{
 
-	return hyperparameters_filename;
+	return filenameHyperparameters;
 
 }
 
