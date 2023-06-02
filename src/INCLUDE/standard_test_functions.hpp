@@ -33,6 +33,7 @@
 
 #include <armadillo>
 #include "test_functions.hpp"
+#include "himmelblau.hpp"
 #include "eggholder.hpp"
 
 class HimmelblauFunction{

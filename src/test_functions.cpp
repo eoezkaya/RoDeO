@@ -735,135 +735,7 @@ double LinearTF1LowFidelityTangent(double *x, double *xd, double *fdot) {
 /**************************************************************************************/
 
 
-/* Himmelblau test function
- *
- * f(x,y) = (x^2+y-11)^2 + (x+y^2-7)^2
- * four local minima :
- * f(3.0,2.0)=0.0
- * f(2.805118, 3.131312) = 0.0
- * f(-3.779310, -3.283186) = 0.0
- * f(3.584428, -1.848126)  = 0.0
- *
- *
- * */
 
-double Himmelblau(double *x){
-
-	double c1 = 1.0;
-	double c2 = 1.0;
-	double c3 = 11.0;
-	double c4 = 1.0;
-	double c5 = 1.0;
-	double c6 = 7.0;
-	return pow( (c1*x[0]*x[0]+c2*x[1]- c3 ), 2.0 ) + pow( (c4 * x[0]+ c5 * x[1]*x[1]- c6), 2.0 );
-
-
-}
-
-
-double HimmelblauTangent(double *x, double *xd, double *fdot) {
-	double c1 = 1.0;
-	double c2 = 1.0;
-	double c3 = 11.0;
-	double c4 = 1.0;
-	double c5 = 1.0;
-	double c6 = 7.0;
-	double f;
-	double fd;
-	double arg1;
-	double arg1d;
-	double arg2;
-	double arg2d;
-	arg1d = c1*2*x[0]*xd[0] + c2*xd[1];
-	arg1 = c1*x[0]*x[0] + c2*x[1] - c3;
-	arg2d = c4*xd[0] + c5*2*x[1]*xd[1];
-	arg2 = c4*x[0] + c5*x[1]*x[1] - c6;
-	fd = 2.0*pow(arg1, 2.0-1)*arg1d + 2.0*pow(arg2, 2.0-1)*arg2d;
-	f = pow(arg1, 2.0) + pow(arg2, 2.0);
-	*fdot = fd;
-	return f;
-}
-
-
-double HimmelblauAdj(double *x, double *xb) {
-	double c1 = 1.0;
-	double c2 = 1.0;
-	double c3 = 11.0;
-	double c4 = 1.0;
-	double c5 = 1.0;
-	double c6 = 7.0;
-
-
-	double tempb;
-	double tempb0;
-
-	tempb = 2.0*pow(c1*(x[0]*x[0])-c3+c2*x[1], 2.0-1);
-	tempb0 = 2.0*pow(c4*x[0]-c6+c5*(x[1]*x[1]), 2.0-1);
-	xb[0] =  c4*tempb0 + 2*x[0]*c1*tempb;
-	xb[1] =  2*x[1]*c5*tempb0 + c2*tempb;
-	return Himmelblau(x);
-
-}
-
-double HimmelblauAdjLowFi(double *x, double *xb) {
-	double c1 = 1.1;
-	double c2 = 0.9;
-	double c3 = 11.05;
-	double c4 = 1.05;
-	double c5 = 1.08;
-	double c6 = 6.97;
-	double f = 0.0;
-	double fb = 0.0;
-	double tempb;
-	double tempb0;
-	double Himmelblau;
-	fb = 1.0;
-	tempb = 2.0*pow(c1*(x[0]*x[0])-c3+c2*x[1], 2.0-1)*fb;
-	tempb0 = 2.0*pow(c4*x[0]-c6+c5*(x[1]*x[1]), 2.0-1)*fb;
-	xb[0] = xb[0] + c4*tempb0 + 2*x[0]*c1*tempb;
-	xb[1] = xb[1] + 2*x[1]*c5*tempb0 + c2*tempb;
-	return pow( (c1*x[0]*x[0]+c2*x[1]- c3 ), 2.0 ) + pow( (c4 * x[0]+ c5 * x[1]*x[1]- c6), 2.0 );
-
-}
-
-
-double HimmelblauLowFi(double *x){
-
-	double c1 = 1.1;
-	double c2 = 0.9;
-	double c3 = 11.05;
-	double c4 = 1.05;
-	double c5 = 1.08;
-	double c6 = 6.97;
-	return pow( (c1*x[0]*x[0]+c2*x[1]- c3 ), 2.0 ) + pow( (c4 * x[0]+ c5 * x[1]*x[1]- c6), 2.0 );
-
-
-}
-
-double HimmelblauTangentLowFi(double *x, double *xd, double *fdot) {
-	double c1 = 1.1;
-	double c2 = 0.9;
-	double c3 = 11.05;
-	double c4 = 1.05;
-	double c5 = 1.08;
-	double c6 = 6.97;
-	double f;
-	double fd;
-	double arg1;
-	double arg1d;
-	double arg2;
-	double arg2d;
-	arg1d = c1*2*x[0]*xd[0] + c2*xd[1];
-	arg1 = c1*x[0]*x[0] + c2*x[1] - c3;
-	arg2d = c4*xd[0] + c5*2*x[1]*xd[1];
-	arg2 = c4*x[0] + c5*x[1]*x[1] - c6;
-	fd = 2.0*pow(arg1, 2.0-1)*arg1d + 2.0*pow(arg2, 2.0-1)*arg2d;
-	f = pow(arg1, 2.0) + pow(arg2, 2.0);
-	*fdot = fd;
-	return f;
-}
-
-/***********************************************************************************/
 
 
 
@@ -1192,176 +1064,176 @@ double Shubertadj(double *x, double *xb) {
 
 
 
-
-
-
-double Himmelblau(vec x){
-
-	return Himmelblau(x.memptr());
-
-}
-
-double HimmelblauLowFi(vec x){
-
-	return Himmelblau(x.memptr()) + Waves2D(x.memptr())*50.0;
-
-}
-
-
-
-vec HimmelblauGradient(vec x){
-
-	vec gradient(2);
-	double tempb;
-	double tempb0;
-	tempb = 2.0*pow(x[0]*x[0]+x[1]-11.0, 2.0-1);
-	tempb0 = 2.0*pow(x[0]+x[1]*x[1]-7.0, 2.0-1);
-	gradient[0] = tempb0 + 2*x[0]*tempb;
-	gradient[1] = 2*x[1]*tempb0 + tempb;
-
-	return gradient;
-}
-
-
-void generateHimmelblauDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
-
-	assert(nSamplesHiFi < nSamplesLowFi);
-	assert(filenameHiFi != filenameLowFi);
-	mat samplesLowFi(nSamplesLowFi,3);
-
-	for (unsigned int i=0; i<nSamplesLowFi; i++){
-		rowvec x(3);
-		double xInp[2];
-		x(0) = generateRandomDouble(-6.0,6.0);
-		x(1) = generateRandomDouble(-6.0,6.0);
-		xInp[0] = x(0);
-		xInp[1] = x(1);
-		double fVal = Himmelblau(xInp);
-		double errorTerm = Waves2D(xInp)*50.0;
-#if 0
-		std::cout<<"fVal = "<<fVal<<"\n";
-		std::cout<<"errorTerm = "<<errorTerm<<"\n\n";
-
-#endif
-		x(2) = fVal + errorTerm;
-		samplesLowFi.row(i) = x;
-
-	}
-
-	saveMatToCVSFile(samplesLowFi, filenameLowFi);
-
-	mat samplesHiFi(nSamplesHiFi,3);
-	for (unsigned int i=0; i<nSamplesHiFi; i++){
-
-		double xInp[2];
-		xInp[0] = samplesLowFi(i,0);
-		xInp[1] = samplesLowFi(i,1);
-		samplesHiFi(i,0) = samplesLowFi(i,0);
-		samplesHiFi(i,1) = samplesLowFi(i,1);
-		samplesHiFi(i,2) = Himmelblau(xInp);
-
-	}
-
-	saveMatToCVSFile(samplesHiFi, filenameHiFi);
-
-}
-
-
-void generateHimmelblauDataMultiFidelityWithShuffle(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
-
-	assert(nSamplesHiFi < nSamplesLowFi);
-	assert(filenameHiFi != filenameLowFi);
-	mat samplesLowFi(nSamplesLowFi,3);
-
-	for (unsigned int i=0; i<nSamplesLowFi; i++){
-		rowvec x(3);
-		double xInp[2];
-		x(0) = generateRandomDouble(-6.0,6.0);
-		x(1) = generateRandomDouble(-6.0,6.0);
-		xInp[0] = x(0);
-		xInp[1] = x(1);
-		double fVal = Himmelblau(xInp);
-		double errorTerm = Waves2D(xInp)*50.0;
-#if 0
-		std::cout<<"fVal = "<<fVal<<"\n";
-		std::cout<<"errorTerm = "<<errorTerm<<"\n\n";
-
-#endif
-		x(2) = fVal + errorTerm;
-		samplesLowFi.row(i) = x;
-
-	}
-
-	saveMatToCVSFile(samplesLowFi, filenameLowFi);
-
-	mat samplesHiFi(nSamplesHiFi,3);
-	for (unsigned int i=0; i<nSamplesHiFi; i++){
-
-		double xInp[2];
-		xInp[0] = samplesLowFi(i,0);
-		xInp[1] = samplesLowFi(i,1);
-		samplesHiFi(i,0) = samplesLowFi(i,0);
-		samplesHiFi(i,1) = samplesLowFi(i,1);
-		samplesHiFi(i,2) = Himmelblau(xInp);
-
-	}
-
-	samplesHiFi = shuffleRows(samplesHiFi);
-	saveMatToCVSFile(samplesHiFi, filenameHiFi);
-
-}
-
-
-
-
-
-void generateHimmelblauDataMultiFidelityWithGradients(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
-
-	assert(nSamplesHiFi < nSamplesLowFi);
-	assert(filenameHiFi != filenameLowFi);
-	mat samplesLowFi(nSamplesLowFi,5);
-
-	for (unsigned int i=0; i<nSamplesLowFi; i++){
-		rowvec x(5);
-		double xInp[2];
-		double xInpb[2];
-		x(0) = generateRandomDouble(-6.0,6.0);
-		x(1) = generateRandomDouble(-6.0,6.0);
-		xInp[0] = x(0);
-		xInp[1] = x(1);
-		double fVal = HimmelblauAdj(xInp,xInpb);
-		double xInpbErr[2];
-		double errorTerm = Waves2DAdj(xInp,xInpbErr)*50.0;
-
-		x(2) = fVal + errorTerm;
-		x(3) = xInpb[0] + 50.0*xInpbErr[0];
-		x(4) = xInpb[1] + 50.0*xInpbErr[1];
-		samplesLowFi.row(i) = x;
-
-	}
-
-
-	saveMatToCVSFile(samplesLowFi, filenameLowFi);
-
-	mat samplesHiFi(nSamplesHiFi,5);
-	for (unsigned int i=0; i<nSamplesHiFi; i++){
-
-		double xInp[2];
-
-		xInp[0] = samplesLowFi(i,0);
-		xInp[1] = samplesLowFi(i,1);
-		double fVal = Himmelblau(xInp);
-		samplesHiFi(i,0) = samplesLowFi(i,0);
-		samplesHiFi(i,1) = samplesLowFi(i,1);
-		samplesHiFi(i,2) = fVal;
-		samplesHiFi(i,3) = samplesLowFi(i,3);
-		samplesHiFi(i,4) = samplesLowFi(i,4);
-
-	}
-
-	saveMatToCVSFile(samplesHiFi, filenameHiFi);
-}
-
+//
+//
+//
+//double Himmelblau(vec x){
+//
+//	return Himmelblau(x.memptr());
+//
+//}
+//
+//double HimmelblauLowFi(vec x){
+//
+//	return Himmelblau(x.memptr()) + Waves2D(x.memptr())*50.0;
+//
+//}
+//
+//
+//
+//vec HimmelblauGradient(vec x){
+//
+//	vec gradient(2);
+//	double tempb;
+//	double tempb0;
+//	tempb = 2.0*pow(x[0]*x[0]+x[1]-11.0, 2.0-1);
+//	tempb0 = 2.0*pow(x[0]+x[1]*x[1]-7.0, 2.0-1);
+//	gradient[0] = tempb0 + 2*x[0]*tempb;
+//	gradient[1] = 2*x[1]*tempb0 + tempb;
+//
+//	return gradient;
+//}
+//
+//
+//void generateHimmelblauDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
+//
+//	assert(nSamplesHiFi < nSamplesLowFi);
+//	assert(filenameHiFi != filenameLowFi);
+//	mat samplesLowFi(nSamplesLowFi,3);
+//
+//	for (unsigned int i=0; i<nSamplesLowFi; i++){
+//		rowvec x(3);
+//		double xInp[2];
+//		x(0) = generateRandomDouble(-6.0,6.0);
+//		x(1) = generateRandomDouble(-6.0,6.0);
+//		xInp[0] = x(0);
+//		xInp[1] = x(1);
+//		double fVal = Himmelblau(xInp);
+//		double errorTerm = Waves2D(xInp)*50.0;
+//#if 0
+//		std::cout<<"fVal = "<<fVal<<"\n";
+//		std::cout<<"errorTerm = "<<errorTerm<<"\n\n";
+//
+//#endif
+//		x(2) = fVal + errorTerm;
+//		samplesLowFi.row(i) = x;
+//
+//	}
+//
+//	saveMatToCVSFile(samplesLowFi, filenameLowFi);
+//
+//	mat samplesHiFi(nSamplesHiFi,3);
+//	for (unsigned int i=0; i<nSamplesHiFi; i++){
+//
+//		double xInp[2];
+//		xInp[0] = samplesLowFi(i,0);
+//		xInp[1] = samplesLowFi(i,1);
+//		samplesHiFi(i,0) = samplesLowFi(i,0);
+//		samplesHiFi(i,1) = samplesLowFi(i,1);
+//		samplesHiFi(i,2) = Himmelblau(xInp);
+//
+//	}
+//
+//	saveMatToCVSFile(samplesHiFi, filenameHiFi);
+//
+//}
+//
+//
+//void generateHimmelblauDataMultiFidelityWithShuffle(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
+//
+//	assert(nSamplesHiFi < nSamplesLowFi);
+//	assert(filenameHiFi != filenameLowFi);
+//	mat samplesLowFi(nSamplesLowFi,3);
+//
+//	for (unsigned int i=0; i<nSamplesLowFi; i++){
+//		rowvec x(3);
+//		double xInp[2];
+//		x(0) = generateRandomDouble(-6.0,6.0);
+//		x(1) = generateRandomDouble(-6.0,6.0);
+//		xInp[0] = x(0);
+//		xInp[1] = x(1);
+//		double fVal = Himmelblau(xInp);
+//		double errorTerm = Waves2D(xInp)*50.0;
+//#if 0
+//		std::cout<<"fVal = "<<fVal<<"\n";
+//		std::cout<<"errorTerm = "<<errorTerm<<"\n\n";
+//
+//#endif
+//		x(2) = fVal + errorTerm;
+//		samplesLowFi.row(i) = x;
+//
+//	}
+//
+//	saveMatToCVSFile(samplesLowFi, filenameLowFi);
+//
+//	mat samplesHiFi(nSamplesHiFi,3);
+//	for (unsigned int i=0; i<nSamplesHiFi; i++){
+//
+//		double xInp[2];
+//		xInp[0] = samplesLowFi(i,0);
+//		xInp[1] = samplesLowFi(i,1);
+//		samplesHiFi(i,0) = samplesLowFi(i,0);
+//		samplesHiFi(i,1) = samplesLowFi(i,1);
+//		samplesHiFi(i,2) = Himmelblau(xInp);
+//
+//	}
+//
+//	samplesHiFi = shuffleRows(samplesHiFi);
+//	saveMatToCVSFile(samplesHiFi, filenameHiFi);
+//
+//}
+//
+//
+//
+//
+//
+//void generateHimmelblauDataMultiFidelityWithGradients(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
+//
+//	assert(nSamplesHiFi < nSamplesLowFi);
+//	assert(filenameHiFi != filenameLowFi);
+//	mat samplesLowFi(nSamplesLowFi,5);
+//
+//	for (unsigned int i=0; i<nSamplesLowFi; i++){
+//		rowvec x(5);
+//		double xInp[2];
+//		double xInpb[2];
+//		x(0) = generateRandomDouble(-6.0,6.0);
+//		x(1) = generateRandomDouble(-6.0,6.0);
+//		xInp[0] = x(0);
+//		xInp[1] = x(1);
+//		double fVal = HimmelblauAdj(xInp,xInpb);
+//		double xInpbErr[2];
+//		double errorTerm = Waves2DAdj(xInp,xInpbErr)*50.0;
+//
+//		x(2) = fVal + errorTerm;
+//		x(3) = xInpb[0] + 50.0*xInpbErr[0];
+//		x(4) = xInpb[1] + 50.0*xInpbErr[1];
+//		samplesLowFi.row(i) = x;
+//
+//	}
+//
+//
+//	saveMatToCVSFile(samplesLowFi, filenameLowFi);
+//
+//	mat samplesHiFi(nSamplesHiFi,5);
+//	for (unsigned int i=0; i<nSamplesHiFi; i++){
+//
+//		double xInp[2];
+//
+//		xInp[0] = samplesLowFi(i,0);
+//		xInp[1] = samplesLowFi(i,1);
+//		double fVal = Himmelblau(xInp);
+//		samplesHiFi(i,0) = samplesLowFi(i,0);
+//		samplesHiFi(i,1) = samplesLowFi(i,1);
+//		samplesHiFi(i,2) = fVal;
+//		samplesHiFi(i,3) = samplesLowFi(i,3);
+//		samplesHiFi(i,4) = samplesLowFi(i,4);
+//
+//	}
+//
+//	saveMatToCVSFile(samplesHiFi, filenameHiFi);
+//}
+//
 
 
 

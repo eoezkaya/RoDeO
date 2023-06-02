@@ -152,12 +152,7 @@ double testFunction1DTangentLowFi(double *x, double *xd, double *fdot);
 
 /*****************************************************************************/
 
-double Himmelblau(double *x);
-double HimmelblauLowFi(double *x);
-double HimmelblauAdj(double *x, double *xb);
-double HimmelblauAdjLowFi(double *x, double *xb);
-double HimmelblauTangent(double *x, double *xd, double *fdot);
-double HimmelblauTangentLowFi(double *x, double *xd, double *fdot);
+
 
 double himmelblauConstraintFunction1(double *x);
 double himmelblauConstraintFunction2(double *x);
