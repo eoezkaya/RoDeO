@@ -84,22 +84,21 @@ void TestFunction::setBoxConstraints(Bounds bounds){
 	boxConstraints = bounds;
 }
 
-void TestFunction::evaluateGlobalExtrema(void) const{
+pair<double,double> TestFunction::evaluateGlobalExtrema(void) const{
 
+	assert(dimension>0);
 
-	rowvec maxx(dimension);
-	rowvec minx(dimension);
+	vec maxx(dimension);
+	vec minx(dimension);
 
 	double globalMin = LARGE;
 	double globalMax = -LARGE;
 
 
-
-	const int numberOfBruteForceIterations = 100000;
-
 	for(unsigned int i=0; i<numberOfBruteForceIterations; i++ ){
 
-		rowvec x = boxConstraints.generateVectorWithinBounds();
+
+		vec x = boxConstraints.generateVectorWithinBounds();
 		double functionValue = func_ptr(x.memptr());
 
 		if(functionValue < globalMin){
@@ -118,11 +117,17 @@ void TestFunction::evaluateGlobalExtrema(void) const{
 
 	printf("Brute Force Results:\n");
 	printf("Function has minimum at x:\n");
-	minx.print();
+	trans(minx).print();
 	printf("Function value at maximum = %10.7f\n",globalMin);
 	printf("Function has maximum at x:\n");
-	maxx.print();
+	trans(maxx).print();
 	printf("Function value at maximum = %10.7f\n",globalMax);
+
+	pair<double,double> extrema;
+	extrema.first  = globalMin;
+	extrema.second = globalMax;
+
+	return extrema;
 
 }
 
@@ -881,147 +886,6 @@ double himmelblauConstraintFunction2(double *x){
 
 
 
-void generateEggholderData(std::string filename, unsigned int nSamples){
-
-
-	mat samples(nSamples,3);
-
-	for (unsigned int i=0; i<samples.n_rows; i++){
-		rowvec x(3);
-		double xInp[2];
-		x(0) = generateRandomDouble(0.0,512.0);
-		x(1) = generateRandomDouble(0.0,512.0);
-		xInp[0] = x(0);
-		xInp[1] = x(1);
-
-		x(2) = Eggholder(xInp);
-		samples.row(i) = x;
-
-	}
-
-
-	saveMatToCVSFile(samples,filename);
-
-}
-
-void generateEggholderDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi){
-
-	assert(nSamplesHiFi < nSamplesLowFi);
-	assert(filenameHiFi != filenameLowFi);
-	mat samplesLowFi(nSamplesLowFi,3);
-
-	for (unsigned int i=0; i<nSamplesLowFi; i++){
-		rowvec x(3);
-		double xInp[2];
-		x(0) = generateRandomDouble(0.0,512.0);
-		x(1) = generateRandomDouble(0.0,512.0);
-		xInp[0] = x(0);
-		xInp[1] = x(1);
-
-		x(2) = Eggholder(xInp) + generateRandomDouble(-10.0,10.0);
-		samplesLowFi.row(i) = x;
-
-	}
-
-
-	saveMatToCVSFile(samplesLowFi, filenameLowFi);
-
-	mat samplesHiFi(nSamplesHiFi,3);
-	for (unsigned int i=0; i<nSamplesHiFi; i++){
-
-		double xInp[2];
-		xInp[0] = samplesLowFi(i,0);
-		xInp[1] = samplesLowFi(i,1);
-		samplesHiFi(i,0) = samplesLowFi(i,0);
-		samplesHiFi(i,1) = samplesLowFi(i,1);
-		samplesHiFi(i,2) = Eggholder(xInp);
-
-	}
-
-	saveMatToCVSFile(samplesHiFi, filenameHiFi);
-}
-
-
-
-
-/* Eggholder test function -512<= (x_1,x_2) <= 512
- *
- * global min f(512, 404.2319) = -959.6407
- *
- *
- * */
-
-
-double Eggholder(double *x){
-	return -(x[1]+47.0)*sin(sqrt(fabs(x[1]+0.5*x[0]+47.0)))-x[0]*sin(sqrt(fabs(x[0]-(x[1]+47.0) )));
-
-}
-
-double Eggholder(vec x){
-	return -(x[1]+47.0)*sin(sqrt(fabs(x[1]+0.5*x[0]+47.0)))-x[0]*sin(sqrt(fabs(x[0]-(x[1]+47.0) )));
-
-}
-
-double EggholderAdj(double *x, double *xb) {
-	double fabs0;
-	double fabs0b;
-	double fabs1;
-	double fabs1b;
-	double temp;
-	double temp0;
-	int branch;
-
-	xb[0] = 0.0;
-	xb[1] = 0.0;
-
-	std::stack<int> intStack;
-
-
-	if (x[1] + 0.5*x[0] + 47.0 >= 0.0) {
-		fabs0 = x[1] + 0.5*x[0] + 47.0;
-		intStack.push(1);
-	} else {
-		fabs0 = -(x[1]+0.5*x[0]+47.0);
-		intStack.push(0);
-	}
-	if (x[0] - (x[1] + 47.0) >= 0.0) {
-		fabs1 = x[0] - (x[1] + 47.0);
-		intStack.push(0);
-	} else {
-		fabs1 = -(x[0]-(x[1]+47.0));
-		intStack.push(1);
-	}
-	temp = sqrt(fabs0);
-	temp0 = sqrt(fabs1);
-	xb[1] = xb[1] - sin(temp);
-	fabs0b = (fabs0 == 0.0 ? 0.0 : -(cos(temp)*(x[1]+47.0)/(2.0*
-			temp)));
-	xb[0] = xb[0] - sin(temp0);
-	fabs1b = (fabs1 == 0.0 ? 0.0 : -(cos(temp0)*x[0]/(2.0*temp0)));
-
-	branch = intStack.top();
-	intStack.pop();
-
-	if (branch == 0) {
-		xb[0] = xb[0] + fabs1b;
-		xb[1] = xb[1] - fabs1b;
-	} else {
-		xb[1] = xb[1] + fabs1b;
-		xb[0] = xb[0] - fabs1b;
-	}
-	branch = intStack.top();
-	intStack.pop();
-
-	if (branch == 0) {
-		xb[0] = xb[0] - 0.5*fabs0b;
-		xb[1] = xb[1] - fabs0b;
-	} else {
-		xb[1] = xb[1] + fabs0b;
-		xb[0] = xb[0] + 0.5*fabs0b;
-	}
-
-	return -(x[1]+47.0)*sin(sqrt(fabs(x[1]+0.5*x[0]+47.0)))-x[0]*sin(sqrt(fabs(x[0]-(x[1]+47.0) )));
-}
 
 
 

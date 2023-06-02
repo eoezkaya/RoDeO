@@ -30,33 +30,13 @@
  */
 
 
-//#define AGGREGATION_TEST
-#define STANDARD_TEST_FUNCTIONS_TEST
-//#define TEST_SURROGATE_MODEL_TESTER
-//#define TEST_TANGENT_MODEL
-//#define TEST_TESTFUNCTIONS
-//#define TEST_SURROGATE_MODEL_DATA
-//#define TEST_SURROGATE_MODEL_BASE
-//#define TEST_POLYNOMIALS
-//#define TEST_OUTPUT
-//#define TEST_AUX
-//#define TEST_BOUNDS
-//#define TEST_CONFIGKEY
-//#define TEST_CONSTRAINT_FUNCTION
-//#define TEST_DESIGN
-//#define TESTEAOPTIMIZER
-//#define TEST_LHS
-//#define TEST_METRIC
-//#define OBJECTIVE_FUNCTION_TEST
-//#define MULTILEVEL_MODEL_TEST
-//#define DRIVER_TEST
-//#define KRIGING_TEST
-//#define TEST_LINEAR_REGRESSION
-//#define TEST_KRIGINGGENERALIZATION
-//#define MATRIX_VECTOR_OPS_TEST
-//#define TEST_GENERAL_PURPOSE_OPTIMIZER
-//#define TEST_GRADIENTOPTIMIZER
-//#define TEST_LINEAR_SOLVER
-//#define OPTIMIZATION_TEST
-//#define GGEK_MODEL_TEST
-//#define EXP_CORRELATION_FUNCTIONS_TEST
+
+
+#ifndef EGGHOLDER
+#define EGGHOLDER
+
+
+double Eggholder(double *x);
+double EggholderAdj(double *x, double *xb);
+
+#endif

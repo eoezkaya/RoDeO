@@ -493,8 +493,6 @@ void GGEKModel::determineThetaCoefficientForDualBasis(void){
 
 	thetaFactor = bestFactor;
 
-	thetaFactor = 993;
-
 	output.printMessage("optimized theta factor = ", thetaFactor);
 
 	updateCorrelationFunctions();

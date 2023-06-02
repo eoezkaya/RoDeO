@@ -37,6 +37,7 @@
 
 #include <string>
 #include <armadillo>
+#include <utility>
 
 
 
@@ -59,6 +60,7 @@ public:
 	mat trainingSamplesInput;
 	mat testSamplesInput;
 
+	int numberOfBruteForceIterations = 100000;
 
 	unsigned int numberOfTrainingSamples = 0;
 	unsigned int numberOfTrainingSamplesLowFi = 0;
@@ -114,7 +116,7 @@ public:
     void generateTrainingSamplesMultiFidelityWithLowFiTangents(void);
 
     void print(void);
-    void evaluateGlobalExtrema(void) const;
+    std::pair<double,double> evaluateGlobalExtrema(void) const;
 
 private:
     mat generateSamplesWithFunctionalValues(mat input, unsigned int N) const;
@@ -164,15 +166,6 @@ double himmelblauConstraintFunction2(double *x);
 /*****************************************************************************/
 
 
-
-
-void generateEggholderData(std::string filename, unsigned int nSamples);
-void generateEggholderDataMultiFidelity(std::string filenameHiFi, std::string filenameLowFi, unsigned int nSamplesHiFi, unsigned int nSamplesLowFi);
-
-
-double Eggholder(double *x);
-double EggholderAdj(double *x, double *xb);
-double Eggholder(vec x);
 
 
 double Rastrigin6D(double *x);

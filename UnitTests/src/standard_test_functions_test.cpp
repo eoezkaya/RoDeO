@@ -36,7 +36,7 @@
 
 using namespace arma;
 
-#ifdef TEST_STANDARD_TEST_FUNCTIONS
+#ifdef STANDARD_TEST_FUNCTIONS_TEST
 
 
 class HimmelblauTest : public ::testing::Test {
@@ -49,6 +49,9 @@ protected:
 	HimmelblauFunction testFun;
 
 };
+
+
+
 
 
 TEST_F(HimmelblauTest, constructor){
@@ -267,6 +270,74 @@ TEST_F(Alpine02_5DTest, testAdjoint){
 
 	error = fabs(tangentValue - directionalDerivative);
 	EXPECT_LT(error, 10E-10);
+
+}
+
+
+class WingweightFunctionTest : public ::testing::Test {
+protected:
+	void SetUp() override {}
+
+	void TearDown() override {}
+
+
+	WingweightFunction testFun;
+
+};
+
+TEST_F(WingweightFunctionTest, generateTrainingData){
+
+	testFun.function.numberOfTrainingSamples = 50;
+	testFun.function.generateTrainingSamples();
+
+
+}
+
+TEST_F(WingweightFunctionTest, testAdjoint){
+
+	unsigned int dim = 10;
+
+	Design d(dim);
+	testFun.function.evaluationSelect = 2;
+
+	rowvec x(dim);
+	x(0) = 156.8; x(1) = 290.2; x(2) = 8.2; x(3) = -8.0; x(4) = 33.5;
+	x(5) = 0.55; x(6) = 1.1; x(7) = 4.2; x(8) = 2000; x(9) = 0.03;
+	d.designParameters = x;
+
+
+	testFun.function.evaluate(d);
+
+	rowvec gradient = d.gradient;
+
+	double epsilon = 10E-6;
+	for(unsigned int i=0; i<dim; i++){
+
+
+		rowvec xp = x;
+		xp(i) += epsilon;
+		rowvec xm = x;
+		xm(i) -= epsilon;
+
+		double fp = Wingweight(xp.memptr());
+		double fm = Wingweight(xm.memptr());
+		double fdValue = (fp - fm)/(2.0*epsilon);
+		double error = fabs(fdValue - gradient(i));
+		EXPECT_LT(error, 10E-6);
+
+	}
+
+}
+
+TEST_F(WingweightFunctionTest, evaluateGlobalExtrema){
+
+	testFun.function.numberOfBruteForceIterations = 100000000;
+
+	std::pair<double, double> extrema = testFun.function.evaluateGlobalExtrema();
+
+	EXPECT_LT(extrema.first, 150.0);
+	EXPECT_GT(extrema.second, 400.0);
+
 
 }
 

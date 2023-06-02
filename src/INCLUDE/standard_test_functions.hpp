@@ -33,7 +33,7 @@
 
 #include <armadillo>
 #include "test_functions.hpp"
-
+#include "eggholder.hpp"
 
 class HimmelblauFunction{
 
@@ -136,6 +136,21 @@ public:
 	WingweightFunction();
 
 };
+
+
+
+class EggholerFunction{
+
+
+public:
+
+	TestFunction function;
+
+	EggholerFunction();
+
+};
+
+
 
 
 #endif
