@@ -126,7 +126,7 @@ protected:
 
 	double yMin = 0.0;
 
-	double sigmaFactor = 0.5;
+	double sigmaFactor = 1.5;
 
 
 

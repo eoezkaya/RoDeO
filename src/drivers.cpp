@@ -943,7 +943,8 @@ void RoDeODriver::setOptimizationFeatures(Optimizer &optimizationStudy) const{
 	keyword = "MAX_NUMBER_OF_INNER_ITERATIONS";
 	if(configKeys.ifConfigKeyIsSet(keyword)){
 
-		int numberOfMaxInnerIterations = configKeys.getConfigKeyIntValue("keyword");
+
+		int numberOfMaxInnerIterations = configKeys.getConfigKeyIntValue(keyword);
 		optimizationStudy.setMaximumNumberOfInnerIterations(numberOfMaxInnerIterations);
 
 	}

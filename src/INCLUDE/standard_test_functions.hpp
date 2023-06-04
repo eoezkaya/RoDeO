@@ -35,74 +35,45 @@
 #include "test_functions.hpp"
 #include "himmelblau.hpp"
 #include "eggholder.hpp"
+#include "wingweight.hpp"
 
 class HimmelblauFunction{
 
-
 public:
-
 	TestFunction function;
-
 	HimmelblauFunction();
 	HimmelblauFunction(double, double);
-
-
-
 };
 
 
 
 class Alpine02_5DFunction{
-
-
 public:
 
 	TestFunction function;
-
 	Alpine02_5DFunction();
-
 };
 
-
-
-
-
-
-
-
 class LinearTestFunction1{
-
-
 public:
-
 	TestFunction function;
-
 	LinearTestFunction1();
 	LinearTestFunction1(double, double);
-
-
-
 };
 
 
 
 class NonLinear1DTestFunction1{
-
-
 public:
 
 	TestFunction function;
 
 	NonLinear1DTestFunction1();
 	NonLinear1DTestFunction1(double, double);
-
-
-
 };
 
 
 class HimmelblauConstraintFunction1{
-
 
 public:
 
@@ -128,30 +99,19 @@ public:
 
 
 class WingweightFunction{
-
-
 public:
-
 	TestFunction function;
-
 	WingweightFunction();
 
 };
 
 
 
-class EggholerFunction{
-
-
+class EggholderFunction{
 public:
-
 	TestFunction function;
-
-	EggholerFunction();
-
+	EggholderFunction();
 };
-
-
 
 
 #endif

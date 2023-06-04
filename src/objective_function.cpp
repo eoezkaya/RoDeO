@@ -417,6 +417,8 @@ void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimizati
 
 	double	sigma = sqrt(ssqr);
 
+	sigma = sigmaFactor*sigma;
+
 #if 0
 	printf("standart_ERROR = %15.10f\n",sigma);
 #endif
@@ -434,7 +436,7 @@ void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimizati
 		printf("ymin = %15.10f\n",yMin);
 #endif
 
-		expectedImprovementValue = improvement*cdf(Z,0.0,1.0)+  sigma * pdf(Z,0.0,1.0);
+		expectedImprovementValue = improvement*cdf(Z,0.0,1.0)+   sigma * pdf(Z,0.0,1.0);
 
 
 	}

@@ -221,7 +221,7 @@ Alpine02_5DFunction::Alpine02_5DFunction():function("Alpine02_5D", 5){
 
 }
 
-EggholerFunction::EggholerFunction():function("Eggholder", 2){
+EggholderFunction::EggholderFunction():function("Eggholder", 2){
 
 	function.func_ptr = Eggholder;
 	function.adj_ptr  = EggholderAdj;
@@ -232,7 +232,6 @@ EggholerFunction::EggholerFunction():function("Eggholder", 2){
 
 	lb(0) = 0.0; ub(0) = 512.0;
 	lb(1) = 0.0; ub(1) = 512.0;
-
 
 	boxConstraints.setBounds(lb,ub);
 	function.setBoxConstraints(boxConstraints);

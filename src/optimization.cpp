@@ -76,7 +76,7 @@ void Optimizer::setDimension(unsigned int dim){
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
 	initializeBoundsForAcquisitionFunctionMaximization();
-	iterMaxAcquisitionFunction = dimension*1000;
+	iterMaxAcquisitionFunction = dimension*100000;
 
 	minDeltaXForZoom = 0.01/dimension;
 	globalOptimalDesign.setDimension(dim);
@@ -1162,7 +1162,6 @@ void Optimizer::EfficientGlobalOptimization(void){
 	assert(ifBoxConstraintsSet);
 
 	checkIfSettingsAreOK();
-
 
 	print();
 

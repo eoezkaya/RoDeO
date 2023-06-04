@@ -39,13 +39,31 @@ using namespace arma;
 #ifdef STANDARD_TEST_FUNCTIONS_TEST
 
 
-class HimmelblauTest : public ::testing::Test {
+class EggholderTest : public ::testing::Test {
 protected:
 	void SetUp() override {}
 
 	void TearDown() override {}
 
 
+	EggholderFunction testFun;
+
+};
+
+
+
+
+TEST_F(EggholderTest, generateDataWithAdjoints){
+
+	testFun.function.generateTrainingSamplesWithAdjoints();
+
+}
+
+
+class HimmelblauTest : public ::testing::Test {
+protected:
+	void SetUp() override {}
+	void TearDown() override {}
 	HimmelblauFunction testFun;
 
 };

@@ -217,9 +217,6 @@ double Borehole(double *x);
 double BoreholeAdj(double *x, double *xb);
 
 
-double Wingweight(double *x);
-double WingweightAdj(double *xin, double *xb);
-
 
 double Alpine02_5D(double *x);
 double Alpine02_5DAdj(double *x, double *xb);

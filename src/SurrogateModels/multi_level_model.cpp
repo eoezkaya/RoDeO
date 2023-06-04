@@ -171,9 +171,7 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 
 	output.printMessage("Preparing error data...");
 
-//	determineAlpha();
-	alpha = 0.0;
-
+	determineAlpha();
 
 	setNameOfInputFileError();
 
