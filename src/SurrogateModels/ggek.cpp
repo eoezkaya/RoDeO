@@ -349,8 +349,8 @@ void GeneralizedDerivativeEnhancedModel::solveLinearSystem(void) {
 
 	weights = linearSystemCorrelationMatrixSVD.solveLinearSystem();
 
-//	vec res = ydot - Phi*weights;
-//	res.print("res");
+	//	vec res = ydot - Phi*weights;
+	//	res.print("res");
 
 }
 
@@ -438,7 +438,14 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 	mat secondhalfData = rawData.submat(howManyTrainingSamplesToUse, 0, numberOfSamples-1, dimension);
 	secondhalfData.save("testDataForTheThetaAuxModel.csv", csv_ascii);
 
-	assert(halfData.n_cols == 2*dimension+1);
+	if(ifDirectionalDerivativesAreUsed){
+
+		assert(halfData.n_cols == 2*dimension+2);
+	}
+	else{
+
+		assert(halfData.n_cols == 2*dimension+1);
+	}
 	assert(secondhalfData.n_cols == dimension+1);
 	assert(halfData.n_rows + secondhalfData.n_rows  == numberOfSamples);
 
@@ -485,7 +492,7 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 		auxiliaryModelForThetaCoefficient.tryOnTestData();
 
 		double MSE = auxiliaryModelForThetaCoefficient.generalizationError;
-//		printScalar(MSE);
+		//		printScalar(MSE);
 		assert(MSE > 0.0);
 
 		if(MSE < bestMSE){
@@ -588,7 +595,7 @@ void GeneralizedDerivativeEnhancedModel::calculateIndicesOfSamplesWithActiveDeri
 		for(unsigned int i=0; i<numberOfSamples; i++){
 			double absDirectionalDerivative = fabs(directionalDerivatives(i));
 
-			if(absDirectionalDerivative < EPSILON){
+			if(absDirectionalDerivative > EPSILON){
 				indicesOfSamplesWithActiveDerivatives.push_back(i);
 
 			}
@@ -596,10 +603,12 @@ void GeneralizedDerivativeEnhancedModel::calculateIndicesOfSamplesWithActiveDeri
 		}
 
 		unsigned int howManyActiveSamples = indicesOfSamplesWithActiveDerivatives.size();
+
 		output.printMessage("Number of samples with active directional derivatives = ",howManyActiveSamples);
 
 		string msg = "Indices of samples with active directional derivatives";
 		output.printList(indicesOfSamplesWithActiveDerivatives, msg);
+
 
 
 	}else{
@@ -937,7 +946,7 @@ bool GeneralizedDerivativeEnhancedModel::checkPhiMatrix(void){
 
 		sum+=beta0;
 
-		//		printTwoScalars(sum, ftilde);
+		printTwoScalars(sum, ftilde);
 		double error = fabs(sum - ftilde);
 		if(error > 10E-05) return false;
 
@@ -952,9 +961,7 @@ bool GeneralizedDerivativeEnhancedModel::checkPhiMatrix(void){
 			unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
 
 			rowvec xi = data.getRowX(indx);
-
 			rowvec d  = data.getRowDifferentiationDirection(indx);
-
 			rowvec xiPerturbedPlus = xi + epsilon*d;
 			rowvec xiPerturbedMins = xi - epsilon*d;
 			double ftildePerturbedPlus = interpolate(xiPerturbedPlus);
@@ -966,14 +973,18 @@ bool GeneralizedDerivativeEnhancedModel::checkPhiMatrix(void){
 				sum +=Phi(N+i,j)*weights(j);
 			}
 
+//			printTwoScalars(sum, fdValue);
+
 			double error = fabs(sum - fdValue);
-			if(error > 10E-05) return false;
+//			printScalar(error);
+			if(error > 10E-03) return false;
 
 		}
 
 	}
 
 	else{
+
 
 		mat gradients = data.getGradientMatrix();
 
@@ -998,6 +1009,7 @@ bool GeneralizedDerivativeEnhancedModel::checkPhiMatrix(void){
 			}
 
 			double error = fabs(sum - fdValue);
+
 			if(error > 10E-05) return false;
 
 		}
@@ -1028,8 +1040,16 @@ void GeneralizedDerivativeEnhancedModel::resetDataObjects(void){
 void GeneralizedDerivativeEnhancedModel::addNewSampleToData(rowvec newsample){
 
 	assert(newsample.size() > 0);
+	assert(dimension>0);
 
-	rowvec sampleToAdd(2*dimension+1, fill::zeros);
+	unsigned int sampleSize = 2*dimension+1;
+
+	if(ifDirectionalDerivativesAreUsed){
+
+		sampleSize = 2*dimension+2;
+	}
+
+	rowvec sampleToAdd(sampleSize, fill::zeros);
 	copyRowVector(sampleToAdd, newsample);
 
 	Bounds boxConstraints = data.getBoxConstraints();

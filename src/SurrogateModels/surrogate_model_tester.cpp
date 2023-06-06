@@ -103,8 +103,10 @@ void SurrogateModelTester::bindSurrogateModels(void){
 			surrogateModel = &krigingModel;
 		}
 		if(surrogateModelType == TANGENT){
-			tangentModel.setDimension(dimension);
-			surrogateModel = &tangentModel;
+			generalizedGradientEnhancedModel.setDirectionalDerivativesOn();
+			generalizedGradientEnhancedModel.setName(name);
+			generalizedGradientEnhancedModel.setDimension(dimension);
+			surrogateModel = &generalizedGradientEnhancedModel;
 		}
 		if(surrogateModelType == GRADIENT_ENHANCED){
 			generalizedGradientEnhancedModel.setName(name);

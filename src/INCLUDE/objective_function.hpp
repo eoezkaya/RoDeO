@@ -35,7 +35,6 @@
 #include <fstream>
 #include <armadillo>
 #include "kriging_training.hpp"
-#include "tgek.hpp"
 #include "aggregation_model.hpp"
 #include "surrogate_model.hpp"
 #include "multi_level_method.hpp"
@@ -112,7 +111,6 @@ protected:
 	KrigingModel surrogateModel;
 	GeneralizedDerivativeEnhancedModel surrogateModelGradient;
 	MultiLevelModel surrogateModelML;
-	TGEKModel       surrogateModelWithTangents;
 
 
 	SurrogateModel *surrogate;
@@ -160,7 +158,7 @@ public:
 	KrigingModel     getSurrogateModel(void) const;
 	GeneralizedDerivativeEnhancedModel getSurrogateModelGradient(void) const;
 	MultiLevelModel  getSurrogateModelML(void) const;
-	TGEKModel        getSurrogateModelTangent(void) const;
+
 
 
 	void setGradientOn(void);

@@ -41,7 +41,6 @@
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
 #include "multi_level_method.hpp"
-#include "tgek.hpp"
 #include "ggek.hpp"
 
 class SurrogateModelTester{
@@ -60,7 +59,7 @@ private:
 	KrigingModel krigingModel;
 	AggregationModel aggregationModel;
 	MultiLevelModel multilevelModel;
-	TGEKModel tangentModel;
+
 	GeneralizedDerivativeEnhancedModel generalizedGradientEnhancedModel;
 
 

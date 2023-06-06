@@ -191,9 +191,11 @@ void ObjectiveFunction::bindWithTangentEnhancedKrigingModel() {
 
 	output.printMessage(
 			"Binding the surrogate model with the TANGENT modeĺ...");
-	surrogateModelWithTangents.setNameOfInputFile(
-			definition.nameHighFidelityTrainingData);
-	surrogate = &surrogateModelWithTangents;
+	surrogateModelGradient.setDirectionalDerivativesOn();
+	surrogateModelGradient.setNameOfInputFile(
+				definition.nameHighFidelityTrainingData);
+		surrogateModelGradient.setName(definition.name);
+		surrogate = &surrogateModelGradient;
 }
 
 void ObjectiveFunction::bindWithMultiFidelityModel() {
@@ -335,9 +337,7 @@ MultiLevelModel ObjectiveFunction::getSurrogateModelML(void) const{
 	return surrogateModelML;
 }
 
-TGEKModel ObjectiveFunction::getSurrogateModelTangent(void) const{
-	return surrogateModelWithTangents;
-}
+
 
 void ObjectiveFunction::initializeSurrogate(void){
 

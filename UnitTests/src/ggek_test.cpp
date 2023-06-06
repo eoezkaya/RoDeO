@@ -82,8 +82,107 @@ protected:
 };
 
 
+
+TEST_F(GGEKModelTest, tryOnTestDataWithTangentsHimmelblau) {
+
+	this->
+
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.numberOfTestSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+	himmelblauFunction.function.generateTestSamples();
+
+	boxConstraints = himmelblauFunction.function.boxConstraints;
+
+	testModel.setDisplayOn();
+	testModel.setDirectionalDerivativesOn();
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.setName("Himmelblau");
+	testModel.setDimension(2);
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+
+//	testModel.ifVaryingSampleWeights = true;
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+	ASSERT_TRUE(testModel.checkPhiMatrix());
+	ASSERT_TRUE(testModel.checkResidual());
+
+
+	testModel.setNameOfInputFileTest(himmelblauFunction.function.filenameTestData);
+
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+	testModel.printGeneralizationError();
+
+	double MSE = testModel.generalizationError;
+
+	ASSERT_TRUE(MSE>0.0);
+
+}
+
+
+TEST_F(GGEKModelTest, tryOnTestDataWithTangents) {
+
+	abort();
+	alpine02Function.function.numberOfTrainingSamples = 50;
+	alpine02Function.function.numberOfTestSamples = 50;
+//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
+	alpine02Function.function.generateTrainingSamplesWithTangents();
+
+	alpine02Function.function.generateTestSamples();
+
+	boxConstraints = alpine02Function.function.boxConstraints;
+
+//	testModel.setDisplayOn();
+	testModel.setDirectionalDerivativesOn();
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.setName("Alpine02Model");
+	testModel.setDimension(5);
+
+	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+
+//	testModel.ifVaryingSampleWeights = true;
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+	ASSERT_TRUE(testModel.checkPhiMatrix());
+	ASSERT_TRUE(testModel.checkResidual());
+
+
+	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);
+
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+//	testModel.printGeneralizationError();
+
+	double MSE = testModel.generalizationError;
+
+	ASSERT_TRUE(MSE>0.0);
+
+}
+
+
+
+
+
+
+
 TEST_F(GGEKModelTest, constructor) {
 
+	abort();
 	ASSERT_FALSE(testModel.ifDataIsRead);
 	ASSERT_FALSE(testModel.ifInitialized);
 	ASSERT_FALSE(testModel.ifNormalized);
@@ -407,13 +506,6 @@ TEST_F(GGEKModelTest, interpolate) {
 
 	ASSERT_TRUE(testModel.ifModelTrainingIsDone);
 }
-
-
-
-
-
-
-
 
 
 

@@ -563,7 +563,8 @@ void MultiLevelModel::bindLowFidelityModel(void){
 	if(modelIDLowFi == TANGENT){
 
 		output.printMessage("Binding the low fidelity model with the TEM model...");
-		lowFidelityModel = &surrogateModelTGEKLowFi;
+		surrogateModelGGEKLowFi.setDirectionalDerivativesOn();
+		lowFidelityModel = &surrogateModelGGEKLowFi;
 		dataLowFidelity.setDirectionalDerivativesOn();
 
 	}
@@ -605,9 +606,7 @@ void MultiLevelModel::bindErrorModel(void){
 	if(modelIDLowFi == TANGENT && modelIDHiFi == TANGENT){
 
 		output.printMessage("Binding the error model with the TEM model...");
-		errorModel = &surrogateModelTEMError;
-
-		modelIDError = TANGENT;
+		assert(false);
 
 	}
 
