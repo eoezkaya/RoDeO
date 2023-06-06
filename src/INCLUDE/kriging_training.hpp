@@ -76,6 +76,7 @@ private:
 
 	void updateWithNewData(void);
 	void updateModelParams(void);
+	void calculateBeta0(void);
 
 
 public:

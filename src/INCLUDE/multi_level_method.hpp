@@ -55,7 +55,7 @@ private:
 	KrigingModel surrogateModelKrigingLowFi;
 	AggregationModel surrogateModelAggregationLowFi;
 	TGEKModel surrogateModelTGEKLowFi;
-	GGEKModel surrogateModelGGEKLowFi;
+	GeneralizedDerivativeEnhancedModel surrogateModelGGEKLowFi;
 
 	KrigingModel surrogateModelKrigingError;
 	AggregationModel surrogateModelAggregationError;

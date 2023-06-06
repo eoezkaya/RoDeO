@@ -37,7 +37,7 @@
 #include "test_defines.hpp"
 #include<gtest/gtest.h>
 
-#ifdef TEST_TANGENT_MODEL
+#ifdef TANGENT_MODEL_TEST
 
 class TGEKModelTest: public ::testing::Test {
 protected:
@@ -48,8 +48,11 @@ protected:
 		lb.fill(-6.0);
 
 		Bounds boxConstraints(lb,ub);
+		testModel.setName("2DTestModelForTangentEnhanced");
 		testModel.setBoxConstraints(boxConstraints);
 		testModel.setDimension(2);
+
+		himmelblauFunction.function.filenameTrainingData ="trainingSamplesHimmelblauTGEK.csv";
 
 
 	}
@@ -59,52 +62,6 @@ protected:
 
 	}
 
-	void generate1DTestFunctionDataForTGEKModel(unsigned int N, unsigned int NTest) {
-
-
-		oneDimensionalTestFunction.function.filenameTrainingData = "trainingSamples1DFunctionTGEK.csv";
-		oneDimensionalTestFunction.function.numberOfTrainingSamples = N;
-		oneDimensionalTestFunction.function.generateTrainingSamplesWithTangents();
-
-		oneDimensionalTestFunction.function.filenameTestData = "testSamples1DFunctionTGEK.csv";
-		oneDimensionalTestFunction.function.numberOfTestSamples  = NTest;
-		oneDimensionalTestFunction.function.generateTestSamples();
-
-		trainingData = oneDimensionalTestFunction.function.trainingSamples;
-		testData = oneDimensionalTestFunction.function.testSamples;
-
-	}
-
-	void generate2DHimmelblauDataForTGEKModel(unsigned int N) {
-
-
-		himmelblauFunction.function.filenameTrainingData ="trainingSamplesHimmelblauTGEK.csv";
-		himmelblauFunction.function.numberOfTrainingSamples = N;
-		himmelblauFunction.function.generateTrainingSamplesWithTangents();
-
-		himmelblauFunction.function.filenameTestData = "testSamplesHimmelblauTGEK.csv";
-		himmelblauFunction.function.numberOfTestSamples  = N;
-		himmelblauFunction.function.generateTestSamples();
-
-		trainingData = himmelblauFunction.function.trainingSamples;
-		testData = himmelblauFunction.function.testSamples;
-
-	}
-
-	void generate2DHimmelblauDataForKrigingModel(unsigned int N) {
-
-		himmelblauFunction.function.filenameTrainingData ="trainingSamplesHimmelblauTGEK.csv";
-		himmelblauFunction.function.numberOfTrainingSamples = N;
-		himmelblauFunction.function.generateTrainingSamples();
-
-		himmelblauFunction.function.filenameTestData = "testSamplesHimmelblauTGEK.csv";
-		himmelblauFunction.function.numberOfTestSamples  = N;
-		himmelblauFunction.function.generateTestSamples();
-
-		trainingData = himmelblauFunction.function.trainingSamples;
-		testData = himmelblauFunction.function.testSamples;
-
-	}
 
 	mat trainingData;
 	mat testData;
@@ -113,6 +70,8 @@ protected:
 	NonLinear1DTestFunction1 oneDimensionalTestFunction;
 	vec ub;
 	vec lb;
+
+
 
 };
 
@@ -129,9 +88,13 @@ TEST_F(TGEKModelTest, testConstructor) {
 
 TEST_F(TGEKModelTest, interpolateWithVarianceAfterDataAdd) {
 
-	generate2DHimmelblauDataForTGEKModel(40);
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
-//	testModel.setDisplayOn();
+
+	himmelblauFunction.function.numberOfTrainingSamples = 40;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	//	testModel.setDisplayOn();
 	testModel.readData();
 
 
@@ -171,9 +134,11 @@ TEST_F(TGEKModelTest, interpolateWithVarianceAfterDataAdd) {
 
 TEST_F(TGEKModelTest, addNewSampleToData) {
 
-	generate2DHimmelblauDataForTGEKModel(10);
+	himmelblauFunction.function.numberOfTrainingSamples = 40;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 
@@ -196,9 +161,11 @@ TEST_F(TGEKModelTest, addNewSampleToData) {
 
 TEST_F(TGEKModelTest, calculatePhiMatrix) {
 
-	generate2DHimmelblauDataForTGEKModel(3);
+	himmelblauFunction.function.numberOfTrainingSamples = 3;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 
@@ -223,7 +190,11 @@ TEST_F(TGEKModelTest, calculatePhiMatrix) {
 
 TEST_F(TGEKModelTest, interpolateWithVariance) {
 
-	generate2DHimmelblauDataForTGEKModel(50);
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
 	//	testModel.setDisplayOn();
 	testModel.readData();
@@ -251,10 +222,11 @@ TEST_F(TGEKModelTest, interpolateWithVariance) {
 
 TEST_F(TGEKModelTest, generateSampleWeights) {
 
-	unsigned int N = 10;
-	generate2DHimmelblauDataForTGEKModel(N);
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
@@ -262,7 +234,7 @@ TEST_F(TGEKModelTest, generateSampleWeights) {
 
 	vec w = testModel.getSampleWeightsVector();
 
-	ASSERT_TRUE(w.size() == N);
+	ASSERT_TRUE(w.size() == 50);
 	double err = fabs(max(w) - 1.0);
 	ASSERT_TRUE(err<10E-10);
 
@@ -271,10 +243,11 @@ TEST_F(TGEKModelTest, generateSampleWeights) {
 
 TEST_F(TGEKModelTest, generateWeightingMatrix) {
 
-	unsigned int N = 10;
-	generate2DHimmelblauDataForTGEKModel(N);
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
@@ -286,16 +259,18 @@ TEST_F(TGEKModelTest, generateWeightingMatrix) {
 
 	ASSERT_TRUE(W.is_diagmat());
 
-	for(unsigned int i=0; i<N+Ndot;i++){
+	for(unsigned int i=0; i<100;i++){
 		ASSERT_TRUE(W(i,i) >= 0.05);
 	}
 }
 
 TEST_F(TGEKModelTest, calculateOutSampleError) {
 
-	generate2DHimmelblauDataForTGEKModel(50);
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 
@@ -316,10 +291,11 @@ TEST_F(TGEKModelTest, calculateOutSampleError) {
 
 TEST_F(TGEKModelTest, readData) {
 
-	generate2DHimmelblauDataForTGEKModel(100);
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
 
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 
@@ -331,9 +307,11 @@ TEST_F(TGEKModelTest, readData) {
 
 TEST_F(TGEKModelTest, normalizeData) {
 
-	generate2DHimmelblauDataForTGEKModel(100);
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 
@@ -345,7 +323,12 @@ TEST_F(TGEKModelTest, normalizeData) {
 
 TEST_F(TGEKModelTest, interpolate) {
 
-	generate2DHimmelblauDataForTGEKModel(3);
+	himmelblauFunction.function.numberOfTrainingSamples = 3;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	//	testModel.setDisplayOn();
 
 	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
 	//	testModel.setDisplayOn();
@@ -373,9 +356,11 @@ TEST_F(TGEKModelTest, interpolate) {
 
 TEST_F(TGEKModelTest, prepareTrainingDataForTheKrigingModel) {
 
-	generate2DHimmelblauDataForTGEKModel(50);
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 	testModel.prepareTrainingDataForTheKrigingModel();
@@ -392,8 +377,11 @@ TEST_F(TGEKModelTest, prepareTrainingDataForTheKrigingModel) {
 
 TEST_F(TGEKModelTest, trainTheta) {
 
-	generate2DHimmelblauDataForTGEKModel(3);
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 	testModel.normalizeData();
@@ -414,8 +402,11 @@ TEST_F(TGEKModelTest, trainTheta) {
 
 TEST_F(TGEKModelTest, updateAuxilliaryFields) {
 
-	generate2DHimmelblauDataForTGEKModel(50);
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 	testModel.normalizeData();
@@ -428,8 +419,11 @@ TEST_F(TGEKModelTest, updateAuxilliaryFields) {
 
 TEST_F(TGEKModelTest, train) {
 
-	generate2DHimmelblauDataForTGEKModel(10);
-	testModel.setNameOfInputFile("trainingSamplesHimmelblauTGEK.csv");
+	himmelblauFunction.function.numberOfTrainingSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
 	//	testModel.setDisplayOn();
 	testModel.readData();
 	testModel.setNumberOfTrainingIterations(1000);

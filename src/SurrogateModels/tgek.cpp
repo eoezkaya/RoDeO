@@ -44,6 +44,22 @@
 
 using namespace arma;
 
+void TGEKModel::setName(string label){
+
+	assert(isNotEmpty(label));
+	name = label;
+	filenameHyperparameters = name + "_hyperparameters.csv";
+
+	auxiliaryModel.setName(label + "_AuxModel");
+
+	filenameTrainingDataAuxModel = name + "_aux.csv";
+
+	auxiliaryModel.setNameOfInputFile(filenameTrainingDataAuxModel);
+
+
+}
+
+
 void TGEKModel::setBoxConstraints(Bounds boxConstraintsInput){
 
 	assert(boxConstraintsInput.areBoundsSet());
@@ -74,6 +90,25 @@ void TGEKModel::readData(void){
 	prepareTrainingDataForTheKrigingModel();
 	auxiliaryModel.readData();
 }
+
+
+void TGEKModel::initializeCorrelationFunction(void){
+
+	assert(dimension>0);
+
+	if(!ifCorrelationFunctionIsInitialized){
+		correlationFunction.setDimension(dimension);
+		correlationFunction.initialize();
+
+		differentiatedCorrelationFunction.setDimension(dimension);
+		differentiatedCorrelationFunction.initialize();
+
+		ifCorrelationFunctionIsInitialized = true;
+	}
+
+
+}
+
 
 void TGEKModel::normalizeData(void){
 
@@ -458,11 +493,13 @@ double TGEKModel::interpolate(rowvec x) const{
 	unsigned int N  = numberOfSamples;
 	unsigned int Nd = numberOfDifferentiatedBasisFunctions;
 
+	vec r(N+Nd);
+
 	double sum = 0.0;
 	for(unsigned int i=0; i<N; i++){
 		rowvec xi = data.getRowX(i);
-		double r = correlationFunction.computeCorrelation(xi,x);
-		sum += w(i)*r;
+		r(i) = correlationFunction.computeCorrelation(xi,x);
+		sum += w(i)*r(i);
 	}
 
 	for(unsigned int i=0; i<Nd; i++){
@@ -470,9 +507,9 @@ double TGEKModel::interpolate(rowvec x) const{
 		unsigned int index = indicesDifferentiatedBasisFunctions[i];
 		rowvec xi = data.getRowX(index);
 		rowvec diffDirection = data.getRowDifferentiationDirection(index);
-		sum +=w(i+N)*correlationFunction.computeCorrelationDot(xi, x, diffDirection);
+		r(N+i) = differentiatedCorrelationFunction.computeCorrelationDot(xi, x, diffDirection);
+		sum +=w(N+i)*r(N+i);
 	}
-
 
 	return sum + beta0;
 
@@ -614,6 +651,7 @@ void TGEKModel::initializeHyperParameters(void){
 
 }
 
+
 void TGEKModel::calculatePhiEntriesForFunctionValues(void) {
 
 	unsigned int N = numberOfSamples;
@@ -628,7 +666,7 @@ void TGEKModel::calculatePhiEntriesForFunctionValues(void) {
 			unsigned int index = indicesDifferentiatedBasisFunctions[j];
 			rowvec xAtindex = data.getRowX(index);
 			rowvec d = data.getRowDifferentiationDirection(index);
-			Phi(i, N + j) = correlationFunction.computeCorrelationDot(xAtindex, xi,d);
+			Phi(i, N + j) = differentiatedCorrelationFunction.computeCorrelationDot(xAtindex, xi,d);
 		}
 	}
 }
@@ -658,7 +696,7 @@ void TGEKModel::calculatePhiEntriesForDerivatives(void) {
 			unsigned int index = indicesDifferentiatedBasisFunctions[j];
 			rowvec xAtindex = data.getRowX(index);
 			rowvec directionBasis = data.getRowDifferentiationDirection(index);
-			Phi(N + i, N + j) = correlationFunction.computeCorrelationDotDot(
+			Phi(N + i, N + j) = differentiatedCorrelationFunction.computeCorrelationDotDot(
 					xAtindex, xAtsampleIndex, directionBasis, directionAtSample);
 		}
 

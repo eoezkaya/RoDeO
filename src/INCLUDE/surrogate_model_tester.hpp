@@ -61,7 +61,7 @@ private:
 	AggregationModel aggregationModel;
 	MultiLevelModel multilevelModel;
 	TGEKModel tangentModel;
-	GGEKModel generalizedGradientEnhancedModel;
+	GeneralizedDerivativeEnhancedModel generalizedGradientEnhancedModel;
 
 
 	SurrogateModel *surrogateModel;

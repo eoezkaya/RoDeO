@@ -161,6 +161,18 @@ void KrigingModel::initializeSurrogateModel(void){
 
 }
 
+
+void KrigingModel::calculateBeta0(void) {
+
+	output.printMessage("Number of samples = ", numberOfSamples);
+	vec ys = data.getOutputVector();
+	double sumys = sum(ys);
+	beta0 = sumys / numberOfSamples;
+	output.printMessage("beta0 = ", beta0);
+}
+
+
+
 void KrigingModel::updateAuxilliaryFields(void){
 
 	assert(ifDataIsRead);
@@ -202,6 +214,9 @@ void KrigingModel::updateAuxilliaryFields(void){
 		/* solve R x = I */
 
 		R_inv_I = linearSystemCorrelationMatrix.solveLinearSystem(vectorOfOnes);
+
+//		calculateBeta0();
+
 
 		beta0 = (1.0/dot(vectorOfOnes,R_inv_I)) * (dot(vectorOfOnes,R_inv_ys));
 
@@ -293,8 +308,8 @@ void KrigingModel::loadHyperParameters(void){
 	}
 	else{
 
-		string msg = "Loading hyperparameter file: " + filenameHyperparameters;
-		output.printMessage(msg);
+//		string msg = "Loading hyperparameter file: " + filenameHyperparameters;
+//		output.printMessage(msg);
 	}
 	output.ifScreenDisplay = false;
 
@@ -485,6 +500,7 @@ void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double
 	assert(ifInitialized);
 	unsigned int N = data.getNumberOfSamples();
 	*ftildeOutput =  interpolate(xp);
+
 
 	vec R_inv_r(N);
 

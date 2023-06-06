@@ -228,9 +228,12 @@ void Optimizer::addConstraint(ConstraintFunction &constFunc){
 void Optimizer::addObjectFunction(ObjectiveFunction &objFunc){
 
 	assert(ifObjectFunctionIsSpecied == false);
+
 	objFun = objFunc;
 
 	designVectorFileName = objFun.getFileNameDesignVector();
+
+	objFun.setSigmaFactor(sigmaFactor);
 
 	sampleDim++;
 	ifObjectFunctionIsSpecied = true;
@@ -1181,9 +1184,6 @@ void Optimizer::EfficientGlobalOptimization(void){
 	unsigned int simulationCount = 0;
 	unsigned int iterOpt=0;
 
-
-
-
 	while(1){
 
 		iterOpt++;
@@ -1228,14 +1228,16 @@ void Optimizer::EfficientGlobalOptimization(void){
 		printf("The most promising design (not normalized):\n");
 		best_dv.print();
 		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
+		std::cout<<"Sigma = "<<optimizedDesignGradientBased.sigma<<"\n";
 		cout<<"Acquisition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
+
 #endif
 
 
 		roundDiscreteParameters(best_dv);
 
 		Design currentBestDesign(best_dv);
-		currentBestDesign.tag = "Current best design";
+		currentBestDesign.tag = "The most promising design";
 		currentBestDesign.setNumberOfConstraints(numberOfConstraints);
 		currentBestDesign.saveDesignVector(designVectorFileName);
 		currentBestDesign.isDesignFeasible = true;
@@ -1252,18 +1254,17 @@ void Optimizer::EfficientGlobalOptimization(void){
 		if(currentBestDesign.checkIfHasNan()){
 			abortWithErrorMessage("NaN while reading external executable outputs");
 		}
-#if 0
+
 		currentBestDesign.print();
-#endif
 
 		addConstraintValuesToData(currentBestDesign);
 		updateOptimizationHistory(currentBestDesign);
 
-
-
-
-
 		findTheGlobalOptimalDesign();
+
+		if(ifAdaptSigmaFactor){
+			modifySigmaFactor();
+		}
 
 
 		simulationCount ++;
@@ -1353,7 +1354,34 @@ void Optimizer::calculateImprovementValue(Design &d){
 	}
 }
 
+void Optimizer::modifySigmaFactor(void){
 
+	vec improvementValues = optimizationHistory.col(sampleDim);
+
+//	improvementValues.print("improvement values");
+    uword i = improvementValues.index_max();
+
+    if(i == improvementValues.size()-1){
+
+
+    	std::cout<<"Improvement has been achieved in the last iteration\n";
+    	if(sigmaFactor>2.0) sigmaFactor = 2.0;
+    	sigmaFactor = sigmaFactor*0.8;
+    }
+    else{
+
+    	std::cout<<"No improvement has been achieved in the last iteration\n";
+    	sigmaFactor = sigmaFactor*1.25;
+    }
+
+    if(sigmaFactor > 10) sigmaFactor = 10.0;
+    if(sigmaFactor < 0.5) sigmaFactor = 0.5;
+
+
+    objFun.setSigmaFactor(sigmaFactor);
+    printScalar(sigmaFactor);
+
+}
 
 
 

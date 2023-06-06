@@ -110,7 +110,7 @@ protected:
 
 
 	KrigingModel surrogateModel;
-	GGEKModel surrogateModelGradient;
+	GeneralizedDerivativeEnhancedModel surrogateModelGradient;
 	MultiLevelModel surrogateModelML;
 	TGEKModel       surrogateModelWithTangents;
 
@@ -158,7 +158,7 @@ public:
 	SURROGATE_MODEL getSurrogateModelTypeLowFi(void) const;
 
 	KrigingModel     getSurrogateModel(void) const;
-	GGEKModel getSurrogateModelGradient(void) const;
+	GeneralizedDerivativeEnhancedModel getSurrogateModelGradient(void) const;
 	MultiLevelModel  getSurrogateModelML(void) const;
 	TGEKModel        getSurrogateModelTangent(void) const;
 

@@ -142,6 +142,10 @@ protected:
 };
 
 
+
+
+
+
 TEST_F(KrigingModelTest, constructor) {
 
 	ASSERT_FALSE(testModel2D.ifDataIsRead);
@@ -374,7 +378,8 @@ TEST_F(KrigingModelTest, train) {
 	double L = testModel2D.calculateLikelihoodFunction(hyperParameters);
 
 	testModel2D.setNumberOfThreads(4);
-	testModel2D.setWriteWarmStartFileOn("warmStartFile.csv");
+	testModel2D.setNameOfHyperParametersFile("warmStartFile.csv");
+	testModel2D.setWriteWarmStartFileFlag(true);
 
 	testModel2D.train();
 
@@ -462,6 +467,66 @@ TEST_F(KrigingModelTest, linearModel) {
 	EXPECT_LT(RMSE,0.001);
 
 }
+
+
+TEST_F(KrigingModelTest, interpolateWithVariance) {
+
+	himmelblauFunction.function.generateTrainingSamples();
+
+	testModel2D.readData();
+	testModel2D.normalizeData();
+	testModel2D.initializeSurrogateModel();
+	testModel2D.setNumberOfTrainingIterations(10000);
+	testModel2D.train();
+
+	mat X = himmelblauFunction.function.trainingSamplesInput;
+	rowvec x = X.row(0);
+	rowvec xp = normalizeRowVector(x,lb,ub);
+
+	double ftilde,ssqr;
+	testModel2D.interpolateWithVariance(xp, &ftilde, &ssqr);
+
+	EXPECT_LT(ssqr, 10E-8);
+
+}
+
+TEST_F(KrigingModelTest, interpolateWithVarianceAfterDataAdd) {
+
+	himmelblauFunction.function.generateTrainingSamples();
+
+	testModel2D.readData();
+
+	testModel2D.normalizeData();
+	testModel2D.initializeSurrogateModel();
+
+
+	testModel2D.setNumberOfTrainingIterations(10000);
+	testModel2D.train();
+
+	rowvec newsample(3);
+	newsample(0) = -2.456;
+	newsample(1) =  5.323;
+	double x[2];
+	x[0] = newsample(0);
+	x[1] = newsample(1);
+
+	newsample(2) =  himmelblauFunction.function.func_ptr(x);
+
+	testModel2D.addNewSampleToData(newsample);
+
+	rowvec xp(2);
+	xp(0) = x[0];
+	xp(1) = x[1];
+
+	xp = normalizeRowVector(xp,lb,ub);
+	double ftilde,ssqr;
+	testModel2D.interpolateWithVariance(xp, &ftilde, &ssqr);
+
+	EXPECT_LT(ssqr, 10E-8);
+
+}
+
+
 
 
 #endif

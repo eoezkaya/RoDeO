@@ -328,7 +328,7 @@ KrigingModel ObjectiveFunction::getSurrogateModel(void) const{
 	return surrogateModel;
 }
 
-GGEKModel ObjectiveFunction::getSurrogateModelGradient(void) const{
+GeneralizedDerivativeEnhancedModel ObjectiveFunction::getSurrogateModelGradient(void) const{
 	return surrogateModelGradient;
 }
 MultiLevelModel ObjectiveFunction::getSurrogateModelML(void) const{
@@ -415,7 +415,9 @@ void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimizati
 
 	surrogate->interpolateWithVariance(designCalculated.dv, &ftilde, &ssqr);
 
-	double	sigma = sqrt(ssqr);
+	double sigma = sqrt(ssqr);
+
+	designCalculated.sigma = sigma;
 
 	sigma = sigmaFactor*sigma;
 
@@ -449,7 +451,7 @@ void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimizati
 
 	designCalculated.valueAcqusitionFunction = expectedImprovementValue;
 	designCalculated.objectiveFunctionValue = ftilde;
-	designCalculated.sigma = sigma;
+
 }
 
 

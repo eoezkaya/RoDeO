@@ -45,7 +45,7 @@ using namespace arma;
 
 
 
-class GGEKModel : public SurrogateModel{
+class GeneralizedDerivativeEnhancedModel : public SurrogateModel{
 
 private:
 
@@ -61,6 +61,8 @@ private:
 
 	bool ifCorrelationFunctionIsInitialized = false;
 	bool ifActiveDeritiveSampleIndicesAreCalculated = false;
+
+	bool ifDirectionalDerivativesAreUsed = false;
 
 	double weightFactorForDerivatives = 0.5;
 
@@ -81,6 +83,8 @@ private:
 	std::string filenameTrainingDataAuxModel = "auxiliaryData.csv";
 
 	void calculatePhiEntriesForFunctionValues(void);
+	void calculatePhiEntriesForDerivativesDirectionalDerivatives(void);
+
 	void calculatePhiEntriesForDerivatives(void);
 
 	void resetDataObjects(void);
@@ -100,6 +104,7 @@ public:
 	void setBoxConstraints(Bounds boxConstraintsInput);
 	void setDimension(unsigned int);
 	void setNameOfInputFile(string filename);
+	void setDirectionalDerivativesOn(void);
 
 
 	void setWriteWarmStartFileFlag(bool flag);

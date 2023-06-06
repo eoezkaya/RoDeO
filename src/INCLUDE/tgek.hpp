@@ -69,15 +69,21 @@ private:
 	bool ifActiveDeritiveSampleIndicesAreCalculated = false;
 
 
+	double thetaFactor = 1.0;
+	unsigned int numberOfIterationsToDetermineThetaFactor = 1000;
+	vec theta;
+	vec gamma;
+
 	KrigingModel auxiliaryModel;
 
-	GaussianCorrelationFunction correlationFunction;
+	ExponentialCorrelationFunction correlationFunction;
+	GaussianCorrelationFunction differentiatedCorrelationFunction;
 
 
 	double targetForDifferentiatedBasis = 0.0;
 	vector<int> indicesDifferentiatedBasisFunctions;
 
-//	uvec indicesDifferentiatedBasisFunctions;
+
 	unsigned int numberOfDifferentiatedBasisFunctions = 0;
 
 	vector<int> indicesOfSamplesWithActiveDerivatives;
@@ -100,11 +106,14 @@ public:
 	bool ifTargetForSampleWeightsIsSet = false;
 	bool ifTargetForDifferentiatedBasisIsSet = false;
 
+	void setName(string label);
+
 	void setBoxConstraints(Bounds boxConstraintsInput);
 	void setDimension(unsigned int);
 
 	void readData(void);
 	void normalizeData(void);
+	void initializeCorrelationFunction(void);
 
 	void setNameOfInputFile(string filename);
 	void setNameOfHyperParametersFile(string filename);

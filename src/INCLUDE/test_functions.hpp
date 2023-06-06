@@ -74,6 +74,7 @@ public:
 
 	bool ifInputSamplesAreGenerated = false;
 	bool ifSomeAdjointsAreLeftBlank = false;
+	bool ifSomeDirectionalDerivativesAreLeftBlank = false;
 
 
 	double noiseLevel = 0.0;

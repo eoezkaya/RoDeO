@@ -334,6 +334,15 @@ mat TestFunction::generateSamplesWithTangents(mat input, unsigned int N) const{
 		rowvec sample(2*dimension + 2);
 		copyRowVector(sample,dv);
 		sample(dimension)   = d.trueValue;
+
+		if(ifSomeDirectionalDerivativesAreLeftBlank){
+			if(i%2 == 0) {
+				d.tangentValue = 0.0;
+				d.tangentDirection.fill(0.0);
+			}
+
+		}
+
 		sample(dimension+1) = d.tangentValue;
 		copyRowVector(sample,d.tangentDirection,dimension+2);
 		samples.row(i) = sample;

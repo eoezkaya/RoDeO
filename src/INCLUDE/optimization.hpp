@@ -84,6 +84,8 @@ private:
 
 
 	unsigned int iterMaxAcquisitionFunction;
+	double sigmaFactor = 1.0;
+
 
 	unsigned int numberOfDisceteVariables = 0;
 	std::vector<double> incrementsForDiscreteVariables;
@@ -96,6 +98,7 @@ private:
 	void findTheGlobalOptimalDesign(void);
 	void initializeBoundsForAcquisitionFunctionMaximization();
 	void evaluateObjectiveFunction(Design &currentBestDesign);
+	void modifySigmaFactor(void);
 
 public:
 
@@ -120,6 +123,7 @@ public:
 	bool ifSurrogatesAreInitialized = false;
 
 	bool ifreduceTrainingDataZoomIn = false;
+	bool ifAdaptSigmaFactor         = false;
 
 
 	OutputDevice output;

@@ -45,7 +45,7 @@ using namespace arma;
 using namespace std;
 
 
-void GGEKModel::setName(string label){
+void GeneralizedDerivativeEnhancedModel::setName(string label){
 
 	assert(isNotEmpty(label));
 	name = label;
@@ -61,7 +61,7 @@ void GGEKModel::setName(string label){
 }
 
 
-void GGEKModel::setBoxConstraints(Bounds boxConstraintsInput){
+void GeneralizedDerivativeEnhancedModel::setBoxConstraints(Bounds boxConstraintsInput){
 
 	assert(boxConstraintsInput.areBoundsSet());
 
@@ -70,7 +70,7 @@ void GGEKModel::setBoxConstraints(Bounds boxConstraintsInput){
 	auxiliaryModel.setBoxConstraints(boxConstraintsInput);
 }
 
-void GGEKModel::setDimension(unsigned int dim){
+void GeneralizedDerivativeEnhancedModel::setDimension(unsigned int dim){
 
 	dimension = dim;
 	data.setDimension(dim);
@@ -78,7 +78,7 @@ void GGEKModel::setDimension(unsigned int dim){
 }
 
 
-void GGEKModel::setNameOfInputFile(string filename){
+void GeneralizedDerivativeEnhancedModel::setNameOfInputFile(string filename){
 
 	assert(isNotEmpty(filename));
 	filenameDataInput = filename;
@@ -87,24 +87,24 @@ void GGEKModel::setNameOfInputFile(string filename){
 }
 
 
-void GGEKModel::setWriteWarmStartFileFlag(bool flag){
+void GeneralizedDerivativeEnhancedModel::setWriteWarmStartFileFlag(bool flag){
 	auxiliaryModel.setWriteWarmStartFileFlag(flag);
 
 }
-void GGEKModel::setReadWarmStartFileFlag(bool flag){
+void GeneralizedDerivativeEnhancedModel::setReadWarmStartFileFlag(bool flag){
 	auxiliaryModel.setReadWarmStartFileFlag(flag);
 
 }
 
 
 
-void GGEKModel::setNameOfHyperParametersFile(string filename){
+void GeneralizedDerivativeEnhancedModel::setNameOfHyperParametersFile(string filename){
 	assert(isNotEmpty(filename));
 	filenameHyperparameters = filename;
 
 
 }
-void GGEKModel::setNumberOfTrainingIterations(unsigned int N){
+void GeneralizedDerivativeEnhancedModel::setNumberOfTrainingIterations(unsigned int N){
 
 	numberOfTrainingIterations = N;
 	auxiliaryModel.setNumberOfTrainingIterations(N);
@@ -112,20 +112,29 @@ void GGEKModel::setNumberOfTrainingIterations(unsigned int N){
 
 }
 
-void GGEKModel::setThetaFactor(double value){
+void GeneralizedDerivativeEnhancedModel::setThetaFactor(double value){
 	assert(value>=1.0);
 	thetaFactor = value;
 }
 
+void GeneralizedDerivativeEnhancedModel::setDirectionalDerivativesOn(void){
+	ifDirectionalDerivativesAreUsed = true;
+}
 
 
-void GGEKModel::readData(void){
+
+void GeneralizedDerivativeEnhancedModel::readData(void){
 
 	assert(isNotEmpty(filenameDataInput));
-	data.setGradientsOn();
+
+	if(ifDirectionalDerivativesAreUsed){
+		data.setDirectionalDerivativesOn();
+	}
+	else{
+		data.setGradientsOn();
+	}
+
 	data.readData(filenameDataInput);
-
-
 
 	numberOfSamples = data.getNumberOfSamples();
 	ifDataIsRead = true;
@@ -135,7 +144,7 @@ void GGEKModel::readData(void){
 
 }
 
-void GGEKModel::prepareTrainingDataForTheKrigingModel(void){
+void GeneralizedDerivativeEnhancedModel::prepareTrainingDataForTheKrigingModel(void){
 
 	assert(ifDataIsRead);
 	assert(numberOfSamples>0);
@@ -163,7 +172,7 @@ void GGEKModel::prepareTrainingDataForTheKrigingModel(void){
 
 
 
-void GGEKModel::normalizeData(void){
+void GeneralizedDerivativeEnhancedModel::normalizeData(void){
 	data.normalize();
 	ifNormalized = true;
 
@@ -171,7 +180,7 @@ void GGEKModel::normalizeData(void){
 
 }
 
-void GGEKModel::initializeCorrelationFunction(void){
+void GeneralizedDerivativeEnhancedModel::initializeCorrelationFunction(void){
 
 	assert(dimension>0);
 
@@ -189,7 +198,7 @@ void GGEKModel::initializeCorrelationFunction(void){
 }
 
 
-void GGEKModel::initializeSurrogateModel(void){
+void GeneralizedDerivativeEnhancedModel::initializeSurrogateModel(void){
 
 	assert(ifDataIsRead);
 	assert(ifNormalized);
@@ -204,9 +213,6 @@ void GGEKModel::initializeSurrogateModel(void){
 
 	numberOfHyperParameters = dimension;
 
-
-	weights = ones<vec>(numberOfSamples + indicesOfSamplesWithActiveDerivatives.size());
-
 	auxiliaryModel.setDimension(dimension);
 	auxiliaryModel.initializeSurrogateModel();
 
@@ -218,7 +224,7 @@ void GGEKModel::initializeSurrogateModel(void){
 
 
 }
-void GGEKModel::printSurrogateModel(void) const{
+void GeneralizedDerivativeEnhancedModel::printSurrogateModel(void) const{
 
 	cout<<"GGEK Model = \n";
 	cout<<"Name = "<<name<<"\n";
@@ -238,7 +244,7 @@ void GGEKModel::printSurrogateModel(void) const{
 
 
 }
-void GGEKModel::printHyperParameters(void) const{
+void GeneralizedDerivativeEnhancedModel::printHyperParameters(void) const{
 
 	std::cout<<"Hyperparameters of the GRADIENT_ENHANCED model...\n";
 	theta.print("theta");
@@ -247,7 +253,7 @@ void GGEKModel::printHyperParameters(void) const{
 
 
 }
-void GGEKModel::saveHyperParameters(void) const{
+void GeneralizedDerivativeEnhancedModel::saveHyperParameters(void) const{
 
 	assert(theta.size() > 0);
 	assert(gamma.size() > 0);
@@ -266,12 +272,12 @@ void GGEKModel::saveHyperParameters(void) const{
 	saveBuffer.save(filenameHyperparameters, csv_ascii);
 
 }
-void GGEKModel::loadHyperParameters(void){
+void GeneralizedDerivativeEnhancedModel::loadHyperParameters(void){
 
 
 }
 
-void GGEKModel::updateCorrelationFunctions(void){
+void GeneralizedDerivativeEnhancedModel::updateCorrelationFunctions(void){
 
 	assert(dimension>0);
 	assert(theta.size() == dimension);
@@ -288,7 +294,7 @@ void GGEKModel::updateCorrelationFunctions(void){
 }
 
 
-void GGEKModel::setHyperParameters(vec parameters){
+void GeneralizedDerivativeEnhancedModel::setHyperParameters(vec parameters){
 
 	assert(parameters.size() == 2*dimension);
 	theta = parameters.head(dimension);
@@ -303,7 +309,7 @@ void GGEKModel::setHyperParameters(vec parameters){
 
 
 
-void GGEKModel::assembleLinearSystem(void){
+void GeneralizedDerivativeEnhancedModel::assembleLinearSystem(void){
 
 	assert(ifDataIsRead);
 	assert(ifNormalized);
@@ -318,7 +324,7 @@ void GGEKModel::assembleLinearSystem(void){
 
 }
 
-void GGEKModel::calculateBeta0() {
+void GeneralizedDerivativeEnhancedModel::calculateBeta0(void) {
 
 	output.printMessage("Number of samples = ", numberOfSamples);
 	vec ys = data.getOutputVector();
@@ -327,7 +333,7 @@ void GGEKModel::calculateBeta0() {
 	output.printMessage("beta0 = ", beta0);
 }
 
-void GGEKModel::solveLinearSystem() {
+void GeneralizedDerivativeEnhancedModel::solveLinearSystem(void) {
 
 	assert(numberOfSamples > 0);
 	assert(ydot.size() == Phi.n_rows);
@@ -343,9 +349,12 @@ void GGEKModel::solveLinearSystem() {
 
 	weights = linearSystemCorrelationMatrixSVD.solveLinearSystem();
 
+//	vec res = ydot - Phi*weights;
+//	res.print("res");
+
 }
 
-void GGEKModel::updateAuxilliaryFields(void){
+void GeneralizedDerivativeEnhancedModel::updateAuxilliaryFields(void){
 
 	assert(ifDataIsRead);
 	assert(ifNormalized);
@@ -357,7 +366,7 @@ void GGEKModel::updateAuxilliaryFields(void){
 
 	solveLinearSystem();
 }
-void GGEKModel::train(void){
+void GeneralizedDerivativeEnhancedModel::train(void){
 
 	assert(ifDataIsRead);
 	assert(ifNormalized);
@@ -375,7 +384,7 @@ void GGEKModel::train(void){
 }
 
 
-void GGEKModel::trainTheta(void){
+void GeneralizedDerivativeEnhancedModel::trainTheta(void){
 
 	assert(dimension>0);
 	auxiliaryModel.train();
@@ -388,8 +397,8 @@ void GGEKModel::trainTheta(void){
 	gamma = hyperparameters.tail(dimension);
 
 
-//	theta.print("theta");
-//	gamma.print("gamma");
+	//	theta.print("theta");
+	//	gamma.print("gamma");
 
 
 	correlationFunction.setHyperParameters(hyperparameters);
@@ -401,7 +410,7 @@ void GGEKModel::trainTheta(void){
 
 }
 
-void GGEKModel::determineThetaCoefficientForDualBasis(void){
+void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(void){
 
 	assert(ifDataIsRead);
 	assert(dimension>0);
@@ -411,7 +420,7 @@ void GGEKModel::determineThetaCoefficientForDualBasis(void){
 
 	output.printMessage("Estimation for the theta amplification factor...");
 
-	GGEKModel auxiliaryModelForThetaCoefficient;
+	GeneralizedDerivativeEnhancedModel auxiliaryModelForThetaCoefficient;
 	auxiliaryModelForThetaCoefficient.setDimension(dimension);
 	auxiliaryModelForThetaCoefficient.setBoxConstraints(boxConstraints);
 
@@ -447,7 +456,7 @@ void GGEKModel::determineThetaCoefficientForDualBasis(void){
 
 
 	vec hyperParameters = joinVectors(theta,gamma);
-//	hyperParameters.print("hyperparams");
+	//	hyperParameters.print("hyperparams");
 	assert(hyperParameters.size() == 2*dimension);
 
 	double exponentStart = 0.0;
@@ -460,13 +469,12 @@ void GGEKModel::determineThetaCoefficientForDualBasis(void){
 
 	double exponent = exponentStart;
 
-	numberOfIterationsToDetermineThetaFactor = 0.0;
 
 	for(unsigned int i=0; i<numberOfIterationsToDetermineThetaFactor; i++){
 
 
 		double valueToTry = pow(10.0,exponent);
-//		printScalar(valueToTry);
+		//		printScalar(valueToTry);
 
 		auxiliaryModelForThetaCoefficient.setThetaFactor(valueToTry);
 		auxiliaryModelForThetaCoefficient.setHyperParameters(hyperParameters);
@@ -505,7 +513,7 @@ void GGEKModel::determineThetaCoefficientForDualBasis(void){
 }
 
 
-double GGEKModel::interpolate(rowvec x) const{
+double GeneralizedDerivativeEnhancedModel::interpolate(rowvec x) const{
 
 	unsigned int N  = numberOfSamples;
 	unsigned int Nd = indicesOfSamplesWithActiveDerivatives.size();
@@ -525,22 +533,30 @@ double GGEKModel::interpolate(rowvec x) const{
 
 		unsigned int index = indicesOfSamplesWithActiveDerivatives[i];
 		rowvec xi = data.getRowX(index);
-		rowvec grad = gradientsMatrix.row(index);
-		rowvec diffDirection = makeUnitVector(grad);
 
-		r(N+i) = differentiatedCorrelationFunction.computeCorrelationDot(xi, x, diffDirection);
+		if(ifDirectionalDerivativesAreUsed){
+
+			rowvec diffDirection = data.getRowDifferentiationDirection(index);
+			r(N+i) = differentiatedCorrelationFunction.computeCorrelationDot(xi, x, diffDirection);
+		}
+		else{
+
+			rowvec grad = gradientsMatrix.row(index);
+			rowvec diffDirection = makeUnitVector(grad);
+			r(N+i) = differentiatedCorrelationFunction.computeCorrelationDot(xi, x, diffDirection);
+		}
+
+
 		sum +=weights(N+i)*r(N+i);
 	}
 
-	return auxiliaryModel.interpolate(x);
 
-
-//	return sum + beta0;
+	return sum + beta0;
 }
 
 
 
-void GGEKModel::interpolateWithVariance(rowvec xp,double *fTilde,double *ssqr) const{
+void GeneralizedDerivativeEnhancedModel::interpolateWithVariance(rowvec xp,double *fTilde,double *ssqr) const{
 
 	auxiliaryModel.interpolateWithVariance(xp, fTilde, ssqr);
 	*fTilde = interpolate(xp);
@@ -549,13 +565,13 @@ void GGEKModel::interpolateWithVariance(rowvec xp,double *fTilde,double *ssqr) c
 }
 
 
-void GGEKModel::setTargetForSampleWeights(double value){
+void GeneralizedDerivativeEnhancedModel::setTargetForSampleWeights(double value){
 	targetForSampleWeights = value;
 	ifTargetForSampleWeightsIsSet= true;
 }
 
 
-void GGEKModel::calculateIndicesOfSamplesWithActiveDerivatives(void){
+void GeneralizedDerivativeEnhancedModel::calculateIndicesOfSamplesWithActiveDerivatives(void){
 
 	assert(ifDataIsRead);
 	assert(numberOfSamples>0);
@@ -563,32 +579,64 @@ void GGEKModel::calculateIndicesOfSamplesWithActiveDerivatives(void){
 
 	indicesOfSamplesWithActiveDerivatives.clear();
 
-	mat gradients = data.getGradientMatrix();
 
-	assert(gradients.n_cols == dimension);
-	assert(gradients.n_rows == numberOfSamples);
+	if(ifDirectionalDerivativesAreUsed){
 
-	for(unsigned int i=0; i<numberOfSamples; i++){
+		vec directionalDerivatives = data.getDirectionalDerivativesVector();
+		assert(directionalDerivatives.size() == numberOfSamples);
 
-		rowvec gradVec = gradients.row(i);
+		for(unsigned int i=0; i<numberOfSamples; i++){
+			double absDirectionalDerivative = fabs(directionalDerivatives(i));
 
-		if(!gradVec.is_zero()){
-			indicesOfSamplesWithActiveDerivatives.push_back(i);
+			if(absDirectionalDerivative < EPSILON){
+				indicesOfSamplesWithActiveDerivatives.push_back(i);
+
+			}
+
 		}
+
+		unsigned int howManyActiveSamples = indicesOfSamplesWithActiveDerivatives.size();
+		output.printMessage("Number of samples with active directional derivatives = ",howManyActiveSamples);
+
+		string msg = "Indices of samples with active directional derivatives";
+		output.printList(indicesOfSamplesWithActiveDerivatives, msg);
+
+
+	}else{
+
+		mat gradients = data.getGradientMatrix();
+
+		assert(gradients.n_cols == dimension);
+		assert(gradients.n_rows == numberOfSamples);
+
+		for(unsigned int i=0; i<numberOfSamples; i++){
+
+			rowvec gradVec = gradients.row(i);
+
+			if(!gradVec.is_zero()){
+				indicesOfSamplesWithActiveDerivatives.push_back(i);
+			}
+		}
+
+		unsigned int howManyActiveSamples = indicesOfSamplesWithActiveDerivatives.size();
+
+		output.printMessage("Number of samples with active gradients = ",howManyActiveSamples);
+
+		string msg = "Indices of samples with active gradients";
+		output.printList(indicesOfSamplesWithActiveDerivatives, msg);
+
+
 	}
 
-	unsigned int howManyActiveSamples = indicesOfSamplesWithActiveDerivatives.size();
 
-	output.printMessage("Number of samples with active gradients = ",howManyActiveSamples);
 
-	string msg = "Indices of samples with active gradients";
-	output.printList(indicesOfSamplesWithActiveDerivatives, msg);
+
 
 	ifActiveDeritiveSampleIndicesAreCalculated = true;
 }
 
 
-void GGEKModel::generateWeightingMatrix(void){
+void GeneralizedDerivativeEnhancedModel::generateWeightingMatrix(void){
 
 	assert(ifDataIsRead);
 	assert(ifActiveDeritiveSampleIndicesAreCalculated);
@@ -621,7 +669,7 @@ void GGEKModel::generateWeightingMatrix(void){
 	}
 }
 
-void GGEKModel::generateRhsForRBFs(void){
+void GeneralizedDerivativeEnhancedModel::generateRhsForRBFs(void){
 
 	assert(ifDataIsRead);
 	assert(ifActiveDeritiveSampleIndicesAreCalculated);
@@ -635,8 +683,6 @@ void GGEKModel::generateRhsForRBFs(void){
 	unsigned int sizeOfRhs = N + Ndot;
 
 	ydot = zeros<vec>(sizeOfRhs);
-
-	mat gradients 	= data.getGradientMatrix();
 	vec y           = data.getOutputVector();
 
 	/* first functional values */
@@ -645,16 +691,26 @@ void GGEKModel::generateRhsForRBFs(void){
 	}
 
 	/* then directional derivatives */
+	if(ifDirectionalDerivativesAreUsed){
 
-	for(unsigned int i=0; i<Ndot; i++){
-		unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
-		rowvec grad = gradients.row(indx);
-		rowvec d    = makeUnitVector(grad);
+		vec directionalDerivatives = data.getDirectionalDerivativesVector();
+		for(unsigned int i=0; i<Ndot; i++){
+			ydot(i+N) = directionalDerivatives(i);
+		}
 
-		double directionalDerivative = dot(d,grad);
+	}
+	else{
 
-		ydot(i+N) = directionalDerivative;
+		mat gradients 	= data.getGradientMatrix();
+		for(unsigned int i=0; i<Ndot; i++){
+			unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
+			rowvec grad = gradients.row(indx);
+			rowvec d    = makeUnitVector(grad);
 
+			double directionalDerivative = dot(d,grad);
+
+			ydot(i+N) = directionalDerivative;
+		}
 	}
 
 	if(ifVaryingSampleWeights){
@@ -663,9 +719,10 @@ void GGEKModel::generateRhsForRBFs(void){
 		ydot = weightMatrix*ydot;
 	}
 
+
 }
 
-void GGEKModel::calculatePhiEntriesForFunctionValues(void) {
+void GeneralizedDerivativeEnhancedModel::calculatePhiEntriesForFunctionValues(void) {
 
 	unsigned int N = numberOfSamples;
 	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
@@ -682,22 +739,47 @@ void GGEKModel::calculatePhiEntriesForFunctionValues(void) {
 		}
 
 
-		for (unsigned int j = 0; j < Ndot;j++) {
-			unsigned int index = indicesOfSamplesWithActiveDerivatives[j];
-			rowvec xAtIndex = data.getRowX(index);
-			rowvec g = gradients.row(index);
-			rowvec d = makeUnitVector(g);
+	}
 
-			Phi(i, N + j) = differentiatedCorrelationFunction.computeCorrelationDot(xAtIndex, xi,d);
+	if(ifDirectionalDerivativesAreUsed){
+
+		for (unsigned int i = 0; i < N; i++) {
+			rowvec xi = data.getRowX(i);
+
+			for (unsigned int j = 0; j < Ndot;j++) {
+				unsigned int index = indicesOfSamplesWithActiveDerivatives[j];
+				rowvec xAtindex = data.getRowX(index);
+				rowvec d = data.getRowDifferentiationDirection(index);
+				Phi(i, N + j) = differentiatedCorrelationFunction.computeCorrelationDot(xAtindex, xi,d);
+			}
 		}
-
 
 	}
 
+	else{
+
+		for (unsigned int i = 0; i < N; i++) {
+			rowvec xi = data.getRowX(i);
+			for (unsigned int j = 0; j < Ndot;j++) {
+				unsigned int index = indicesOfSamplesWithActiveDerivatives[j];
+				rowvec xAtIndex = data.getRowX(index);
+				rowvec g = gradients.row(index);
+				rowvec d = makeUnitVector(g);
+
+				Phi(i, N + j) = differentiatedCorrelationFunction.computeCorrelationDot(xAtIndex, xi,d);
+			}
+
+		}
+
+	}
 
 }
 
-void GGEKModel::calculatePhiEntriesForDerivatives(void) {
+
+
+
+
+void GeneralizedDerivativeEnhancedModel::calculatePhiEntriesForDerivatives(void) {
 
 	unsigned int N    = numberOfSamples;
 	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
@@ -737,8 +819,45 @@ void GGEKModel::calculatePhiEntriesForDerivatives(void) {
 	}
 }
 
+void GeneralizedDerivativeEnhancedModel::calculatePhiEntriesForDerivativesDirectionalDerivatives(void) {
 
-void GGEKModel::calculatePhiMatrix(void){
+	unsigned int N    = numberOfSamples;
+	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
+
+
+	/* last "howManySamplesHaveDerivatives" equations are for directional derivatives */
+	for (unsigned int i = 0; i < Ndot; i++) {
+
+
+
+		unsigned int sampleIndex = indicesOfSamplesWithActiveDerivatives[i];
+		rowvec xAtsampleIndex = data.getRowX(sampleIndex);
+
+		rowvec directionAtSample = data.getRowDifferentiationDirection(sampleIndex);
+
+		/* directional derivatives of primary basis functions */
+		for (unsigned int j = 0; j < N; j++) {
+			rowvec xj = data.getRowX(j);
+			Phi(N + i, j) = correlationFunction.computeCorrelationDot(xj, xAtsampleIndex, directionAtSample);
+		}
+
+		/* directional derivatives of differentiated basis functions */
+
+		for (unsigned int j = 0; j < Ndot;j++) {
+			unsigned int index = indicesOfSamplesWithActiveDerivatives[j];
+			rowvec xAtindex = data.getRowX(index);
+			rowvec directionBasis = data.getRowDifferentiationDirection(index);
+
+			Phi(N + i, N + j) = differentiatedCorrelationFunction.computeCorrelationDotDot(
+					xAtindex, xAtsampleIndex, directionBasis, directionAtSample);
+		}
+
+	}
+}
+
+
+
+void GeneralizedDerivativeEnhancedModel::calculatePhiMatrix(void){
 
 	assert(ifDataIsRead);
 	assert(ifNormalized);
@@ -753,7 +872,17 @@ void GGEKModel::calculatePhiMatrix(void){
 	Phi = zeros<mat>(howManyTotalDataPoints, howManyBasisFunctions);
 
 	calculatePhiEntriesForFunctionValues();
-	calculatePhiEntriesForDerivatives();
+
+	if(ifDirectionalDerivativesAreUsed){
+
+		calculatePhiEntriesForDerivativesDirectionalDerivatives();
+	}
+	else{
+
+		calculatePhiEntriesForDerivatives();
+	}
+
+
 
 
 	if(ifVaryingSampleWeights){
@@ -765,30 +894,30 @@ void GGEKModel::calculatePhiMatrix(void){
 
 }
 
-void GGEKModel::resetPhiMatrix(void){
+void GeneralizedDerivativeEnhancedModel::resetPhiMatrix(void){
 	Phi.reset();
 
 }
 
-bool GGEKModel::checkResidual(void) const{
+bool GeneralizedDerivativeEnhancedModel::checkResidual(void) const{
 
 	vec residual = ydot - Phi*weights;
-
-//	residual.print("residual");
-
 	if(norm(residual) < 10E-3) return true;
-
 	else return false;
 }
 
 
-bool GGEKModel::checkPhiMatrix(void){
+bool GeneralizedDerivativeEnhancedModel::checkPhiMatrix(void){
 
 
 	unsigned int N    = numberOfSamples;
 	unsigned int Ndot = indicesOfSamplesWithActiveDerivatives.size();
 
-	assert(weights.size() == N + Ndot);
+	if(weights.size() == 0){
+		weights = ones<vec>(N+Ndot);
+	}
+
+
 
 	double epsilon = 0.0000001;
 
@@ -808,7 +937,7 @@ bool GGEKModel::checkPhiMatrix(void){
 
 		sum+=beta0;
 
-//		printTwoScalars(sum, ftilde);
+		//		printTwoScalars(sum, ftilde);
 		double error = fabs(sum - ftilde);
 		if(error > 10E-05) return false;
 
@@ -816,38 +945,75 @@ bool GGEKModel::checkPhiMatrix(void){
 
 	/* directional derivatives */
 
+	if(ifDirectionalDerivativesAreUsed){
 
-	mat gradients = data.getGradientMatrix();
+		for(unsigned int i=0; i<Ndot; i++){
 
+			unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
 
-	for(unsigned int i=0; i<Ndot; i++){
+			rowvec xi = data.getRowX(indx);
 
-		unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
+			rowvec d  = data.getRowDifferentiationDirection(indx);
 
-		rowvec xi = data.getRowX(indx);
-		rowvec g = gradients.row(indx);
-		rowvec d = makeUnitVector(g);
+			rowvec xiPerturbedPlus = xi + epsilon*d;
+			rowvec xiPerturbedMins = xi - epsilon*d;
+			double ftildePerturbedPlus = interpolate(xiPerturbedPlus);
+			double ftildePerturbedMins = interpolate(xiPerturbedMins);
 
-		rowvec xiPerturbedPlus = xi + epsilon*d;
-		rowvec xiPerturbedMins = xi - epsilon*d;
-		double ftildePerturbedPlus = interpolate(xiPerturbedPlus);
-		double ftildePerturbedMins = interpolate(xiPerturbedMins);
+			double fdValue = (ftildePerturbedPlus - ftildePerturbedMins)/(2.0*epsilon);
+			double sum = 0.0;
+			for(unsigned int j=0; j<N+Ndot;j++){
+				sum +=Phi(N+i,j)*weights(j);
+			}
 
-		double fdValue = (ftildePerturbedPlus - ftildePerturbedMins)/(2.0*epsilon);
-		double sum = 0.0;
-		for(unsigned int j=0; j<N+Ndot;j++){
-			sum +=Phi(N+i,j)*weights(j);
+			double error = fabs(sum - fdValue);
+			if(error > 10E-05) return false;
+
 		}
 
-		double error = fabs(sum - fdValue);
-		if(error > 10E-05) return false;
+	}
+
+	else{
+
+		mat gradients = data.getGradientMatrix();
+
+
+		for(unsigned int i=0; i<Ndot; i++){
+
+			unsigned int indx = indicesOfSamplesWithActiveDerivatives[i];
+
+			rowvec xi = data.getRowX(indx);
+			rowvec g = gradients.row(indx);
+			rowvec d = makeUnitVector(g);
+
+			rowvec xiPerturbedPlus = xi + epsilon*d;
+			rowvec xiPerturbedMins = xi - epsilon*d;
+			double ftildePerturbedPlus = interpolate(xiPerturbedPlus);
+			double ftildePerturbedMins = interpolate(xiPerturbedMins);
+
+			double fdValue = (ftildePerturbedPlus - ftildePerturbedMins)/(2.0*epsilon);
+			double sum = 0.0;
+			for(unsigned int j=0; j<N+Ndot;j++){
+				sum +=Phi(N+i,j)*weights(j);
+			}
+
+			double error = fabs(sum - fdValue);
+			if(error > 10E-05) return false;
+
+		}
+
 
 	}
+
+
+
+
+
 
 	return true;
 }
 
-void GGEKModel::resetDataObjects(void){
+void GeneralizedDerivativeEnhancedModel::resetDataObjects(void){
 
 	Phi.reset();
 	weights.reset();
@@ -859,7 +1025,7 @@ void GGEKModel::resetDataObjects(void){
 
 }
 
-void GGEKModel::addNewSampleToData(rowvec newsample){
+void GeneralizedDerivativeEnhancedModel::addNewSampleToData(rowvec newsample){
 
 	assert(newsample.size() > 0);
 
@@ -889,14 +1055,14 @@ void GGEKModel::addNewSampleToData(rowvec newsample){
 }
 
 
-void GGEKModel::addNewLowFidelitySampleToData(rowvec newsample){
+void GeneralizedDerivativeEnhancedModel::addNewLowFidelitySampleToData(rowvec newsample){
 
 	assert(false);
 
 }
 
 
-void GGEKModel::updateModelWithNewData(void){
+void GeneralizedDerivativeEnhancedModel::updateModelWithNewData(void){
 
 	resetDataObjects();
 	readData();
@@ -907,23 +1073,23 @@ void GGEKModel::updateModelWithNewData(void){
 }
 
 
-unsigned int GGEKModel::getNumberOfSamplesWithActiveGradients(void) const{
+unsigned int GeneralizedDerivativeEnhancedModel::getNumberOfSamplesWithActiveGradients(void) const{
 	return indicesOfSamplesWithActiveDerivatives.size();
 
 }
 
 
-mat GGEKModel::getPhiMatrix(void) const{
+mat GeneralizedDerivativeEnhancedModel::getPhiMatrix(void) const{
 	return Phi;
 }
-mat GGEKModel::getWeightMatrix(void) const{
+mat GeneralizedDerivativeEnhancedModel::getWeightMatrix(void) const{
 	return weightMatrix;
 }
 
-vec GGEKModel::getSampleWeightsVector(void) const{
+vec GeneralizedDerivativeEnhancedModel::getSampleWeightsVector(void) const{
 	return sampleWeights;
 }
-mat GGEKModel::getGradient(void) const{
+mat GeneralizedDerivativeEnhancedModel::getGradient(void) const{
 	assert(ifDataIsRead);
 	return data.getGradientMatrix();
 }
