@@ -235,7 +235,7 @@ EggholderFunction::EggholderFunction():function("Eggholder", 2){
 
 	boxConstraints.setBounds(lb,ub);
 	function.setBoxConstraints(boxConstraints);
-	function.filenameTestData = "eggholderestData.csv";
+	function.filenameTestData = "eggholderTestData.csv";
 	function.filenameTrainingData = "eggholder.csv";
 
 	function.numberOfTrainingSamples = 50;

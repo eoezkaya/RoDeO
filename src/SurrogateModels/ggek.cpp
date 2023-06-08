@@ -492,7 +492,7 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 		auxiliaryModelForThetaCoefficient.tryOnTestData();
 
 		double MSE = auxiliaryModelForThetaCoefficient.generalizationError;
-		//		printScalar(MSE);
+//		printScalar(MSE);
 		assert(MSE > 0.0);
 
 		if(MSE < bestMSE){
@@ -504,7 +504,7 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 		exponent +=deltaExponent;
 	}
 
-	//	printTwoScalars(bestMSE, bestFactor);
+//	printTwoScalars(bestMSE, bestFactor);
 
 	thetaFactor = bestFactor;
 

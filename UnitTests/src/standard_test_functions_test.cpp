@@ -56,6 +56,8 @@ protected:
 TEST_F(EggholderTest, generateDataWithAdjoints){
 
 	testFun.function.generateTrainingSamplesWithAdjoints();
+	testFun.function.numberOfTestSamples = 200;
+	testFun.function.generateTestSamples();
 
 }
 
