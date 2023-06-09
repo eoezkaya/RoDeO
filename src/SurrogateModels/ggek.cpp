@@ -38,6 +38,7 @@
 #include "auxiliary_functions.hpp"
 #include "kriging_training.hpp"
 #include "test_functions.hpp"
+#include "vector_manipulations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 

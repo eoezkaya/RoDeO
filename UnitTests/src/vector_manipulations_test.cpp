@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with RoDEO.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, RPTU)
@@ -28,36 +28,32 @@
  *
  *
  */
+#include<math.h>
+#include "vector_manipulations.hpp"
+#include "test_defines.hpp"
+#include<gtest/gtest.h>
 
 
-//#define AGGREGATION_TEST
-//#define STANDARD_TEST_FUNCTIONS_TEST
-//#define TEST_SURROGATE_MODEL_TESTER
-//#define TANGENT_MODEL_TEST
-//#define TEST_TESTFUNCTIONS
-//#define TEST_SURROGATE_MODEL_DATA
-//#define TEST_SURROGATE_MODEL_BASE
-//#define TEST_POLYNOMIALS
-//#define TEST_OUTPUT
-//#define TEST_AUX
-//#define TEST_BOUNDS
-//#define TEST_CONFIGKEY
-//#define TEST_CONSTRAINT_FUNCTION
-//#define TEST_DESIGN
-//#define TESTEAOPTIMIZER
-//#define TEST_LHS
-//#define TEST_METRIC
-//#define OBJECTIVE_FUNCTION_TEST
-//#define MULTILEVEL_MODEL_TEST
-//#define DRIVER_TEST
-//#define KRIGING_TEST
-//#define TEST_LINEAR_REGRESSION
-//#define TEST_KRIGINGGENERALIZATION
-//#define MATRIX_VECTOR_OPS_TEST
-//#define TEST_GENERAL_PURPOSE_OPTIMIZER
-//#define TEST_GRADIENTOPTIMIZER
-//#define TEST_LINEAR_SOLVER
-//#define OPTIMIZATION_TEST
-//#define GDEK_MODEL_TEST
-//#define EXP_CORRELATION_FUNCTIONS_TEST
-#define VECTOR_MANIP_TEST
+#ifdef VECTOR_MANIP_TEST
+
+TEST(testMatrixVectorOperations, makeUnitVector){
+
+	vec v(10,fill::randu);
+	v = v*5;
+	vec w = makeUnitVector(v);
+	double normw = norm(w,2);
+	EXPECT_LT(fabs(normw-1.0),10E-10);
+}
+
+TEST(testMatrixVectorOperations, makeUnitRowVector){
+
+	rowvec v(10,fill::randu);
+	v = v*5;
+	rowvec w = makeUnitVector(v);
+
+	double normw = norm(w,2);
+	EXPECT_LT(fabs(normw-1.0),10E-10);
+
+}
+
+#endif

@@ -271,25 +271,7 @@ TEST(testMatrixVectorOperations, joinVectors){
 
 
 
-TEST(testMatrixVectorOperations, testMakeUnitVector){
 
-	vec v(10,fill::randu);
-	v = v*5;
-	vec w = makeUnitVector(v);
-	double normw = norm(w,2);
-	EXPECT_LT(fabs(normw-1.0),10E-10);
-}
-
-TEST(testMatrixVectorOperations, testMakeUnitRowVector){
-
-	rowvec v(10,fill::randu);
-	v = v*5;
-	rowvec w = makeUnitVector(v);
-
-	double normw = norm(w,2);
-	EXPECT_LT(fabs(normw-1.0),10E-10);
-
-}
 
 TEST(testMatrixVectorOperations, isIntheList){
 

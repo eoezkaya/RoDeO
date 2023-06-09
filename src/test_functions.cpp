@@ -46,7 +46,7 @@
 #include "random_functions.hpp"
 #include "lhs.hpp"
 #include "bounds.hpp"
-
+#include "vector_manipulations.hpp"
 
 
 #define ARMA_DONT_PRINT_ERRORS
