@@ -46,6 +46,7 @@
 #include "random_functions.hpp"
 #include "lhs.hpp"
 #include "bounds.hpp"
+#include "matrix_vector_operations.hpp"
 #include "vector_manipulations.hpp"
 
 
@@ -277,7 +278,7 @@ mat TestFunction::generateSamplesWithFunctionalValues(mat input, unsigned int N)
 		Design d(dv);
 		evaluate(d);
 		rowvec sample(dimension + 1);
-		copyRowVector(sample, dv);
+		copyVector(sample, dv);
 		sample(dimension) = d.trueValue;
 		samples.row(i) = sample;
 	}
@@ -304,9 +305,9 @@ mat TestFunction::generateSamplesWithAdjoints(mat input, unsigned int N) const {
 		}
 
 		rowvec sample(2*dimension +1);
-		copyRowVector(sample,dv);
+		copyVector(sample,dv);
 		sample(dimension) = d.trueValue;
-		copyRowVector(sample,d.gradient,dimension+1);
+		copyVector(sample,d.gradient,dimension+1);
 		samples.row(i) = sample;
 	}
 
@@ -332,7 +333,7 @@ mat TestFunction::generateSamplesWithTangents(mat input, unsigned int N) const{
 		d.tangentDirection = dir;
 		evaluate(d);
 		rowvec sample(2*dimension + 2);
-		copyRowVector(sample,dv);
+		copyVector(sample,dv);
 		sample(dimension)   = d.trueValue;
 
 		if(ifSomeDirectionalDerivativesAreLeftBlank){
@@ -344,7 +345,7 @@ mat TestFunction::generateSamplesWithTangents(mat input, unsigned int N) const{
 		}
 
 		sample(dimension+1) = d.tangentValue;
-		copyRowVector(sample,d.tangentDirection,dimension+2);
+		copyVector(sample,d.tangentDirection,dimension+2);
 		samples.row(i) = sample;
 
 	}

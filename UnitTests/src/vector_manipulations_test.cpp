@@ -36,7 +36,7 @@
 
 #ifdef VECTOR_MANIP_TEST
 
-TEST(testMatrixVectorOperations, makeUnitVector){
+TEST(testVectorManipulations, makeUnitVector){
 
 	vec v(10,fill::randu);
 	v = v*5;
@@ -45,7 +45,7 @@ TEST(testMatrixVectorOperations, makeUnitVector){
 	EXPECT_LT(fabs(normw-1.0),10E-10);
 }
 
-TEST(testMatrixVectorOperations, makeUnitRowVector){
+TEST(testVectorManipulations, makeUnitRowVector){
 
 	rowvec v(10,fill::randu);
 	v = v*5;
@@ -55,5 +55,122 @@ TEST(testMatrixVectorOperations, makeUnitRowVector){
 	EXPECT_LT(fabs(normw-1.0),10E-10);
 
 }
+
+TEST(testVectorManipulations, normalizeVector){
+
+	rowvec x(5,fill::randu);
+	vec xmin(5); xmin.fill(0.1);
+	vec xmax(5); xmax.fill(2.1);
+
+	rowvec xNormalized = normalizeVector(x, xmin, xmax);
+	double xCheck = xNormalized(0)*5 * (2.0) + 0.1;
+
+	double error = fabs(xCheck-x(0));
+	EXPECT_LT(error, 10E-10);
+
+	x(0) = 1.3; x(1) = 10.7; x(2) = -1.3; x(3) = 0.0; x(4) = 1.7;
+	xmin.fill(1.3);
+	xmax.fill(50.0);
+	xNormalized = normalizeVector(x, xmin, xmax);
+	EXPECT_LT(fabs(xNormalized(0)), 10E-10);
+
+}
+
+TEST(testVectorManipulations, normalizeRowVectorBack){
+
+	rowvec x(5,fill::randu);
+	vec xmin(5); xmin.fill(0.1);
+	vec xmax(5); xmax.fill(2.1);
+
+	rowvec xNormalized = normalizeVector(x, xmin, xmax);
+	rowvec xNormalizedBack = normalizeVectorBack(xNormalized, xmin, xmax);
+
+	for(unsigned int i=0; i<5; i++){
+		double err = fabs(x(i) - xNormalizedBack(i));
+		EXPECT_LT(err,10E-10);
+
+	}
+
+
+
+}
+
+TEST(testVectorManipulations, addOneElement){
+
+	vec testVector(10,fill::randu);
+	double val = testVector(5);
+
+	double someValue = 1.987;
+	addOneElement<vec>(testVector, someValue);
+	ASSERT_TRUE(testVector.size() == 11);
+	double error  = fabs(testVector(5) - val);
+	ASSERT_LT(error, 10E-10);
+	error  = fabs(testVector(10) - someValue);
+	ASSERT_LT(error, 10E-10);
+
+	vec testRowVector(10,fill::randu);
+	val = testRowVector(5);
+	addOneElement<vec>(testRowVector, someValue);
+	ASSERT_TRUE(testRowVector.size() == 11);
+
+	error  = fabs(testRowVector(5) - val);
+	ASSERT_LT(error, 10E-10);
+	error  = fabs(testRowVector(10) - someValue);
+	ASSERT_LT(error, 10E-10);
+
+
+}
+
+TEST(testVectorManipulations, copyVector){
+
+	vec a(10,fill::randu);
+	vec b(7,fill::randu);
+
+	copyVector(a,b);
+
+	for(unsigned int i=0; i<7; i++){
+
+		double error  = fabs(a(i) - b(i));
+		ASSERT_LT(error, 10E-10);
+
+
+	}
+
+}
+
+
+TEST(testVectorManipulations, copyRowVector){
+
+	rowvec a(10,fill::randu);
+	rowvec b(7,fill::randu);
+
+	copyVector(a,b);
+
+	for(unsigned int i=0; i<7; i++){
+		double error  = fabs(a(i) - b(i));
+		ASSERT_LT(error, 10E-10);
+	}
+
+}
+
+
+TEST(testVectorManipulations, copyVectorAfterIndex){
+
+	rowvec a(5,fill::randu);
+	rowvec b(2,fill::randu);
+
+	copyVector(a,b,3);
+
+
+	for(unsigned int i=3; i<5; i++){
+		double error  = fabs(a(i) - b(i-3));
+		ASSERT_LT(error, 10E-10);
+	}
+
+}
+
+
+
+
 
 #endif

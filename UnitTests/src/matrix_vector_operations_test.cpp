@@ -113,25 +113,6 @@ TEST(testMatrixVectorOperations, copyRowVector){
 }
 
 
-TEST(testMatrixVectorOperations, normalizeRowVector){
-
-	rowvec x(5,fill::randu);
-	vec xmin(5); xmin.fill(0.1);
-	vec xmax(5); xmax.fill(2.1);
-
-	rowvec xNormalized = normalizeRowVector(x, xmin, xmax);
-	double xCheck = xNormalized(0)*5 * (2.0) + 0.1;
-
-	double error = fabs(xCheck-x(0));
-	EXPECT_LT(error, 10E-10);
-
-	x(0) = 1.3; x(1) = 10.7; x(2) = -1.3; x(3) = 0.0; x(4) = 1.7;
-	xmin.fill(1.3);
-	xmax.fill(50.0);
-	xNormalized = normalizeRowVector(x, xmin, xmax);
-	EXPECT_LT(fabs(xNormalized(0)), 10E-10);
-
-}
 
 
 TEST(testMatrixVectorOperations, normalizeMatrix){
@@ -197,31 +178,6 @@ TEST(testMatrixVectorOperations, convertToRowVector){
 
 	double error  = fabs(testRowVector(5) - testVector(5));
 
-	ASSERT_LT(error, 10E-10);
-
-
-}
-TEST(testMatrixVectorOperations, addOneElement){
-
-	vec testVector(10,fill::randu);
-	double val = testVector(5);
-
-	double someValue = 1.987;
-	addOneElement(testVector, someValue);
-	ASSERT_TRUE(testVector.size() == 11);
-	double error  = fabs(testVector(5) - val);
-	ASSERT_LT(error, 10E-10);
-	error  = fabs(testVector(10) - someValue);
-	ASSERT_LT(error, 10E-10);
-
-	vec testRowVector(10,fill::randu);
-	val = testRowVector(5);
-	addOneElement(testRowVector, someValue);
-	ASSERT_TRUE(testRowVector.size() == 11);
-
-	error  = fabs(testRowVector(5) - val);
-	ASSERT_LT(error, 10E-10);
-	error  = fabs(testRowVector(10) - someValue);
 	ASSERT_LT(error, 10E-10);
 
 

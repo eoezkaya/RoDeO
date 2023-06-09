@@ -35,6 +35,7 @@
 #include <cassert>
 
 #include "surrogate_model.hpp"
+#include "vector_manipulations.hpp"
 #include "auxiliary_functions.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
@@ -411,14 +412,14 @@ void SurrogateModel::tryOnTestData(void){
 
 
 		rowvec sample = x;
-		addOneElement(sample,fTilde);
+		addOneElement<rowvec>(sample,fTilde);
 
 		if(data.ifTestDataHasFunctionValues){
 
-			addOneElement(sample,fExact(i));
+			addOneElement<rowvec>(sample,fExact(i));
 			double error = pow((fExact(i) - fTilde),2.0);
 			squaredError(i) = error;
-			addOneElement(sample,error);
+			addOneElement<rowvec>(sample,error);
 
 			output.printMessage("f(x) = ",fExact(i), "estimate = ", fTilde);
 			output.printMessage("Squared error = ", error);

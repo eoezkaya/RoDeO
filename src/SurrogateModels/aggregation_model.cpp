@@ -45,7 +45,7 @@ using std::cout;
 #include "test_functions.hpp"
 #include "auxiliary_functions.hpp"
 #include "linear_regression.hpp"
-
+#include "vector_manipulations.hpp"
 
 void AggregationModel::setDimension(unsigned int dim){
 
@@ -390,7 +390,7 @@ double AggregationModel::calculateDualModelEstimate(const rowvec &x, int index) 
 
 	vec xmin = boxConstraints.getLowerBounds();
 	vec xmax = boxConstraints.getUpperBounds();
-	rowvec xp = normalizeRowVectorBack(x, xmin, xmax);
+	rowvec xp = normalizeVectorBack(x, xmin, xmax);
 
 
 	double yNearestPoint = y(index);

@@ -43,6 +43,7 @@
 #include "test_functions.hpp"
 #include "optimization.hpp"
 #include "lhs.hpp"
+#include "vector_manipulations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -530,7 +531,7 @@ void Optimizer::zoomInDesignSpace(void){
 #endif
 	vec dx = upperBoundsForAcqusitionFunctionMaximization - lowerBoundsForAcqusitionFunctionMaximization;
 
-	rowvec dvNormalized = normalizeRowVector(globalOptimalDesign.designParameters, lowerBounds, upperBounds);
+	rowvec dvNormalized = normalizeVector(globalOptimalDesign.designParameters, lowerBounds, upperBounds);
 
 #if 0
 	printVector(dvNormalized,"dvNormalized");
@@ -573,8 +574,8 @@ void Optimizer::reduceBoxConstraints(void){
 	vec lb = lowerBoundsForAcqusitionFunctionMaximization;
 	vec ub = upperBoundsForAcqusitionFunctionMaximization;
 
-	vec lbNotNormalized = normalizeColumnVectorBack(lb, lowerBounds, upperBounds);
-	vec ubNotNormalized = normalizeColumnVectorBack(ub, lowerBounds, upperBounds);
+	vec lbNotNormalized = normalizeVectorBack(lb, lowerBounds, upperBounds);
+	vec ubNotNormalized = normalizeVectorBack(ub, lowerBounds, upperBounds);
 
 
 	output.printMessage("Updated box constraints = ");
@@ -1220,7 +1221,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 
 
 		rowvec best_dvNorm = optimizedDesignGradientBased.dv;
-		rowvec best_dv =normalizeRowVectorBack(best_dvNorm, lowerBounds, upperBounds);
+		rowvec best_dv =normalizeVectorBack(best_dvNorm, lowerBounds, upperBounds);
 		double estimatedBestdv = objFun.interpolate(best_dvNorm);
 
 

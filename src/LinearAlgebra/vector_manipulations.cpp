@@ -32,24 +32,17 @@
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
+#include <cassert>
 
 
 #include "vector_manipulations.hpp"
 
-vec makeUnitVector(vec x){
 
-	double normX = norm(x,2);
-	vec result = x/normX;
-	return result;
-}
 
-rowvec makeUnitVector(rowvec x){
 
-	double normX = norm(x,2);
-	rowvec result = x/normX;
-	return result;
 
-}
+
+
 
 
 

@@ -39,6 +39,7 @@
 #include "kriging_training.hpp"
 #include "test_functions.hpp"
 #include "vector_manipulations.hpp"
+#include "matrix_vector_operations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -1051,14 +1052,14 @@ void GeneralizedDerivativeEnhancedModel::addNewSampleToData(rowvec newsample){
 	}
 
 	rowvec sampleToAdd(sampleSize, fill::zeros);
-	copyRowVector(sampleToAdd, newsample);
+	copyVector(sampleToAdd, newsample);
 
 	Bounds boxConstraints = data.getBoxConstraints();
 
 	vec lb = boxConstraints.getLowerBounds();
 	vec ub = boxConstraints.getUpperBounds();
 	rowvec x = sampleToAdd.head(dimension);
-	x = normalizeRowVector(x, lb, ub);
+	x = normalizeVector(x, lb, ub);
 
 	mat inputData = data.getInputMatrix();
 
