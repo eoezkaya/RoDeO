@@ -33,7 +33,6 @@
 #define AUX_FUNCTIONS_HPP
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
-#include "matrix_vector_operations.hpp"
 #include "random_functions.hpp"
 #include "metric.hpp"
 #include <armadillo>
@@ -41,6 +40,8 @@
 #include <map>
 #include <math.h>
 #include <cassert>
+
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
 using namespace arma;
 using std::string;
 
@@ -60,7 +61,8 @@ void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
 bool checkValue(double value, double expected, double tolerance);
 bool checkValue(double value, double expected);
 
-template<typename T> bool isBetween(T number, T a, T b){
+template<typename T>
+bool isNumberBetween(T number, T a, T b){
 
 	assert(b>a);
 

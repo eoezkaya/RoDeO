@@ -102,7 +102,7 @@ void LinearModel::loadHyperParameters(void){
 
 void LinearModel::printHyperParameters(void) const{
 
-	printVector(weights,"linear regression weights");
+	weights.print("linear regression weights");
 
 }
 

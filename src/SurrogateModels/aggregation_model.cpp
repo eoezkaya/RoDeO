@@ -45,7 +45,7 @@ using std::cout;
 #include "test_functions.hpp"
 #include "auxiliary_functions.hpp"
 #include "linear_regression.hpp"
-#include "vector_manipulations.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 
 void AggregationModel::setDimension(unsigned int dim){
 

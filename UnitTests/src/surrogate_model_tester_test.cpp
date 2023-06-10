@@ -31,7 +31,7 @@
 
 #include<gtest/gtest.h>
 #include "surrogate_model_tester.hpp"
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "bounds.hpp"
 #include "random_functions.hpp"
 #include "standard_test_functions.hpp"

@@ -31,9 +31,9 @@
 
 #include "bounds.hpp"
 #include "auxiliary_functions.hpp"
-#include "matrix_vector_operations.hpp"
 #include "random_functions.hpp"
 #include<cassert>
+#include "matrix_operations.hpp"
 
 Bounds::Bounds(){
 
@@ -183,8 +183,8 @@ bool Bounds::isPointWithinBounds(const vec &inputVector) const{
 
 void Bounds::print(void) const{
 
-	printVector(lowerBounds,"Lower bounds");
-	printVector(upperBounds,"Upper bounds");
+	lowerBounds.print("Lower bounds");
+	upperBounds.print("Upper bounds");
 
 }
 

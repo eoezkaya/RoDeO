@@ -32,7 +32,7 @@
 #include "standard_test_functions.hpp"
 #include "bounds.hpp"
 #include "random_functions.hpp"
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include <cassert>
 
 HimmelblauFunction::HimmelblauFunction():function("Himmelblau", 2){

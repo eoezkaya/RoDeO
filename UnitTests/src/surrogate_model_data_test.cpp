@@ -34,7 +34,7 @@
 #include<gtest/gtest.h>
 #include "surrogate_model_data.hpp"
 #include "bounds.hpp"
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "auxiliary_functions.hpp"
 #include "test_defines.hpp"
 using std::string;

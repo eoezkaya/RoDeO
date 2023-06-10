@@ -32,7 +32,7 @@
 
 
 #include "general_purpose_optimizer.hpp"
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "random_functions.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>

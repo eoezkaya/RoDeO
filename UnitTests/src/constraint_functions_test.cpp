@@ -31,7 +31,7 @@
 
 #include<gtest/gtest.h>
 #include "constraint_functions.hpp"
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "test_functions.hpp"
 #include "standard_test_functions.hpp"
 #include "auxiliary_functions.hpp"

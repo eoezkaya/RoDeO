@@ -32,9 +32,10 @@
 
 #include <cassert>
 #include "design.hpp"
-#include "matrix_vector_operations.hpp"
-#include "vector_manipulations.hpp"
+#include "vector_operations.hpp"
 #include "auxiliary_functions.hpp"
+#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -108,7 +109,7 @@ void Design::generateRandomDifferentiationDirection(void) {
 rowvec Design::constructSampleObjectiveFunction(void) const{
 
 	rowvec sample(dimension+1);
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = trueValue;
 	return sample;
 }
@@ -117,7 +118,7 @@ rowvec Design::constructSampleObjectiveFunction(void) const{
 rowvec Design::constructSampleObjectiveFunctionLowFi(void) const{
 
 	rowvec sample(dimension+1);
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = trueValueLowFidelity;
 
 	return sample;
@@ -130,7 +131,7 @@ rowvec Design::constructSampleObjectiveFunctionWithTangent(void) const{
 	assert(tangentDirection.size() == dimension);
 	rowvec sample(2*dimension+2, fill::zeros);
 
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension)   = trueValue;
 	sample(dimension+1) = tangentValue;
 
@@ -146,7 +147,7 @@ rowvec Design::constructSampleObjectiveFunctionWithTangentLowFi(void) const{
 	assert(tangentDirection.size() == dimension);
 	rowvec sample(2*dimension+2, fill::zeros);
 
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension)   = trueValueLowFidelity;
 	sample(dimension+1) = tangentValueLowFidelity;
 
@@ -162,7 +163,7 @@ rowvec Design::constructSampleObjectiveFunctionWithGradient(void) const{
 	assert(gradient.size() == dimension);
 	rowvec sample(2*dimension+1);
 
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = trueValue;
 
 	for(unsigned int i=0; i<dimension; i++){
@@ -176,7 +177,7 @@ rowvec Design::constructSampleObjectiveFunctionWithGradientLowFi(void) const{
 	assert(gradientLowFidelity.size() == dimension);
 	rowvec sample(2*dimension+1);
 
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = trueValueLowFidelity;
 
 	for(unsigned int i=0; i<dimension; i++){
@@ -191,7 +192,7 @@ rowvec Design::constructSampleConstraint(int constraintID) const{
 	assert(constraintTrueValues.size() == numberOfConstraints);
 
 	rowvec sample(dimension+1);
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = constraintTrueValues(constraintID);
 
 	return sample;
@@ -203,7 +204,7 @@ rowvec Design::constructSampleConstraintLowFi(int constraintID) const{
 	assert(constraintTrueValuesLowFidelity.size() == numberOfConstraints);
 
 	rowvec sample(dimension+1);
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = constraintTrueValuesLowFidelity(constraintID);
 
 	return sample;
@@ -218,7 +219,7 @@ rowvec Design::constructSampleConstraintWithTangent(int constraintID) const{
 	assert(constraintTangent.size() == numberOfConstraints);
 
 	rowvec sample(2*dimension+2);
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = constraintTrueValues(constraintID);
 	sample(dimension+1) = constraintTangent(constraintID);
 
@@ -239,7 +240,7 @@ rowvec Design::constructSampleConstraintWithTangentLowFi(int constraintID) const
 	assert(constraintTangentLowFidelity.size() == numberOfConstraints);
 
 	rowvec sample(2*dimension+2);
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension)   = constraintTrueValuesLowFidelity(constraintID);
 	sample(dimension+1) = constraintTangentLowFidelity(constraintID);
 
@@ -258,7 +259,7 @@ rowvec Design::constructSampleConstraintWithGradient(int constraintID) const{
 	assert(constraintTrueValues.size() == numberOfConstraints);
 
 	rowvec sample(2*dimension+1);
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = constraintTrueValues(constraintID);
 	rowvec constraintGradient = constraintGradientsMatrix.row(constraintID);
 	for(unsigned int i=0; i<dimension; i++){
@@ -274,7 +275,7 @@ rowvec Design::constructSampleConstraintWithGradientLowFi(int constraintID) cons
 	assert(constraintTrueValuesLowFidelity.size() == numberOfConstraints);
 
 	rowvec sample(2*dimension+1);
-	copyRowVectorFirstKElements(sample,designParameters, dimension);
+	copyVectorFirstKElements(sample,designParameters, dimension);
 	sample(dimension) = constraintTrueValuesLowFidelity(constraintID);
 	rowvec constraintGradient = constraintGradientsMatrixLowFi.row(constraintID);
 	for(unsigned int i=0; i<dimension; i++){
@@ -326,7 +327,7 @@ void Design::print(void) const{
 
 	std::cout<< "\n***************** " << tag << " *****************\n";
 	std::cout<<"Design parameters = \n";
-	printVector(designParameters);
+	designParameters.print();
 	std::cout<<"Function value = "<<trueValue<<"\n";
 
 	if(fabs(trueValueLowFidelity) > 0.0 ){
@@ -334,11 +335,12 @@ void Design::print(void) const{
 	}
 
 	if(!gradient.is_zero() && gradient.size() > 0){
-		printVector(gradient,"gradient vector");
+		gradient.print("gradient vector");
+
 	}
 
 	if(!gradientLowFidelity.is_zero() && gradientLowFidelity.size() > 0){
-			printVector(gradientLowFidelity,"gradient vector (Low Fi)");
+		gradientLowFidelity.print("gradient vector (Low Fi)");
 	}
 
 
@@ -353,7 +355,7 @@ void Design::print(void) const{
 
 			if(!it->is_zero()){
 				std::cout<<"Constraint gradient "<<count<<"\n";
-				printVector(*it);
+				it->print();
 				count++;
 			}
 		}

@@ -32,7 +32,9 @@
 
 
 
-#include "matrix_vector_operations.hpp"
+#include "matrix_operations.hpp"
+
+#include "vector_operations.hpp"
 #include "auxiliary_functions.hpp"
 #include "random_functions.hpp"
 
@@ -56,16 +58,7 @@ void printScalarValueWithName(std::string name, unsigned int value) {
 	std::cout<<name<<" = "<<value<<"\n";
 }
 
-void abortIfHasNan(rowvec &v){
 
-	if(v.has_nan()){
-
-		std::cout<<"ERROR: NaN in a rowvector!\n";
-		abort();
-
-	}
-
-}
 
 
 void printTwoScalarValuesWithNames(std::string name1, double value1,std::string name2, double value2 ){
@@ -78,41 +71,6 @@ void printTwoScalarValuesWithNames(std::string name1, double value1,std::string 
 
 
 
-void copyRowVectorFirstKElements(rowvec &a,const rowvec &b, unsigned int k){
-
-	assert(a.size()>=k);
-	assert(b.size()>=k);
-
-	for(unsigned int i=0; i<k; i++){
-		a(i) = b(i);
-	}
-
-}
-
-
-vec convertToVector(rowvec &in){
-
-	vec out(in.size());
-
-	for(unsigned int i=0;i<in.size();i++){
-
-		out(i) = in(i);
-	}
-	return out;
-
-}
-
-
-rowvec convertToRowVector(vec &in){
-	rowvec out(in.size());
-
-	for(unsigned int i=0;i<in.size();i++){
-
-		out(i) = in(i);
-	}
-	return out;
-
-}
 
 
 
@@ -146,24 +104,7 @@ void appendMatrixToCSVData(const mat& A, std::string fileName){
 
 }
 
-void appendRowVectorToCSVData(rowvec v, std::string fileName){
 
-
-	std::ofstream outfile;
-
-	outfile.open(fileName, std::ios_base::app); // append instead of overwrite
-
-	outfile.precision(10);
-	for(unsigned int i=0; i<v.size()-1; i++){
-
-		outfile << v(i) <<",";
-	}
-	outfile << v(v.size()-1)<<"\n";
-
-
-	outfile.close();
-
-}
 
 
 mat readMatFromCVSFile(std::string fileName){
@@ -240,177 +181,9 @@ void printMatrix(mat M, std::string name){
 
 }
 
-void printVector(vec v, std::string name){
 
-	std::cout.precision(11);
-	std::cout.setf(ios::fixed);
 
-	std::cout<< '\n';
-	if(name != "None") std::cout<<"vector "<<name<<" has "<<v.size()<<" elements:\n";
-	trans(v).raw_print();
-	std::cout<< '\n';
 
-}
-
-void printVector(rowvec v, std::string name){
-
-	std::cout.precision(11);
-	std::cout.setf(ios::fixed);
-
-	std::cout<< '\n';
-	if(name != "None") std::cout<<"vector "<<name<<" has "<<v.size()<<" elements:\n";
-	v.raw_print();
-	std::cout<< '\n';
-
-}
-
-
-
-void printVector(std::vector<std::string> v){
-
-
-	for(std::size_t i = 0; i < v.size()-1; ++i) {
-		std::cout << v[i] << ", ";
-	}
-
-	std::cout << v[v.size()-1] << "\n";
-
-
-}
-
-void printVector(std::vector<int> v){
-
-	for (std::vector<int>::const_iterator i = v.begin(); i != v.end(); ++i){
-		std::cout << *i << ' ';
-	}
-	std::cout<<"\n";
-
-
-}
-
-
-void printVector(std::vector<bool> v){
-
-	for (std::vector<bool>::const_iterator i = v.begin(); i != v.end(); ++i){
-		std::cout << *i << ' ';
-	}
-	std::cout<<"\n";
-
-
-}
-
-void printVector(std::vector<double> v){
-
-
-	for(std::size_t i = 0; i < v.size()-1; ++i) {
-		std::cout << v[i] << ", ";
-	}
-
-	std::cout << v[v.size()-1] << "\n";
-
-}
-
-
-
-vec normalizeColumnVector(vec x, double xmin, double xmax){
-
-	return ( (xmax-xmin)*x+xmin );
-
-
-}
-
-
-
-vec normalizeColumnVectorBack(vec xnorm, vec xmin, vec xmax){
-
-	unsigned int dim = xnorm.size();
-	vec xp(dim);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		assert(xmax(i) > xmin(i));
-		xp(i) = xnorm(i)*dim * (xmax(i) - xmin(i)) + xmin(i);
-
-	}
-	return xp;
-}
-
-
-uvec findIndicesKMax(const vec &v, unsigned int k){
-
-	unsigned int dim = v.size();
-	assert(dim >= k);
-	uvec indices(k, fill::zeros);
-	vec  values(k, fill::zeros);
-	values.fill(-LARGE);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		double maxThreshold = min(values);
-		unsigned int maxThresholdIndex = index_min(values);
-
-		if(v(i) >= maxThreshold){
-
-			values(maxThresholdIndex) = v(i);
-			indices(maxThresholdIndex) = i;
-		}
-
-	}
-
-	return indices;
-
-}
-
-uvec findIndicesKMin(const vec &v, unsigned int k){
-
-	unsigned int dim = v.size();
-	assert(dim >= k);
-	uvec indices(k, fill::zeros);
-	vec  values(k, fill::zeros);
-	values.fill(LARGE);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		double minThreshold = max(values);
-		unsigned int minThresholdIndex = index_max(values);
-
-		if(v(i) <= minThreshold){
-
-			values(minThresholdIndex) = v(i);
-			indices(minThresholdIndex) = i;
-		}
-
-	}
-
-	return indices;
-
-}
-
-vector<int> returnKMinIndices(const vec &v, unsigned int k){
-
-	unsigned int dim = v.size();
-	assert(dim >= k);
-	vector<int> indices(k);
-
-	vec values(k, fill::zeros);
-	values.fill(LARGE);
-
-	for(unsigned int i=0; i<dim; i++){
-
-		double minThreshold = max(values);
-		unsigned int minThresholdIndex = index_max(values);
-
-		if(v(i) <= minThreshold){
-
-			values(minThresholdIndex) = v(i);
-			indices[minThresholdIndex] = i;
-		}
-
-	}
-
-	return indices;
-
-}
 
 
 
@@ -528,38 +301,6 @@ mat normalizeMatrix(mat matrixIn, Bounds &boxConstraints){
 }
 
 
-bool isEqual(const rowvec &a, const rowvec &b, double tolerance){
-
-	unsigned int sizeOfa = a.size();
-	unsigned int sizeOfb = b.size();
-
-	assert(sizeOfa == sizeOfb);
-
-	for(unsigned int i=0; i<sizeOfa; i++){
-
-		if(checkValue(a(i),b(i), tolerance) == false) return false;
-	}
-
-	return true;
-}
-
-bool isEqual(const vec &a, const vec &b, double tolerance){
-
-	unsigned int sizeOfa = a.size();
-	unsigned int sizeOfb = b.size();
-
-	assert(sizeOfa == sizeOfb);
-
-	for(unsigned int i=0; i<sizeOfa; i++){
-
-		if(checkValue(a(i),b(i), tolerance) == false) return false;
-	}
-
-	return true;
-}
-
-
-
 bool isEqual(const mat &A, const mat&B, double tolerance){
 
 	unsigned int m = A.n_rows;
@@ -580,34 +321,6 @@ bool isEqual(const mat &A, const mat&B, double tolerance){
 	return true;
 }
 
-
-bool isBetween(const vec &v, const vec&a, const vec&b){
-
-	assert(v.size() == a.size() && v.size() == b.size());
-
-	for(unsigned int i=0; i<v.size(); i++){
-
-		if(v(i) < a(i)) return false;
-		if(v(i) > b(i)) return false;
-	}
-
-	return true;
-
-}
-
-bool isBetween(const rowvec &v, const rowvec&a, const rowvec&b){
-
-	assert(v.size() == a.size() && v.size() == b.size());
-
-	for(unsigned int i=0; i<v.size(); i++){
-
-		if(v(i) < a(i)) return false;
-		if(v(i) > b(i)) return false;
-	}
-
-	return true;
-
-}
 
 int findInterval(double value, vec discreteValues){
 
@@ -665,16 +378,6 @@ mat shuffleRows(mat A){
 }
 
 
-bool isIntheList(const uvec& list, int element){
-
-	unsigned int dim = list.size();
-
-	for(unsigned int i=0; i<dim; i++){
-		if(element == list(i)) return true;
-	}
-
-	return false;
-}
 
 
 bool isIntheList(const vector<int> &list, int element){

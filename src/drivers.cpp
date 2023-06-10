@@ -45,6 +45,7 @@
 #include "constraint_functions.hpp"
 #include "auxiliary_functions.hpp"
 #include "surrogate_model_tester.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "drivers.hpp"
 #include "configkey.hpp"
 #include "lhs.hpp"

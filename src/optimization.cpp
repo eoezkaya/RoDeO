@@ -43,7 +43,7 @@
 #include "test_functions.hpp"
 #include "optimization.hpp"
 #include "lhs.hpp"
-#include "vector_manipulations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 

@@ -31,7 +31,7 @@
 
 
 #include "gradient_optimizer.hpp"
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
 #include "auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS

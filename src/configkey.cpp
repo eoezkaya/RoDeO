@@ -40,6 +40,7 @@
 #include <cassert>
 #include "configkey.hpp"
 #include "auxiliary_functions.hpp"
+#include "vector_operations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -79,7 +80,7 @@ void ConfigKey::print(void) const{
 
 		if(type == "doubleVector"){
 
-			printVector(vectorDoubleValue);
+			vectorDoubleValue.print();
 
 		}
 		if(type == "stringVector"){

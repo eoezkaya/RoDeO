@@ -35,11 +35,12 @@
 
 
 #include "ggek.hpp"
+
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "vector_operations.hpp"
 #include "auxiliary_functions.hpp"
 #include "kriging_training.hpp"
 #include "test_functions.hpp"
-#include "vector_manipulations.hpp"
-#include "matrix_vector_operations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 

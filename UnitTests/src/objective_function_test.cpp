@@ -32,7 +32,7 @@
 #include<gtest/gtest.h>
 #include "objective_function.hpp"
 #include "optimization.hpp"
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "standard_test_functions.hpp"
 #include "auxiliary_functions.hpp"
 #include "test_defines.hpp"

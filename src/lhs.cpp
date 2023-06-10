@@ -31,8 +31,8 @@
 
 #include "lhs.hpp"
 #include "random_functions.hpp"
-#include "matrix_vector_operations.hpp"
 #include <cassert>
+#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
 
 
 LHSSamples::LHSSamples(unsigned int d, double lb, double ub, unsigned int N){
@@ -500,7 +500,7 @@ void RandomSamples::generateSamples(void){
 		dx(i) = (upperBounds(i) - lowerBounds(i))/numberOfSamples;
 
 	}
-#if 1
+#if 0
 	printVector(dx,"dx");
 #endif
 
@@ -510,7 +510,7 @@ void RandomSamples::generateSamples(void){
 
 
 		rowvec dv = generateRandomRowVector(lowerBounds,upperBounds);
-#if 1
+#if 0
 		printVector(dv,"dv");
 #endif
 

@@ -28,15 +28,16 @@
  *
  *
  */
+#include "vector_operations.hpp"
+
 #include<math.h>
-#include "vector_manipulations.hpp"
 #include "test_defines.hpp"
 #include<gtest/gtest.h>
 
 
 #ifdef VECTOR_MANIP_TEST
 
-TEST(testVectorManipulations, makeUnitVector){
+TEST(testVectorOperations, makeUnitVector){
 
 	vec v(10,fill::randu);
 	v = v*5;
@@ -45,7 +46,7 @@ TEST(testVectorManipulations, makeUnitVector){
 	EXPECT_LT(fabs(normw-1.0),10E-10);
 }
 
-TEST(testVectorManipulations, makeUnitRowVector){
+TEST(testVectorOperations, makeUnitRowVector){
 
 	rowvec v(10,fill::randu);
 	v = v*5;
@@ -56,7 +57,7 @@ TEST(testVectorManipulations, makeUnitRowVector){
 
 }
 
-TEST(testVectorManipulations, normalizeVector){
+TEST(testVectorOperations, normalizeVector){
 
 	rowvec x(5,fill::randu);
 	vec xmin(5); xmin.fill(0.1);
@@ -76,7 +77,7 @@ TEST(testVectorManipulations, normalizeVector){
 
 }
 
-TEST(testVectorManipulations, normalizeRowVectorBack){
+TEST(testVectorOperations, normalizeRowVectorBack){
 
 	rowvec x(5,fill::randu);
 	vec xmin(5); xmin.fill(0.1);
@@ -95,7 +96,7 @@ TEST(testVectorManipulations, normalizeRowVectorBack){
 
 }
 
-TEST(testVectorManipulations, addOneElement){
+TEST(testVectorOperations, addOneElement){
 
 	vec testVector(10,fill::randu);
 	double val = testVector(5);
@@ -121,7 +122,7 @@ TEST(testVectorManipulations, addOneElement){
 
 }
 
-TEST(testVectorManipulations, copyVector){
+TEST(testVectorOperations, copyVector){
 
 	vec a(10,fill::randu);
 	vec b(7,fill::randu);
@@ -139,7 +140,7 @@ TEST(testVectorManipulations, copyVector){
 }
 
 
-TEST(testVectorManipulations, copyRowVector){
+TEST(testVectorOperations, copyRowVector){
 
 	rowvec a(10,fill::randu);
 	rowvec b(7,fill::randu);
@@ -153,8 +154,23 @@ TEST(testVectorManipulations, copyRowVector){
 
 }
 
+TEST(testVectorOperations, copyRowVectorFirstKElements){
 
-TEST(testVectorManipulations, copyVectorAfterIndex){
+	rowvec a(10,fill::randu);
+	rowvec b(7,fill::randu);
+
+	copyVectorFirstKElements(a,b,5);
+
+	for(unsigned int i=0; i<5; i++){
+		double error  = fabs(a(i) - b(i));
+		ASSERT_LT(error, 10E-10);
+	}
+
+	ASSERT_GT(fabs(a(5) - b(5)), 10E-10);
+}
+
+
+TEST(testVectorOperations, copyVectorAfterIndex){
 
 	rowvec a(5,fill::randu);
 	rowvec b(2,fill::randu);
@@ -169,6 +185,92 @@ TEST(testVectorManipulations, copyVectorAfterIndex){
 
 }
 
+TEST(testVectorOperations, joinVectors){
+
+	rowvec a(5,fill::randu);
+	rowvec b(2,fill::randu);
+
+	rowvec c = joinVectors(a,b);
+
+
+	for(unsigned int i=0; i<5; i++){
+		double error  = fabs(a(i) - c(i));
+		ASSERT_LT(error, 10E-10);
+	}
+
+	for(unsigned int i=0; i<2; i++){
+		double error  = fabs(b(i) - c(i+5));
+		ASSERT_LT(error, 10E-10);
+	}
+
+
+}
+
+TEST(testVectorOperations, returnKMinIndices){
+
+	vec v(10);
+	v(0) =  0.0;
+	v(1) =  1.0;
+	v(2) =  2.0;
+	v(3) =  3.0;
+	v(4) =  4.0;
+	v(5) =  5.0;
+	v(6) =  0.0;
+	v(7) =  1.0;
+	v(8) =  2.9;
+	v(9) =  100.0;
+
+	vector<int> kBest = returnKMinIndices(v,4);
+
+	ASSERT_TRUE(isIntheList(kBest,0));
+	ASSERT_TRUE(isIntheList(kBest,1));
+	ASSERT_TRUE(isIntheList(kBest,6));
+	ASSERT_FALSE(isIntheList(kBest,9));
+	ASSERT_TRUE(kBest.size() == 4);
+
+
+}
+
+
+TEST(testVectorOperations, isEqualRowVector){
+
+	rowvec v1(5,fill::randu);
+	rowvec v2 = v1;
+	v2(0) += 10E-8;
+
+	ASSERT_TRUE(isEqual(v1,v2,10E-5));
+	ASSERT_FALSE(isEqual(v1,v2,10E-9));
+
+}
+
+TEST(testVectorOperations, isEqualVector){
+
+	vec v1(5,fill::randu);
+	vec v2 = v1;
+	v2(0) += 10E-8;
+
+	ASSERT_TRUE(isEqual(v1,v2,10E-5));
+	ASSERT_FALSE(isEqual(v1,v2,10E-9));
+
+}
+
+
+TEST(testVectorOperations, appendRowVectorToCSVData){
+
+	mat data(10,5,fill::randu);
+	data.save("testData.csv", csv_ascii);
+	rowvec x(5,fill::randu);
+	appendRowVectorToCSVData(x,"testData.csv");
+
+	data.load("testData.csv", csv_ascii);
+	ASSERT_TRUE(data.n_rows ==11);
+
+	rowvec xLast = data.row(10);
+
+	ASSERT_TRUE(isEqual(x,xLast, 10E-10));
+
+	remove("testData.csv");
+}
 
 
 

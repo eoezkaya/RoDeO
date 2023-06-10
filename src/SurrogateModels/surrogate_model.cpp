@@ -35,7 +35,8 @@
 #include <cassert>
 
 #include "surrogate_model.hpp"
-#include "vector_manipulations.hpp"
+
+#include "vector_operations.hpp"
 #include "auxiliary_functions.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
@@ -193,7 +194,7 @@ void SurrogateModel::reduceTrainingData(unsigned howManySamples, double targetVa
 		rowvec sample     = trainingData.row(i);
 		rowvec dv         = sample.head(dim);
 		double value      = sample(dim);
-		vec x = convertToVector(dv);
+		vec x = trans(dv);
 
 		if(!isBetween(x,lb,ub)){
 

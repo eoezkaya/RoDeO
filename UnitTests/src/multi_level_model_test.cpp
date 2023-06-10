@@ -30,7 +30,7 @@
  */
 
 #include "multi_level_method.hpp"
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "standard_test_functions.hpp"
 #include "test_defines.hpp"
 #include<gtest/gtest.h>

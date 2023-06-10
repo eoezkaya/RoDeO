@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDEO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -33,7 +33,11 @@
 
 #include <armadillo>
 #include <cassert>
+#include <vector>
+#include "Rodeo_globals.hpp"
+#include "auxiliary_functions.hpp"
 using namespace arma;
+using namespace std;
 
 template <typename T>
 T normalizeVector(T x, vec xmin, vec xmax){
@@ -121,6 +125,19 @@ void copyVector(T &a, T b, unsigned int indx){
 	}
 }
 
+template <typename T>
+void copyVectorFirstKElements(T &a,const T &b, unsigned int k){
+
+	assert(a.size()>=k);
+	assert(b.size()>=k);
+
+	for(unsigned int i=0; i<k; i++){
+		a(i) = b(i);
+	}
+
+}
+
+
 
 template <typename T>
 T joinVectors(const T& v1, const T& v2){
@@ -146,6 +163,92 @@ T joinVectors(const T& v1, const T& v2){
 	return result;
 
 }
+
+
+template <typename T>
+vector<int> returnKMinIndices(const T &v, unsigned int k){
+
+	unsigned int dim = v.size();
+	assert(dim >= k);
+	vector<int> indices(k);
+
+	T values(k, fill::zeros);
+	values.fill(LARGE);
+
+	for(unsigned int i=0; i<dim; i++){
+
+		double minThreshold = max(values);
+		unsigned int minThresholdIndex = index_max(values);
+
+		if(v(i) <= minThreshold){
+
+			values(minThresholdIndex) = v(i);
+			indices[minThresholdIndex] = i;
+		}
+
+	}
+
+	return indices;
+
+}
+
+template <typename T>
+bool isEqual(const T &a, const T &b, double tolerance){
+
+	unsigned int sizeOfa = a.size();
+	unsigned int sizeOfb = b.size();
+
+	assert(sizeOfa == sizeOfb);
+
+	for(unsigned int i=0; i<sizeOfa; i++){
+
+		if(checkValue(a(i),b(i), tolerance) == false) return false;
+	}
+
+	return true;
+}
+
+template <typename T>
+bool isBetween(const T &v, const T&a, const T&b){
+
+	assert(v.size() == a.size() && v.size() == b.size());
+
+	for(unsigned int i=0; i<v.size(); i++){
+
+		if(v(i) < a(i)) return false;
+		if(v(i) > b(i)) return false;
+	}
+
+	return true;
+
+}
+
+void appendRowVectorToCSVData(rowvec, string);
+
+template <typename T>
+void printVector(std::vector<T> v){
+
+	for(std::size_t i = 0; i < v.size()-1; ++i) {
+		std::cout << v[i] << ", ";
+	}
+
+	std::cout << v[v.size()-1] << "\n";
+
+}
+
+template <typename T>
+void abortIfHasNan(T &v){
+
+	if(v.has_nan()){
+		abortWithErrorMessage("ERROR: NaN in vector!");
+	}
+
+}
+
+
+
+
+
 
 
 #endif

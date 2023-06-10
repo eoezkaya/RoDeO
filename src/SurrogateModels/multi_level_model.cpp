@@ -31,10 +31,12 @@
 
 #include <armadillo>
 #include<cassert>
+
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
 #include "multi_level_method.hpp"
 #include "kriging_training.hpp"
 #include "aggregation_model.hpp"
-#include "matrix_vector_operations.hpp"
+#include "vector_operations.hpp"
 #include "Rodeo_globals.hpp"
 #include "metric.hpp"
 #include "auxiliary_functions.hpp"

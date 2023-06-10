@@ -31,7 +31,7 @@
 
 
 #include "optimization.hpp"
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "auxiliary_functions.hpp"
 #include "standard_test_functions.hpp"
 #include "design.hpp"

@@ -33,7 +33,7 @@
 #define OUTPUT_HPP
 
 #include<string>
-#include<matrix_vector_operations.hpp>
+#include<matrix_operations.hpp>
 #include "design.hpp"
 
 using std::string;

@@ -31,7 +31,7 @@
 
 #include "gaussian_correlation_function.hpp"
 #include <cassert>
-#include "matrix_vector_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS

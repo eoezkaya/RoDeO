@@ -31,10 +31,10 @@
 
 
 #include "ea_optimizer.hpp"
-#include "matrix_vector_operations.hpp"
-#include "vector_manipulations.hpp"
 #include "random_functions.hpp"
 #include "auxiliary_functions.hpp"
+#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 #include<cassert>
@@ -340,7 +340,7 @@ void EAPopulation::writeToFile(std::string filename) const{
 
 		vec buffer = it->getGenes();
 		addOneElement<vec>(buffer,it->getObjectiveFunctionValue());
-		rowvec rowBuffer = convertToRowVector(buffer);
+		rowvec rowBuffer = trans(buffer);
 		dataBuffer.row(rowNumber) = rowBuffer;
 		rowNumber++;
 	}
@@ -363,7 +363,7 @@ void EAPopulation::readFromFile(std::string filename){
 		EAIndividual individualToAdd(dimension);
 
 		rowvec rowBuffer = readBuffer.row(i);
-		vec buffer = convertToVector(rowBuffer);
+		vec buffer = trans(rowBuffer);
 		vec genes = buffer.head(dimension);
 		individualToAdd.setGenes(genes);
 		individualToAdd.setId(i);

@@ -33,12 +33,30 @@
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 #include <cassert>
+#include <iostream>
 
 
-#include "vector_manipulations.hpp"
+#include "vector_operations.hpp"
 
 
+void appendRowVectorToCSVData(rowvec v, std::string filename){
 
+	assert(v.size() > 0);
+	assert(isNotEmpty(filename));
+
+	std::ofstream outfile;
+
+	outfile.open(filename, std::ios_base::app); // append instead of overwrite
+
+	outfile.precision(10);
+	for(unsigned int i=0; i<v.size()-1; i++){
+
+		outfile << v(i) <<",";
+	}
+	outfile << v(v.size()-1)<<"\n";
+	outfile.close();
+
+}
 
 
 

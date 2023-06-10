@@ -29,12 +29,12 @@
  *
  */
 #include<math.h>
-#include "matrix_vector_operations.hpp"
 #include "auxiliary_functions.hpp"
 #include "bounds.hpp"
 #include "random_functions.hpp"
 #include "test_defines.hpp"
 #include<gtest/gtest.h>
+#include "../../src/LinearAlgebra/INCLUDE/matrix_operations.hpp"
 
 
 #ifdef MATRIX_VECTOR_OPS_TEST
@@ -320,53 +320,7 @@ TEST(testMatrixVectorOperations, returnKMinIndices2){
 }
 
 
-TEST(testMatrixVectorOperations, returnKMinIndices3){
 
-	vec v(10);
-	v(0) =  0.0;
-	v(1) =  1.0;
-	v(2) =  2.0;
-	v(3) =  3.0;
-	v(4) =  4.0;
-	v(5) =  5.0;
-	v(6) =  0.0;
-	v(7) =  1.0;
-	v(8) =  2.9;
-	v(9) =  100.0;
-
-	vector<int> kBest = returnKMinIndices(v,4);
-
-	ASSERT_TRUE(isIntheList(kBest,0));
-	ASSERT_TRUE(isIntheList(kBest,1));
-	ASSERT_TRUE(isIntheList(kBest,6));
-	ASSERT_FALSE(isIntheList(kBest,9));
-	ASSERT_TRUE(kBest.size() == 4);
-
-
-}
-
-
-TEST(testMatrixVectorOperations, findIndicesKMax){
-
-	vec v(6);
-	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
-
-	uvec kBest = findIndicesKMax(v,3);
-	ASSERT_TRUE(isIntheList(kBest,4));
-
-
-}
-
-
-TEST(testMatrixVectorOperations, findIndicesKMin){
-
-	vec v(6);
-	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
-
-	uvec kBest = findIndicesKMin(v,3);
-	ASSERT_TRUE(isIntheList(kBest,1));
-
-}
 
 
 

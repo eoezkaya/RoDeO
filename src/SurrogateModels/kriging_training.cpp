@@ -41,7 +41,7 @@
 #include "random_functions.hpp"
 #include "Rodeo_macros.hpp"
 #include "Rodeo_globals.hpp"
-
+#include "vector_operations.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -250,14 +250,14 @@ void KrigingModel::printHyperParameters(void) const{
 	vec theta = hyperParameters.head(dim);
 	vec gamma = hyperParameters.tail(dim);
 
-	printVector(theta,"theta");
-	printVector(gamma,"gamma");
+	trans(theta).print("theta");
+	trans(gamma).print("gamma");
 
 	if(ifUsesLinearRegression){
 
 		vec w = linearModel.getWeights();
 		std::cout<<"Weights of the linear regression model = \n";
-		printVector(w,"weights");
+		w.print();
 
 	}
 
@@ -461,9 +461,9 @@ void KrigingModel::checkAuxilliaryFields(void) const{
 	vec ys = data.getOutputVector();
 	vec ys_min_betaI = ys - beta0*vectorOfOnes;
 	vec residual2 = ys_min_betaI - R*R_inv_ys_min_beta;
-	printVector(residual2,"residual (ys-betaI - R * R^-1 (ys-beta0I) )");
+//	printVector(residual2,"residual (ys-betaI - R * R^-1 (ys-beta0I) )");
 	vec residual3 = vectorOfOnes - R*R_inv_I;
-	printVector(residual3,"residual (I - R * R^-1 I)");
+//	printVector(residual3,"residual (I - R * R^-1 I)");
 }
 
 void KrigingModel::updateModelWithNewData(void){

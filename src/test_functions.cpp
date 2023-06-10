@@ -46,8 +46,8 @@
 #include "random_functions.hpp"
 #include "lhs.hpp"
 #include "bounds.hpp"
-#include "matrix_vector_operations.hpp"
-#include "vector_manipulations.hpp"
+#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
 
 
 #define ARMA_DONT_PRINT_ERRORS

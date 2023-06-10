@@ -40,22 +40,16 @@
 #include <iostream>
 #include <vector>
 
+
 using namespace arma;
 
-void abortIfHasNan(rowvec &);
+
 
 bool isEqual(const mat &A, const mat&B, double tolerance);
-bool isEqual(const rowvec &a, const rowvec &b, double tolerance);
-bool isEqual(const vec &a, const vec &b, double tolerance);
 
 
 void printMatrix(mat M, std::string name="None");
-void printVector(vec v, std::string name="None");
-void printVector(rowvec v, std::string name="None");
-void printVector(std::vector<std::string> v);
-void printVector(std::vector<int> v);
-void printVector(std::vector<bool> v);
-void printVector(std::vector<double> v);
+
 
 #define printScalar(name) printScalarValueWithName(#name, (name))
 #define printTwoScalars(name1,name2) printTwoScalarValuesWithNames(#name1, (name1), #name2, (name2))
@@ -70,24 +64,12 @@ void printTwoScalarValuesWithNames(std::string name1, double value1,std::string 
 
 
 
-void copyRowVectorFirstKElements(rowvec &a,const rowvec &b, unsigned int k);
-
-
-
-uvec findIndicesKMax(const vec &v, unsigned int k);
-uvec findIndicesKMin(const vec &v, unsigned int k);
-
-std::vector<int> returnKMinIndices(const vec &v, unsigned int k);
-
 
 void joinMatricesByColumns(mat& A, const mat& B);
 void joinMatricesByRows(mat& A, const mat& B);
 
 
-vec convertToVector(rowvec &);
-rowvec convertToRowVector(vec &);
 
-void appendRowVectorToCSVData(rowvec v, std::string fileName);
 void appendMatrixToCSVData(const mat& A, std::string fileName);
 
 mat readMatFromCVSFile(std::string fileName);
@@ -105,11 +87,7 @@ int findIndexOfRow(const rowvec &v, const mat &A, double);
 
 mat shuffleRows(mat A);
 
-bool isBetween(const vec &v, const vec&a, const vec&b);
-bool isBetween(const rowvec &v, const rowvec&a, const rowvec&b);
-
-
-bool isIntheList(const uvec&, int);
+//bool isIntheList(const uvec&, int);
 bool isIntheList(const std::vector<int> &list, int element);
 
 #endif

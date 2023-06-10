@@ -547,7 +547,7 @@ void SurrogateModelData::print(void) const{
 
 	printMatrix(rawData,"raw data");
 	printMatrix(X,"sample input matrix");
-	printVector(y,"sample output vector");
+	trans(y).print("sample output vector");
 
 
 	if(ifDataHasGradients){
@@ -558,7 +558,7 @@ void SurrogateModelData::print(void) const{
 
 	if(ifDataHasDirectionalDerivatives){
 
-		printVector(directionalDerivatives, "directional derivatives");
+		trans(directionalDerivatives).print("directional derivatives");
 		printMatrix(differentiationDirections, "differentiation directions");
 
 	}
