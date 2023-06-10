@@ -39,7 +39,6 @@
 #include "linear_regression.hpp"
 #include "Rodeo_macros.hpp"
 #include "kriging_training.hpp"
-#include "aggregation_model.hpp"
 #include "multi_level_method.hpp"
 #include "ggek.hpp"
 
@@ -57,7 +56,6 @@ private:
 
 	LinearModel linearModel;
 	KrigingModel krigingModel;
-	AggregationModel aggregationModel;
 	MultiLevelModel multilevelModel;
 
 	GeneralizedDerivativeEnhancedModel generalizedGradientEnhancedModel;

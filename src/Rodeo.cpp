@@ -44,7 +44,7 @@
 //#include "read_settings.hpp"
 #include "surrogate_model.hpp"
 
-#include "aggregation_model.hpp"
+
 #include "kriging_training.hpp"
 #include "polynomials.hpp"
 #include "polynomials_test.hpp"

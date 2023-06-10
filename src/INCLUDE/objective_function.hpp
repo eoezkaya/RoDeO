@@ -35,7 +35,6 @@
 #include <fstream>
 #include <armadillo>
 #include "kriging_training.hpp"
-#include "aggregation_model.hpp"
 #include "surrogate_model.hpp"
 #include "multi_level_method.hpp"
 #include "design.hpp"

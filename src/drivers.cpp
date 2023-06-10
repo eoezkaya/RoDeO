@@ -132,7 +132,6 @@ RoDeODriver::RoDeODriver(){
 	availableSurrogateModels.push_back("ORDINARY_KRIGING");
 	availableSurrogateModels.push_back("UNIVERSAL_KRIGING");
 	availableSurrogateModels.push_back("LINEAR_REGRESSION");
-	availableSurrogateModels.push_back("AGGREGATION");
 	availableSurrogateModels.push_back("TANGENT");
 	availableSurrogateModels.push_back("GRADIENT_ENHANCED");
 
@@ -1059,11 +1058,6 @@ SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
 
 	}
 
-	if(modelName == "AGGREGATION_MODEL" ||  modelName == "AGGREGATION" || modelName == "aggregation_model") {
-
-		return AGGREGATION;
-
-	}
 
 	if(modelName == "TANGENT" ||  modelName == "tangent" || modelName == "Tangent") {
 		return TANGENT;

@@ -35,7 +35,6 @@
 #include <armadillo>
 #include "objective_function.hpp"
 #include "kriging_training.hpp"
-#include "aggregation_model.hpp"
 #include "design.hpp"
 #include <cassert>
 

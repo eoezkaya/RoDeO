@@ -40,7 +40,7 @@
 #include "auxiliary_functions.hpp"
 #include "test_functions.hpp"
 #include "kriging_training.hpp"
-#include "aggregation_model.hpp"
+
 
 #include "optimization.hpp"
 #include "random_functions.hpp"
