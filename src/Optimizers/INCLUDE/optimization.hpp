@@ -34,7 +34,6 @@
 
 #include <armadillo>
 #include "kriging_training.hpp"
-#include "aggregation_model.hpp"
 #include "objective_function.hpp"
 #include "constraint_functions.hpp"
 #include "random_functions.hpp"
