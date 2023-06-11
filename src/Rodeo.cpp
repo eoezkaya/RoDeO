@@ -33,22 +33,7 @@
 
 #include<stdio.h>
 #include<iostream>
-
-
-#include "optimization.hpp"
-#include "test_functions.hpp"
-#include "linear_regression.hpp"
-#include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
 #include "auxiliary_functions.hpp"
-
-#include "surrogate_model.hpp"
-
-
-#include "kriging_training.hpp"
-#include "polynomials.hpp"
-#include "polynomials_test.hpp"
-#include "lhs.hpp"
 #include "drivers.hpp"
 #ifdef UNIT_TESTS
 #include<gtest/gtest.h>
