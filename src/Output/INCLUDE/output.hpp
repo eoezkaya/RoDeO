@@ -38,6 +38,9 @@
 
 using std::string;
 
+void printRoDeOIntro(void);
+
+
 class OutputDevice{
 
 

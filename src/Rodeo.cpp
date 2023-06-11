@@ -35,6 +35,7 @@
 #include<iostream>
 #include "auxiliary_functions.hpp"
 #include "drivers.hpp"
+#include "output.hpp"
 #ifdef UNIT_TESTS
 #include<gtest/gtest.h>
 #endif
@@ -44,22 +45,7 @@
 int main(int argc, char* argv[]){
 
 
-	printf("\n\n\n");
-
-
-	printf("	  ____       ____        ___   \n");
-	printf("	 |  _ \\ ___ |  _ \\  ___ / _ \\  \n");
-	printf("	 | |_) / _ \\| | | |/ _ \\ | | | \n");
-	printf("	 |  _ < (_) | |_| |  __/ |_| | \n");
-	printf("	 |_| \\_\\___/|____/ \\___|\\___/  \n");
-
-	printf("\n");
-	printf("    RObust DEsign Optimization Package      ");
-	printf("\n\n\n");
-
-
-
-
+	printRoDeOIntro();
 	/* initialize random seed*/
 	srand (time(NULL));
 

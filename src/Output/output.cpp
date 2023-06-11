@@ -35,6 +35,21 @@
 
 using std::cout;
 
+
+void printRoDeOIntro(void) {
+	printf("\n\n\n");
+	printf("	  ____       ____        ___   \n");
+	printf("	 |  _ \\ ___ |  _ \\  ___ / _ \\  \n");
+	printf("	 | |_) / _ \\| | | |/ _ \\ | | | \n");
+	printf("	 |  _ < (_) | |_| |  __/ |_| | \n");
+	printf("	 |_| \\_\\___/|____/ \\___|\\___/  \n");
+	printf("\n");
+	printf("    RObust DEsign Optimization Package      ");
+	printf("\n\n\n");
+}
+
+
+
 OutputDevice::OutputDevice(){}
 
 void OutputDevice::setDisplayOn(void) {
