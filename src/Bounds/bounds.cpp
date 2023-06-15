@@ -29,11 +29,11 @@
  *
  */
 
-#include "bounds.hpp"
-#include "auxiliary_functions.hpp"
-#include "random_functions.hpp"
 #include<cassert>
-#include "matrix_operations.hpp"
+#include "./INCLUDE/bounds.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../Random/INCLUDE/random_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
 
 Bounds::Bounds(){
 

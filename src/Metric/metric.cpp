@@ -29,9 +29,9 @@
  *
  */
 
-#include "metric.hpp"
-#include "auxiliary_functions.hpp"
-#include "bounds.hpp"
+#include "./INCLUDE/metric.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../Bounds/INCLUDE/bounds.hpp"
 
 
 
@@ -301,9 +301,9 @@ void WeightedL1Norm::findOptimalWeights(void){
 
 
 	assert(dimension>0);
-
+#ifdef OPENMP_SUPPORT
 	omp_set_num_threads(numberOfThreads);
-
+#endif
 	double globalBestL1error = LARGE;
 	vec globalOptimalWeights(dimension);
 
@@ -313,8 +313,9 @@ void WeightedL1Norm::findOptimalWeights(void){
 
 		initializeNumberOfTrainingIterations();
 	}
-
+#ifdef OPENMP_SUPPORT
 #pragma omp parallel for
+#endif
 		for(unsigned int iThread = 0; iThread<numberOfThreads; iThread++){
 
 
@@ -343,7 +344,9 @@ void WeightedL1Norm::findOptimalWeights(void){
 
 			double sumWeights = sum(optimalWeights);
 			optimalWeights = optimalWeights/sumWeights;
+#ifdef OPENMP_SUPPORT
 #pragma omp critical
+#endif
 			{
 
 				if(bestL1Error < globalBestL1error){
@@ -357,8 +360,9 @@ void WeightedL1Norm::findOptimalWeights(void){
 		}
 
 	setWeights(globalOptimalWeights);
-
+#ifdef OPENMP_SUPPORT
 	omp_set_num_threads(1);
+#endif
 
 }
 

@@ -108,11 +108,11 @@ double HimmelblauAdjLowFi(double *x, double *xb) {
 	double c4 = 1.05;
 	double c5 = 1.08;
 	double c6 = 6.97;
-	double f = 0.0;
+
 	double fb = 0.0;
 	double tempb;
 	double tempb0;
-	double Himmelblau;
+
 	fb = 1.0;
 	tempb = 2.0*pow(c1*(x[0]*x[0])-c3+c2*x[1], 2.0-1)*fb;
 	tempb0 = 2.0*pow(c4*x[0]-c6+c5*(x[1]*x[1]), 2.0-1)*fb;

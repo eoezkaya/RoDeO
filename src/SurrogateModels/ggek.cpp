@@ -34,13 +34,13 @@
 #include<cassert>
 
 
-#include "ggek.hpp"
+#include "./INCLUDE/ggek.hpp"
 
 #include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "vector_operations.hpp"
-#include "auxiliary_functions.hpp"
-#include "kriging_training.hpp"
-#include "test_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "./INCLUDE/kriging_training.hpp"
+#include "../TestFunctions/INCLUDE/test_functions.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -1080,6 +1080,10 @@ void GeneralizedDerivativeEnhancedModel::addNewSampleToData(rowvec newsample){
 
 void GeneralizedDerivativeEnhancedModel::addNewLowFidelitySampleToData(rowvec newsample){
 
+	if(newsample.is_empty()){
+			abortWithErrorMessage("Sample is empty");
+
+	}
 	assert(false);
 
 }

@@ -30,9 +30,9 @@
  */
 
 
-#include "gradient_optimizer.hpp"
-#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "auxiliary_functions.hpp"
+#include "./INCLUDE/gradient_optimizer.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>

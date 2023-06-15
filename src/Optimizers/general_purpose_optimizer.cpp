@@ -31,9 +31,10 @@
  */
 
 
-#include "general_purpose_optimizer.hpp"
-#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "random_functions.hpp"
+#include "./INCLUDE/general_purpose_optimizer.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../Random/INCLUDE/random_functions.hpp"
+
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 #include<cassert>
@@ -172,10 +173,12 @@ void GeneralPurposeOptimizer::setObjectiveFunction(GeneralPurposeObjectiveFuncti
 void GeneralPurposeOptimizer::setNumberOfThreads(unsigned int nThreads){
 
 	numberOfThreads = nThreads;
+#ifdef OPENMP_SUPPORT
 	omp_set_num_threads(numberOfThreads);
-
+#endif
 
 }
+
 
 unsigned int GeneralPurposeOptimizer::getNumberOfThreads(void) const{
 
@@ -200,6 +203,8 @@ double GeneralPurposeOptimizer::callObjectiveFunction(vec &x){
 
 double GeneralPurposeOptimizer::calculateObjectiveFunctionInternal(vec& x){
 
+	assert(false);
+	x.print();
 	double someNumber = -19.12;
 	return someNumber;
 

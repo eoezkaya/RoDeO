@@ -37,18 +37,23 @@
 #include <iostream>
 #include <unistd.h>
 #include <cassert>
-#include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
-#include "test_functions.hpp"
-#include "optimization.hpp"
-#include "objective_function.hpp"
-#include "constraint_functions.hpp"
-#include "auxiliary_functions.hpp"
-#include "surrogate_model_tester.hpp"
-#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "drivers.hpp"
-#include "configkey.hpp"
-#include "lhs.hpp"
+
+
+#include "../INCLUDE/Rodeo_macros.hpp"
+#include "../INCLUDE/Rodeo_globals.hpp"
+#include "../TestFunctions/INCLUDE/test_functions.hpp"
+#include "../Optimizers/INCLUDE/optimization.hpp"
+#include "../ObjectiveFunctions/INCLUDE/objective_function.hpp"
+#include "../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
+
+#include "../SurrogateModels/INCLUDE/surrogate_model_tester.hpp"
+#include "./INCLUDE/drivers.hpp"
+#include "./INCLUDE/configkey.hpp"
+#include "../LHS/INCLUDE/lhs.hpp"
+
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 

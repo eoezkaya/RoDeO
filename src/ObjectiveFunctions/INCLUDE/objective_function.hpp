@@ -34,11 +34,11 @@
 
 #include <fstream>
 #include <armadillo>
-#include "kriging_training.hpp"
-#include "surrogate_model.hpp"
-#include "multi_level_method.hpp"
-#include "design.hpp"
-#include "output.hpp"
+#include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
+#include "../../SurrogateModels/INCLUDE/surrogate_model.hpp"
+#include "../../SurrogateModels/INCLUDE/multi_level_method.hpp"
+#include "../../Optimizers/INCLUDE/design.hpp"
+#include "../../Output/INCLUDE/output.hpp"
 
 
 

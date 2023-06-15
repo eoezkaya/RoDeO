@@ -29,10 +29,11 @@
  *
  */
 
-#include "lhs.hpp"
-#include "random_functions.hpp"
 #include <cassert>
-#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
+
+#include "./INCLUDE/lhs.hpp"
+#include "../Random/INCLUDE/random_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
 
 
 LHSSamples::LHSSamples(unsigned int d, double lb, double ub, unsigned int N){
@@ -104,7 +105,7 @@ LHSSamples::LHSSamples(unsigned int d, vec lb, vec ub, unsigned int N){
 
 void LHSSamples::setDiscreteParameterIndices(int *indices, int size){
 
-	for(unsigned int i=0; i<size; i++) {
+	for(int i=0; i<size; i++) {
 
 		indicesDiscreteVariables.push_back(indices[i]);
 	}
@@ -144,7 +145,7 @@ void LHSSamples::setDiscreteParameterIncrements(std::vector<double> increments){
 
 uvec LHSSamples::returnValidIntervalsForADimension(mat validIntervals, unsigned int dim){
 
-	assert(dim>=0);
+	assert(dim>0);
 	assert(dim<numberOfDesignVariables);
 
 	// first count how many valid intervals

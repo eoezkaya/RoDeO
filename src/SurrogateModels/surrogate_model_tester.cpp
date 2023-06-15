@@ -30,8 +30,8 @@
  */
 
 
-#include "surrogate_model_tester.hpp"
-#include "auxiliary_functions.hpp"
+#include "./INCLUDE/surrogate_model_tester.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 #include <cassert>
 
 

@@ -34,14 +34,12 @@
 #include<string>
 #include <cassert>
 
-#include "surrogate_model.hpp"
+#include "./INCLUDE/surrogate_model.hpp"
+#include "../INCLUDE/Rodeo_macros.hpp"
+#include "../INCLUDE/Rodeo_globals.hpp"
 
-#include "vector_operations.hpp"
-#include "auxiliary_functions.hpp"
-#include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
-
-
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>

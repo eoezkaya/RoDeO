@@ -33,10 +33,10 @@
 
 
 #include<armadillo>
-#include "bounds.hpp"
-#include "output.hpp"
-#include "Rodeo_globals.hpp"
-#include "general_purpose_optimizer.hpp"
+#include "../../Bounds/INCLUDE/bounds.hpp"
+#include "../../Output/INCLUDE/output.hpp"
+#include "../../INCLUDE/Rodeo_globals.hpp"
+#include "../../Optimizers/INCLUDE/general_purpose_optimizer.hpp"
 using namespace arma;
 
 typedef double (*ObjectiveFunctionType)(vec);

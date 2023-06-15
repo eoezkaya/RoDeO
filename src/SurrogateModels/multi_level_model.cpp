@@ -32,13 +32,13 @@
 #include <armadillo>
 #include<cassert>
 
-#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "multi_level_method.hpp"
-#include "kriging_training.hpp"
-#include "vector_operations.hpp"
-#include "Rodeo_globals.hpp"
-#include "metric.hpp"
-#include "auxiliary_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "./INCLUDE/multi_level_method.hpp"
+#include "./INCLUDE/kriging_training.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../INCLUDE/Rodeo_globals.hpp"
+#include "../Metric/INCLUDE/metric.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 using namespace arma;
 using namespace std;
 
@@ -70,7 +70,14 @@ void MultiLevelModel::setDimension(unsigned int dim){
 
 
 
-void MultiLevelModel::setNameOfInputFile(string filename){}
+void MultiLevelModel::setNameOfInputFile(string filename){
+
+	if(isEmpty(filename)){
+
+		abortWithErrorMessage("Input filename is not specified!");
+	}
+
+}
 
 void MultiLevelModel::setNameOfInputFileError(void){
 	assert(isNotEmpty(name));

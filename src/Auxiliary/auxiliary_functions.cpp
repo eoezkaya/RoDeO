@@ -29,7 +29,7 @@
  *
  */
 
-#include "auxiliary_functions.hpp"
+#include "./INCLUDE/auxiliary_functions.hpp"
 #include <chrono>
 #include <random>
 #include <string>

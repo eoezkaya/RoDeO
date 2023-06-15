@@ -36,14 +36,18 @@
 #include <iostream>
 #include <unistd.h>
 #include <cassert>
-#include "auxiliary_functions.hpp"
-#include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
-#include "test_functions.hpp"
-#include "optimization.hpp"
-#include "objective_function.hpp"
-#include "lhs.hpp"
-#include "bounds.hpp"
+
+
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../INCLUDE/Rodeo_macros.hpp"
+#include "../INCLUDE/Rodeo_globals.hpp"
+#include "../TestFunctions/INCLUDE/test_functions.hpp"
+#include "../Optimizers/INCLUDE/optimization.hpp"
+#include "./INCLUDE/objective_function.hpp"
+#include "../LHS/INCLUDE/lhs.hpp"
+
+#include "../Bounds/INCLUDE/bounds.hpp"
+
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>

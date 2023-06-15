@@ -31,11 +31,12 @@
 
 
 #include <cassert>
-#include "design.hpp"
-#include "vector_operations.hpp"
-#include "auxiliary_functions.hpp"
-#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "./INCLUDE/design.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+
+
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -188,7 +189,7 @@ rowvec Design::constructSampleObjectiveFunctionWithGradientLowFi(void) const{
 
 rowvec Design::constructSampleConstraint(int constraintID) const{
 
-	assert(constraintID < numberOfConstraints);
+	assert(constraintID < int(numberOfConstraints));
 	assert(constraintTrueValues.size() == numberOfConstraints);
 
 	rowvec sample(dimension+1);
@@ -200,7 +201,7 @@ rowvec Design::constructSampleConstraint(int constraintID) const{
 
 rowvec Design::constructSampleConstraintLowFi(int constraintID) const{
 
-	assert(constraintID < numberOfConstraints);
+	assert(constraintID < int(numberOfConstraints));
 	assert(constraintTrueValuesLowFidelity.size() == numberOfConstraints);
 
 	rowvec sample(dimension+1);
@@ -213,7 +214,7 @@ rowvec Design::constructSampleConstraintLowFi(int constraintID) const{
 
 rowvec Design::constructSampleConstraintWithTangent(int constraintID) const{
 
-	assert(constraintID < numberOfConstraints);
+	assert(constraintID < int(numberOfConstraints));
 	assert(constraintTrueValues.size() == numberOfConstraints);
 	assert(constraintDifferentiationDirectionsMatrix.n_rows == numberOfConstraints);
 	assert(constraintTangent.size() == numberOfConstraints);
@@ -234,7 +235,7 @@ rowvec Design::constructSampleConstraintWithTangent(int constraintID) const{
 
 rowvec Design::constructSampleConstraintWithTangentLowFi(int constraintID) const{
 
-	assert(constraintID < numberOfConstraints);
+	assert(constraintID < int(numberOfConstraints));
 	assert(constraintTrueValuesLowFidelity.size() == numberOfConstraints);
 	assert(constraintDifferentiationDirectionsMatrixLowFi.n_rows == numberOfConstraints);
 	assert(constraintTangentLowFidelity.size() == numberOfConstraints);
@@ -255,7 +256,7 @@ rowvec Design::constructSampleConstraintWithTangentLowFi(int constraintID) const
 
 rowvec Design::constructSampleConstraintWithGradient(int constraintID) const{
 
-	assert(constraintID < numberOfConstraints);
+	assert(constraintID < int(numberOfConstraints));
 	assert(constraintTrueValues.size() == numberOfConstraints);
 
 	rowvec sample(2*dimension+1);
@@ -271,7 +272,7 @@ rowvec Design::constructSampleConstraintWithGradient(int constraintID) const{
 
 rowvec Design::constructSampleConstraintWithGradientLowFi(int constraintID) const{
 
-	assert(constraintID < numberOfConstraints);
+	assert(constraintID < int(numberOfConstraints));
 	assert(constraintTrueValuesLowFidelity.size() == numberOfConstraints);
 
 	rowvec sample(2*dimension+1);

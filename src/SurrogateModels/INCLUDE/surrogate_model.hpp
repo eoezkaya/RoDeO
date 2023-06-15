@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, RPTU)
@@ -32,10 +32,10 @@
 #ifndef SURROAGE_MODEL_HPP
 #define SURROAGE_MODEL_HPP
 #include <armadillo>
-#include "Rodeo_macros.hpp"
-#include "bounds.hpp"
-#include "design.hpp"
-#include "surrogate_model_data.hpp"
+#include "../../INCLUDE/Rodeo_macros.hpp"
+#include "../../Bounds/INCLUDE/bounds.hpp"
+#include "../../Optimizers/INCLUDE/design.hpp"
+#include "./surrogate_model_data.hpp"
 
 using namespace arma;
 using std::string;

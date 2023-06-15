@@ -31,17 +31,17 @@
 
 #ifndef AUX_FUNCTIONS_HPP
 #define AUX_FUNCTIONS_HPP
-#include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
-#include "random_functions.hpp"
-#include "metric.hpp"
+
 #include <armadillo>
 #include <vector>
 #include <map>
 #include <math.h>
 #include <cassert>
-
-#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "../../INCLUDE/Rodeo_macros.hpp"
+#include "../../INCLUDE/Rodeo_globals.hpp"
+#include "../../Random/INCLUDE/random_functions.hpp"
+#include "../../Metric/INCLUDE/metric.hpp"
+#include "../../LinearAlgebra/INCLUDE/matrix_operations.hpp"
 using namespace arma;
 using std::string;
 

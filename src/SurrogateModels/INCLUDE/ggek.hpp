@@ -34,13 +34,13 @@
 
 
 #include <armadillo>
-#include "Rodeo_macros.hpp"
-#include "surrogate_model.hpp"
-#include "kriging_training.hpp"
-#include "exponential_correlation_function.hpp"
-#include "gaussian_correlation_function.hpp"
-#include "linear_regression.hpp"
-#include "linear_solver.hpp"
+#include "../../INCLUDE/Rodeo_macros.hpp"
+#include "./surrogate_model.hpp"
+#include "./kriging_training.hpp"
+#include "../../CorrelationFunctions/INCLUDE/exponential_correlation_function.hpp"
+#include "../../CorrelationFunctions/INCLUDE/gaussian_correlation_function.hpp"
+#include "./linear_regression.hpp"
+#include "../../LinearAlgebra/INCLUDE/linear_solver.hpp"
 using namespace arma;
 
 

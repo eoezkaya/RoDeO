@@ -28,8 +28,8 @@
  *
  *
  */
-#include "auxiliary_functions.hpp"
-#include "linear_solver.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "./INCLUDE/linear_solver.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 #include<cassert>
@@ -290,7 +290,7 @@ vec SVDSystem::solveLinearSystem(vec &b){
 //	sigmaCut.print("sigmaCut");
 
 
-	for(unsigned int i=0; i<numberOfActiveSingularValues; i++){
+	for(int i=0; i<numberOfActiveSingularValues; i++){
 
 		solution += dot(U.col(i),rhs)*sigmaCut(i)*V.col(i);
 
@@ -330,7 +330,7 @@ vec SVDSystem::solveLinearSystem(void){
 //	sigmaCut.print("sigmaCut");
 
 
-	for(unsigned int i=0; i<numberOfActiveSingularValues; i++){
+	for(int i=0; i<numberOfActiveSingularValues; i++){
 
 		solution += dot(U.col(i),rhs)*sigmaCut(i)*V.col(i);
 

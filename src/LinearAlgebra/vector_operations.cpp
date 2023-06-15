@@ -36,7 +36,7 @@
 #include <iostream>
 
 
-#include "vector_operations.hpp"
+#include "./INCLUDE/vector_operations.hpp"
 
 
 void appendRowVectorToCSVData(rowvec v, std::string filename){

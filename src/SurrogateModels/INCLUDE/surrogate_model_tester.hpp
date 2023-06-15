@@ -34,13 +34,14 @@
 
 
 #include <string>
-#include "output.hpp"
-#include "bounds.hpp"
-#include "linear_regression.hpp"
-#include "Rodeo_macros.hpp"
-#include "kriging_training.hpp"
-#include "multi_level_method.hpp"
-#include "ggek.hpp"
+#include "../../Output/INCLUDE/output.hpp"
+#include "../../Bounds/INCLUDE/bounds.hpp"
+
+#include "./linear_regression.hpp"
+#include "../../INCLUDE/Rodeo_macros.hpp"
+#include "./kriging_training.hpp"
+#include "./multi_level_method.hpp"
+#include "./ggek.hpp"
 
 class SurrogateModelTester{
 

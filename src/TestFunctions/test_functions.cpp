@@ -35,19 +35,20 @@
 #include <stdlib.h>
 #include <stack>
 #include <cassert>
-#include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
-#include "auxiliary_functions.hpp"
-#include "test_functions.hpp"
-#include "kriging_training.hpp"
+
+#include "../INCLUDE/Rodeo_macros.hpp"
+#include "../INCLUDE/Rodeo_globals.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "./INCLUDE/test_functions.hpp"
+#include "../SurrogateModels/INCLUDE/kriging_training.hpp"
 
 
-#include "optimization.hpp"
-#include "random_functions.hpp"
-#include "lhs.hpp"
-#include "bounds.hpp"
-#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../Optimizers/INCLUDE/optimization.hpp"
+#include "../Random/INCLUDE/random_functions.hpp"
+#include "../LHS/INCLUDE/lhs.hpp"
+#include "../Bounds/INCLUDE/bounds.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 
 
 #define ARMA_DONT_PRINT_ERRORS
@@ -96,7 +97,7 @@ pair<double,double> TestFunction::evaluateGlobalExtrema(void) const{
 	double globalMax = -LARGE;
 
 
-	for(unsigned int i=0; i<numberOfBruteForceIterations; i++ ){
+	for(int i=0; i<numberOfBruteForceIterations; i++ ){
 
 
 		vec x = boxConstraints.generateVectorWithinBounds();

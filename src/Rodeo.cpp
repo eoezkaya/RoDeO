@@ -33,16 +33,19 @@
 
 #include<stdio.h>
 #include<iostream>
-#include "auxiliary_functions.hpp"
-#include "drivers.hpp"
-#include "output.hpp"
 #ifdef UNIT_TESTS
 #include<gtest/gtest.h>
 #endif
 
+#include "./Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "./Driver/INCLUDE/drivers.hpp"
+#include "./Output/INCLUDE/output.hpp"
+
+
 
 
 int main(int argc, char* argv[]){
+
 
 
 	printRoDeOIntro();

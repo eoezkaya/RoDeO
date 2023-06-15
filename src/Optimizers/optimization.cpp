@@ -35,14 +35,18 @@
 #include <iostream>
 #include <unistd.h>
 #include <cassert>
-#include "auxiliary_functions.hpp"
-#include "kriging_training.hpp"
-#include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
-#include "test_functions.hpp"
-#include "optimization.hpp"
-#include "lhs.hpp"
-#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
+
+
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../SurrogateModels/INCLUDE/kriging_training.hpp"
+#include "../INCLUDE/Rodeo_macros.hpp"
+#include "../INCLUDE/Rodeo_globals.hpp"
+#include "../TestFunctions/INCLUDE/test_functions.hpp"
+#include "./INCLUDE/optimization.hpp"
+#include "../LHS/INCLUDE/lhs.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+
+
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -303,7 +307,6 @@ void Optimizer::calculateFeasibilityProbabilities(DesignForBayesianOptimization 
 
 	rowvec probabilities(numberOfConstraints, fill::zeros);
 
-	unsigned int i=0;
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
 		string type  = it->getInequalityType();
@@ -679,7 +682,7 @@ void Optimizer::findTheGlobalOptimalDesign(void){
 /* These designs (there can be more than one) are found by maximizing the expected
  *  Improvement function and taking the constraints into account
  */
-void Optimizer::findTheMostPromisingDesign(unsigned int howManyDesigns){
+void Optimizer::findTheMostPromisingDesign(void){
 
 	output.printMessage("Searching the best potential design...");
 
@@ -952,7 +955,7 @@ void Optimizer::setOptimizationHistoryConstraints(mat inputObjectiveFunction) {
 	for (auto it = constraintFunctions.begin();it != constraintFunctions.end(); it++) {
 
 		int ID = it->getID();
-		assert(ID>=0 && ID<numberOfConstraints );
+		assert(ID>=0 && ID < int(numberOfConstraints) );
 		mat dataRead;
 		string fileNameConstraint = it->getFileNameTrainingData();
 		dataRead.load(fileNameConstraint, csv_ascii);
@@ -1021,7 +1024,7 @@ void Optimizer::calculateInitialImprovementValue(void){
 	bool ifFeasibleDesignFound = false;
 
 	double bestFeasibleObjectiveFunctionValue = LARGE;
-	int bestIndex = -1;
+
 
 	vec objectiveFunctionValues = optimizationHistory.col(dimension);
 
@@ -1032,7 +1035,7 @@ void Optimizer::calculateInitialImprovementValue(void){
 		if(feasibility>0.0 && objectiveFunctionValues(i) < bestFeasibleObjectiveFunctionValue){
 			ifFeasibleDesignFound = true;
 			bestFeasibleObjectiveFunctionValue = objectiveFunctionValues(i);
-			bestIndex = i;
+
 		}
 	}
 

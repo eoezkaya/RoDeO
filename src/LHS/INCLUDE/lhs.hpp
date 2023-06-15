@@ -33,7 +33,7 @@
 #define LHSSAMPLING
 #include <string>
 #include <armadillo>
-#include "Rodeo_globals.hpp"
+#include "../../INCLUDE/Rodeo_globals.hpp"
 using namespace arma;
 
 

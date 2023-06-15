@@ -30,13 +30,17 @@
  */
 
 
-#include "linear_regression.hpp"
-#include "auxiliary_functions.hpp"
-#include "Rodeo_macros.hpp"
+#include "./INCLUDE/linear_regression.hpp"
+#include "./INCLUDE/surrogate_model.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../Bounds/INCLUDE/bounds.hpp"
+#include "../INCLUDE/Rodeo_macros.hpp"
+
 
 #include <armadillo>
 
 using namespace arma;
+
 
 
 //LinearModel::LinearModel():SurrogateModel(){}
@@ -177,8 +181,13 @@ double LinearModel::interpolate(rowvec x ) const{
 
 }
 
-void LinearModel::interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const{
+void LinearModel::interpolateWithVariance(rowvec xp,double *fTilde,double *ssqr) const{
+
 	assert(false);
+	xp.print();
+	*fTilde = 0.0;
+	*ssqr = 0.0;
+
 }
 
 vec LinearModel::interpolateAll(mat X) const{
@@ -208,10 +217,11 @@ void LinearModel::printSurrogateModel(void) const{
 
 void LinearModel::addNewSampleToData(rowvec newsample){
 
-
+	assert(newsample.size() > 0);
 }
 
 void LinearModel::addNewLowFidelitySampleToData(rowvec newsample){
+	assert(newsample.size() > 0);
 	assert(false);
 }
 
@@ -223,7 +233,10 @@ void LinearModel::setNameOfInputFile(std::string filename){
 
 }
 
-void LinearModel::setNumberOfTrainingIterations(unsigned int nIters){}
+void LinearModel::setNumberOfTrainingIterations(unsigned int nIters){
+	assert(nIters > 0);
+
+}
 
 
 void LinearModel::setNameOfHyperParametersFile(std::string filename){

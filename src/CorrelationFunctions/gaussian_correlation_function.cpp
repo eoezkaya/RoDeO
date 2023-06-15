@@ -29,10 +29,12 @@
  *
  */
 
-#include "gaussian_correlation_function.hpp"
+#include "./INCLUDE/gaussian_correlation_function.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+
+
 #include <cassert>
-#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -94,7 +96,7 @@ double GaussianCorrelationFunction::computeCorrelationDot(const rowvec &xi, cons
 	assert(!isinf(derivative));
 
 
-	return -1.0*exp(-sum)*sumd;
+	return derivative;
 
 }
 
@@ -117,7 +119,6 @@ double GaussianCorrelationFunction::computeCorrelationDotDot(const rowvec &xi, c
 
 	}
 	temp = exp(-t);
-	double resultd = -(temp*td);
 	double resultdd = -(temp*tdd-td*exp(-t)*td0);
 
 	assert(!isinf(resultdd));

@@ -34,8 +34,11 @@
 #include <armadillo>
 #include <cassert>
 #include <vector>
-#include "Rodeo_globals.hpp"
-#include "auxiliary_functions.hpp"
+
+#include "../../INCLUDE/Rodeo_globals.hpp"
+#include "../../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+
+
 using namespace arma;
 using namespace std;
 

@@ -31,8 +31,8 @@
 
 
 
-#include "surrogate_model_data.hpp"
-#include "auxiliary_functions.hpp"
+#include "./INCLUDE/surrogate_model_data.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 
 
 

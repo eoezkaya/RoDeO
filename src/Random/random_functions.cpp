@@ -31,8 +31,8 @@
 
 #include <cassert>
 
-#include "random_functions.hpp"
-#include "auxiliary_functions.hpp"
+#include "./INCLUDE/random_functions.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>

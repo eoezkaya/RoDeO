@@ -32,8 +32,8 @@
 #ifndef SURROGATE_MODEL_DATA_HPP
 #define SURROGATE_MODEL_DATA_HPP
 
-#include "output.hpp"
-#include "bounds.hpp"
+#include "../../Output/INCLUDE/output.hpp"
+#include "../../Bounds/INCLUDE/bounds.hpp"
 #include<string>
 
 #define ARMA_DONT_PRINT_ERRORS

@@ -36,13 +36,17 @@
 #include <iostream>
 #include <unistd.h>
 #include <cassert>
-#include "auxiliary_functions.hpp"
-#include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
-#include "test_functions.hpp"
-#include "optimization.hpp"
-#include "constraint_functions.hpp"
-#include "lhs.hpp"
+
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../INCLUDE/Rodeo_macros.hpp"
+#include "../INCLUDE/Rodeo_globals.hpp"
+#include "../TestFunctions/INCLUDE/test_functions.hpp"
+#include "../Optimizers/INCLUDE/optimization.hpp"
+#include "../LHS/INCLUDE/lhs.hpp"
+#include "../Bounds/INCLUDE/bounds.hpp"
+
+
+#include "./INCLUDE/constraint_functions.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
@@ -189,7 +193,9 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 		rowvec functionalValue(1);
 		functionalValue = readOutput(definitionConstraint.outputFilename, 1);
 
-		assert(d.constraintTrueValues.size() > getID());
+		assert( int(d.constraintTrueValues.size()) > getID());
+
+
 		d.constraintTrueValues(getID()) = functionalValue(0);
 	}
 

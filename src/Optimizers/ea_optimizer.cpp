@@ -30,11 +30,11 @@
  */
 
 
-#include "ea_optimizer.hpp"
-#include "random_functions.hpp"
-#include "auxiliary_functions.hpp"
-#include "LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "./INCLUDE/ea_optimizer.hpp"
+#include "../Random/INCLUDE/random_functions.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 #include<cassert>
@@ -252,7 +252,7 @@ unsigned int EAPopulation::getIdOftheIndividual(unsigned int index) const{
 
 EAIndividual EAPopulation::getIndividual(unsigned int id) const{
 
-	unsigned int order = getIndividualOrderInPopulationById(id);
+	int order = getIndividualOrderInPopulationById(id);
 	assert(order!=-1);
 	return population.at(order);
 
@@ -332,7 +332,7 @@ void EAPopulation::writeToFile(std::string filename) const{
 	unsigned int numberOfColumnsInTheDataBuffer = dimension + 1;
 	unsigned int numberOfRowsInTheDataBuffer = getSize();
 
-	mat dataBuffer(getSize(), numberOfColumnsInTheDataBuffer);
+	mat dataBuffer(numberOfRowsInTheDataBuffer, numberOfColumnsInTheDataBuffer);
 
 
 	unsigned int rowNumber = 0;
@@ -474,12 +474,16 @@ vec EAPopulation::findPolynomialCoefficientsForQuadraticFitnessDistribution(void
 	coefficients = inv(A)*rhs;
 
 
+/*
 	double f1 = coefficients(0)*populationMinimum*populationMinimum + coefficients(1) * populationMinimum + coefficients(2);
 	assert(fabs(f1-1.0) < 10E-8);
 	double f2 = coefficients(0)*populationMaximum*populationMaximum + coefficients(1) * populationMaximum + coefficients(2);
 	assert(fabs(f2-aValueCloseButNotEqualToZero) < 10E-5);
 	double fmin = 2*coefficients(0)*populationMaximum + coefficients(1);
 	assert(fabs(fmin) < 10E-8);
+
+*/
+
 	return coefficients;
 
 }
@@ -585,6 +589,9 @@ EAIndividual EAPopulation::pickUpARandomIndividualForReproduction(void) const{
 
 	assert(false);
 
+	EAIndividual empty;
+
+	return empty;
 }
 
 
@@ -732,13 +739,15 @@ void EAOptimizer::initializePopulation(void){
 
 
 	output.printMessage("Size of initial population = ",sizeOfInitialPopulation);
-
+#ifdef OPENMP_SUPPORT
 #pragma omp parallel
+#endif
 	{
 
 		std::vector<EAIndividual> slavePopulation;
-
+#ifdef OPENMP_SUPPORT
 #pragma omp for nowait
+#endif
 		for (unsigned int i = 0; i < sizeOfInitialPopulation; ++i)
 		{
 
@@ -750,8 +759,9 @@ void EAOptimizer::initializePopulation(void){
 			slavePopulation.push_back(generatedIndividual);
 		}
 
-
+#ifdef OPENMP_SUPPORT
 #pragma omp critical
+#endif
 		{
 			/* merge populations from each thread */
 			population.addAGroupOfIndividuals(slavePopulation);
@@ -933,7 +943,10 @@ EAIndividual  EAOptimizer::generateIndividualByReproduction(std::pair<EAIndividu
 
 void EAOptimizer::callObjectiveFunctionForAGroup(
 		std::vector<EAIndividual> &children) {
+
+#ifdef OPENMP_SUPPORT
 #pragma omp parallel
+#endif
 	{
 		for (auto it = std::begin(children); it != std::end(children); ++it) {
 			callObjectiveFunction(*it);
@@ -1031,8 +1044,9 @@ void EAOptimizer::optimize(void){
 	checkIfSettingsAreOk();
 
 	if(ifWarmStart){
-
+#ifdef OPENMP_SUPPORT
 #pragma omp critical
+#endif
 		{
 			readWarmRestartFile();
 		}

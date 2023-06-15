@@ -33,10 +33,10 @@
 
 
 #include <armadillo>
-#include "kriging_training.hpp"
-#include "objective_function.hpp"
-#include "constraint_functions.hpp"
-#include "random_functions.hpp"
+#include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
+#include "../../ObjectiveFunctions/INCLUDE/objective_function.hpp"
+#include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
+#include "../../Random/INCLUDE/random_functions.hpp"
 
 
 
@@ -210,7 +210,7 @@ public:
 
 	rowvec calculateGradientOfAcqusitionFunction(DesignForBayesianOptimization &) const;
 	DesignForBayesianOptimization MaximizeAcqusitionFunctionGradientBased(DesignForBayesianOptimization ) const;
-	void findTheMostPromisingDesign(unsigned int howManyDesigns = 1);
+	void findTheMostPromisingDesign(void);
 	DesignForBayesianOptimization getDesignWithMaxExpectedImprovement(void) const;
 
 	rowvec generateRandomRowVectorAroundASample(void);

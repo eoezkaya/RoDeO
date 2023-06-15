@@ -29,10 +29,12 @@
  *
  */
 
-#include "exponential_correlation_function.hpp"
 #include <cassert>
-#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "auxiliary_functions.hpp"
+
+
+#include "./INCLUDE/exponential_correlation_function.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -162,7 +164,7 @@ double ExponentialCorrelationFunction::computeCorrelationDot(const rowvec &xi, c
     if(norm(xi-xj)<EPSILON) return 0.0;
 
 
-    for (int k = 0; k < dim; ++k) {
+    for (unsigned int k = 0; k < dim; ++k) {
         if (xi(k) - xj(k) >= 0.0) {
             fabs0d = -direction(k);
             fabs0 = xi(k) - xj(k);

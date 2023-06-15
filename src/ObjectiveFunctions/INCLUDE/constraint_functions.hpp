@@ -33,10 +33,11 @@
 
 
 #include <armadillo>
-#include "objective_function.hpp"
-#include "kriging_training.hpp"
-#include "design.hpp"
 #include <cassert>
+
+#include "./objective_function.hpp"
+#include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
+#include "../../Optimizers/INCLUDE/design.hpp"
 
 
 

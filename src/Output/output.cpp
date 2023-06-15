@@ -29,8 +29,8 @@
  *
  */
 
-#include "output.hpp"
-#include "design.hpp"
+#include "./INCLUDE/output.hpp"
+#include "../Optimizers/INCLUDE/design.hpp"
 #include <iostream>
 
 using std::cout;

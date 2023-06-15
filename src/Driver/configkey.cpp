@@ -38,9 +38,9 @@
 #include <iostream>
 #include <unistd.h>
 #include <cassert>
-#include "configkey.hpp"
-#include "auxiliary_functions.hpp"
-#include "vector_operations.hpp"
+#include "./INCLUDE/configkey.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 

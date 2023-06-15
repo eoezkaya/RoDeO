@@ -35,10 +35,10 @@
 
 #include<armadillo>
 #include<vector>
-#include "objective_function.hpp"
-#include "constraint_functions.hpp"
-#include "optimization.hpp"
-#include "configkey.hpp"
+#include "../../ObjectiveFunctions/INCLUDE/objective_function.hpp"
+#include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
+#include "../../Optimizers/INCLUDE/optimization.hpp"
+#include "./configkey.hpp"
 using namespace arma;
 
 

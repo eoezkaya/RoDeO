@@ -30,10 +30,10 @@
  */
 #ifndef TEST_FUNCTIONS_HPP
 #define TEST_FUNCTIONS_HPP
-#include "Rodeo_macros.hpp"
-#include "surrogate_model.hpp"
-#include "design.hpp"
-#include "bounds.hpp"
+#include "../../INCLUDE/Rodeo_macros.hpp"
+#include "../../SurrogateModels/INCLUDE/surrogate_model.hpp"
+#include "../../Optimizers/INCLUDE/design.hpp"
+#include "../../Bounds/INCLUDE/bounds.hpp"
 
 #include <string>
 #include <armadillo>

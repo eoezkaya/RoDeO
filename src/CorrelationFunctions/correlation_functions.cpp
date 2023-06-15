@@ -38,9 +38,9 @@
 #include <unistd.h>
 #include <cassert>
 
-#include "correlation_functions.hpp"
-#include "LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "auxiliary_functions.hpp"
+#include "./INCLUDE/correlation_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>

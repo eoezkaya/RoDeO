@@ -35,13 +35,13 @@
 #include<string>
 #include<cassert>
 
-#include "kriging_training.hpp"
-#include "linear_regression.hpp"
-#include "auxiliary_functions.hpp"
-#include "random_functions.hpp"
-#include "Rodeo_macros.hpp"
-#include "Rodeo_globals.hpp"
-#include "vector_operations.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "./INCLUDE/kriging_training.hpp"
+#include "./INCLUDE/linear_regression.hpp"
+#include "../Random/INCLUDE/random_functions.hpp"
+#include "../INCLUDE/Rodeo_macros.hpp"
+#include "../INCLUDE/Rodeo_globals.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
@@ -398,6 +398,11 @@ void KrigingModel::addNewSampleToData(rowvec newsample){
 
 void KrigingModel::addNewLowFidelitySampleToData(rowvec newsample){
 
+	if(newsample.is_empty()){
+		abortWithErrorMessage("Sample is empty");
+
+	}
+
 	assert(false);
 
 }
@@ -543,9 +548,9 @@ double KrigingModel::calculateLikelihoodFunction(vec hyperParameters){
 
 	assert(ifDataIsRead);
 	assert(ifNormalized);
+	assert(numberOfSamples > 0);
 
-	unsigned int dim = data.getDimension();
-	unsigned int N = data.getNumberOfSamples();
+
 
 	correlationFunction.setHyperParameters(hyperParameters);
 
@@ -557,7 +562,7 @@ double KrigingModel::calculateLikelihoodFunction(vec hyperParameters){
 	}
 
 	double logdetR = linearSystemCorrelationMatrix.calculateLogDeterminant();
-	double NoverTwo = double(N)/2.0;
+	double NoverTwo = double(numberOfSamples)/2.0;
 
 	double likelihoodValue = 0.0;
 
@@ -605,11 +610,15 @@ void KrigingModel::train(void){
 		double globalBestL1error = LARGE;
 
 		KrigingHyperParameterOptimizer bestOptimizer;
+
+#ifdef OPENMP_SUPPORT
 		omp_set_num_threads(numberOfThreads);
+#endif
 
 		numberOfTrainingIterations = numberOfTrainingIterations/numberOfThreads;
-
+#ifdef OPENMP_SUPPORT
 #pragma omp parallel for
+#endif
 		for(unsigned int thread = 0; thread< numberOfThreads; thread++){
 
 			KrigingHyperParameterOptimizer parameterOptimizer;
@@ -643,8 +652,9 @@ void KrigingModel::train(void){
 			EAIndividual bestSolution = parameterOptimizer.getSolution();
 			vec optimizedHyperParameters = bestSolution.getGenes();
 
-
+#ifdef OPENMP_SUPPORT
 #pragma omp critical
+#endif
 			{
 
 				double bestSolutionLikelihood = bestSolution.getObjectiveFunctionValue();
@@ -656,8 +666,9 @@ void KrigingModel::train(void){
 			}
 		}
 
+#ifdef OPENMP_SUPPORT
 		omp_set_num_threads(1);
-
+#endif
 
 		correlationFunction.setHyperParameters(bestOptimizer.getBestDesignVector());
 
