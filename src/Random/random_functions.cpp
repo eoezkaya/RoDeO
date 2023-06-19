@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp,RPTU)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -66,56 +66,6 @@ double generateRandomDouble(double a, double b) {
 	return a + r;
 }
 
-
-void generateRandomDoubleArray(double *xp,double a, double b, unsigned int dim) {
-
-	for(unsigned int i=0; i<dim; i++) {
-
-		xp[i] = generateRandomDouble(a,b);
-
-	}
-
-
-}
-
-
-
-rowvec generateRandomRowVector(vec lb, vec ub){
-	unsigned int dim = lb.size();
-	rowvec x(dim);
-	for(unsigned int i=0; i<dim; i++) {
-		assert(lb(i) <= ub(i));
-		x(i) = generateRandomDouble(lb(i), ub(i));
-	}
-	return x;
-
-}
-
-rowvec generateRandomRowVector(double lb, double ub, unsigned int dim){
-
-	assert(lb <= ub);
-	rowvec x(dim,fill::zeros);
-
-	for(unsigned int i=0; i<dim; i++) {
-
-		x(i) = generateRandomDouble(lb, ub);
-	}
-	return x;
-
-}
-
-vec generateRandomVector(vec lb, vec ub){
-	unsigned int dim = lb.size();
-	vec x(dim);
-	for(unsigned int i=0; i<dim; i++) {
-		assert(lb(i) <= ub(i));
-		x(i) = generateRandomDouble(lb(i), ub(i));
-	}
-	return x;
-
-}
-
-
 mat generateRandomMatrix(unsigned int Nrows, vec lb, vec ub){
 
 	assert(lb.size() == ub.size());
@@ -125,7 +75,7 @@ mat generateRandomMatrix(unsigned int Nrows, vec lb, vec ub){
 
 	for(unsigned int i=0; i<Nrows; i++) {
 
-		X.row(i) = generateRandomRowVector(lb,ub);
+		X.row(i) = generateRandomVector<rowvec>(lb,ub);
 
 	}
 
@@ -134,30 +84,6 @@ mat generateRandomMatrix(unsigned int Nrows, vec lb, vec ub){
 }
 
 
-
-vec generateRandomVector(double lb, double ub, unsigned int dim){
-
-	assert(lb <= ub);
-	vec x(dim,fill::zeros);
-
-	for(unsigned int i=0; i<dim; i++) {
-
-		x(i) = generateRandomDouble(lb, ub);
-	}
-	return x;
-
-}
-
-
-void generateRandomVector(vec lb, vec ub, unsigned int dim, double *x){
-
-
-	for(unsigned int i=0; i<dim; i++) {
-		assert(lb(i) < ub(i));
-		x[i] = generateRandomDouble(lb(i), ub(i));
-	}
-
-}
 
 
 
@@ -178,63 +104,5 @@ double generateRandomDoubleFromNormalDist(double xs, double xe, double sigma_fac
 	return distribution(generator);
 }
 
-//void generateKRandomIntegers(uvec &numbers, unsigned int N, unsigned int k){
-//
-//	unsigned int numbersGenerated = 0;
-//
-//	numbers.fill(0);
-//
-//
-//	while (numbersGenerated != k){
-//
-//
-//		int r = rand()%N;
-//#if 0
-//		printf("random number = %d\n",r);
-//#endif
-//		if (isIntheList(r, numbers) == -1 ){
-//
-//			numbers(numbersGenerated) = r;
-//			numbersGenerated++;
-//#if 0
-//			printf("numbers =\n");
-//			numbers.print();
-//#endif
-//		}
-//
-//	}
-//
-//}
-
-
-
-
-
-/** generate a random weight matrix: all elements other than the diagonal are positive, sum of all rows is equal to one
- *
- */
-mat generateRandomWeightMatrix(unsigned int dim){
-
-	mat weights(dim,dim,fill::randn);
-
-	weights = abs(weights);
-	for(unsigned int i=0; i<dim; i++){
-
-		weights(i,i) = 0.0;
-	}
-	colvec rowSum = sum(weights,1);
-
-	for(unsigned int i=0; i<dim; i++){
-		for(unsigned int j=0; j<dim; j++){
-
-			weights(i,j) = weights(i,j)/rowSum(i);
-		}
-
-	}
-
-
-	return weights;
-
-}
 
 

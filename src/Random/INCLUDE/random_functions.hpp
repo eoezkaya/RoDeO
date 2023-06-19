@@ -39,26 +39,37 @@ int generateRandomInt(int a, int b);
 int generateRandomInt(uvec indices);
 
 double generateRandomDouble(double a, double b);
-void generateRandomDoubleArray(double *xp,double a, double b, unsigned int dim);
 
-
-rowvec generateRandomRowVector(vec lb, vec ub);
-rowvec generateRandomRowVector(double lb, double ub, unsigned int dim);
-
-vec generateRandomVector(vec lb, vec ub);
-vec generateRandomVector(double lb, double ub, unsigned int dim);
-
-void generateRandomVector(vec lb, vec ub, unsigned int dim, double *x);
 
 mat generateRandomMatrix(unsigned int Nrows, vec lb, vec ub);
 
 double generateRandomDoubleFromNormalDist(double xs, double xe, double sigma_factor);
 
 
-void generateKRandomIntegers(uvec &numbers, unsigned int N, unsigned int k);
-mat generateRandomWeightMatrix(unsigned int dim);
 
+template <typename T>
+T generateRandomVector(const vec & lb, const vec & ub){
+	unsigned int dim = lb.size();
+	T x(dim);
+	for(unsigned int i=0; i<dim; i++) {
 
+		x(i) = generateRandomDouble(lb(i), ub(i));
+	}
+	return x;
+
+}
+
+template <typename T>
+T generateRandomVector(double lb, double ub, unsigned int dim){
+
+	T x(dim);
+	for(unsigned int i=0; i<dim; i++) {
+
+		x(i) = generateRandomDouble(lb, ub);
+	}
+	return x;
+
+}
 
 
 #endif

@@ -92,18 +92,18 @@ void Design::setNumberOfConstraints(unsigned int howManyConstraints){
 }
 
 void Design::generateRandomDesignVector(vec lb, vec ub){
-	designParameters = generateRandomRowVector(lb,ub);
+	designParameters = generateRandomVector<rowvec>(lb,ub);
 }
 
 void Design::generateRandomDesignVector(double lb, double ub){
 
-	designParameters = generateRandomRowVector(lb,ub,dimension);
+	designParameters = generateRandomVector<rowvec>(lb,ub,dimension);
 }
 
 
 void Design::generateRandomDifferentiationDirection(void) {
 
-	rowvec direction =  generateRandomRowVector(-1.0,1.0,dimension);
+	rowvec direction =  generateRandomVector<rowvec>(-1.0,1.0,dimension);
 	tangentDirection =  makeUnitVector(direction);
 }
 
@@ -503,13 +503,13 @@ void DesignForBayesianOptimization::generateRandomDesignVector(void){
 
 	double lowerBound = 0.0;
 	double upperBound = 1.0/dim;
-	dv = generateRandomRowVector(lowerBound, upperBound , dim);
+	dv = generateRandomVector<rowvec>(lowerBound, upperBound , dim);
 
 
 }
 
 void DesignForBayesianOptimization::generateRandomDesignVector(vec lb, vec ub){
-	dv = generateRandomRowVector(lb, ub);
+	dv = generateRandomVector<rowvec>(lb, ub);
 }
 
 void DesignForBayesianOptimization::generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub){
@@ -533,7 +533,7 @@ void DesignForBayesianOptimization::generateRandomDesignVectorAroundASample(cons
 
 	}
 
-	dv = generateRandomRowVector(lowerBounds, upperBounds);
+	dv = generateRandomVector<rowvec>(lowerBounds, upperBounds);
 }
 
 void DesignForBayesianOptimization::print(void) const{

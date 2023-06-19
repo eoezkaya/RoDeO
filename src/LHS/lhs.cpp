@@ -241,7 +241,7 @@ void LHSSamples::generateSamples(void){
 			ub(i) = lb(i) + 0.1*dx(i);
 		}
 
-		rowvec dv = generateRandomRowVector(lb,ub);
+		rowvec dv = generateRandomVector<rowvec>(lb,ub);
 #if 0
 		printVector(lb,"lb");
 		printVector(ub,"ub");
@@ -509,7 +509,7 @@ void RandomSamples::generateSamples(void){
 	while(numberOfSamplesGenerated < numberOfSamples){
 
 
-		rowvec dv = generateRandomRowVector(lowerBounds,upperBounds);
+		rowvec dv = generateRandomVector<rowvec>(lowerBounds,upperBounds);
 #if 0
 		printVector(dv,"dv");
 #endif

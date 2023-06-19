@@ -189,7 +189,7 @@ void EAIndividual::printLess(void) const{
 void EAIndividual::initializeRandom(void){
 
 	assert(dimension>0);
-	genes = generateRandomVector(0.0,1.0,dimension);
+	genes = generateRandomVector<vec>(0.0,1.0,dimension);
 	fitness = generateRandomDouble(0.0,1.0);
 	objectiveFunctionValue = generateRandomDouble(0.0,1.0);
 	reproductionProbability = generateRandomDouble(0.0,0.1);

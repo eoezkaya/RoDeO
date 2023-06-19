@@ -70,16 +70,10 @@ void Bounds::reset(void){
 }
 
 unsigned int Bounds::getDimension(void) const{
-
 	return dimension;
-
 }
-
-
 void Bounds::setDimension(unsigned int value){
-
 	dimension = value;
-
 }
 
 
@@ -116,39 +110,14 @@ void Bounds::setBounds(double lowerBound, double upperBound) {
 }
 
 bool Bounds::areBoundsSet(void) const{
-
 	return ifBoundsAreSet;
-
 }
-
-
-
-
 vec Bounds::getLowerBounds(void) const{
-
 	return lowerBounds;
-
-
 }
-
-double Bounds::getLowerBound(unsigned int index) const{
-
-	return lowerBounds(index);
-
-}
-
-
 
 vec Bounds::getUpperBounds(void) const{
-
 	return upperBounds;
-
-}
-
-double Bounds::getUpperBound(unsigned int index) const{
-
-	return upperBounds(index);
-
 }
 
 bool Bounds::checkIfBoundsAreValid(void) const{
@@ -156,17 +125,11 @@ bool Bounds::checkIfBoundsAreValid(void) const{
 	assert(dimension>0);
 
 	for(unsigned int i=0; i<dimension; i++){
-
-
 		if(lowerBounds(i) >= upperBounds(i) ) {
-
 			return false;
 		}
-
 	}
-
 	return true;
-
 }
 
 bool Bounds::isPointWithinBounds(const vec &inputVector) const{
@@ -194,7 +157,7 @@ void Bounds::print(void) const{
 vec Bounds::generateVectorWithinBounds(void) const{
 
 	assert(areBoundsSet());
-	vec randomVector = generateRandomVector(lowerBounds, upperBounds);
+	vec randomVector = generateRandomVector<vec>(lowerBounds, upperBounds);
 
 	return randomVector;
 

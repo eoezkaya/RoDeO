@@ -33,10 +33,71 @@
 #include "../INCLUDE/random_functions.hpp"
 
 
-
 TEST(testrandom, generateRandomDouble){
+
+	double r = generateRandomDouble(12.7, 12.8);
+	ASSERT_TRUE(r>12.7);
+	ASSERT_TRUE(r<12.8);
 
 
 }
+
+TEST(testrandom, generateRandomvector){
+
+	vec lb(3);
+	vec ub(3);
+
+	lb.fill(-1.0);
+	ub.fill(2.8);
+
+	vec r = generateRandomVector<vec>(lb,ub);
+
+	ASSERT_TRUE(r.size() == 3);
+
+	for(unsigned int i=0; i<3; i++){
+
+		ASSERT_TRUE(r(i) > -1.0);
+		ASSERT_TRUE(r(i) <  2.8);
+
+	}
+
+
+}
+
+TEST(testrandom, generateRandomRowvector){
+
+	vec lb(3);
+	vec ub(3);
+
+	lb.fill(-1.0);
+	ub.fill(2.8);
+
+	rowvec r = generateRandomVector<rowvec>(lb,ub);
+
+	ASSERT_TRUE(r.size() == 3);
+
+	for(unsigned int i=0; i<3; i++){
+
+		ASSERT_TRUE(r(i) > -1.0);
+		ASSERT_TRUE(r(i) <  2.8);
+
+	}
+
+
+	r = generateRandomVector<rowvec>(-1.0,2.8,3);
+
+	ASSERT_TRUE(r.size() == 3);
+
+	for(unsigned int i=0; i<3; i++){
+
+		ASSERT_TRUE(r(i) > -1.0);
+		ASSERT_TRUE(r(i) <  2.8);
+
+	}
+
+
+
+}
+
 
 

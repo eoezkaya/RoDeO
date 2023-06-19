@@ -142,10 +142,13 @@ TEST(testBounds, setlowerBound){
 
 	testBounds.setBounds(lowerBounds,upperBounds);
 
-	double result1 = testBounds.getLowerBound(2);
+	vec lb = testBounds.getLowerBounds();
+	vec ub = testBounds.getUpperBounds();
+
+	double result1 = lb(2);
 	EXPECT_EQ(result1,lowerBounds(2));
 
-	double result2 = testBounds.getUpperBound(4);
+	double result2 = ub(4);
 	EXPECT_EQ(result2,upperBounds(4));
 
 
