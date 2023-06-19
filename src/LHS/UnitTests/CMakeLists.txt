@@ -1,0 +1,13 @@
+if(UNIT_TESTS)
+	set(src_files lhs_test.cpp)
+	add_executable(runTestsLHS runTests.cpp ${src_files})
+	find_package(Armadillo REQUIRED)
+	include_directories(${ARMADILLO_INCLUDE_DIRS})
+	target_link_libraries(runTestsLHS gtest_main)
+	target_link_libraries(runTestsLHS ${ARMADILLO_LIBRARIES})
+	target_link_libraries(runTestsLHS lhs)
+	target_link_libraries(runTestsLHS random)
+	target_link_libraries(runTestsLHS linearAlgebra)
+	target_link_libraries(runTestsLHS auxiliary)
+	
+endif(UNIT_TESTS)

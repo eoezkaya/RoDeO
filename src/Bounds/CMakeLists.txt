@@ -16,3 +16,9 @@ message("-- Target compiler flags for bounds are: ${MAIN_CFLAGS}")
 add_custom_command(TARGET bounds POST_BUILD
 COMMAND echo built with the flags: ${MAIN_CFLAGS})
 
+target_link_libraries(bounds random)
+
+
+if(UNIT_TESTS)
+add_subdirectory(./UnitTests)
+endif(UNIT_TESTS)

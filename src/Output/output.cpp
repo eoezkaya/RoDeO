@@ -122,7 +122,7 @@ void OutputDevice::printMessage(std::string message, rowvec whatToPrint) const{
 
 void OutputDevice::printMessage(std::string message, mat whatToPrint) const{
 	if(ifScreenDisplay){
-		printMatrix(whatToPrint,message);
+		whatToPrint.print(message);
 	}
 }
 

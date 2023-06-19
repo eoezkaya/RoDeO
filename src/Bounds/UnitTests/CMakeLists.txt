@@ -1,0 +1,10 @@
+if(UNIT_TESTS)
+	set(src_files bounds_test.cpp)
+	add_executable(runBoundsTest runTests.cpp ${src_files})
+	find_package(Armadillo REQUIRED)
+	include_directories(${ARMADILLO_INCLUDE_DIRS})
+	target_link_libraries(runBoundsTest gtest_main)
+	target_link_libraries(runBoundsTest ${ARMADILLO_LIBRARIES})
+	target_link_libraries(runBoundsTest   bounds)
+
+endif(UNIT_TESTS)

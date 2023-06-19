@@ -34,6 +34,7 @@
 #include "./INCLUDE/lhs.hpp"
 #include "../Random/INCLUDE/random_functions.hpp"
 #include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 
 
 LHSSamples::LHSSamples(unsigned int d, double lb, double ub, unsigned int N){
@@ -408,16 +409,13 @@ bool LHSSamples::testIfSamplesAreTooClose(void){
 
 
 void LHSSamples::saveSamplesToCSVFile(std::string fileName){
-
-
 	saveMatToCVSFile(samples,fileName);
-
 }
 
 
 
 void LHSSamples::printSamples(void){
-	printMatrix(samples,"LHS Samples");
+	samples.print("LHS Samples");
 }
 
 
@@ -482,6 +480,7 @@ RandomSamples::RandomSamples(unsigned int d, vec lb, vec ub, unsigned int N){
 	upperBounds= ub;
 	lowerBounds= lb;
 
+	samples.reset();
 	samples = zeros<mat>(N,d);
 
 	generateSamples();
@@ -533,7 +532,8 @@ void RandomSamples::saveSamplesToCSVFile(std::string fileName){
 
 
 void RandomSamples::printSamples(void){
-	printMatrix(samples,"Random Samples");
+
+	samples.print("Random Samples");
 
 }
 
@@ -793,7 +793,7 @@ void FullFactorialSamples::saveSamplesToCSVFile(std::string fileName){
 void FullFactorialSamples::printSamples(void){
 
 
-	printMatrix(this->samples,"Full Factorial Samples");
+	samples.print("Full factorial Samples");
 
 
 

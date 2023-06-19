@@ -20,9 +20,6 @@ if(UNIT_TESTS)
 	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 	FetchContent_MakeAvailable(googletest)
 	
-	
-	
-     
 else()
     message("-- Building without Unit Tests")
 endif(UNIT_TESTS)
@@ -68,12 +65,7 @@ target_link_libraries(${PROJECT_NAME}  random)
 target_link_libraries(${PROJECT_NAME}  surrogateModels)
 target_link_libraries(${PROJECT_NAME}  testFunctions)
 
-if(UNIT_TESTS)
-	target_link_libraries(${PROJECT_NAME} gtest_main)
-	add_subdirectory(../UnitTests/src/LinearAlgebra)
-	target_link_libraries(${PROJECT_NAME}  linearAlgebraTest)
-	
-endif(UNIT_TESTS)
+
 
 
 find_package(Armadillo REQUIRED)

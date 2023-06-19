@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDEO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, RPTU)
@@ -28,7 +28,6 @@
  *
  *
  */
-
 #include <stdio.h>
 #include <math.h>
 #include <string>
@@ -140,10 +139,8 @@ void TestFunction::print(void){
 	printf("Function name = %s\n",function_name.c_str());
 	printf("Number of independent variables = %d\n",dimension);
 	printf("Parameter bounds:\n");
-
-
-	printMatrix(trainingSamples, "trainingSamples");
-	printMatrix(testSamples, "testSamples");
+	trainingSamples.print("trainingSamples");
+	testSamples.print("testSamples");
 	boxConstraints.print();
 
 

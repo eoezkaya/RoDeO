@@ -1,0 +1,10 @@
+if(UNIT_TESTS)
+	set(src_files correlation_functions_test.cpp exponential_correlation_function_test.cpp)
+	add_executable(runTestsCorrelationFunctions runTests.cpp ${src_files})
+	find_package(Armadillo REQUIRED)
+	include_directories(${ARMADILLO_INCLUDE_DIRS})
+	target_link_libraries(runTestsCorrelationFunctions gtest_main)
+	target_link_libraries(runTestsCorrelationFunctions ${ARMADILLO_LIBRARIES})
+	target_link_libraries(runTestsCorrelationFunctions   correlationFunctions)
+
+endif(UNIT_TESTS)

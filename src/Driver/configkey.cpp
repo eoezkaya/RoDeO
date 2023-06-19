@@ -36,7 +36,6 @@
 #include <sstream>
 #include <stdlib.h>
 #include <iostream>
-#include <unistd.h>
 #include <cassert>
 #include "./INCLUDE/configkey.hpp"
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"

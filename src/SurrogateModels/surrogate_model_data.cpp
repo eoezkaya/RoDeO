@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -20,7 +20,7 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with RoDeO.
+ * General Public License along with RoDEO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Emre Özkaya, (SciComp, RPTU)
@@ -28,7 +28,6 @@
  *
  *
  */
-
 
 
 #include "./INCLUDE/surrogate_model_data.hpp"
@@ -545,29 +544,28 @@ bool SurrogateModelData::isDataNormalized(void) const{
 
 void SurrogateModelData::print(void) const{
 
-	printMatrix(rawData,"raw data");
-	printMatrix(X,"sample input matrix");
+	rawData.print("raw data");
+	X.print("X");
 	trans(y).print("sample output vector");
 
 
 	if(ifDataHasGradients){
 
-		printMatrix(gradient,"sample gradient matrix");
+		gradient.print("sample gradient matrix");
 
 	}
 
 	if(ifDataHasDirectionalDerivatives){
 
 		trans(directionalDerivatives).print("directional derivatives");
-		printMatrix(differentiationDirections, "differentiation directions");
+		differentiationDirections.print("differentiation directions");
 
 	}
 
 	if(ifTestDataIsRead){
 
-		printMatrix(XrawTest,"raw data for testing");
-
-		printMatrix(XTest, "sample input matrix for testing");
+		XrawTest.print("raw data for testing");
+		XTest.print("sample input matrix for testing");
 
 	}
 

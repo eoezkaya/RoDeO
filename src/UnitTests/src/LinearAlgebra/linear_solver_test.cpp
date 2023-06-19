@@ -29,14 +29,15 @@
  *
  */
 
-#include "linear_solver.hpp"
-#include "auxiliary_functions.hpp"
-#include "test_defines.hpp"
+#include "../../../LinearAlgebra/INCLUDE/linear_solver.hpp"
+#include "../../../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../INCLUDE/test_defines.hpp"
+
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 #include<gtest/gtest.h>
 
-#ifdef TEST_LINEAR_SOLVER
+#ifdef LINEAR_SOLVER_TEST
 
 class CholeskySystemTest : public ::testing::Test {
 protected:

@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -171,23 +171,6 @@ void saveMatToCVSFile(mat M, std::string fileName){
 
 
 
-void printMatrix(mat M, std::string name){
-
-
-	std::cout<< '\n';
-	if(name != "None") std::cout<<name<<": "<<M.n_rows<<"x"<<M.n_cols<<"matrix\n";
-	M.print();
-	std::cout<< '\n';
-
-}
-
-
-
-
-
-
-
-
 
 mat normalizeMatrix(mat matrixIn){
 
@@ -322,40 +305,15 @@ bool isEqual(const mat &A, const mat&B, double tolerance){
 }
 
 
-int findInterval(double value, vec discreteValues){
 
-
-	for(unsigned int i=0; i<discreteValues.size()-1; i++) {
-
-		double xs = discreteValues[i];
-		double xe = discreteValues[i+1];
-
-		assert(xe>xs);
-
-		if(value>=xs && value <xe) return i;
-
-	}
-
-	if (value > discreteValues[discreteValues.size()-1]) {
-
-		return discreteValues.size()-1;
-	}
-
-	return -1;
-}
 
 
 int findIndexOfRow(const rowvec &v, const mat &A, double tolerance = 10E-8){
 
 	assert(v.size() == A.n_cols);
-
-
 	for(unsigned int i=0; i<A.n_rows; i++){
-
 		if(isEqual(v,A.row(i), tolerance)) return i;
-
 	}
-
 	return -1;
 }
 
@@ -379,17 +337,6 @@ mat shuffleRows(mat A){
 
 
 
-
-bool isIntheList(const vector<int> &list, int element){
-
-	unsigned int dim = list.size();
-
-	for(unsigned int i=0; i<dim; i++){
-		if(element == list[i]) return true;
-	}
-
-	return false;
-}
 
 
 

@@ -48,7 +48,6 @@ using namespace arma;
 bool isEqual(const mat &A, const mat&B, double tolerance);
 
 
-void printMatrix(mat M, std::string name="None");
 
 
 #define printScalar(name) printScalarValueWithName(#name, (name))
@@ -80,14 +79,11 @@ mat normalizeMatrix(mat matrixIn, vec xmin, vec xmax);
 mat normalizeMatrix(mat matrixIn, Bounds &boxConstraints);
 
 
-int findInterval(double value, vec discreteValues);
 
 int findIndexOfRow(const rowvec &v, const mat &A, double);
 
 
 mat shuffleRows(mat A);
 
-//bool isIntheList(const uvec&, int);
-bool isIntheList(const std::vector<int> &list, int element);
 
 #endif

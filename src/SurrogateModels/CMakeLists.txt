@@ -22,6 +22,7 @@ endif(ASSERTS)
 
 
 target_link_libraries(surrogateModels correlationFunctions)
+target_link_libraries(surrogateModels auxiliary)
 target_link_libraries(surrogateModels linearAlgebra)
 target_link_libraries(surrogateModels optimizers)
 target_link_libraries(surrogateModels metric)
@@ -34,3 +35,8 @@ message("-- Target compiler flags for surrogateModels are: ${MAIN_CFLAGS}")
 
 add_custom_command(TARGET surrogateModels POST_BUILD
 COMMAND echo built with the flags: ${MAIN_CFLAGS})
+
+
+if(UNIT_TESTS)
+	add_subdirectory(./UnitTests)
+endif(UNIT_TESTS)

@@ -1,0 +1,11 @@
+if(UNIT_TESTS)
+	set(src_files linear_solver_test.cpp matrix_operations_test.cpp vector_operations_test.cpp)
+	add_executable(runTestsLinearAlgebra runTests.cpp ${src_files})
+	find_package(Armadillo REQUIRED)
+	include_directories(${ARMADILLO_INCLUDE_DIRS})
+	target_link_libraries(runTestsLinearAlgebra gtest_main)
+	target_link_libraries(runTestsLinearAlgebra ${ARMADILLO_LIBRARIES})
+	target_link_libraries(runTestsLinearAlgebra   linearAlgebra)
+	target_link_libraries(runTestsLinearAlgebra   auxiliary)
+
+endif(UNIT_TESTS)

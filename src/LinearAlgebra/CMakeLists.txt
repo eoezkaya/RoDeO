@@ -19,3 +19,5 @@ message("-- Target compiler flags for linearAlgebra are: ${MAIN_CFLAGS}")
 
 add_custom_command(TARGET linearAlgebra POST_BUILD
 COMMAND echo built with the flags: ${MAIN_CFLAGS})
+
+add_subdirectory(./UnitTests)

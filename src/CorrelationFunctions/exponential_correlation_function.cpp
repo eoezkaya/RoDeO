@@ -208,7 +208,7 @@ void ExponentialCorrelationFunction::print(void) const{
 	std::cout<<"Exponential correlation function = \n";
 	thetaParameters.print("theta:");
 	gammaParameters.print("theta:");
-	printScalar(epsilon);
+	std::cout<<"epsilon = "<<epsilon<<"\n";
 
 
 

@@ -34,16 +34,27 @@
 
 #include <armadillo>
 #include <vector>
-#include <map>
-#include <math.h>
 #include <cassert>
-#include "../../INCLUDE/Rodeo_macros.hpp"
-#include "../../INCLUDE/Rodeo_globals.hpp"
-#include "../../Random/INCLUDE/random_functions.hpp"
-#include "../../Metric/INCLUDE/metric.hpp"
-#include "../../LinearAlgebra/INCLUDE/matrix_operations.hpp"
 using namespace arma;
 using std::string;
+
+
+
+bool isEmpty(std::string);
+bool isNotEmpty(std::string);
+bool isEqual(string s1, string s2);
+bool checkIfOn(std::string keyword);
+bool checkIfOff(std::string keyword);
+std::vector<std::string> getStringValuesFromString(std::string sub_str, char delimiter);
+vec getDoubleValuesFromString(std::string sub_str, char delimiter);
+std::string removeSpacesFromString(std::string );
+std::string removeKeywordFromString(std::string inputStr,  std::string keyword);
+
+
+
+
+
+
 
 void executePythonScript(std::string command);
 
@@ -53,8 +64,6 @@ void compileWithCpp(std::string, std::string);
 
 
 void changeDirectoryToUnitTests(void);
-
-void normalizeDataMatrix(mat matrixIn, mat &matrixOut);
 
 
 
@@ -71,7 +80,11 @@ bool isNumberBetween(T number, T a, T b){
 }
 
 
-template<typename T> bool isIntheList(const std::vector<T> &vec, T item){
+
+
+
+template<typename T>
+bool isIntheList(const std::vector<T> &vec, T item){
 
 	if ( std::find(vec.begin(), vec.end(), item) != vec.end() )
 		return true;
@@ -80,14 +93,16 @@ template<typename T> bool isIntheList(const std::vector<T> &vec, T item){
 
 }
 
-template<typename T> bool isNotIntheList(const std::vector<T> &vec, T item){
+template<typename T>
+bool isNotIntheList(const std::vector<T> &vec, T item){
 
 	if(isIntheList(vec, item)) return false;
 	else return true;
 }
 
 
-template<typename T> bool isIntheList(T* v, T item, unsigned int dim){
+template<typename T>
+bool isIntheList(T* v, T item, unsigned int dim){
 
 	for(unsigned int i=0; i<dim; i++){
 
@@ -98,7 +113,8 @@ template<typename T> bool isIntheList(T* v, T item, unsigned int dim){
 	return false;
 }
 
-template<typename T> bool isNotIntheList(T* v, T item, unsigned int dim){
+template<typename T>
+bool isNotIntheList(T* v, T item, unsigned int dim){
 
 	if(isIntheList(v, item, dim)) return false;
 	else return true;
@@ -112,19 +128,6 @@ void abortIfDoesNotMatch(int firstNumber, int secondNumber, string message = "No
 void abortWithErrorMessage(string message);
 
 
-bool isEmpty(std::string);
-bool isNotEmpty(std::string);
-bool isEqual(string s1, string s2);
-
-
-bool checkIfOn(std::string keyword);
-bool checkIfOff(std::string keyword);
-
-
-
-double calculatePolynomial(double x, const rowvec &coeffs);
-double calculateTensorProduct(const rowvec &x, const mat &coeffs);
-
 double pdf(double x, double mu, double sigma);
 
 /* Returns the probability of [-inf,x] of a gaussian distribution */
@@ -134,21 +137,11 @@ double calculateProbalityGreaterThanAValue(double value, double mu, double sigma
 
 
 
-
-//void solveLinearSystemCholesky(mat U, vec &x, vec b);
-
 bool file_exist(const char *fileName);
 bool file_exist(std::string filename);
 
 void readFileToaString(std::string, std::string &);
 
-
-std::vector<std::string> getStringValuesFromString(std::string sub_str, char delimiter);
-vec getDoubleValuesFromString(std::string sub_str, char delimiter);
-std::string removeSpacesFromString(std::string );
-std::string removeKeywordFromString(std::string inputStr,  std::string keyword);
-
-void compute_max_min_distance_data(mat &x, double &max_distance, double &min_distance);
 
 
 bool checkifTooCLose(const rowvec &, const rowvec &, double = 10E-6);

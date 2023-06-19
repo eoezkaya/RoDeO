@@ -33,14 +33,10 @@
 
 #include<stdio.h>
 #include<iostream>
-#ifdef UNIT_TESTS
-#include<gtest/gtest.h>
-#endif
 
 #include "./Auxiliary/INCLUDE/auxiliary_functions.hpp"
 #include "./Driver/INCLUDE/drivers.hpp"
 #include "./Output/INCLUDE/output.hpp"
-
 
 
 
@@ -51,18 +47,6 @@ int main(int argc, char* argv[]){
 	printRoDeOIntro();
 	/* initialize random seed*/
 	srand (time(NULL));
-
-#ifdef UNIT_TESTS
-
-	changeDirectoryToUnitTests();
-
-	testing::InitGoogleTest(&argc, argv);
-	int runTestsResult = RUN_ALL_TESTS();
-
-	return runTestsResult;
-
-#endif
-
 
 	if(argc == 1){
 		abortWithErrorMessage("File name for the configuration file (*.cfg) is missing!");
