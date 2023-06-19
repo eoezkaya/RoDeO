@@ -59,10 +59,17 @@ TEST(testBounds, constructorWithVectors){
 
 	vec lowerBoundsGet = testBounds.getLowerBounds();
 
-	for(unsigned int i=0; i<dim; i++) ASSERT_EQ(lowerBoundsGet(i),lowerBounds(i));
+	for(unsigned int i=0; i<dim; i++) {
+
+		ASSERT_EQ(lowerBoundsGet(i),lowerBounds(i));
+	}
 
 	vec upperBoundsGet = testBounds.getUpperBounds();
-	for(unsigned int i=0; i<dim; i++) ASSERT_EQ(upperBoundsGet(i),upperBounds(i));
+
+	for(unsigned int i=0; i<dim; i++) {
+
+		ASSERT_EQ(upperBoundsGet(i),upperBounds(i));
+	}
 
 }
 
@@ -78,7 +85,10 @@ TEST(testBounds, setBoundsWithVectors){
 	testBounds.setBounds(lowerBounds,upperBounds);
 
 	vec lowerBoundsGet = testBounds.getLowerBounds();
-	for(unsigned int i=0; i<dim; i++) ASSERT_EQ(lowerBoundsGet(i),lowerBounds(i));
+	for(unsigned int i=0; i<dim; i++) {
+
+		ASSERT_EQ(lowerBoundsGet(i),lowerBounds(i));
+	}
 
 
 

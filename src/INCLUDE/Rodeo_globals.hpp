@@ -1,11 +1,11 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2020 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
- * Lead developer: Emre Özkaya (SciComp, TU Kaiserslautern)
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
  *
  * This file is part of RoDeO
  *
@@ -20,10 +20,10 @@
  *
  * See the GNU General Public License for more details.
  * You should have received a copy of the GNU
- * General Public License along with CoDiPack.
+ * General Public License along with RoDeO.
  * If not, see <http://www.gnu.org/licenses/>.
  *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
+ * Authors: Emre Özkaya, (SciComp, RPTU)
  *
  *
  *
@@ -31,9 +31,7 @@
 
 #ifndef RODEO_GLOBALS_HPP
 #define RODEO_GLOBALS_HPP
-#include "read_settings.hpp"
 
-extern Rodeo_settings settings;
 
 const double SQRT2PI = 2.506628274631000;
 const double INVSQRT2PI = 0.3989422804014327;
@@ -41,4 +39,7 @@ const double LARGE = 10E14;
 const double EPSILON = 10E-14;
 const double GOLDENRATIO = 1.618033988749;
 const double SQRT2 = 1.414213562;
+
+
+
 #endif

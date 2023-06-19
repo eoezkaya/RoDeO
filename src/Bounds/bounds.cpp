@@ -85,10 +85,12 @@ void Bounds::setDimension(unsigned int value){
 
 void Bounds::setBounds(vec lowerBoundsInput, vec upperBoundsInput) {
 
+	assert(lowerBoundsInput.size()>0);
+	assert(upperBoundsInput.size()>0);
+	assert(lowerBoundsInput.size() == upperBoundsInput.size());
+
 	lowerBounds = lowerBoundsInput;
 	upperBounds = upperBoundsInput;
-
-	assert(lowerBounds.size() == upperBounds.size());
 
 	dimension = lowerBounds.size();
 	assert(checkIfBoundsAreValid());

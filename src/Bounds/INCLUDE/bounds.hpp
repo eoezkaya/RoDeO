@@ -55,27 +55,25 @@ public:
 
 	void reset(void);
 
-	unsigned int getDimension(void) const;
+
 	void setDimension(unsigned int);
-
-	vec getLowerBounds(void) const;
-	double getLowerBound(unsigned int) const;
-	double getUpperBound(unsigned int) const;
-
-	vec getUpperBounds(void) const;
-
-	bool checkIfBoundsAreValid(void) const;
 	void setBounds(vec, vec);
 	void setBounds(double, double);
 
+
+	bool checkIfBoundsAreValid(void) const;
 	bool areBoundsSet(void) const;
+	bool isPointWithinBounds(const vec &) const;
 
 	vec generateVectorWithinBounds(void) const;
-	bool isPointWithinBounds(const vec &) const;
 
 	void print(void) const;
 
-
+	unsigned int getDimension(void) const;
+	vec getLowerBounds(void) const;
+	double getLowerBound(unsigned int) const;
+	double getUpperBound(unsigned int) const;
+	vec getUpperBounds(void) const;
 
 };
 
