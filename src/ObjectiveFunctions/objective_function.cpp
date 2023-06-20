@@ -131,6 +131,10 @@ void ObjectiveFunctionDefinition::print(void) const{
 }
 
 
+
+/**********************************************************************************************/
+
+
 ObjectiveFunction::ObjectiveFunction(){}
 
 void ObjectiveFunction::setEvaluationMode(std::string mode){
@@ -235,7 +239,7 @@ void ObjectiveFunction::bindSurrogateModelSingleFidelity() {
 	if (definition.modelHiFi == GRADIENT_ENHANCED) {
 		bindWithGradientEnhancedModel();
 	}
-	if (definition.modelHiFi == TANGENT) {
+	if (definition.modelHiFi == TANGENT_ENHANCED) {
 		bindWithTangentEnhancedKrigingModel();
 	}
 }

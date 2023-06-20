@@ -33,11 +33,36 @@
 
 #include<gtest/gtest.h>
 
+TEST(testTestFunctions, constructor){
+
+	TestFunction testFun("testFunction",2);
+	ASSERT_TRUE(testFun.dimension == 2);
+	ASSERT_TRUE(testFun.adj_ptr == NULL);
+	ASSERT_TRUE(testFun.func_ptr == NULL);
+	ASSERT_TRUE(testFun.adj_ptrLowFi == NULL);
+	ASSERT_TRUE(testFun.func_ptrLowFi == NULL);
+	ASSERT_TRUE(testFun.tan_ptr == NULL);
+	ASSERT_TRUE(testFun.tan_ptrLowFi == NULL);
+	ASSERT_FALSE(testFun.boxConstraints.areBoundsSet());
+
+}
+
+
 
 TEST(testTestFunctions, GenerateSamplesInput){
 
 	TestFunction testFun("testFunction",2);
-	testFun.setBoxConstraints(0.0, 2.0);
+
+	Bounds boxConstraints;
+	vec lb(2);
+	vec ub(2);
+	lb(0) = -1.2;
+	lb(1) =  199.0;
+	ub(0) =  1.99;
+	ub(1) =  202.4;
+	boxConstraints.setBounds(lb, ub);
+
+	testFun.setBoxConstraints(boxConstraints);
 	testFun.numberOfTrainingSamples = 100;
 	testFun.numberOfTestSamples     = 10;
 	testFun.generateSamplesInputTrainingData();
@@ -49,16 +74,33 @@ TEST(testTestFunctions, GenerateSamplesInput){
 	ASSERT_EQ(samplesInput.n_rows, 100);
 	ASSERT_EQ(samplesInput.n_cols, 2);
 
+	for(unsigned int i=0; i<100; i++){
+
+		ASSERT_TRUE(samplesInput(i,0) > -1.2);
+		ASSERT_TRUE(samplesInput(i,0) <  1.99);
+		ASSERT_TRUE(samplesInput(i,1) >  199);
+		ASSERT_TRUE(samplesInput(i,1) <  202.4);
+
+	}
 
 	samplesInput = testFun.testSamplesInput;
 
 	ASSERT_EQ(samplesInput.n_rows, 10);
 	ASSERT_EQ(samplesInput.n_cols, 2);
 
+
+	for(unsigned int i=0; i<10; i++){
+
+		ASSERT_TRUE(samplesInput(i,0) > -1.2);
+		ASSERT_TRUE(samplesInput(i,0) <  1.99);
+		ASSERT_TRUE(samplesInput(i,1) >  199);
+		ASSERT_TRUE(samplesInput(i,1) <  202.4);
+
+	}
+
+
+
 }
-
-
-
 
 
 TEST(testTestFunctions, evaluate){

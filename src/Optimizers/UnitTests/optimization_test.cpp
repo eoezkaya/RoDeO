@@ -145,7 +145,7 @@ protected:
 		compileWithCpp("himmelblauTangent.cpp", definition.executableName);
 
 		himmelblauFunction.function.generateTrainingSamplesWithTangents();
-		definition.modelHiFi = TANGENT;
+		definition.modelHiFi = TANGENT_ENHANCED;
 		objFunHimmelblau.setParametersByDefinition(definition);
 		testOptimizer.addObjectFunction(objFunHimmelblau);
 

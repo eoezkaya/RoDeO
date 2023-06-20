@@ -174,7 +174,7 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
 	surrogateTester.setFileNameTestData(testFunction.function.filenameTestData);
 	surrogateTester.setNumberOfTrainingIterations(1000);
 
-	surrogateTester.setSurrogateModel(TANGENT);
+	surrogateTester.setSurrogateModel(TANGENT_ENHANCED);
 	surrogateTester.bindSurrogateModels();
 	surrogateTester.setDisplayOn();
 	surrogateTester.performSurrogateModelTest();

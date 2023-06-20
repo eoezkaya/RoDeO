@@ -70,7 +70,6 @@ public:
 
 	ObjectiveFunctionDefinition();
 	bool checkIfDefinitionIsOk(void) const;
-	unsigned int identifyCase(void) const;
 
 	void print(void) const;
 

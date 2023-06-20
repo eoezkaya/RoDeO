@@ -1134,7 +1134,7 @@ void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
 	else{
 
 		SURROGATE_MODEL type = objFun.getSurrogateModelType();
-		if(type == TANGENT){
+		if(type == TANGENT_ENHANCED){
 
 			currentBestDesign.generateRandomDifferentiationDirection();
 			objFun.setEvaluationMode("tangent");

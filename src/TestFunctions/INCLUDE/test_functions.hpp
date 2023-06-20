@@ -120,6 +120,7 @@ public:
     std::pair<double,double> evaluateGlobalExtrema(void) const;
 
 private:
+
     mat generateSamplesWithFunctionalValues(mat input, unsigned int N) const;
     mat generateSamplesWithAdjoints(mat input, unsigned int N) const;
     mat generateSamplesWithTangents(mat input, unsigned int N) const;

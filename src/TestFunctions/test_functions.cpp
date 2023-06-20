@@ -44,7 +44,6 @@
 
 #include "../Optimizers/INCLUDE/optimization.hpp"
 #include "../Random/INCLUDE/random_functions.hpp"
-#include "../LHS/INCLUDE/lhs.hpp"
 #include "../Bounds/INCLUDE/bounds.hpp"
 #include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
 #include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
@@ -64,8 +63,6 @@ TestFunction::TestFunction(std::string name,int dim):boxConstraints(dim){
 
 	dimension = dim;
 	function_name = name;
-
-
 }
 
 void TestFunction::setBoxConstraints(double lb, double ub){
@@ -207,6 +204,8 @@ void TestFunction::evaluate(Design &d) const{
 void TestFunction::generateSamplesInputTrainingData(void){
 
 	assert(numberOfTrainingSamples> 0);
+	assert(boxConstraints.areBoundsSet());
+
 	vec lb = boxConstraints.getLowerBounds();
 	vec ub = boxConstraints.getUpperBounds();
 
@@ -220,12 +219,7 @@ void TestFunction::generateSamplesInputTrainingData(void){
 		howManySamples = numberOfTrainingSamples;
 	}
 
-	LHSSamples samplesTraining(dimension, lb, ub, howManySamples);
-
-
-	trainingSamplesInput = samplesTraining.getSamples();
-	trainingSamplesInput = shuffleRows(trainingSamplesInput);
-
+	trainingSamplesInput = generateRandomMatrix(howManySamples,lb,ub);
 	ifInputSamplesAreGenerated = true;
 
 
@@ -234,11 +228,18 @@ void TestFunction::generateSamplesInputTrainingData(void){
 void TestFunction::generateSamplesInputTestData(void){
 
 	assert(numberOfTestSamples> 0);
+	assert(boxConstraints.areBoundsSet());
+
 	vec lb = boxConstraints.getLowerBounds();
 	vec ub = boxConstraints.getUpperBounds();
-	LHSSamples samplesTest(dimension, lb, ub, numberOfTestSamples);
 
-	testSamplesInput = samplesTest.getSamples();
+//
+//	LHSSamples samplesTest(dimension, lb, ub, numberOfTestSamples);
+//	testSamplesInput = samplesTest.getSamples();
+
+
+	testSamplesInput =  generateRandomMatrix(numberOfTestSamples,lb,ub);
+
 
 	if(dimension == 1) testSamplesInput = sort(testSamplesInput);
 

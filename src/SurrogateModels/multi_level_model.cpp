@@ -188,7 +188,7 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 	if(modelIDError == ORDINARY_KRIGING){
 		rawDataError = zeros<mat>(numberOfSamples,dimension+1);
 	}
-	if(modelIDError == TANGENT){
+	if(modelIDError == TANGENT_ENHANCED){
 		rawDataError = zeros<mat>(numberOfSamples,2*dimension+2);
 	}
 
@@ -206,7 +206,7 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 
 	}
 
-	if(modelIDError == TANGENT){
+	if(modelIDError == TANGENT_ENHANCED){
 
 		for(unsigned int i = 0; i < numberOfSamples; i++){
 
@@ -537,7 +537,7 @@ bool MultiLevelModel::checkifModelIDIsValid(SURROGATE_MODEL id) const{
 	if(id == NONE) return false;
 	if(id == ORDINARY_KRIGING) return true;
 	if(id == UNIVERSAL_KRIGING) return true;
-	if(id == TANGENT) return true;
+	if(id == TANGENT_ENHANCED) return true;
 	if(id == GRADIENT_ENHANCED) return true;
 
 
@@ -568,7 +568,7 @@ void MultiLevelModel::bindLowFidelityModel(void){
 
 	}
 
-	if(modelIDLowFi == TANGENT){
+	if(modelIDLowFi == TANGENT_ENHANCED){
 
 		output.printMessage("Binding the low fidelity model with the TEM model...");
 		surrogateModelGGEKLowFi.setDirectionalDerivativesOn();
@@ -600,7 +600,7 @@ void MultiLevelModel::bindErrorModel(void){
 
 	}
 
-	if((modelIDLowFi == TANGENT && modelIDHiFi == ORDINARY_KRIGING)
+	if((modelIDLowFi == TANGENT_ENHANCED && modelIDHiFi == ORDINARY_KRIGING)
 	|| (modelIDLowFi == GRADIENT_ENHANCED && modelIDHiFi == ORDINARY_KRIGING)){
 
 		output.printMessage("Binding the error model with the Ordinary Kriging model...");
@@ -611,7 +611,7 @@ void MultiLevelModel::bindErrorModel(void){
 	}
 
 
-	if(modelIDLowFi == TANGENT && modelIDHiFi == TANGENT){
+	if(modelIDLowFi == TANGENT_ENHANCED && modelIDHiFi == TANGENT_ENHANCED){
 
 		output.printMessage("Binding the error model with the TEM model...");
 		assert(false);

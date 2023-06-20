@@ -91,11 +91,11 @@ protected:
 
 	void setDefinitionForCase2(void){
 
-		definition.modelHiFi = AGGREGATION;
+		definition.modelHiFi = GRADIENT_ENHANCED;
 	}
 	void setDefinitionForCase3(void){
 
-		definition.modelHiFi = TANGENT;
+		definition.modelHiFi = TANGENT_ENHANCED;
 	}
 
 	void setDefinitionForCase4(void){

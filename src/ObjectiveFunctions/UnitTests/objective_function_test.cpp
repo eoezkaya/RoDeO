@@ -29,13 +29,28 @@
  *
  */
 
-#include<gtest/gtest.h>
+
 #include "../INCLUDE/objective_function.hpp"
 #include "../../Optimizers/INCLUDE/optimization.hpp"
 #include "../../LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "../../TestFunctions/INCLUDE/standard_test_functions.hpp"
 #include "../../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 
+#include<gtest/gtest.h>
+
+
+
+TEST(ObjectiveFunctionDefinitionTest, constructor){
+
+	ObjectiveFunctionDefinition testDefinition;
+
+	ASSERT_TRUE(testDefinition.modelHiFi == ORDINARY_KRIGING);
+	ASSERT_TRUE(testDefinition.modelLowFi == ORDINARY_KRIGING);
+	ASSERT_FALSE(testDefinition.ifDefined);
+	ASSERT_FALSE(testDefinition.ifMultiLevel);
+
+
+}
 
 
 class ObjectiveFunctionTest : public ::testing::Test {
@@ -64,11 +79,7 @@ protected:
 
 	}
 
-	void TearDown() override {
-
-
-
-	}
+	void TearDown() override {}
 
 	ObjectiveFunction objFunTest;
 	HimmelblauFunction himmelblauFunction;
@@ -82,7 +93,11 @@ protected:
 
 
 
-	void setDefinitionForCase1(void){}
+	void setDefinitionForCase1(void){
+
+		definition.modelHiFi = ORDINARY_KRIGING;
+
+	}
 
 	void setDefinitionForCase2(void){
 
@@ -90,7 +105,7 @@ protected:
 	}
 	void setDefinitionForCase3(void){
 
-		definition.modelHiFi = TANGENT;
+		definition.modelHiFi = TANGENT_ENHANCED;
 	}
 
 	void setDefinitionForCase4(void){

@@ -443,6 +443,11 @@ void Design::saveDesignVector(std::string fileName) const{
 	}
 }
 
+
+/************************************************************************************/
+
+
+
 DesignForBayesianOptimization::DesignForBayesianOptimization(){};
 
 DesignForBayesianOptimization::DesignForBayesianOptimization(unsigned int dimension, unsigned int numberOfConstraints){
@@ -488,15 +493,6 @@ void DesignForBayesianOptimization::gradientUpdateDesignVector(const rowvec &gra
 	}
 
 }
-
-
-
-
-
-
-
-
-
 
 
 void DesignForBayesianOptimization::generateRandomDesignVector(void){

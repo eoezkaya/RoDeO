@@ -57,6 +57,62 @@ protected:
 
 };
 
+TEST_F(DesignTest, constructor){
+
+	Design testObject;
+
+	ASSERT_TRUE(testObject.dimension == 0);
+	ASSERT_TRUE(testObject.isDesignFeasible);
+	ASSERT_EQ(testObject.ID,0);
+
+}
+
+
+TEST_F(DesignTest, constructorWithRowVector){
+
+	rowvec dv(2);
+	dv(0) = 1.2; dv(1) = 2.3;
+	Design testObject(dv);
+
+	ASSERT_TRUE(testObject.dimension == 2);
+	ASSERT_EQ(testObject.designParameters.size(), 2);
+	ASSERT_EQ(testObject.designParameters(0), 1.2);
+	ASSERT_EQ(testObject.designParameters(1), 2.3);
+	ASSERT_EQ(testObject.gradient.size(),2);
+	ASSERT_EQ(testObject.gradientLowFidelity.size(),2);
+
+}
+
+
+TEST_F(DesignTest, constructorWithInt){
+
+	Design testObject(2);
+
+	ASSERT_TRUE(testObject.dimension == 2);
+	ASSERT_EQ(testObject.designParameters.size(), 2);
+	ASSERT_EQ(testObject.gradient.size(),2);
+	ASSERT_EQ(testObject.gradientLowFidelity.size(),2);
+
+}
+
+TEST_F(DesignTest, generateRandomDifferentiationDirection){
+
+	Design testObject(2);
+	testObject.generateRandomDifferentiationDirection();
+	rowvec d = testObject.tangentDirection;
+
+	double normd = norm(d,2);
+	double error = fabs(normd - 1.0);
+
+	ASSERT_LT(error,10E-10);
+	ASSERT_TRUE(d(0) > -1.0 && d(0) < 1.0);
+	ASSERT_TRUE(d(1) > -1.0 && d(1) < 1.0);
+}
+
+
+
+
+
 
 TEST_F(DesignTest, constructSampleObjectiveFunction){
 
@@ -68,8 +124,6 @@ TEST_F(DesignTest, constructSampleObjectiveFunction){
 	ASSERT_EQ(samples(0), 1.0);
 	ASSERT_EQ(samples(1),-1.0);
 	ASSERT_EQ(samples(2), 8.9);
-
-
 
 }
 
@@ -155,7 +209,7 @@ TEST_F(DesignTest, constructSampleObjectiveFunctionGradientLowFi){
 	rowvec gradient(2);
 	gradient(0) = 11.0;
 	gradient(1) = 6.0;
-	testDesign.trueValue = 8.9;
+	testDesign.trueValueLowFidelity = 8.9;
 	testDesign.gradientLowFidelity = gradient;
 	rowvec samples = testDesign.constructSampleObjectiveFunctionWithGradientLowFi();
 
@@ -169,6 +223,7 @@ TEST_F(DesignTest, constructSampleObjectiveFunctionGradientLowFi){
 }
 
 TEST_F(DesignTest, constructSampleConstraint){
+
 
 	testDesign.setNumberOfConstraints(2);
 	testDesign.constraintTrueValues(0) =  2.2;
@@ -307,11 +362,12 @@ TEST_F(DesignTest, saveToAFile){
 
 	testDesign.saveToAFile("testDesign.dat");
 
+
 	remove("testDesign.dat");
 
 }
 
-class CDesignExpectedImprovementTest: public ::testing::Test {
+class DesignForBayesianOptimizationTest: public ::testing::Test {
 protected:
 	void SetUp() override {
 		testDesign.dim = 5;
@@ -334,7 +390,8 @@ protected:
 
 };
 
-TEST_F(CDesignExpectedImprovementTest, constructor){
+TEST_F(DesignForBayesianOptimizationTest, constructor){
+
 
 	ASSERT_EQ(testDesign.dim,5);
 	ASSERT_EQ(testDesign.constraintValues.size(),2);
@@ -342,7 +399,7 @@ TEST_F(CDesignExpectedImprovementTest, constructor){
 }
 
 
-TEST_F(CDesignExpectedImprovementTest, generateRandomDesignVector){
+TEST_F(DesignForBayesianOptimizationTest, generateRandomDesignVector){
 
 	testDesign.generateRandomDesignVector();
 
@@ -351,20 +408,26 @@ TEST_F(CDesignExpectedImprovementTest, generateRandomDesignVector){
 	}
 }
 
-//TEST_F(CDesignExpectedImprovementTest, gradientUpdateDesignVector){
-//
-//	rowvec dv(5);
-//	dv(0) = 0.1; dv(1) = 0.2; dv(2) = 0.3; dv(3) = 0.3; dv(4) = 0.3;
-//	rowvec grad(5);
-//	grad(0) = 0.001; grad(1) = 2.0; grad(2) = -1.0; grad(3) = -1.0; grad(4) = -1.0;
-//	testDesign.dv = dv;
-//	testDesign.gradientUpdateDesignVector(grad,10.0);
-//	ASSERT_LT(fabs(testDesign.dv(0)- 0.11),10E-10);
-//	ASSERT_EQ(testDesign.dv(1), 1.0/5.0);
-//	ASSERT_EQ(testDesign.dv(2), 0.0);
-//}
+TEST_F(DesignForBayesianOptimizationTest, gradientUpdateDesignVector){
 
-TEST_F(CDesignExpectedImprovementTest, generateRandomDesignVectorAroundASample){
+	vec lb(5);
+	vec ub(5);
+
+	lb.fill(0.0);
+	ub.fill(0.2);
+
+	rowvec dv(5);
+	dv(0) = 0.1; dv(1) = 0.2; dv(2) = 0.3; dv(3) = 0.3; dv(4) = 0.3;
+	rowvec grad(5);
+	grad(0) = 0.001; grad(1) = 2.0; grad(2) = -1.0; grad(3) = -1.0; grad(4) = -1.0;
+	testDesign.dv = dv;
+	testDesign.gradientUpdateDesignVector(grad,lb,ub,10.0);
+	ASSERT_LT(fabs(testDesign.dv(0)- 0.11),10E-10);
+	ASSERT_EQ(testDesign.dv(1), 1.0/5.0);
+	ASSERT_EQ(testDesign.dv(2), 0.0);
+}
+
+TEST_F(DesignForBayesianOptimizationTest, generateRandomDesignVectorAroundASample){
 
 	unsigned int dim =  5;
 	unsigned int N =  generateRandomInt(20,30);
@@ -389,7 +452,7 @@ TEST_F(CDesignExpectedImprovementTest, generateRandomDesignVectorAroundASample){
 }
 
 
-TEST_F(CDesignExpectedImprovementTest, calculateProbalityThatTheEstimateIsGreaterThanAValue){
+TEST_F(DesignForBayesianOptimizationTest, calculateProbalityThatTheEstimateIsGreaterThanAValue){
 
 	double p = testDesign.calculateProbalityThatTheEstimateIsGreaterThanAValue(20.0);
 	EXPECT_GT(p, 0.4);
@@ -399,7 +462,7 @@ TEST_F(CDesignExpectedImprovementTest, calculateProbalityThatTheEstimateIsGreate
 
 }
 
-TEST_F(CDesignExpectedImprovementTest, calculateProbalityThatTheEstimateIsLessThanAValue){
+TEST_F(DesignForBayesianOptimizationTest, calculateProbalityThatTheEstimateIsLessThanAValue){
 
 	double p1 = testDesign.calculateProbalityThatTheEstimateIsLessThanAValue(20.0);
 	double p2 = testDesign.calculateProbalityThatTheEstimateIsGreaterThanAValue(20.0);
