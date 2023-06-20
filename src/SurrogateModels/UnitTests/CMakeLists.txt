@@ -10,7 +10,6 @@ if(UNIT_TESTS)
 	target_link_libraries(runTestsSurrogateModels   surrogateModels)
 	target_link_libraries(runTestsSurrogateModels   output)
 	target_link_libraries(runTestsSurrogateModels   objectiveFunctions)
-	target_link_libraries(runTestsSurrogateModels   lhs)
 	
 
 	find_package(OpenMP)

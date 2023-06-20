@@ -44,7 +44,7 @@
 #include "../TestFunctions/INCLUDE/test_functions.hpp"
 #include "../Optimizers/INCLUDE/optimization.hpp"
 #include "./INCLUDE/objective_function.hpp"
-#include "../LHS/INCLUDE/lhs.hpp"
+
 
 #include "../Bounds/INCLUDE/bounds.hpp"
 

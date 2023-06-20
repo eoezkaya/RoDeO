@@ -42,7 +42,6 @@
 #include "../INCLUDE/Rodeo_globals.hpp"
 #include "../TestFunctions/INCLUDE/test_functions.hpp"
 #include "../Optimizers/INCLUDE/optimization.hpp"
-#include "../LHS/INCLUDE/lhs.hpp"
 #include "../Bounds/INCLUDE/bounds.hpp"
 
 

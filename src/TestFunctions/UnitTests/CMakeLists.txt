@@ -8,7 +8,6 @@ if(UNIT_TESTS)
 	target_link_libraries(runTestsTestFunctions   testFunctions)
 	target_link_libraries(runTestsTestFunctions   bounds)
 	target_link_libraries(runTestsTestFunctions   optimizers)
-	target_link_libraries(runTestsTestFunctions   lhs)
 	target_link_libraries(runTestsTestFunctions   auxiliary)
 	
 	find_package(OpenMP)

@@ -11,7 +11,6 @@ if(UNIT_TESTS)
 	target_link_libraries(runTestsOptimizationFunctions   surrogateModels)
 	target_link_libraries(runTestsOptimizationFunctions   output)
 	target_link_libraries(runTestsOptimizationFunctions   testFunctions)
-	target_link_libraries(runTestsOptimizationFunctions   lhs)
 	
 	find_package(OpenMP)
 	if(OpenMP_CXX_FOUND)	

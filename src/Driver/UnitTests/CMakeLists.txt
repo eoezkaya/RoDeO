@@ -11,9 +11,7 @@ if(UNIT_TESTS)
 	target_link_libraries(runTestsDriver   surrogateModels)
 	target_link_libraries(runTestsDriver   output)
 	target_link_libraries(runTestsDriver   objectiveFunctions)
-	target_link_libraries(runTestsDriver   lhs)
 	
-
 	find_package(OpenMP)
 	if(OpenMP_CXX_FOUND)	
 		target_link_libraries(runTestsDriver OpenMP::OpenMP_CXX)

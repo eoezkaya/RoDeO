@@ -10,9 +10,7 @@ if(UNIT_TESTS)
 	target_link_libraries(runTestsOptimizers   surrogateModels)
 	target_link_libraries(runTestsOptimizers   output)
 	target_link_libraries(runTestsOptimizers   objectiveFunctions)
-	target_link_libraries(runTestsOptimizers   lhs)
 	
-
 	find_package(OpenMP)
 	if(OpenMP_CXX_FOUND)	
 		target_link_libraries(runTestsOptimizers OpenMP::OpenMP_CXX)
