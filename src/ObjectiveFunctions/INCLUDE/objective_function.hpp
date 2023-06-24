@@ -40,8 +40,9 @@
 #include "../../Optimizers/INCLUDE/design.hpp"
 #include "../../Output/INCLUDE/output.hpp"
 
-
-
+#ifdef UNIT_TESTS
+#include<gtest/gtest.h>
+#endif
 
 class ObjectiveFunctionDefinition{
 
@@ -79,6 +80,15 @@ public:
 
 class ObjectiveFunction{
 
+#ifdef UNIT_TESTS
+	friend class ObjectiveFunctionTest;
+	FRIEND_TEST(ObjectiveFunctionTest, constructor);
+	FRIEND_TEST(ObjectiveFunctionTest, setParametersByDefinition);
+	FRIEND_TEST(ObjectiveFunctionTest, setParameterBounds);
+	FRIEND_TEST(ObjectiveFunctionTest, setDimensionAfterBindSurrogateModelCase1);
+	FRIEND_TEST(ObjectiveFunctionTest, setNameAfterBindSurrogateModelCase1);
+#endif
+
 
 private:
 	void readOnlyFunctionalValue(Design &d) const;
@@ -87,7 +97,7 @@ private:
 	void bindWithOrdinaryKrigingModel();
 	void bindWithUniversalKrigingModel();
 	void bindWithGradientEnhancedModel();
-	void bindWithTangentEnhancedKrigingModel();
+	void bindWithTangentEnhancedModel();
 	void bindWithMultiFidelityModel();
 
 	bool isHiFiEvaluation(void) const;
@@ -139,10 +149,12 @@ public:
 
 	bool isMultiFidelityActive(void) const;
 
+
+
 	void setEvaluationMode(std::string);
 	void setDataAddMode(std::string mode);
 
-
+	void setParametersByDefinition(ObjectiveFunctionDefinition);
 	void bindSurrogateModel(void);
 
 	void initializeSurrogate(void);
@@ -158,10 +170,6 @@ public:
 	MultiLevelModel  getSurrogateModelML(void) const;
 
 
-
-	void setGradientOn(void);
-	void setGradientOff(void);
-
 	void setDisplayOn(void);
 	void setDisplayOff(void);
 
@@ -170,12 +178,7 @@ public:
 	void setNumberOfTrainingIterationsForSurrogateModel(unsigned int);
 
 	void setDimension(unsigned int dimension);
-	unsigned int getDimension(void) const;
-
-	std::string getName(void) const{
-		return definition.name;
-	}
-
+	void setName(string name);
 
 	void setFileNameReadInput(std::string fileName);
 	void setFileNameReadInputLowFidelity(std::string fileName);
@@ -189,7 +192,6 @@ public:
 	std::string getFileNameTrainingData(void) const;
 
 
-	void setParametersByDefinition(ObjectiveFunctionDefinition);
 
 
 	void calculateExpectedImprovement(DesignForBayesianOptimization &designCalculated) const;

@@ -30,8 +30,8 @@
  */
  
 #include<gtest/gtest.h>
- 
-int runTests(void){
+#include<cassert>
+int main(void){
 
 	::testing::InitGoogleTest();
 

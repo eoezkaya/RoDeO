@@ -31,7 +31,7 @@
  
 #include<gtest/gtest.h>
  
-int runTests(void){
+int main(void){
 
 	::testing::InitGoogleTest();
 

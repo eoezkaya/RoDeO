@@ -42,6 +42,7 @@
 
 TEST(ObjectiveFunctionDefinitionTest, constructor){
 
+
 	ObjectiveFunctionDefinition testDefinition;
 
 	ASSERT_TRUE(testDefinition.modelHiFi == ORDINARY_KRIGING);
@@ -49,8 +50,91 @@ TEST(ObjectiveFunctionDefinitionTest, constructor){
 	ASSERT_FALSE(testDefinition.ifDefined);
 	ASSERT_FALSE(testDefinition.ifMultiLevel);
 
+}
+
+TEST(ObjectiveFunctionDefinitionTest, checkIfDefinitionIsOkFails1){
+
+	ObjectiveFunctionDefinition testDefinition;
+
+	ASSERT_FALSE(testDefinition.checkIfDefinitionIsOk());
 
 }
+
+TEST(ObjectiveFunctionDefinitionTest, checkIfDefinitionIsOkFails2){
+
+	ObjectiveFunctionDefinition testDefinition;
+	testDefinition.name = "someObjective";
+	testDefinition.designVectorFilename = "dv.dat";
+	testDefinition.modelHiFi = ORDINARY_KRIGING;
+	testDefinition.outputFilename = "result.dat";
+	testDefinition.executableName = "evaluateObjFunction";
+
+	/* ifDefined is still false */
+
+	ASSERT_FALSE(testDefinition.checkIfDefinitionIsOk());
+}
+
+TEST(ObjectiveFunctionDefinitionTest, checkIfDefinitionIsOkPasses){
+
+	ObjectiveFunctionDefinition testDefinition;
+	testDefinition.name = "someObjective";
+	testDefinition.designVectorFilename = "dv.dat";
+	testDefinition.modelHiFi = ORDINARY_KRIGING;
+	testDefinition.outputFilename = "result.dat";
+	testDefinition.executableName = "evaluateObjFunction";
+	testDefinition.nameHighFidelityTrainingData = "data.csv";
+	testDefinition.ifDefined = true;
+
+	ASSERT_TRUE(testDefinition.checkIfDefinitionIsOk());
+
+}
+
+
+TEST(ObjectiveFunctionDefinitionTest, checkIfDefinitionIsOkFails3){
+
+	ObjectiveFunctionDefinition testDefinition;
+	testDefinition.name = "someObjective";
+	testDefinition.designVectorFilename = "dv.dat";
+	testDefinition.modelHiFi = ORDINARY_KRIGING;
+	testDefinition.outputFilename = "result.dat";
+	testDefinition.executableName = "evaluateObjFunction";
+	testDefinition.nameHighFidelityTrainingData = "data.csv";
+	testDefinition.ifDefined = true;
+	testDefinition.ifMultiLevel = true;
+
+
+	ASSERT_FALSE(testDefinition.checkIfDefinitionIsOk());
+
+
+
+}
+
+
+TEST(ObjectiveFunctionDefinitionTest, checkIfDefinitionIsOkPasses2){
+
+	ObjectiveFunctionDefinition testDefinition;
+	testDefinition.name = "someObjective";
+	testDefinition.designVectorFilename = "dv.dat";
+	testDefinition.modelHiFi = ORDINARY_KRIGING;
+	testDefinition.outputFilename = "result.dat";
+	testDefinition.executableName = "evaluateObjFunction";
+	testDefinition.nameHighFidelityTrainingData = "data.csv";
+	testDefinition.ifDefined = true;
+	testDefinition.ifMultiLevel = true;
+
+	testDefinition.nameLowFidelityTrainingData = "dataLowFi.csv";
+	testDefinition.executableNameLowFi = "evaluateObjFunctionLowFi";
+	testDefinition.modelLowFi = ORDINARY_KRIGING;
+	testDefinition.outputFilenameLowFi = "result.dat";
+
+
+	ASSERT_TRUE(testDefinition.checkIfDefinitionIsOk());
+
+
+}
+
+
+
 
 
 class ObjectiveFunctionTest : public ::testing::Test {
@@ -61,12 +145,6 @@ protected:
 		filenameTrainingDataLowFi = himmelblauFunction.function.filenameTrainingDataLowFidelity;
 		filenameTrainingDataHiFi  = himmelblauFunction.function.filenameTrainingDataHighFidelity;
 
-		objFunTest.setDimension(2);
-		vec lb(2); lb.fill(-6.0);
-		vec ub(2); ub.fill(6.0);
-
-		Bounds boxConstraints(lb,ub);
-		objFunTest.setParameterBounds(boxConstraints);
 
 		definition.designVectorFilename = "dv.dat";
 		definition.executableName = "himmelblau";
@@ -76,6 +154,7 @@ protected:
 		definition.name= "himmelblau";
 		definition.nameHighFidelityTrainingData = filenameTrainingData;
 		definition.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
+		definition.ifDefined = true;
 
 	}
 
@@ -132,123 +211,41 @@ protected:
 };
 
 
-
-TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModel){
-
-	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
-	himmelblauFunction.function.numberOfTrainingSamples = 20;
-
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
-	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-	d.trueValueLowFidelity = 2.67;
-	rowvec gradientLowFi(2);
-	gradientLowFi(0) = -18.9;
-	gradientLowFi(1) = -22.4;
-	d.gradientLowFidelity = gradientLowFi;
+TEST_F(ObjectiveFunctionTest, constructor) {
 
 
-	setDefinitionForCase5();
-	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setDataAddMode("adjointLowFidelity");
+	ObjectiveFunction testObject;
+	ASSERT_FALSE(testObject.ifDefinitionIsSet);
+	ASSERT_FALSE(testObject.ifParameterBoundsAreSet);
+	ASSERT_FALSE(testObject.ifSurrogateModelIsDefined);
+	ASSERT_FALSE(testObject.ifWarmStart);
+	ASSERT_TRUE(testObject.evaluationMode.empty());
+	ASSERT_TRUE(testObject.addDataMode.empty());
+	ASSERT_FALSE(testObject.boxConstraints.areBoundsSet());
 
-//	objFunTest.setDisplayOn();
-	objFunTest.initializeSurrogate();
-	objFunTest.addLowFidelityDesignToData(d);
-
-	mat newData;
-	newData.load(filenameTrainingDataLowFi, csv_ascii);
-
-//	newData.print("newData");
-
-	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
-
-	rowvec lastRow = newData.row(newData.n_rows-1);
-	ASSERT_EQ(lastRow(0),2.1);
-	ASSERT_EQ(lastRow(1),-1.9);
-	ASSERT_EQ(lastRow(2),2.67);
-	ASSERT_EQ(lastRow(3),-18.9);
-	ASSERT_EQ(lastRow(4),-22.4);
-
-	remove(filenameTrainingData.c_str());
-	remove(filenameTrainingDataLowFi.c_str());
 
 }
 
+TEST_F(ObjectiveFunctionTest, setParametersByDefinition) {
 
-TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModelOnlyPrimalSolution){
-
-	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
-	himmelblauFunction.function.numberOfTrainingSamples = 20;
-
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
-	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-	d.trueValueLowFidelity = 2.67;
-
-
-	setDefinitionForCase5();
-	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setDataAddMode("primalLowFidelity");
-
-//	objFunTest.setDisplayOn();
-	objFunTest.initializeSurrogate();
-	objFunTest.addLowFidelityDesignToData(d);
-
-	mat newData;
-	newData.load(filenameTrainingDataLowFi, csv_ascii);
-
-//	newData.print("newData");
-
-	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
-
-	rowvec lastRow = newData.row(newData.n_rows-1);
-	ASSERT_EQ(lastRow(0),2.1);
-	ASSERT_EQ(lastRow(1),-1.9);
-	ASSERT_EQ(lastRow(2),2.67);
-	ASSERT_EQ(lastRow(3),0.0);
-	ASSERT_EQ(lastRow(4),0.0);
-
-
-	remove(filenameTrainingData.c_str());
-	remove(filenameTrainingDataLowFi.c_str());
-
-}
-
-
-
-
-
-
-TEST_F(ObjectiveFunctionTest, testConstructor) {
-
-
-	ASSERT_FALSE(objFunTest.ifInitialized);
-	ASSERT_FALSE(objFunTest.ifSurrogateModelIsDefined);
-	ASSERT_TRUE(objFunTest.getDimension() == 2);
-	ASSERT_TRUE(objFunTest.ifParameterBoundsAreSet);
-
-}
-
-
-TEST_F(ObjectiveFunctionTest, testObjectiveFunctionDefinition) {
-
+	ObjectiveFunction testObject;
 	setDefinitionForCase1();
-	bool ifOk = definition.checkIfDefinitionIsOk();
+	testObject.setParametersByDefinition(definition);
+	ASSERT_TRUE(testObject.ifDefinitionIsSet);
+	ASSERT_TRUE(testObject.definition.checkIfDefinitionIsOk());
 
-	ASSERT_TRUE(ifOk);
+}
+
+TEST_F(ObjectiveFunctionTest, setParameterBounds) {
+
+	ObjectiveFunction testObject;
+	Bounds boxConstraints;
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+	boxConstraints.setBounds(lb, ub);
+	testObject.setParameterBounds(boxConstraints);
+	ASSERT_TRUE(testObject.boxConstraints.areBoundsSet());
 
 }
 
@@ -272,7 +269,59 @@ TEST_F(ObjectiveFunctionTest, bindSurrogateModelCase1) {
 	ASSERT_TRUE(objFunTest.ifSurrogateModelIsDefined);
 }
 
+
+TEST_F(ObjectiveFunctionTest, setDimensionAfterBindSurrogateModelCase1) {
+
+	setDefinitionForCase1();
+	objFunTest.setParametersByDefinition(definition);
+	//	objFunTest.setDisplayOn();
+	objFunTest.bindSurrogateModel();
+	objFunTest.setDimension(2);
+
+	ASSERT_EQ(objFunTest.surrogateModel.getDimension(),2);
+
+
+}
+
+TEST_F(ObjectiveFunctionTest, setNameAfterBindSurrogateModelCase1) {
+
+	setDefinitionForCase1();
+	objFunTest.setParametersByDefinition(definition);
+	//	objFunTest.setDisplayOn();
+	objFunTest.bindSurrogateModel();
+	objFunTest.setName(definition.name);
+
+	std::string name = objFunTest.surrogateModel.getName();
+
+	ASSERT_TRUE(isEqual(name, definition.name));
+}
+
+
+TEST_F(ObjectiveFunctionTest, setBoundsAfterBindSurrogateModelCase1) {
+
+	setDefinitionForCase1();
+	objFunTest.setParametersByDefinition(definition);
+	//	objFunTest.setDisplayOn();
+	objFunTest.bindSurrogateModel();
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
+
+	ASSERT_TRUE(objFunTest.ifParameterBoundsAreSet);
+}
+
+
+
+
 TEST_F(ObjectiveFunctionTest, bindSurrogateModelCase2) {
+
+
+	abort();
 
 	setDefinitionForCase2();
 	objFunTest.setParametersByDefinition(definition);
@@ -314,6 +363,8 @@ TEST_F(ObjectiveFunctionTest, initializeSurrogateCase1) {
 
 
 TEST_F(ObjectiveFunctionTest, initializeSurrogateCase2) {
+
+	abort();
 
 	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 	trainingData = himmelblauFunction.function.trainingSamples;
@@ -1074,5 +1125,104 @@ TEST_F(ObjectiveFunctionTest, trainSurrogate){
 }
 
 
+
+
+
+
+TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModel){
+
+
+	abort();
+	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
+	himmelblauFunction.function.numberOfTrainingSamples = 20;
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValueLowFidelity = 2.67;
+	rowvec gradientLowFi(2);
+	gradientLowFi(0) = -18.9;
+	gradientLowFi(1) = -22.4;
+	d.gradientLowFidelity = gradientLowFi;
+
+
+	setDefinitionForCase5();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDataAddMode("adjointLowFidelity");
+
+	//	objFunTest.setDisplayOn();
+	objFunTest.initializeSurrogate();
+	objFunTest.addLowFidelityDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingDataLowFi, csv_ascii);
+
+	//	newData.print("newData");
+
+	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.67);
+	ASSERT_EQ(lastRow(3),-18.9);
+	ASSERT_EQ(lastRow(4),-22.4);
+
+	remove(filenameTrainingData.c_str());
+	remove(filenameTrainingDataLowFi.c_str());
+
+}
+
+
+TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModelOnlyPrimalSolution){
+
+	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
+	himmelblauFunction.function.numberOfTrainingSamples = 20;
+
+	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	d.trueValueLowFidelity = 2.67;
+
+
+	setDefinitionForCase5();
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDataAddMode("primalLowFidelity");
+
+	//	objFunTest.setDisplayOn();
+	objFunTest.initializeSurrogate();
+	objFunTest.addLowFidelityDesignToData(d);
+
+	mat newData;
+	newData.load(filenameTrainingDataLowFi, csv_ascii);
+
+	//	newData.print("newData");
+
+	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
+
+	rowvec lastRow = newData.row(newData.n_rows-1);
+	ASSERT_EQ(lastRow(0),2.1);
+	ASSERT_EQ(lastRow(1),-1.9);
+	ASSERT_EQ(lastRow(2),2.67);
+	ASSERT_EQ(lastRow(3),0.0);
+	ASSERT_EQ(lastRow(4),0.0);
+
+
+	remove(filenameTrainingData.c_str());
+	remove(filenameTrainingDataLowFi.c_str());
+
+}
 
 

@@ -11,7 +11,6 @@ endif(ASSERTS)
 
 get_target_property(MAIN_CFLAGS objectiveFunctions COMPILE_OPTIONS)
 
-add_definitions(-DNDEBUG)
 
 # also see: COMPILE_DEFINITIONS INCLUDE_DIRECTORIES
 message("-- Target compiler flags for objectiveFunctions are: ${MAIN_CFLAGS}")

@@ -59,46 +59,28 @@ ObjectiveFunctionDefinition::ObjectiveFunctionDefinition(void){}
 
 bool ObjectiveFunctionDefinition::checkIfDefinitionIsOk(void) const{
 
+	if(ifDefined == false) return false;
 
-	if(name.empty()){
-		abortWithErrorMessage("Name is missing the objective function definition");
-	}
+	if(name.empty() ||
+			designVectorFilename.empty() ||
+			executableName.empty() ||
+			outputFilename.empty() ||
+			nameHighFidelityTrainingData.empty()){
 
-	if(designVectorFilename.empty()){
-		abortWithErrorMessage("Design vector filename is missing in the objective function definition");
-	}
-
-	if(executableName.empty()){
-		abortWithErrorMessage("Name of the executable is missing in the objective function definition");
-
-	}
-	if(outputFilename.empty()){
-		abortWithErrorMessage("Name of the output file is missing in the objective function definition");
-	}
-
-	if(nameHighFidelityTrainingData.empty()){
-		abortWithErrorMessage("Name of the training data file is missing in the objective function definition");
+		return false;
 	}
 
 	if(ifMultiLevel){
 
-		if(executableNameLowFi.empty()){
-			abortWithErrorMessage("Name of executable for the low fidelity model is missing in the objective function definition");
-
-		}
-
-		if(nameLowFidelityTrainingData.empty()){
-			abortWithErrorMessage("Name of training data file for the low fidelity model is missing in the objective function definition");
-		}
-
-		if(outputFilenameLowFi.empty()){
-			abortWithErrorMessage("Name of output file for the low fidelity model is missing in the objective function definition");
+		if(executableNameLowFi.empty() ||
+				nameLowFidelityTrainingData.empty() ||
+				outputFilenameLowFi.empty()){
+			return false;
 		}
 
 		if(nameLowFidelityTrainingData == nameHighFidelityTrainingData){
 
-			abortWithErrorMessage("Name of the training data is same for both low and high fidelity models");
-
+			return false;
 		}
 
 	}
@@ -150,11 +132,21 @@ void ObjectiveFunction::setDataAddMode(std::string mode){
 }
 
 void ObjectiveFunction::setDimension(unsigned int dimension){
+
+	assert(ifSurrogateModelIsDefined);
+
 	dim = dimension;
+	surrogate->setDimension(dimension);
 }
-unsigned int ObjectiveFunction::getDimension(void) const{
-	return dim;
+
+void ObjectiveFunction::setName(string name){
+
+	assert(ifSurrogateModelIsDefined);
+	assert(isNotEmpty(name));
+
+	surrogate->setName(name);
 }
+
 
 
 bool ObjectiveFunction::isMultiFidelityActive(void) const{
@@ -172,15 +164,12 @@ SURROGATE_MODEL ObjectiveFunction::getSurrogateModelTypeLowFi(void) const{
 void ObjectiveFunction::bindWithOrdinaryKrigingModel() {
 	output.printMessage(
 			"Binding the surrogate model with the ORDINARY_KRIGING modeĺ...");
-	surrogateModel.setNameOfInputFile(definition.nameHighFidelityTrainingData);
-	surrogateModel.setName(definition.name);
 	surrogate = &surrogateModel;
 }
 
 void ObjectiveFunction::bindWithUniversalKrigingModel() {
 	output.printMessage(
 			"Binding the surrogate model with the UNIVERSAL_KRIGING modeĺ...");
-	surrogateModel.setNameOfInputFile(definition.nameHighFidelityTrainingData);
 	surrogateModel.setLinearRegressionOn();
 	surrogate = &surrogateModel;
 }
@@ -188,22 +177,16 @@ void ObjectiveFunction::bindWithUniversalKrigingModel() {
 void ObjectiveFunction::bindWithGradientEnhancedModel() {
 	output.printMessage(
 			"Binding the surrogate model with the GRADIENT_ENHANCED modeĺ...");
-	surrogateModelGradient.setNameOfInputFile(
-			definition.nameHighFidelityTrainingData);
-	surrogateModelGradient.setName(definition.name);
 	surrogate = &surrogateModelGradient;
 
 }
 
-void ObjectiveFunction::bindWithTangentEnhancedKrigingModel() {
+void ObjectiveFunction::bindWithTangentEnhancedModel() {
 
 	output.printMessage(
-			"Binding the surrogate model with the TANGENT modeĺ...");
+			"Binding the surrogate model with the TANGENT_ENHANCED modeĺ...");
 	surrogateModelGradient.setDirectionalDerivativesOn();
-	surrogateModelGradient.setNameOfInputFile(
-				definition.nameHighFidelityTrainingData);
-		surrogateModelGradient.setName(definition.name);
-		surrogate = &surrogateModelGradient;
+	surrogate = &surrogateModelGradient;
 }
 
 void ObjectiveFunction::bindWithMultiFidelityModel() {
@@ -240,14 +223,14 @@ void ObjectiveFunction::bindSurrogateModelSingleFidelity() {
 		bindWithGradientEnhancedModel();
 	}
 	if (definition.modelHiFi == TANGENT_ENHANCED) {
-		bindWithTangentEnhancedKrigingModel();
+		bindWithTangentEnhancedModel();
 	}
 }
 
 void ObjectiveFunction::bindSurrogateModel(void){
 
 	assert(ifDefinitionIsSet);
-	assert(definition.modelHiFi != NONE);
+	assert(definition.checkIfDefinitionIsOk());
 
 	if(definition.ifMultiLevel){
 		bindWithMultiFidelityModel();
@@ -262,8 +245,6 @@ void ObjectiveFunction::bindSurrogateModel(void){
 
 
 void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition def){
-
-
 	assert(def.checkIfDefinitionIsOk());
 	definition = def;
 	ifDefinitionIsSet = true;
@@ -320,15 +301,17 @@ void ObjectiveFunction::setExecutableName(std::string exeName){
 
 void ObjectiveFunction::setParameterBounds(Bounds bounds){
 
-	assert(dim == bounds.getDimension());
+	if(dim > 0 ){
+		assert(dim == bounds.getDimension());
+	}
+
+
 	assert(bounds.areBoundsSet());
+	assert(ifSurrogateModelIsDefined);
 
 	boxConstraints = bounds;
 
-	if(ifSurrogateModelIsDefined){
-
-		surrogate->setBoxConstraints(boxConstraints);
-	}
+	surrogate->setBoxConstraints(boxConstraints);
 
 
 	ifParameterBoundsAreSet = true;
@@ -673,7 +656,7 @@ void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
 
 		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
 		for (unsigned int i = 0; i < dim; i++) {
-				gradient(i) = resultBuffer(i + offset);
+			gradient(i) = resultBuffer(i + offset);
 		}
 		d.trueValue = resultBuffer(0);
 		d.gradient = gradient;
@@ -682,7 +665,7 @@ void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
 	if(isLowFiEvaluation()){
 		resultBuffer = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
 		for (unsigned int i = 0; i < dim; i++) {
-				gradient(i) = resultBuffer(i + offset);
+			gradient(i) = resultBuffer(i + offset);
 		}
 		d.trueValueLowFidelity = resultBuffer(0);
 		d.gradientLowFidelity = gradient;

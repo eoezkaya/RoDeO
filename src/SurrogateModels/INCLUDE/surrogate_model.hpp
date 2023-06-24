@@ -110,6 +110,9 @@ public:
 
 	virtual void setName(std::string);
 
+	string getName(void) const;
+
+
 	void readDataTest(void);
 	void normalizeDataTest(void);
 
