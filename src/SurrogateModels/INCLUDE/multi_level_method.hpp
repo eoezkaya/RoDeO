@@ -37,9 +37,22 @@
 #include "kriging_training.hpp"
 #include "ggek.hpp"
 
+#ifdef UNIT_TESTS
+#include<gtest/gtest.h>
+#endif
+
 using std::string;
 
 class MultiLevelModel : public SurrogateModel{
+
+#ifdef UNIT_TESTS
+	friend class MultiLevelModelTest;
+	FRIEND_TEST(MultiLevelModelTest, setDimension);
+	FRIEND_TEST(MultiLevelModelTest, normalizeData);
+	FRIEND_TEST(MultiLevelModelTest, testInterpolateWithVariance);
+
+#endif
+
 
 private:
 

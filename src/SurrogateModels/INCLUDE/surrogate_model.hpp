@@ -67,8 +67,8 @@ protected:
 	bool ifHasGradientData = false;
 
 
-	bool ifWriteWarmStartFile = true;
-	bool ifReadWarmStartFile = false;
+	bool ifWriteWarmStartFile = false;
+	bool ifReadWarmStartFile  = false;
 
 	unsigned int numberOfThreads = 1;
 

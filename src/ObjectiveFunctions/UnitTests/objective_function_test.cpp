@@ -226,6 +226,20 @@ TEST_F(ObjectiveFunctionTest, constructor) {
 
 }
 
+
+TEST_F(ObjectiveFunctionTest, setBounds) {
+
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+	objFunTest.setParameterBounds(boxConstraints);
+
+	ASSERT_TRUE(objFunTest.ifParameterBoundsAreSet);
+}
+
 TEST_F(ObjectiveFunctionTest, setParametersByDefinition) {
 
 	ObjectiveFunction testObject;
@@ -236,18 +250,6 @@ TEST_F(ObjectiveFunctionTest, setParametersByDefinition) {
 
 }
 
-TEST_F(ObjectiveFunctionTest, setParameterBounds) {
-
-	ObjectiveFunction testObject;
-	Bounds boxConstraints;
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-	boxConstraints.setBounds(lb, ub);
-	testObject.setParameterBounds(boxConstraints);
-	ASSERT_TRUE(testObject.boxConstraints.areBoundsSet());
-
-}
 
 
 TEST_F(ObjectiveFunctionTest, getSurrogateModelType) {
@@ -270,58 +272,9 @@ TEST_F(ObjectiveFunctionTest, bindSurrogateModelCase1) {
 }
 
 
-TEST_F(ObjectiveFunctionTest, setDimensionAfterBindSurrogateModelCase1) {
-
-	setDefinitionForCase1();
-	objFunTest.setParametersByDefinition(definition);
-	//	objFunTest.setDisplayOn();
-	objFunTest.bindSurrogateModel();
-	objFunTest.setDimension(2);
-
-	ASSERT_EQ(objFunTest.surrogateModel.getDimension(),2);
-
-
-}
-
-TEST_F(ObjectiveFunctionTest, setNameAfterBindSurrogateModelCase1) {
-
-	setDefinitionForCase1();
-	objFunTest.setParametersByDefinition(definition);
-	//	objFunTest.setDisplayOn();
-	objFunTest.bindSurrogateModel();
-	objFunTest.setName(definition.name);
-
-	std::string name = objFunTest.surrogateModel.getName();
-
-	ASSERT_TRUE(isEqual(name, definition.name));
-}
-
-
-TEST_F(ObjectiveFunctionTest, setBoundsAfterBindSurrogateModelCase1) {
-
-	setDefinitionForCase1();
-	objFunTest.setParametersByDefinition(definition);
-	//	objFunTest.setDisplayOn();
-	objFunTest.bindSurrogateModel();
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	Bounds boxConstraints(lb,ub);
-
-
-	objFunTest.setParameterBounds(boxConstraints);
-
-	ASSERT_TRUE(objFunTest.ifParameterBoundsAreSet);
-}
-
-
-
 
 TEST_F(ObjectiveFunctionTest, bindSurrogateModelCase2) {
 
-
-	abort();
 
 	setDefinitionForCase2();
 	objFunTest.setParametersByDefinition(definition);
@@ -339,76 +292,98 @@ TEST_F(ObjectiveFunctionTest, bindSurrogateModelCase3) {
 	ASSERT_TRUE(objFunTest.ifSurrogateModelIsDefined);
 }
 
-TEST_F(ObjectiveFunctionTest, initializeSurrogateCase1) {
+TEST_F(ObjectiveFunctionTest, initializeSurrogateKriging) {
 
 	himmelblauFunction.function.generateTrainingSamples();
 	trainingData = himmelblauFunction.function.trainingSamples;
 
 	setDefinitionForCase1();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.initializeSurrogate();
-	KrigingModel testModel = objFunTest.getSurrogateModel();
 
-	mat rawData = testModel.getRawData();
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+	objFunTest.setParameterBounds(boxConstraints);
+	objFunTest.setDimension(2);
+
+
+	objFunTest.initializeSurrogate();
+
+	mat rawData = objFunTest.surrogate->getRawData();
 
 	bool ifDataIsConsistent = isEqual(rawData, trainingData, 10E-8);
 	ASSERT_TRUE(ifDataIsConsistent);
 	/* check dimension */
-	ASSERT_EQ(testModel.getDimension(), 2);
-	ASSERT_FALSE(testModel.areGradientsOn());
-	ASSERT_TRUE(testModel.ifDataIsRead);
+	ASSERT_EQ(objFunTest.surrogate->getDimension(), 2);
+	ASSERT_TRUE(objFunTest.surrogate->ifDataIsRead);
 
 	remove(filenameTrainingData.c_str());
 }
 
 
-TEST_F(ObjectiveFunctionTest, initializeSurrogateCase2) {
+TEST_F(ObjectiveFunctionTest, initializeSurrogateGradientEnhanced) {
 
-	abort();
+
 
 	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
 	trainingData = himmelblauFunction.function.trainingSamples;
 
 	setDefinitionForCase2();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.initializeSurrogate();
-	GeneralizedDerivativeEnhancedModel testModel = objFunTest.getSurrogateModelGradient();
 
-	mat rawData = testModel.getRawData();
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+	objFunTest.setParameterBounds(boxConstraints);
+	objFunTest.setDimension(2);
+
+
+	objFunTest.initializeSurrogate();
+	mat rawData = objFunTest.surrogate->getRawData();
 
 	bool ifDataIsConsistent = isEqual(rawData, trainingData, 10E-8);
 	ASSERT_TRUE(ifDataIsConsistent);
 	/* check dimension */
-	ASSERT_EQ(testModel.getDimension(), 2);
-	ASSERT_TRUE(testModel.ifDataIsRead);
+	ASSERT_EQ(objFunTest.surrogate->getDimension(), 2);
+	ASSERT_TRUE(objFunTest.surrogate->ifDataIsRead);
 
 	remove(filenameTrainingData.c_str());
 }
 
-//TEST_F(ObjectiveFunctionTest, initializeSurrogateCase3) {
-//
-//	himmelblauFunction.function.generateTrainingSamplesWithTangents();
-//	trainingData = himmelblauFunction.function.trainingSamples;
-//
-//	setDefinitionForCase3();
-//	objFunTest.setParametersByDefinition(definition);
-//
-//	objFunTest.initializeSurrogate();
-//	GeneralizedDerivativeEnhancedModel testModel = objFunTest.getSurrogateModelTangent();
-//
-//	mat rawData = testModel.getRawData();
-//
-//	bool ifDataIsConsistent = isEqual(rawData, trainingData, 10E-8);
-//	ASSERT_TRUE(ifDataIsConsistent);
-//	/* check dimension */
-//	ASSERT_EQ(testModel.getDimension(), 2);
-//	ASSERT_FALSE(testModel.areGradientsOn());
-//	ASSERT_TRUE(testModel.ifDataIsRead);
-//
-//	remove(filenameTrainingData.c_str());
-//}
+TEST_F(ObjectiveFunctionTest, initializeSurrogateTangentEnhanced) {
 
-TEST_F(ObjectiveFunctionTest, initializeSurrogateCase4) {
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+	trainingData = himmelblauFunction.function.trainingSamples;
+
+	setDefinitionForCase3();
+	objFunTest.setParametersByDefinition(definition);
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+	objFunTest.setParameterBounds(boxConstraints);
+	objFunTest.setDimension(2);
+
+
+
+	objFunTest.initializeSurrogate();
+	mat rawData = objFunTest.surrogate->getRawData();
+
+	bool ifDataIsConsistent = isEqual(rawData, trainingData, 10E-8);
+	ASSERT_TRUE(ifDataIsConsistent);
+	/* check dimension */
+	ASSERT_EQ(objFunTest.surrogate->getDimension(), 2);
+	ASSERT_TRUE(objFunTest.surrogate->ifDataIsRead);
+
+	remove(filenameTrainingData.c_str());
+}
+
+TEST_F(ObjectiveFunctionTest, initializeSurrogateCaseMultiFidelityBothKriging) {
 
 	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 100;
 	himmelblauFunction.function.numberOfTrainingSamples = 50;
@@ -419,6 +394,17 @@ TEST_F(ObjectiveFunctionTest, initializeSurrogateCase4) {
 
 	setDefinitionForCase4();
 	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setParametersByDefinition(definition);
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+	objFunTest.setParameterBounds(boxConstraints);
+	objFunTest.setDimension(2);
+
+
+
 	objFunTest.initializeSurrogate();
 
 	MultiLevelModel testModel = objFunTest.getSurrogateModelML();

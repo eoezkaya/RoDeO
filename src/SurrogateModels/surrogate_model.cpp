@@ -56,6 +56,8 @@ void SurrogateModel::setName(std::string nameInput){
 
 	name = nameInput;
 
+	filenameHyperparameters = name + "_hyperparameters.csv";
+
 }
 
 string SurrogateModel::getName(void) const{

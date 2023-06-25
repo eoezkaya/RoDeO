@@ -42,6 +42,8 @@
 using namespace arma;
 using namespace std;
 
+
+
 void MultiLevelModel::setName(std::string nameGiven){
 
 	assert(isNotEmpty(nameGiven));
@@ -58,13 +60,10 @@ void MultiLevelModel::setName(std::string nameGiven){
 
 void MultiLevelModel::setDimension(unsigned int dim){
 
+	assert(ifSurrogateModelsAreSet);
 	dimension = dim;
-
-	if(ifSurrogateModelsAreSet){
-
-		lowFidelityModel->setDimension(dim);
-		errorModel->setDimension(dim);
-	}
+	lowFidelityModel->setDimension(dim);
+	errorModel->setDimension(dim);
 
 }
 
@@ -96,7 +95,20 @@ void MultiLevelModel::setNameOfHyperParametersFile(string label){
 
 
 }
+
+void MultiLevelModel::setWriteWarmStartFileFlag(bool flag){
+
+	assert(ifSurrogateModelsAreSet);
+	ifWriteWarmStartFile = flag;
+
+	errorModel->setWriteWarmStartFileFlag(flag);
+	lowFidelityModel->setWriteWarmStartFileFlag(flag);
+}
+
+
 void MultiLevelModel::setNumberOfTrainingIterations(unsigned int nIter){
+
+	assert(ifSurrogateModelsAreSet);
 
 	lowFidelityModel->setNumberOfTrainingIterations(nIter);
 	errorModel->setNumberOfTrainingIterations(nIter);
@@ -106,6 +118,7 @@ void MultiLevelModel::setNumberOfTrainingIterations(unsigned int nIter){
 }
 
 void MultiLevelModel::setinputFileNameHighFidelityData(string filename){
+
 	assert(isNotEmpty(filename));
 	filenameDataInput = filename;
 	output.printMessage("Name for the high fidelity input data is set as " + filenameDataInput);
@@ -149,6 +162,9 @@ void MultiLevelModel::readData(void){
 	assert(isNotEmpty(filenameDataInput));
 	assert(isNotEmpty(filenameDataInputLowFidelity));
 
+
+
+
 	output.printMessage("Reading data for the multilevel model...");
 
 	data.readData(filenameDataInput);
@@ -156,6 +172,8 @@ void MultiLevelModel::readData(void){
 
 	dataLowFidelity.readData(filenameDataInputLowFidelity);
 	numberOfSamplesLowFidelity = dataLowFidelity.getNumberOfSamples();
+
+	lowFidelityModel->setNameOfInputFile(filenameDataInputLowFidelity);
 	lowFidelityModel->readData();
 
 	rawDataLowFidelity = dataLowFidelity.getRawData();
@@ -226,6 +244,7 @@ void MultiLevelModel::prepareAndReadErrorData(void){
 
 	rawDataError.save(inputFileNameError, csv_ascii);
 
+	errorModel->setNameOfInputFile(inputFileNameError);
 	errorModel->readData();
 
 	output.printMessage("Error data is saved in " + inputFileNameError);
@@ -286,12 +305,7 @@ void MultiLevelModel::printHyperParameters(void) const{
 
 }
 
-void MultiLevelModel::setWriteWarmStartFileFlag(bool flag){
-	lowFidelityModel->setWriteWarmStartFileFlag(flag);
-	errorModel->setWriteWarmStartFileFlag(flag);
 
-
-}
 void MultiLevelModel::setReadWarmStartFileFlag(bool flag){
 
 	lowFidelityModel->setReadWarmStartFileFlag(flag);
@@ -342,6 +356,7 @@ void MultiLevelModel::trainLowFidelityModel(void){
 	assert(ifInitialized);
 
 	output.printMessage("Training the low fidelity model...");
+
 	lowFidelityModel->train();
 }
 
@@ -546,9 +561,6 @@ bool MultiLevelModel::checkifModelIDIsValid(SURROGATE_MODEL id) const{
 
 void MultiLevelModel::bindLowFidelityModel(void){
 
-	assert(dimension>0);
-	assert(isNotEmpty(filenameDataInputLowFidelity));
-
 	if(!checkifModelIDIsValid(modelIDLowFi)){
 		abortWithErrorMessage("Undefined surrogate model for the low fidelity model");
 	}
@@ -585,9 +597,6 @@ void MultiLevelModel::bindLowFidelityModel(void){
 
 	}
 
-	lowFidelityModel->setNameOfInputFile(filenameDataInputLowFidelity);
-	lowFidelityModel->setDimension(dimension);
-
 }
 
 void MultiLevelModel::bindErrorModel(void){
@@ -617,8 +626,6 @@ void MultiLevelModel::bindErrorModel(void){
 		assert(false);
 
 	}
-
-	errorModel->setDimension(dimension);
 
 }
 

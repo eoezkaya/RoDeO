@@ -133,20 +133,8 @@ void ObjectiveFunction::setDataAddMode(std::string mode){
 
 void ObjectiveFunction::setDimension(unsigned int dimension){
 
-	assert(ifSurrogateModelIsDefined);
-
 	dim = dimension;
-	surrogate->setDimension(dimension);
 }
-
-void ObjectiveFunction::setName(string name){
-
-	assert(ifSurrogateModelIsDefined);
-	assert(isNotEmpty(name));
-
-	surrogate->setName(name);
-}
-
 
 
 bool ObjectiveFunction::isMultiFidelityActive(void) const{
@@ -194,19 +182,19 @@ void ObjectiveFunction::bindWithMultiFidelityModel() {
 	surrogateModelML.setIDHiFiModel(definition.modelHiFi);
 	surrogateModelML.setIDLowFiModel(definition.modelLowFi);
 
-	surrogateModelML.setinputFileNameHighFidelityData(definition.nameHighFidelityTrainingData);
-	surrogateModelML.setinputFileNameLowFidelityData(definition.nameLowFidelityTrainingData);
+//	surrogateModelML.setinputFileNameHighFidelityData(definition.nameHighFidelityTrainingData);
+//	surrogateModelML.setinputFileNameLowFidelityData(definition.nameLowFidelityTrainingData);
 
-	assert(dim>0);
+//	assert(dim>0);
 
 	/* TODO modify this ugly code */
-	surrogateModelML.setDimension(dim);
+//	surrogateModelML.setDimension(dim);
 	surrogateModelML.bindModels();
-	surrogateModelML.setDimension(dim);
+//	surrogateModelML.setDimension(dim);
 
 	output.printMessage("Binding the surrogate model with the Multi-fidelity model...");
 
-	surrogateModelML.setName(definition.name);
+//	surrogateModelML.setName(definition.name);
 
 	surrogate = &surrogateModelML;
 
@@ -307,23 +295,11 @@ void ObjectiveFunction::setParameterBounds(Bounds bounds){
 
 
 	assert(bounds.areBoundsSet());
-	assert(ifSurrogateModelIsDefined);
-
 	boxConstraints = bounds;
-
-	surrogate->setBoxConstraints(boxConstraints);
-
 
 	ifParameterBoundsAreSet = true;
 }
 
-KrigingModel ObjectiveFunction::getSurrogateModel(void) const{
-	return surrogateModel;
-}
-
-GeneralizedDerivativeEnhancedModel ObjectiveFunction::getSurrogateModelGradient(void) const{
-	return surrogateModelGradient;
-}
 MultiLevelModel ObjectiveFunction::getSurrogateModelML(void) const{
 	return surrogateModelML;
 }
@@ -336,13 +312,14 @@ void ObjectiveFunction::initializeSurrogate(void){
 	assert(ifDefinitionIsSet);
 	assert(dim>0);
 
-
 	bindSurrogateModel();
 
-	assert(boxConstraints.areBoundsSet());
 
+	surrogate->setName(definition.name);
 	surrogate->setDimension(dim);
 	surrogate->setBoxConstraints(boxConstraints);
+	surrogate->setNameOfInputFile(definition.nameHighFidelityTrainingData);
+
 	surrogate->readData();
 	surrogate->normalizeData();
 

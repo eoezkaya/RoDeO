@@ -87,6 +87,11 @@ class ObjectiveFunction{
 	FRIEND_TEST(ObjectiveFunctionTest, setParameterBounds);
 	FRIEND_TEST(ObjectiveFunctionTest, setDimensionAfterBindSurrogateModelCase1);
 	FRIEND_TEST(ObjectiveFunctionTest, setNameAfterBindSurrogateModelCase1);
+	FRIEND_TEST(ObjectiveFunctionTest, initializeSurrogateKriging);
+	FRIEND_TEST(ObjectiveFunctionTest, initializeSurrogateGradientEnhanced);
+	FRIEND_TEST(ObjectiveFunctionTest, initializeSurrogateTangentEnhanced);
+
+
 #endif
 
 
@@ -165,8 +170,6 @@ public:
 	SURROGATE_MODEL getSurrogateModelType(void) const;
 	SURROGATE_MODEL getSurrogateModelTypeLowFi(void) const;
 
-	KrigingModel     getSurrogateModel(void) const;
-	GeneralizedDerivativeEnhancedModel getSurrogateModelGradient(void) const;
 	MultiLevelModel  getSurrogateModelML(void) const;
 
 
@@ -178,7 +181,6 @@ public:
 	void setNumberOfTrainingIterationsForSurrogateModel(unsigned int);
 
 	void setDimension(unsigned int dimension);
-	void setName(string name);
 
 	void setFileNameReadInput(std::string fileName);
 	void setFileNameReadInputLowFidelity(std::string fileName);
