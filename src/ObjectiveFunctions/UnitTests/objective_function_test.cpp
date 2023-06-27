@@ -423,6 +423,7 @@ TEST_F(ObjectiveFunctionTest, initializeSurrogateCaseMultiFidelityBothKriging) {
 
 	bool ifDataIsConsistent = isEqual(lowFiData, trainingDataLowFi, 10E-8);
 
+	ASSERT_TRUE(ifDataIsConsistent);
 
 	remove(filenameTrainingDataHiFi.c_str());
 	remove(filenameTrainingDataLowFi.c_str());
@@ -430,24 +431,6 @@ TEST_F(ObjectiveFunctionTest, initializeSurrogateCaseMultiFidelityBothKriging) {
 
 }
 
-
-//TEST_F(ObjectiveFunctionTest, readOutput){
-//
-//	std::ofstream readOutputTestFile;
-//	readOutputTestFile.open ("readOutputTestFile.txt");
-//	readOutputTestFile << "2.144 56.12 77 0\n";
-//	readOutputTestFile.close();
-//
-//	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-//	rowvec result = objFunTest.readOutput(4);
-//
-//	EXPECT_EQ(result(0), 2.144);
-//	EXPECT_EQ(result(3), 0);
-//
-//
-//	remove("readOutputTestFile.txt");
-//
-//}
 
 TEST_F(ObjectiveFunctionTest, readOutputDesign){
 
@@ -479,6 +462,7 @@ TEST_F(ObjectiveFunctionTest, readOutputDesignAdjoint){
 
 	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
 	objFunTest.setEvaluationMode("adjoint");
+	objFunTest.setDimension(2);
 	objFunTest.readOutputDesign(d);
 	EXPECT_EQ(d.trueValue, 2.144);
 
@@ -519,6 +503,7 @@ TEST_F(ObjectiveFunctionTest, writeDesignVariablesToFile){
 
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setEvaluationMode("primal");
+	objFunTest.setDimension(2);
 	objFunTest.writeDesignVariablesToFile(d);
 
 	rowvec dv(2);
@@ -543,9 +528,10 @@ TEST_F(ObjectiveFunctionTest, evaluateDesign){
 	dvInput(1) = -1.9;
 	d.designParameters = dvInput;
 
-	compileWithCpp("himmelblau.cpp", definition.executableName);
+	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblau.cpp", definition.executableName);
 
 	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDimension(2);
 	objFunTest.setEvaluationMode("primal");
 	objFunTest.evaluateDesign(d);
 
@@ -568,10 +554,11 @@ TEST_F(ObjectiveFunctionTest, evaluateDesignLowFi){
 	dvInput(1) = -1.9;
 	d.designParameters = dvInput;
 
-	compileWithCpp("himmelblauLowFidelity.cpp", definition.executableNameLowFi);
+	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauLowFidelity.cpp", definition.executableNameLowFi);
 
 	definition.ifMultiLevel = true;
 	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDimension(2);
 	objFunTest.setEvaluationMode("primalLowFi");
 	objFunTest.evaluateDesign(d);
 
@@ -598,9 +585,10 @@ TEST_F(ObjectiveFunctionTest, evaluateDesignAdjoint){
 	dvInput(1) = -1.9;
 	d.designParameters = dvInput;
 
-	compileWithCpp("himmelblauAdjoint.cpp", definition.executableName);
+	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauAdjoint.cpp", definition.executableName);
 
 	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDimension(2);
 	objFunTest.setEvaluationMode("adjoint");
 	objFunTest.evaluateDesign(d);
 
@@ -627,11 +615,12 @@ TEST_F(ObjectiveFunctionTest, evaluateDesignAdjointLowFi){
 	dvInput(1) = -1.9;
 	d.designParameters = dvInput;
 
-	compileWithCpp("himmelblauAdjointLowFi.cpp", definition.executableNameLowFi);
+	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauAdjointLowFi.cpp", definition.executableNameLowFi);
 
 
 
 	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDimension(2);
 	objFunTest.setEvaluationMode("adjointLowFi");
 	objFunTest.evaluateDesign(d);
 
@@ -659,9 +648,10 @@ TEST_F(ObjectiveFunctionTest, evaluateDesignTangent){
 	diffDirection(1) = 0.0;
 	d.tangentDirection = diffDirection;
 
-	compileWithCpp("himmelblauTangent.cpp", definition.executableName);
+	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauTangent.cpp", definition.executableName);
 
 	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDimension(2);
 	objFunTest.setEvaluationMode("tangent");
 	objFunTest.evaluateDesign(d);
 
@@ -692,9 +682,10 @@ TEST_F(ObjectiveFunctionTest, evaluateDesignTangentLowFi){
 	diffDirection(1) = 0.0;
 	d.tangentDirection = diffDirection;
 
-	compileWithCpp("himmelblauTangentLowFi.cpp", definition.executableNameLowFi);
+	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauTangentLowFi.cpp", definition.executableNameLowFi);
 
 	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDimension(2);
 	objFunTest.setEvaluationMode("tangentLowFi");
 	objFunTest.evaluateDesign(d);
 
@@ -724,6 +715,16 @@ TEST_F(ObjectiveFunctionTest, addDesignToData){
 	d.trueValue = 2.4;
 
 	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDimension(2);
+
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
 	objFunTest.setDataAddMode("primal");
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
@@ -743,7 +744,7 @@ TEST_F(ObjectiveFunctionTest, addDesignToData){
 }
 
 
-TEST_F(ObjectiveFunctionTest, addDesignToDataGGEKModel){
+TEST_F(ObjectiveFunctionTest, addDesignToDataGradientEnhancedModel){
 
 
 	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
@@ -760,6 +761,16 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataGGEKModel){
 	setDefinitionForCase2();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDataAddMode("primal");
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
+
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
 
@@ -785,15 +796,6 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataGGEKModel){
 }
 
 
-
-
-
-
-
-
-
-
-
 TEST_F(ObjectiveFunctionTest, addDesignToDataTangentModel){
 
 
@@ -811,6 +813,16 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataTangentModel){
 	setDefinitionForCase3();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDataAddMode("primal");
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
+
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
 
@@ -862,6 +874,17 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataWithMultiFidelity){
 	//	objFunTest.setDisplayOn();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDataAddMode("primalBoth");
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
+
+
 	objFunTest.initializeSurrogate();
 
 	objFunTest.addDesignToData(d);
@@ -921,6 +944,16 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataWithMultiFidelityGGEKModelLowFi){
 	//	objFunTest.setDisplayOn();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDataAddMode("primalHiFiAdjointLowFi");
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
+
 	objFunTest.initializeSurrogate();
 
 	objFunTest.addDesignToData(d);
@@ -983,6 +1016,17 @@ TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataWithMultiFidelity){
 	//	objFunTest.setDisplayOn();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDataAddMode("primalLowFidelity");
+
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
+
 	objFunTest.initializeSurrogate();
 
 	objFunTest.addLowFidelityDesignToData(d);
@@ -1035,6 +1079,17 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataTangent){
 	setDefinitionForCase3();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDataAddMode("tangent");
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
+
+
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
 
@@ -1073,6 +1128,17 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataAdjoint){
 	setDefinitionForCase2();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDataAddMode("adjoint");
+
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
+
 	objFunTest.initializeSurrogate();
 	objFunTest.addDesignToData(d);
 
@@ -1091,9 +1157,6 @@ TEST_F(ObjectiveFunctionTest, addDesignToDataAdjoint){
 
 }
 
-
-
-
 TEST_F(ObjectiveFunctionTest, trainSurrogate){
 
 	himmelblauFunction.function.generateTrainingSamples();
@@ -1101,24 +1164,26 @@ TEST_F(ObjectiveFunctionTest, trainSurrogate){
 
 	setDefinitionForCase1();
 	objFunTest.setParametersByDefinition(definition);
-	objFunTest.initializeSurrogate();
-	objFunTest.setParametersByDefinition(definition);
+
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+	objFunTest.setParameterBounds(boxConstraints);
 	objFunTest.initializeSurrogate();
 	objFunTest.setNumberOfTrainingIterationsForSurrogateModel(1000);
-
 	objFunTest.trainSurrogate();
 
+
 }
-
-
-
-
 
 
 TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModel){
 
 
-	abort();
 	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
 	himmelblauFunction.function.numberOfTrainingSamples = 20;
 
@@ -1141,6 +1206,16 @@ TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModel){
 	setDefinitionForCase5();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDataAddMode("adjointLowFidelity");
+
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
 
 	//	objFunTest.setDisplayOn();
 	objFunTest.initializeSurrogate();
@@ -1186,6 +1261,15 @@ TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModelOnlyPrimalSolution){
 	setDefinitionForCase5();
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDataAddMode("primalLowFidelity");
+	objFunTest.setDimension(2);
+
+	vec lb(2); lb.fill(-6.0);
+	vec ub(2); ub.fill(6.0);
+
+	Bounds boxConstraints(lb,ub);
+
+
+	objFunTest.setParameterBounds(boxConstraints);
 
 	//	objFunTest.setDisplayOn();
 	objFunTest.initializeSurrogate();

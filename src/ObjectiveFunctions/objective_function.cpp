@@ -182,19 +182,14 @@ void ObjectiveFunction::bindWithMultiFidelityModel() {
 	surrogateModelML.setIDHiFiModel(definition.modelHiFi);
 	surrogateModelML.setIDLowFiModel(definition.modelLowFi);
 
-//	surrogateModelML.setinputFileNameHighFidelityData(definition.nameHighFidelityTrainingData);
-//	surrogateModelML.setinputFileNameLowFidelityData(definition.nameLowFidelityTrainingData);
+	surrogateModelML.setinputFileNameHighFidelityData(definition.nameHighFidelityTrainingData);
+	surrogateModelML.setinputFileNameLowFidelityData(definition.nameLowFidelityTrainingData);
 
-//	assert(dim>0);
 
 	/* TODO modify this ugly code */
-//	surrogateModelML.setDimension(dim);
 	surrogateModelML.bindModels();
-//	surrogateModelML.setDimension(dim);
 
 	output.printMessage("Binding the surrogate model with the Multi-fidelity model...");
-
-//	surrogateModelML.setName(definition.name);
 
 	surrogate = &surrogateModelML;
 
@@ -319,6 +314,7 @@ void ObjectiveFunction::initializeSurrogate(void){
 	surrogate->setDimension(dim);
 	surrogate->setBoxConstraints(boxConstraints);
 	surrogate->setNameOfInputFile(definition.nameHighFidelityTrainingData);
+
 
 	surrogate->readData();
 	surrogate->normalizeData();
