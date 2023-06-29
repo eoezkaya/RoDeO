@@ -41,11 +41,12 @@
 
 
 
-class ConstraintDefinition : public ObjectiveFunctionDefinition{
+class ConstraintDefinition{
 
 public:
 
 	std::string inequalityType;
+	std::string constraintName;
 	int ID = -1;
 	double value = 0.0;
 
@@ -71,7 +72,7 @@ public:
 
 	ConstraintFunction();
 
-	void setParametersByDefinition(ConstraintDefinition);
+	void setConstraintDefinition(ConstraintDefinition);
 
 	void setInequalityType(std::string);
 	std::string getInequalityType(void) const;

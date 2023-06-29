@@ -63,7 +63,9 @@ protected:
 		definition.outputFilename = "objFunVal.dat";
 		definition.name= "himmelblau";
 		definition.nameHighFidelityTrainingData = filenameTrainingData;
-		definition.setDefinition("constraint1 > 10.0");
+		definition.ifDefined = true;
+
+		constraintDefinition.setDefinition("constraint1 > 10.0");
 
 
 
@@ -77,7 +79,8 @@ protected:
 
 	ConstraintFunction constraintFunTest;
 	HimmelblauFunction himmelblauFunction;
-	ConstraintDefinition definition;
+	ObjectiveFunctionDefinition definition;
+	ConstraintDefinition constraintDefinition;
 	mat trainingData;
 	mat trainingDataLowFi;
 
@@ -109,40 +112,37 @@ protected:
 };
 
 
-//
-//
-//TEST_F(ConstraintFunctionTest, testConstructor) {
-//
-//	ASSERT_FALSE(constraintFunTest.ifGradientAvailable);
-//	ASSERT_FALSE(constraintFunTest.ifInitialized);
-//	ASSERT_FALSE(constraintFunTest.ifSurrogateModelIsDefined);
-//	ASSERT_TRUE(constraintFunTest.getDimension() == 2);
-//	ASSERT_TRUE(constraintFunTest.ifParameterBoundsAreSet);
-//	ASSERT_TRUE(constraintFunTest.getID() == -1);
-//
-//}
+
+
+TEST_F(ConstraintFunctionTest, testConstructor) {
+
+	ConstraintFunction testObject;
+	ASSERT_TRUE(testObject.ifDefinitionIsSet == false);
+}
 
 TEST_F(ConstraintFunctionTest, setDefinition) {
 
 	string testString = "testConstraint1 < 12.0";
-	definition.setDefinition(testString);
+	constraintDefinition.setDefinition(testString);
 
-	string name = definition.name;
+	string name = constraintDefinition.constraintName;
 
 	ASSERT_TRUE(name == "testConstraint1");
 
-	string type = definition.inequalityType;
+	string type = constraintDefinition.inequalityType;
 
 	ASSERT_TRUE(type == "<");
 
-	double value = definition.value;
+	double value = constraintDefinition.value;
 
 	ASSERT_TRUE(value == 12.0);
 
-	testString = "testConstraint1 = 12.0";
-	definition.setDefinition(testString);
+	testString = "testConstraint1 > 12.0";
+	constraintDefinition.setDefinition(testString);
 
-	cout<<definition.inequalityType<<"\n";
+	type = constraintDefinition.inequalityType;
+
+	ASSERT_TRUE(type == ">");
 
 }
 
@@ -173,6 +173,7 @@ TEST_F(ConstraintFunctionTest, bindSurrogateModelCase1) {
 
 	setDefinitionForCase1();
 	constraintFunTest.setParametersByDefinition(definition);
+
 	//	objFunTest.setDisplayOn();
 	constraintFunTest.bindSurrogateModel();
 	ASSERT_TRUE(constraintFunTest.ifSurrogateModelIsDefined);
@@ -182,6 +183,8 @@ TEST_F(ConstraintFunctionTest, bindSurrogateModelCase1) {
 TEST_F(ConstraintFunctionTest, checkFeasibility){
 
 	constraintFunTest.setParametersByDefinition(definition);
+	constraintFunTest.setConstraintDefinition(constraintDefinition);
+
 	bool ifFeasible = constraintFunTest.checkFeasibility(10.4);
 	ASSERT_TRUE(ifFeasible);
 	ifFeasible = constraintFunTest.checkFeasibility(9.9);
@@ -225,7 +228,7 @@ TEST_F(ConstraintFunctionTest, evaluate){
 	d.designParameters = dvInput;
 	d.setNumberOfConstraints(1);
 
-	compileWithCpp("himmelblau.cpp", definition.executableName);
+	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblau.cpp", definition.executableName);
 
 	constraintFunTest.setParametersByDefinition(definition);
 	constraintFunTest.setID(0);
@@ -250,7 +253,7 @@ TEST_F(ConstraintFunctionTest, evaluateDesignAdjoint){
 	d.designParameters = dvInput;
 	d.setNumberOfConstraints(1);
 
-	compileWithCpp("himmelblauAdjoint.cpp", definition.executableName);
+	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauAdjoint.cpp", definition.executableName);
 
 
 	constraintFunTest.setParametersByDefinition(definition);
@@ -290,7 +293,7 @@ TEST_F(ConstraintFunctionTest, evaluateDesignTangent){
 	diffDirection(1) = 0.0;
 	d.tangentDirection = diffDirection;
 
-	compileWithCpp("himmelblauTangent.cpp", definition.executableName);
+	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauTangent.cpp", definition.executableName);
 
 	constraintFunTest.setID(0);
 	constraintFunTest.setParametersByDefinition(definition);

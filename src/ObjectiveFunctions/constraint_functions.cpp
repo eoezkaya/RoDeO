@@ -77,64 +77,29 @@ void ConstraintDefinition::setDefinition(std::string definition){
 	valueBuf.assign(definition,place+1,definition.length() - nameBuf.length() - typeBuf.length());
 	valueBuf = removeSpacesFromString(valueBuf);
 
-	name = nameBuf;
+	constraintName = nameBuf;
 	inequalityType = typeBuf;
 	value = stod(valueBuf);
 }
 
-
-
-
-
 void ConstraintDefinition::print(void) const{
 
-	std::cout<<"\n================ Constraint function definition ================\n";
-	std::cout<< "Name = "<<name<<"\n";
-	std::cout<< "ID = "<<ID<<"\n";
-	std::cout<< "Type = "<<inequalityType<<"\n";
-	std::cout<< "Target value = "<<value<<"\n";
-	std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
-	std::cout<< "Training data = " << nameHighFidelityTrainingData << "\n";;
-	std::cout<< "Executable = " << executableName << "\n";
-	std::cout<< "Path = " << path << "\n";
-	std::cout<< "Surrogate model = " << modelHiFi << "\n";
-	std::cout<< "Multilevel = "<<ifMultiLevel<<"\n";
+	std::cout<<"Constraint ID = " << ID <<"\n";
 
-	if(ifMultiLevel){
-		std::cout<< "Low fidelity model = " << "\n";
-		std::cout<< "\tTraining data = " << nameHighFidelityTrainingData << "\n";;
-		std::cout<< "\tExecutable = " << executableName << "\n";
-		std::cout<< "\tPath = " << path << "\n";
-		std::cout<< "\tSurrogate model = " << modelHiFi << "\n";
+	std::cout<<"Constraint definition = ";
+	std::cout<< constraintName << " ";
+	std::cout<< inequalityType << " ";
+	std::cout<< value<< "\n";
 
-	}
-
-
-	std::cout<< "================================================================\n\n";
 }
-
 
 
 
 ConstraintFunction::ConstraintFunction(){}
 
-void ConstraintFunction::setParametersByDefinition(ConstraintDefinition definitionInput){
+void ConstraintFunction::setConstraintDefinition(ConstraintDefinition definitionInput){
 
 	definitionConstraint = definitionInput;
-	definition.designVectorFilename = definitionConstraint.designVectorFilename;
-	definition.executableName = definitionConstraint.executableName;
-	definition.executableNameLowFi = definitionConstraint.executableNameLowFi;
-	definition.modelHiFi = definitionConstraint.modelHiFi;
-	definition.modelLowFi = definitionConstraint.modelLowFi;
-	definition.ifMultiLevel = definitionConstraint.ifMultiLevel;
-	definition.name = definitionConstraint.name;
-	definition.nameHighFidelityTrainingData = definitionConstraint.nameHighFidelityTrainingData;
-	definition.nameLowFidelityTrainingData = definitionConstraint.nameLowFidelityTrainingData;
-	definition.path = definitionConstraint.path;
-	definition.pathLowFi = definitionConstraint.pathLowFi;
-	definition.outputFilename = definitionConstraint.outputFilename;
-	definition.outputFilenameLowFi = definitionConstraint.outputFilenameLowFi;
-	ifDefinitionIsSet = true;
 
 }
 
@@ -190,7 +155,7 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 	if(evaluationMode.compare("primal") == 0 ){
 
 		rowvec functionalValue(1);
-		functionalValue = readOutput(definitionConstraint.outputFilename, 1);
+		functionalValue = readOutput(definition.outputFilename, 1);
 
 		assert( int(d.constraintTrueValues.size()) > getID());
 
@@ -202,7 +167,7 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 
 		rowvec resultBuffer(2);
 
-		resultBuffer = readOutput(definitionConstraint.outputFilename, 2);
+		resultBuffer = readOutput(definition.outputFilename, 2);
 		d.trueValue = resultBuffer(0);
 		d.tangentValue = resultBuffer(1);
 	}
@@ -211,7 +176,7 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 
 		rowvec resultBuffer(1+dim);
 
-		resultBuffer = readOutput(definitionConstraint.outputFilename, 1+dim);
+		resultBuffer = readOutput(definition.outputFilename, 1+dim);
 
 		int id = definitionConstraint.ID;
 		assert(id>=0);
@@ -267,8 +232,9 @@ void ConstraintFunction::addDesignToData(Design &d){
 
 
 void ConstraintFunction::print(void) const{
-
 	definitionConstraint.print();
+	definition.print();
+
 
 }
 

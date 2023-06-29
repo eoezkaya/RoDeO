@@ -695,7 +695,7 @@ TEST_F(ObjectiveFunctionTest, evaluateDesignTangentLowFi){
 
 	remove(definition.designVectorFilename.c_str());
 	remove(definition.outputFilename.c_str());
-	remove(definition.executableName.c_str());
+	remove(definition.executableNameLowFi.c_str());
 
 }
 

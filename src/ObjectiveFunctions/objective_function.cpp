@@ -92,7 +92,8 @@ void ObjectiveFunctionDefinition::print(void) const{
 	std::cout<<"\n================ Objective function definition ================\n";
 	std::cout<< "Name = "<<name<<"\n";
 	std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
-	std::cout<< "Training data = " << nameHighFidelityTrainingData << "\n";;
+	std::cout<< "Training data = " << nameHighFidelityTrainingData << "\n";
+	std::cout<< "Output data = " << outputFilename << "\n";
 	std::cout<< "Executable = " << executableName << "\n";
 	std::cout<< "Path = " << path << "\n";
 	std::cout<< "Surrogate model = " << modelHiFi << "\n";
@@ -101,7 +102,8 @@ void ObjectiveFunctionDefinition::print(void) const{
 	if(ifMultiLevel){
 
 		std::cout<< "Low fidelity model = " << "\n";
-		std::cout<< "\tTraining data = " << nameLowFidelityTrainingData << "\n";;
+		std::cout<< "\tTraining data = " << nameLowFidelityTrainingData << "\n";
+		std::cout<< "Output data = " << outputFilenameLowFi << "\n";
 		std::cout<< "\tExecutable = " << executableNameLowFi << "\n";
 		std::cout<< "\tPath = " << path << "\n";
 		std::cout<< "\tSurrogate model = " << modelLowFi << "\n";
@@ -213,7 +215,7 @@ void ObjectiveFunction::bindSurrogateModelSingleFidelity() {
 void ObjectiveFunction::bindSurrogateModel(void){
 
 	assert(ifDefinitionIsSet);
-	assert(definition.checkIfDefinitionIsOk());
+
 
 	if(definition.ifMultiLevel){
 		bindWithMultiFidelityModel();
@@ -228,7 +230,15 @@ void ObjectiveFunction::bindSurrogateModel(void){
 
 
 void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition def){
-	assert(def.checkIfDefinitionIsOk());
+
+
+	bool ifDefinitionIsOk = def.checkIfDefinitionIsOk();
+
+	if(!ifDefinitionIsOk){
+		def.print();
+		abortWithErrorMessage("Something wrong with the objective function definition");
+	}
+
 	definition = def;
 	ifDefinitionIsSet = true;
 
