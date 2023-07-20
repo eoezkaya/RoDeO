@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2021 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -38,11 +38,30 @@
 #include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
 #include "../../Random/INCLUDE/random_functions.hpp"
 
+#ifdef UNIT_TESTS
+#include<gtest/gtest.h>
+#endif
 
 
 class Optimizer {
 
+#ifdef UNIT_TESTS
+	friend class OptimizationTest;
+	FRIEND_TEST(OptimizationTest, constructor);
+	FRIEND_TEST(OptimizationTest, setOptimizationProblem);
+	FRIEND_TEST(OptimizationTest, reduceTrainingDataFiles);
+	FRIEND_TEST(OptimizationTest, zoomInDesignSpace);
+	FRIEND_TEST(OptimizationTest, setOptimizationHistory);
+	FRIEND_TEST(OptimizationTest, updateOptimizationHistory);
+	FRIEND_TEST(OptimizationTest, zoomInDesignSpace);
+	FRIEND_TEST(OptimizationTest, estimateConstraints);
+	FRIEND_TEST(OptimizationTest, calculateFeasibilityProbabilities);
+
+
+#endif
+
 private:
+
 
 	vec lowerBounds;
 	vec upperBounds;
@@ -96,8 +115,40 @@ private:
 
 	void findTheGlobalOptimalDesign(void);
 	void initializeBoundsForAcquisitionFunctionMaximization();
-	void evaluateObjectiveFunction(Design &currentBestDesign);
+
 	void modifySigmaFactor(void);
+
+	void evaluateObjectiveFunction(Design &currentBestDesign);
+	void evaluateObjectiveFunctionMultiFidelity(Design &currentBestDesign);
+	void evaluateObjectiveFunctionSingleFidelity(Design &currentBestDesign);
+	void evaluateObjectiveFunctionWithTangents(Design &currentBestDesign);
+	void evaluateObjectFunctionWithAdjoints();
+	void evaluateObjectFunctionWithPrimal();
+	void evaluateObjectiveFunctionMultiFidelityWithBothPrimal(Design &currentBestDesign);
+	void evaluateObjectiveFunctionMultiFidelityWithLowFiAdjoint(Design &currentBestDesign);
+
+	void evaluateConstraints(Design &);
+
+	bool areDiscreteParametersUsed(void) const;
+	void roundDiscreteParameters(rowvec &);
+
+
+	bool isConstrained(void) const;
+	bool isNotConstrained(void) const;
+
+	void zoomInDesignSpace(void);
+	void reduceTrainingDataFiles(void) const;
+	void reduceBoxConstraints(void);
+	bool isToZoomInIteration(unsigned int) const;
+
+	void trainSurrogatesForConstraints();
+
+	void setOptimizationHistory(void);
+	void updateOptimizationHistory(Design d);
+	void clearOptimizationHistoryFile(void) const;
+	void prepareOptimizationHistoryFile(void) const;
+
+	void estimateConstraints(DesignForBayesianOptimization &) const;
 
 public:
 
@@ -120,9 +171,9 @@ public:
 	bool ifBoxConstraintsSet = false;
 	bool ifObjectFunctionIsSpecied = false;
 	bool ifSurrogatesAreInitialized = false;
-
 	bool ifreduceTrainingDataZoomIn = false;
 	bool ifAdaptSigmaFactor         = false;
+
 
 
 	OutputDevice output;
@@ -136,20 +187,15 @@ public:
 
 
 	void setParameterToDiscrete(unsigned int, double);
-
-	void roundDiscreteParameters(rowvec &);
-
 	bool checkSettings(void) const;
 	void print(void) const;
 	void printConstraints(void) const;
 
-	void EfficientGlobalOptimization(void);
+	void performEfficientGlobalOptimization(void);
 
 	void initializeSurrogates(void);
 	void trainSurrogates(void);
 
-
-	void setProblemType(std::string);
 	void setMaximumNumberOfIterations(unsigned int );
 	void setMaximumNumberOfIterationsLowFidelity(unsigned int);
 
@@ -167,22 +213,19 @@ public:
 	void setZoomFactor(double value);
 
 
+
+
 	void setHowOftenTrainModels(unsigned int value);
 	void setHowOftenZoomIn(unsigned int value);
 
 
-	void zoomInDesignSpace(void);
-	void reduceTrainingDataFiles(void) const;
-	void reduceBoxConstraints(void);
+
 
 	void setInitialImprovementValue(double);
 	void calculateImprovementValue(Design &);
 
 	void addConstraint(ConstraintFunction &);
 
-	void evaluateConstraints(Design &);
-
-	void estimateConstraints(DesignForBayesianOptimization &) const;
 
 	void checkIfSettingsAreOK(void) const;
 	bool checkBoxConstraints(void) const;
@@ -195,14 +238,6 @@ public:
 
 	void computeConstraintsandPenaltyTerm(Design &);
 
-
-	void setOptimizationHistory(void);
-	void updateOptimizationHistory(Design d);
-	void clearOptimizationHistoryFile(void) const;
-	void prepareOptimizationHistoryFile(void) const;
-
-
-
 	void addConstraintValuesToData(Design &d);
 
 	void calculateFeasibilityProbabilities(DesignForBayesianOptimization &) const;
@@ -212,17 +247,6 @@ public:
 	DesignForBayesianOptimization MaximizeAcqusitionFunctionGradientBased(DesignForBayesianOptimization ) const;
 	void findTheMostPromisingDesign(void);
 	DesignForBayesianOptimization getDesignWithMaxExpectedImprovement(void) const;
-
-	rowvec generateRandomRowVectorAroundASample(void);
-
-
-	bool ifConstrained(void) const;
-
-
-	mat getOptimizationHistory(void) const;
-	pair<vec,vec> getBoundsForAcqusitionFunctionMaximization(void) const;
-	Design getGlobalOptimalDesign(void) const;
-
 
 
 };

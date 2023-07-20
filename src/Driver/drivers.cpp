@@ -50,89 +50,94 @@
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
-
-
-
-RoDeODriver::RoDeODriver(){
-
+void RoDeODriver::addConfigKeysObjectiveFunction() {
 	/* Keywords for objective functions */
+	configKeysObjectiveFunction.add(ConfigKey("NAME", "string"));
+	configKeysObjectiveFunction.add(ConfigKey("DESIGN_VECTOR_FILE", "string"));
+	configKeysObjectiveFunction.add(ConfigKey("OUTPUT_FILE", "stringVector"));
+	configKeysObjectiveFunction.add(ConfigKey("PATH", "stringVector"));
+	configKeysObjectiveFunction.add(ConfigKey("EXECUTABLE", "stringVector"));
+	configKeysObjectiveFunction.add(
+			ConfigKey("SURROGATE_MODEL", "stringVector"));
+	configKeysObjectiveFunction.add(
+			ConfigKey("FILENAME_TRAINING_DATA", "stringVector"));
+	configKeysObjectiveFunction.add(
+			ConfigKey("NUMBER_OF_TRAINING_ITERATIONS", "int"));
+	configKeysObjectiveFunction.add(ConfigKey("MULTILEVEL_MODEL", "string"));
+	configKeysObjectiveFunction.add(ConfigKey("WARM_START", "string"));
+}
 
-	configKeysObjectiveFunction.add(ConfigKey("NAME","string") );
-	configKeysObjectiveFunction.add(ConfigKey("DESIGN_VECTOR_FILE","string") );
-
-	configKeysObjectiveFunction.add(ConfigKey("OUTPUT_FILE","stringVector") );
-	configKeysObjectiveFunction.add(ConfigKey("PATH","stringVector") );
-	configKeysObjectiveFunction.add(ConfigKey("EXECUTABLE","stringVector") );
-	configKeysObjectiveFunction.add(ConfigKey("SURROGATE_MODEL","stringVector") );
-
-	configKeysObjectiveFunction.add(ConfigKey("FILENAME_TRAINING_DATA","stringVector") );
-
-	configKeysObjectiveFunction.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
-	configKeysObjectiveFunction.add(ConfigKey("MULTILEVEL_MODEL","string") );
-	configKeysObjectiveFunction.add(ConfigKey("WARM_START","string") );
-
-
+void RoDeODriver::addConfigKeysConstraintFunctions() {
 	/* Keywords for constraints */
+	configKeysConstraintFunction.add(ConfigKey("DEFINITION", "string"));
+	configKeysConstraintFunction.add(ConfigKey("DESIGN_VECTOR_FILE", "string"));
+	configKeysConstraintFunction.add(ConfigKey("OUTPUT_FILE", "stringVector"));
+	configKeysConstraintFunction.add(ConfigKey("PATH", "stringVector"));
+	configKeysConstraintFunction.add(ConfigKey("EXECUTABLE", "stringVector"));
+	configKeysConstraintFunction.add(
+			ConfigKey("SURROGATE_MODEL", "stringVector"));
+	configKeysConstraintFunction.add(
+			ConfigKey("NUMBER_OF_TRAINING_ITERATIONS", "int"));
+	configKeysConstraintFunction.add(ConfigKey("MULTILEVEL_MODEL", "string"));
+	configKeysConstraintFunction.add(ConfigKey("WARM_START", "string"));
+	configKeysConstraintFunction.add(
+			ConfigKey("FILENAME_TRAINING_DATA", "stringVector"));
+}
 
-	configKeysConstraintFunction.add(ConfigKey("DEFINITION","string") );
-	configKeysConstraintFunction.add(ConfigKey("DESIGN_VECTOR_FILE","string") );
-
-	configKeysConstraintFunction.add(ConfigKey("OUTPUT_FILE","stringVector") );
-	configKeysConstraintFunction.add(ConfigKey("PATH","stringVector") );
-
-	configKeysConstraintFunction.add(ConfigKey("EXECUTABLE","stringVector") );
-	configKeysConstraintFunction.add(ConfigKey("SURROGATE_MODEL","stringVector") );
-	configKeysConstraintFunction.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
-	configKeysConstraintFunction.add(ConfigKey("MULTILEVEL_MODEL","string") );
-	configKeysConstraintFunction.add(ConfigKey("WARM_START","string") );
-	configKeysConstraintFunction.add(ConfigKey("FILENAME_TRAINING_DATA","stringVector") );
-
-
-
-	/* Other keywords */
-
-	configKeys.add(ConfigKey("PROBLEM_TYPE","string") );
-	configKeys.add(ConfigKey("PROBLEM_NAME","string") );
-	configKeys.add(ConfigKey("DIMENSION","int") );
-	configKeys.add(ConfigKey("UPPER_BOUNDS","doubleVector") );
-	configKeys.add(ConfigKey("LOWER_BOUNDS","doubleVector") );
-
-
+void RoDeODriver::addConfigKeysSurrogateModelTest() {
 	/* For Surrogate Model Test */
-	configKeys.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS","int") );
-	configKeys.add(ConfigKey("MULTILEVEL_MODEL","string") );
-	configKeys.add(ConfigKey("FILENAME_TRAINING_DATA","stringVector") );
-	configKeys.add(ConfigKey("FILENAME_TEST_DATA","string") );
-	configKeys.add(ConfigKey("SURROGATE_MODEL","stringVector") );
-	configKeys.add(ConfigKey("WARM_START","string") );
+	configKeys.add(ConfigKey("NUMBER_OF_TRAINING_ITERATIONS", "int"));
+	configKeys.add(ConfigKey("MULTILEVEL_MODEL", "string"));
+	configKeys.add(ConfigKey("FILENAME_TRAINING_DATA", "stringVector"));
+	configKeys.add(ConfigKey("FILENAME_TEST_DATA", "string"));
+	configKeys.add(ConfigKey("SURROGATE_MODEL", "stringVector"));
+	configKeys.add(ConfigKey("WARM_START", "string"));
+}
 
+void RoDeODriver::addConfigKeysOptimization() {
+	configKeys.add(ConfigKey("MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS", "int"));
+	configKeys.add(ConfigKey("VISUALIZATION", "string"));
+	configKeys.add(ConfigKey("DISPLAY", "string"));
+	configKeys.add(ConfigKey("ZOOM_IN", "string"));
+	configKeys.add(ConfigKey("ZOOM_IN_CONTRACTION_FACTOR", "double"));
+	configKeys.add(ConfigKey("ZOOM_IN_HOW_OFTEN", "int"));
+	configKeys.add(ConfigKey("MAX_NUMBER_OF_INNER_ITERATIONS", "int"));
+	configKeys.add(ConfigKey("DISCRETE_VARIABLES", "doubleVector"));
+	configKeys.add(
+			ConfigKey("DISCRETE_VARIABLES_VALUE_INCREMENTS", "doubleVector"));
+	configKeys.add(
+			ConfigKey("TARGET_VALUE_FOR_VARIABLE_SAMPLE_WEIGHTS", "string"));
+}
 
+void RoDeODriver::addConfigKeysGeneral() {
+	configKeys.add(ConfigKey("PROBLEM_TYPE", "string"));
+	configKeys.add(ConfigKey("PROBLEM_NAME", "string"));
+	configKeys.add(ConfigKey("DIMENSION", "int"));
+	configKeys.add(ConfigKey("UPPER_BOUNDS", "doubleVector"));
+	configKeys.add(ConfigKey("LOWER_BOUNDS", "doubleVector"));
+}
 
-	configKeys.add(ConfigKey("MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS","int") );
-	configKeys.add(ConfigKey("VISUALIZATION","string") );
-	configKeys.add(ConfigKey("DISPLAY","string") );
-	configKeys.add(ConfigKey("ZOOM_IN","string") );
-	configKeys.add(ConfigKey("ZOOM_IN_CONTRACTION_FACTOR","double") );
-	configKeys.add(ConfigKey("ZOOM_IN_HOW_OFTEN","int") );
-
-	configKeys.add(ConfigKey("MAX_NUMBER_OF_INNER_ITERATIONS","int") );
-
-	configKeys.add(ConfigKey("DISCRETE_VARIABLES","doubleVector") );
-	configKeys.add(ConfigKey("DISCRETE_VARIABLES_VALUE_INCREMENTS","doubleVector") );
-
-	configKeys.add(ConfigKey("TARGET_VALUE_FOR_VARIABLE_SAMPLE_WEIGHTS","string") );
-
-
-#if 0
-	printKeywords();
-#endif
-
+void RoDeODriver::addAvailableSurrogateModels() {
 	availableSurrogateModels.push_back("ORDINARY_KRIGING");
 	availableSurrogateModels.push_back("UNIVERSAL_KRIGING");
 	availableSurrogateModels.push_back("LINEAR_REGRESSION");
 	availableSurrogateModels.push_back("TANGENT_ENHANCED");
 	availableSurrogateModels.push_back("GRADIENT_ENHANCED");
+}
 
+RoDeODriver::RoDeODriver(){
+
+
+	addConfigKeysObjectiveFunction();
+	addConfigKeysConstraintFunctions();
+	addConfigKeysGeneral();
+	addConfigKeysSurrogateModelTest();
+	addConfigKeysOptimization();
+#if 0
+	printKeywords();
+#endif
+
+	addAvailableSurrogateModels();
 }
 
 
@@ -301,22 +306,7 @@ void RoDeODriver::checkIfSurrogateModelTypeIsOK(void) const{
 
 }
 
-void RoDeODriver::checkIfConstraintsAreProperlyDefined(void) const{
 
-	output.printMessage("Checking constraint function settings...");
-
-	for(auto it = std::begin(constraints); it != std::end(constraints); ++it) {
-
-		if(it->inequalityType != ">" && it->inequalityType != "<"){
-
-			std::cout<<"ERROR: Only inequality constraints (>,<) are allowed in constraint definitions, did you set CONSTRAINT_DEFINITIONS properly?\n";
-			abort();
-
-		}
-
-	}
-
-}
 
 
 
@@ -324,8 +314,6 @@ void RoDeODriver::checkSettingsForOptimization(void) const{
 
 	checkIfProblemDimensionIsSetProperly();
 	checkIfBoxConstraintsAreSetPropertly();
-	checkIfConstraintsAreProperlyDefined();
-
 
 	configKeys.abortifConfigKeyIsNotSet("MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS");
 
@@ -396,65 +384,7 @@ bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 }
 
 
-void  RoDeODriver::checkConsistencyOfConstraint(ConstraintDefinition def) const{
 
-	assert(def.ifDefined);
-
-	string exeName = def.executableName;
-
-	if(isEmpty(exeName)){
-		abortWithErrorMessage("Constraint function EXECUTABLE is undefined!");
-	}
-
-	string filenameDesignVector = def.designVectorFilename;
-	if(isEmpty(filenameDesignVector)){
-		abortWithErrorMessage("Constraint function DESIGN_VECTOR_FILE is undefined!");
-	}
-
-	string outputFileName = def.outputFilename;
-
-	if(isEmpty(outputFileName)){
-		abortWithErrorMessage("Constraint function OUTPUT_FILE is undefined!");
-	}
-
-	string filenameTrainingData = def.nameHighFidelityTrainingData;
-
-	if(isEmpty(filenameTrainingData)){
-		abortWithErrorMessage("Constraint function FILENAME_TRAINING_DATA is undefined!");
-	}
-
-	bool ifMultiLevelIsActive = def.ifMultiLevel;
-
-	if(ifMultiLevelIsActive){
-
-		string exeNameLowFi = def.executableNameLowFi;
-
-		if(isEmpty(exeNameLowFi)){
-			abortWithErrorMessage("Constraint function EXECUTABLE for the low-fidelity model is undefined!");
-		}
-		string filenameTrainingDataLowFi = def.nameLowFidelityTrainingData;
-
-		if(isEmpty(filenameTrainingDataLowFi)){
-			abortWithErrorMessage("Constraint function FILENAME_TRAINING_DATA for the low-fidelity model is undefined!");
-		}
-
-		string outputFileNameLowFi = def.outputFilenameLowFi;
-
-		if(isEmpty(outputFileNameLowFi)){
-			abortWithErrorMessage("Constraint function OUTPUT_FILE for the low-fidelity model is undefined!");
-		}
-	}
-
-
-
-}
-
-void RoDeODriver::checkConsistencyOfConstraintDefinitions(void) const{
-
-	for ( auto i = constraints.begin(); i != constraints.end(); i++ ) {
-		checkConsistencyOfConstraint(*i);
-	}
-}
 
 void RoDeODriver::checkConsistencyOfObjectiveFunctionDefinition(void) const{
 
@@ -566,7 +496,7 @@ void RoDeODriver::printAllConstraintDefinitions(void) const{
 
 	std::cout<<"\nList of all constraint definitions:\n";
 
-	for ( auto i = constraints.begin(); i != constraints.end(); i++ ) {
+	for ( auto i = constraintDefinitions.begin(); i != constraintDefinitions.end(); i++ ) {
 
 		i->print();
 	}
@@ -611,8 +541,10 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	filenameTrainingData = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
 	surrogateModel = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
 
-	ConstraintDefinition constraintFunctionDefinition;
-	constraintFunctionDefinition.setDefinition(definitionBuffer);
+	ObjectiveFunctionDefinition constraintFunctionDefinition;
+	ConstraintDefinition constraintExpression;
+	constraintExpression.setDefinition(definitionBuffer);
+
 
 	constraintFunctionDefinition.designVectorFilename = designVectorFilename;
 	constraintFunctionDefinition.executableName = executableName;
@@ -664,11 +596,12 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 
 	}
 
-	constraintFunctionDefinition.ID = numberOfConstraints;
+	constraintExpression.ID = numberOfConstraints;
 	constraintFunctionDefinition.ifDefined = true;
 	numberOfConstraints++;
 
-	constraints.push_back(constraintFunctionDefinition);
+	constraintDefinitions.push_back(constraintFunctionDefinition);
+	constraintExpressions.push_back(constraintExpression);
 
 
 }
@@ -677,10 +610,18 @@ ObjectiveFunctionDefinition RoDeODriver::getObjectiveFunctionDefinition(void) co
 	return definitionObjectiveFunction;
 }
 
-ConstraintDefinition RoDeODriver::getConstraintDefinition(unsigned int i) const{
-	assert(i<constraints.size());
-	return constraints.at(i);
+ConstraintDefinition RoDeODriver::getConstraintExpression(unsigned int i) const{
+	assert(i<constraintExpressions.size());
+	return constraintExpressions.at(i);
 }
+
+ObjectiveFunctionDefinition RoDeODriver::getConstraintDefinition(unsigned int i) const{
+
+	assert(i<constraintDefinitions.size());
+	return constraintDefinitions.at(i);
+}
+
+
 
 
 unsigned int RoDeODriver::getDimension(void) const{
@@ -889,9 +830,20 @@ void RoDeODriver::extractConfigDefinitionsFromString(std::string inputString){
 	}
 }
 
-ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDefinition) const{
+void RoDeODriver::setConstraintBoxConstraints(ConstraintFunction &constraintFunc) const {
+
+	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
+	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
+	Bounds boxConstraints(lb, ub);
+	constraintFunc.setParameterBounds(boxConstraints);
+}
+
+ConstraintFunction RoDeODriver::setConstraint(unsigned int index) const{
 
 
+	ConstraintDefinition expression = getConstraintExpression(index);
+	ObjectiveFunctionDefinition definition = getConstraintDefinition(index);
+	definition.name = expression.constraintName;
 
 	int dim = configKeys.getConfigKeyIntValue("DIMENSION");
 
@@ -899,16 +851,10 @@ ConstraintFunction RoDeODriver::setConstraint(ConstraintDefinition constraintDef
 	ConstraintFunction constraintFunc;
 	constraintFunc.setDimension(dim);
 
-	constraintFunc.setParametersByDefinition(constraintDefinition);
+	constraintFunc.setParametersByDefinition(definition);
+	constraintFunc.setConstraintDefinition(expression);
 
-	vec lb = configKeys.getConfigKeyVectorDoubleValue("LOWER_BOUNDS");
-	vec ub = configKeys.getConfigKeyVectorDoubleValue("UPPER_BOUNDS");
-
-	Bounds boxConstraints(lb,ub);
-	constraintFunc.setParameterBounds(boxConstraints);
-
-
-
+	setConstraintBoxConstraints(constraintFunc);
 	unsigned int nIterForSurrogateTraining = 10000;
 
 
@@ -962,7 +908,7 @@ void RoDeODriver::runOptimization(void){
 		optimizationStudy.print();
 	}
 
-	optimizationStudy.EfficientGlobalOptimization();
+	optimizationStudy.performEfficientGlobalOptimization();
 
 }
 
@@ -1003,14 +949,15 @@ Optimizer RoDeODriver::setOptimizationStudy(void) {
 	optimizationStudy.setBoxConstraints(boxConstraints);
 
 
-	for ( auto i = constraints.begin(); i != constraints.end(); i++ ) {
 
-		ConstraintFunction constraintToAdd = setConstraint(*i);
+	for ( int i = 0; i<numberOfConstraints; i++ ) {
+
+		ConstraintFunction constraintToAdd = setConstraint(i);
 		optimizationStudy.addConstraint(constraintToAdd);
 
 	}
 
-	checkConsistencyOfConstraintDefinitions();
+//	checkConsistencyOfConstraintDefinitions();
 
 
 	vec indicesOfDiscreteVariables = configKeys.getConfigKeyVectorDoubleValue("DISCRETE_VARIABLES");

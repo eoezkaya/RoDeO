@@ -83,37 +83,93 @@ protected:
 };
 
 
-TEST_F(SurrogateTesterTest, bindSurrogateModel){
+TEST_F(SurrogateTesterTest, constructor){
 
+	SurrogateModelTester testObject;
+	ASSERT_FALSE(testObject.boxConstraints.areBoundsSet());
+	ASSERT_FALSE(testObject.ifSurrogateModelLowFiSpecified);
+	ASSERT_FALSE(testObject.ifSurrogateModelSpecified);
+	ASSERT_FALSE(testObject.ifbindSurrogateModelisDone);
 
-	surrogateTester.setName("testModel");
-	surrogateTester.setFileNameTrainingData("trainingData.csv");
-	surrogateTester.setFileNameTestData("test.csv");
-	surrogateTester.setSurrogateModel(LINEAR_REGRESSION);
-
-	surrogateTester.bindSurrogateModels();
-	ASSERT_EQ(surrogateTester.ifbindSurrogateModelisDone,true);
 
 }
 
+
+
+TEST_F(SurrogateTesterTest, bindSurrogateModel){
+
+	SurrogateModelTester testObject;
+	testObject.setSurrogateModel(LINEAR_REGRESSION);
+	testObject.bindSurrogateModels();
+	ASSERT_EQ(testObject.ifbindSurrogateModelisDone,true);
+
+}
+
+
 TEST_F(SurrogateTesterTest, setBoxConstraints){
+
+	SurrogateModelTester testObject;
 
 	unsigned int dim = 2;
 	vec lowerBounds(dim, fill::zeros);
 	vec upperBounds(dim, fill::ones);
 	Bounds boxConstraints(lowerBounds , upperBounds);
 
-	SurrogateModelTester surrogateTester;
-	surrogateTester.setBoxConstraints(boxConstraints);
+	testObject.setBoxConstraints(boxConstraints);
 
-	Bounds boxConstraintsGet = surrogateTester.getBoxConstraints();
+	Bounds boundsOfTestProblem = testObject.boxConstraints;
 
-	unsigned int dimBoxConstraints = boxConstraintsGet.getDimension();
-	ASSERT_EQ(dimBoxConstraints,2);
+	unsigned int dimBoxConstraints = boundsOfTestProblem.getDimension();
+	ASSERT_EQ(dimBoxConstraints,dim);
 
 }
 
-TEST_F(SurrogateTesterTest, performSurrogateModelGGEKModel){
+
+TEST_F(SurrogateTesterTest, performSurrogateModelTestLinearRegression){
+
+	SurrogateModelTester testObject;
+
+	Bounds boxConstraints;
+	boxConstraints.setDimension(2);
+	boxConstraints.setBounds(-3.0, 3.0);
+
+	testObject.setBoxConstraints(boxConstraints);
+
+	linearTestFunction.function.generateTrainingSamples();
+	linearTestFunction.function.generateTestSamples();
+
+	testObject.setName("testModel");
+	testObject.setFileNameTrainingData(linearTestFunction.function.filenameTrainingData);
+	testObject.setFileNameTestData(linearTestFunction.function.filenameTestData);
+
+	testObject.setSurrogateModel(LINEAR_REGRESSION);
+	testObject.setDimension(2);
+	testObject.bindSurrogateModels();
+
+//	surrogateTester.setDisplayOn();
+	testObject.performSurrogateModelTest();
+
+	mat results;
+	results.load("surrogateTestResults.csv", csv_ascii);
+
+	vec SE = results.col(4);
+
+	EXPECT_LT(mean(SE), 0.00001);
+
+	remove("surrogateTestResults.csv");
+	remove(linearTestFunction.function.filenameTrainingData.c_str());
+	remove(linearTestFunction.function.filenameTestData.c_str());
+
+
+
+}
+
+
+
+
+
+
+TEST_F(SurrogateTesterTest, performSurrogateModelGradientEnhancedModel){
 
 
 	Bounds boxConstraints;
@@ -133,7 +189,7 @@ TEST_F(SurrogateTesterTest, performSurrogateModelGGEKModel){
 
 	surrogateTester.setSurrogateModel(GRADIENT_ENHANCED);
 	surrogateTester.bindSurrogateModels();
-	surrogateTester.setDisplayOn();
+//	surrogateTester.setDisplayOn();
 	surrogateTester.performSurrogateModelTest();
 
 	mat results;
@@ -144,7 +200,7 @@ TEST_F(SurrogateTesterTest, performSurrogateModelGGEKModel){
 	double MSE = mean(SE);
 //	printScalar(MSE);
 
-	abort();
+
 
 
 	EXPECT_LT(MSE, 10000);
@@ -158,7 +214,6 @@ TEST_F(SurrogateTesterTest, performSurrogateModelGGEKModel){
 }
 
 TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
-
 
 
 	Bounds boxConstraints;
@@ -176,7 +231,7 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
 
 	surrogateTester.setSurrogateModel(TANGENT_ENHANCED);
 	surrogateTester.bindSurrogateModels();
-	surrogateTester.setDisplayOn();
+//	surrogateTester.setDisplayOn();
 	surrogateTester.performSurrogateModelTest();
 
 	mat results;
@@ -186,7 +241,7 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestTangentModel){
 	double MSE = mean(SE);
 //	printScalar(MSE);
 
-	EXPECT_LT(mean(SE), 100000);
+	EXPECT_LT(MSE, 100000);
 
 
 	remove("surrogateTestResults.csv");
@@ -290,41 +345,6 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestMultiLevelOnlyFunctionalVal
 
 }
 
-TEST_F(SurrogateTesterTest, performSurrogateModelTestLinearRegression){
-
-	Bounds boxConstraints;
-	boxConstraints.setDimension(2);
-	boxConstraints.setBounds(-3.0, 3.0);
-
-	surrogateTester.setBoxConstraints(boxConstraints);
-
-	linearTestFunction.function.generateTrainingSamples();
-	linearTestFunction.function.generateTestSamples();
-
-	surrogateTester.setName("testModel");
-	surrogateTester.setFileNameTrainingData(linearTestFunction.function.filenameTrainingData);
-	surrogateTester.setFileNameTestData(linearTestFunction.function.filenameTestData);
-
-	surrogateTester.setSurrogateModel(LINEAR_REGRESSION);
-	surrogateTester.bindSurrogateModels();
-
-//	surrogateTester.setDisplayOn();
-	surrogateTester.performSurrogateModelTest();
-
-	mat results;
-	results.load("surrogateTestResults.csv", csv_ascii);
-
-	vec SE = results.col(4);
-
-	EXPECT_LT(mean(SE), 0.00001);
-
-	remove("surrogateTestResults.csv");
-	remove(linearTestFunction.function.filenameTrainingData.c_str());
-	remove(linearTestFunction.function.filenameTestData.c_str());
-
-
-
-}
 
 
 TEST_F(SurrogateTesterTest, performSurrogateModelTestOrdinaryKriging){
@@ -359,7 +379,7 @@ TEST_F(SurrogateTesterTest, performSurrogateModelTestOrdinaryKriging){
 	vec SE = results.col(4);
 
 	double MSE = mean(SE);
-	printScalar(MSE);
+//	printScalar(MSE);
 
 	EXPECT_LT(MSE, 100000);
 

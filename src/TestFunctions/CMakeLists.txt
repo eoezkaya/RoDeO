@@ -1,4 +1,4 @@
-set(src_files eggholder.cpp himmelblau.cpp standard_test_functions.cpp test_functions.cpp wingweight.cpp)
+set(src_files eggholder.cpp himmelblau.cpp standard_test_functions.cpp test_functions.cpp wingweight.cpp griewank2D.cpp)
 add_library(testFunctions ${src_files})
 target_compile_options(testFunctions PUBLIC -Wall -Wextra -Wpedantic -O2)
 

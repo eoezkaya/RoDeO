@@ -243,6 +243,27 @@ EggholderFunction::EggholderFunction():function("Eggholder", 2){
 
 }
 
+/***********************************************************************************************/
 
+Griewank2DFunction::Griewank2DFunction():function("Griewank2D", 2){
 
+	function.func_ptr  = griewank2D;
+	function.adj_ptr   = griewank2DAdjoint;
+	function.tan_ptr   = griewank2DTangent;
+	Bounds boxConstraints;
 
+	vec lb(2);
+	vec ub(2);
+
+	lb(0) = -600.0; ub(0) = 600.0;
+	lb(1) = -600.0; ub(1) = 600.0;
+
+	boxConstraints.setBounds(lb,ub);
+	function.setBoxConstraints(boxConstraints);
+	function.filenameTestData = "griewank2DTestData.csv";
+	function.filenameTrainingData = "griewank2D.csv";
+
+	function.numberOfTrainingSamples = 50;
+	function.numberOfTestSamples = 100;
+
+}

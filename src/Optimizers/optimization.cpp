@@ -161,7 +161,7 @@ void Optimizer::setBoxConstraints(Bounds boxConstraints){
 	assert(ifObjectFunctionIsSpecied);
 	objFun.setParameterBounds(boxConstraints);
 
-	if(ifConstrained()){
+	if(isConstrained()){
 
 		for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
@@ -200,18 +200,6 @@ void Optimizer::setZoomInOff(void){
 	ifZoomInDesignSpaceIsAllowed = false;
 }
 
-
-pair<vec,vec> Optimizer::getBoundsForAcqusitionFunctionMaximization(void) const{
-	pair<vec,vec> result;
-	result.first  = lowerBoundsForAcqusitionFunctionMaximization;
-	result.second = upperBoundsForAcqusitionFunctionMaximization;
-
-	return result;
-}
-
-Design Optimizer::getGlobalOptimalDesign(void) const{
-	return globalOptimalDesign;
-}
 
 void Optimizer::setHowOftenZoomIn(unsigned int value){
 	assert(value < maxNumberOfSamples);
@@ -273,14 +261,12 @@ void Optimizer::estimateConstraints(DesignForBayesianOptimization &design) const
 
 bool Optimizer::checkBoxConstraints(void) const{
 
-	bool flagWithinBounds = true;
-
 	for(unsigned int i=0; i<dimension; i++) {
 
-		if(lowerBounds(i) >= upperBounds(i)) flagWithinBounds = false;
+		if(lowerBounds(i) >= upperBounds(i)) return false;
 	}
 
-	return flagWithinBounds;
+	return true;
 }
 
 
@@ -309,18 +295,18 @@ void Optimizer::calculateFeasibilityProbabilities(DesignForBayesianOptimization 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
 		string type  = it->getInequalityType();
-		double value = it->getInequalityTargetValue();
+		double inequalityValue = it->getInequalityTargetValue();
 		int ID = it->getID();
 		double estimated = designCalculated.constraintValues(ID);
 		double sigma = designCalculated.constraintSigmas(ID);
 
 		if(type.compare(">") == 0){
 			/* p (constraint value > target) */
-			probabilities(ID) =  calculateProbalityGreaterThanAValue(value, estimated, sigma);
+			probabilities(ID) =  calculateProbalityGreaterThanAValue(inequalityValue, estimated, sigma);
 		}
 
 		if(type.compare("<") == 0){
-			probabilities(ID) =  calculateProbalityLessThanAValue(value, estimated, sigma);
+			probabilities(ID) =  calculateProbalityLessThanAValue(inequalityValue, estimated, sigma);
 		}
 
 	}
@@ -342,7 +328,7 @@ void Optimizer::print(void) const{
 
 	objFun.print();
 
-	if (!ifConstrained()){
+	if (isNotConstrained()){
 		std::cout << "Optimization problem does not have any constraints\n";
 	}
 	else{
@@ -392,23 +378,22 @@ void Optimizer::initializeSurrogates(void){
 
 }
 
+void Optimizer::trainSurrogatesForConstraints() {
+	output.printMessage("Training surrogate model for the constraints...");
+	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end();
+			it++) {
+		it->trainSurrogate();
+	}
+	output.printMessage("Model training for constraints is done...");
+}
 
 void Optimizer::trainSurrogates(void){
 
 	output.printMessage("Training surrogate model for the objective function...");
-
 	objFun.trainSurrogate();
 
-	if(constraintFunctions.size() !=0){
-		output.printMessage("Training surrogate model for the constraints...");
-	}
-
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-		it->trainSurrogate();
-	}
-
-	if(constraintFunctions.size() !=0){
-		output.printMessage("Model training for constraints is done...");
+	if(isConstrained()){
+		trainSurrogatesForConstraints();
 	}
 }
 
@@ -454,7 +439,7 @@ void Optimizer::updateOptimizationHistory(Design d) {
 
 void Optimizer::addPenaltyToAcqusitionFunctionForConstraints(DesignForBayesianOptimization &designCalculated) const{
 
-	if(ifConstrained()){
+	if(isConstrained()){
 
 		estimateConstraints(designCalculated);
 
@@ -466,17 +451,41 @@ void Optimizer::addPenaltyToAcqusitionFunctionForConstraints(DesignForBayesianOp
 }
 
 
-bool Optimizer::ifConstrained(void) const{
+bool Optimizer::isConstrained(void) const{
 
 	if(numberOfConstraints > 0) return true;
 	else return false;
+}
+
+bool Optimizer::isNotConstrained(void) const{
+
+	if(numberOfConstraints == 0) return true;
+	else return false;
+}
+
+bool Optimizer::areDiscreteParametersUsed(void) const{
+
+	if(numberOfDisceteVariables>0) return true;
+	else return false;
+}
+
+
+bool Optimizer::isToZoomInIteration(unsigned int iterationNo) const{
+
+	if(iterationNo%howOftenZoomIn == 0 && ifZoomInDesignSpaceIsAllowed){
+
+		return true;
+	}
+	else{
+		return false;
+	}
 
 }
 
 
 void Optimizer::computeConstraintsandPenaltyTerm(Design &d) {
 
-	if(ifConstrained()){
+	if(isConstrained()){
 
 		output.printMessage("Evaluating constraints...");
 
@@ -600,7 +609,7 @@ void Optimizer::reduceTrainingDataFiles(void) const{
 
 	objFun.reduceTrainingDataFiles(howManySamplesReduceAfterZoomIn, globalOptimalDesign.trueValue);
 
-	if(ifConstrained()){
+	if(isConstrained()){
 
 		for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
@@ -1067,7 +1076,7 @@ void Optimizer::setOptimizationHistory(void){
 
 	optimizationHistory.col(dimension) = trainingDataObjectiveFunction.col(dimension);
 
-	if (ifConstrained()){
+	if(isConstrained()){
 		setOptimizationHistoryConstraints(inputObjectiveFunction);
 		setOptimizationHistoryFeasibilityValues(inputObjectiveFunction);
 	}
@@ -1090,8 +1099,71 @@ void Optimizer::setOptimizationHistory(void){
 }
 
 
-mat Optimizer::getOptimizationHistory(void) const{
-	return optimizationHistory;
+
+void Optimizer::evaluateObjectiveFunctionMultiFidelityWithBothPrimal(Design &currentBestDesign) {
+	objFun.setEvaluationMode("primal");
+	objFun.evaluateDesign(currentBestDesign);
+	objFun.setEvaluationMode("primalLowFi");
+	objFun.evaluateDesign(currentBestDesign);
+	objFun.setDataAddMode("primalBoth");
+	objFun.addDesignToData(currentBestDesign);
+}
+
+void Optimizer::evaluateObjectiveFunctionMultiFidelityWithLowFiAdjoint(Design &currentBestDesign) {
+
+	objFun.setEvaluationMode("primal");
+	objFun.evaluateDesign(currentBestDesign);
+	objFun.setEvaluationMode("adjointLowFi");
+	objFun.evaluateDesign(currentBestDesign);
+	objFun.setDataAddMode("primalHiFiAdjointLowFi");
+	objFun.addDesignToData(currentBestDesign);
+}
+
+void Optimizer::evaluateObjectiveFunctionMultiFidelity(Design &currentBestDesign) {
+
+	SURROGATE_MODEL typeHiFi = objFun.getSurrogateModelType();
+	SURROGATE_MODEL typeLowFi = objFun.getSurrogateModelTypeLowFi();
+
+	if (typeHiFi == ORDINARY_KRIGING && typeLowFi == ORDINARY_KRIGING) {
+
+		evaluateObjectiveFunctionMultiFidelityWithBothPrimal(currentBestDesign);
+	}
+	if (typeHiFi == ORDINARY_KRIGING && typeLowFi == GRADIENT_ENHANCED) {
+		evaluateObjectiveFunctionMultiFidelityWithLowFiAdjoint(currentBestDesign);
+	}
+}
+
+void Optimizer::evaluateObjectiveFunctionWithTangents(Design &currentBestDesign) {
+
+	currentBestDesign.generateRandomDifferentiationDirection();
+	objFun.setEvaluationMode("tangent");
+	objFun.setDataAddMode("tangent");
+}
+
+void Optimizer::evaluateObjectFunctionWithAdjoints() {
+	objFun.setEvaluationMode("adjoint");
+	objFun.setDataAddMode("adjoint");
+}
+
+void Optimizer::evaluateObjectFunctionWithPrimal() {
+	objFun.setEvaluationMode("primal");
+	objFun.setDataAddMode("primal");
+}
+
+void Optimizer::evaluateObjectiveFunctionSingleFidelity(Design &currentBestDesign) {
+
+	SURROGATE_MODEL type = objFun.getSurrogateModelType();
+
+	if (type == TANGENT_ENHANCED) {
+		evaluateObjectiveFunctionWithTangents(currentBestDesign);
+	} else if (type == GRADIENT_ENHANCED) {
+		evaluateObjectFunctionWithAdjoints();
+	} else {
+		evaluateObjectFunctionWithPrimal();
+	}
+
+	objFun.evaluateDesign(currentBestDesign);
+	objFun.addDesignToData(currentBestDesign);
 }
 
 void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
@@ -1100,77 +1172,26 @@ void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
 
 	if(objFun.isMultiFidelityActive()){
 
-		SURROGATE_MODEL typeHiFi = objFun.getSurrogateModelType();
-		SURROGATE_MODEL typeLowFi = objFun.getSurrogateModelTypeLowFi();
-
-		if(typeHiFi == ORDINARY_KRIGING && typeLowFi == ORDINARY_KRIGING){
-
-			objFun.setEvaluationMode("primal");
-			objFun.evaluateDesign(currentBestDesign);
-			objFun.setEvaluationMode("primalLowFi");
-			objFun.evaluateDesign(currentBestDesign);
-			objFun.setDataAddMode("primalBoth");
-
-			objFun.addDesignToData(currentBestDesign);
-
-		}
-
-		if(typeHiFi == ORDINARY_KRIGING && typeLowFi == GRADIENT_ENHANCED){
-
-			objFun.setEvaluationMode("primal");
-			objFun.evaluateDesign(currentBestDesign);
-			objFun.setEvaluationMode("adjointLowFi");
-			objFun.evaluateDesign(currentBestDesign);
-			objFun.setDataAddMode("primalHiFiAdjointLowFi");
-
-			objFun.addDesignToData(currentBestDesign);
-
-
-		}
-
+		evaluateObjectiveFunctionMultiFidelity(currentBestDesign);
 	}
 
 	else{
 
-		SURROGATE_MODEL type = objFun.getSurrogateModelType();
-		if(type == TANGENT_ENHANCED){
-
-			currentBestDesign.generateRandomDifferentiationDirection();
-			objFun.setEvaluationMode("tangent");
-			objFun.setDataAddMode("tangent");
-
-		}
-		else if(type == GRADIENT_ENHANCED){
-
-			objFun.setEvaluationMode("adjoint");
-			objFun.setDataAddMode("adjoint");
-		}
-
-		else{
-
-			objFun.setEvaluationMode("primal");
-			objFun.setDataAddMode("primal");
-
-		}
-
-
-		objFun.evaluateDesign(currentBestDesign);
-		objFun.addDesignToData(currentBestDesign);
-
+		evaluateObjectiveFunctionSingleFidelity(currentBestDesign);
 	}
 
 }
 
-void Optimizer::EfficientGlobalOptimization(void){
+void Optimizer::performEfficientGlobalOptimization(void){
 
 	assert(ifObjectFunctionIsSpecied);
 	assert(ifBoxConstraintsSet);
 
 	checkIfSettingsAreOK();
 
-	print();
-
-	output.ifScreenDisplay = true;
+	if(output.ifScreenDisplay){
+		print();
+	}
 
 	initializeSurrogates();
 
@@ -1198,18 +1219,14 @@ void Optimizer::EfficientGlobalOptimization(void){
 			trainSurrogates();
 		}
 
-		if(iterOpt%howOftenZoomIn == 0){
 
-			if(ifZoomInDesignSpaceIsAllowed) {
+		if(isToZoomInIteration(iterOpt)){
 
-				zoomInDesignSpace();
-				reduceBoxConstraints();
-				reduceTrainingDataFiles();
-				initializeSurrogates();
-				trainSurrogates();
-
-			}
-
+			zoomInDesignSpace();
+			reduceBoxConstraints();
+			reduceTrainingDataFiles();
+			initializeSurrogates();
+			trainSurrogates();
 		}
 
 		findTheMostPromisingDesign();
@@ -1226,17 +1243,21 @@ void Optimizer::EfficientGlobalOptimization(void){
 		double estimatedBestdv = objFun.interpolate(best_dvNorm);
 
 
-#if 1
-		printf("The most promising design (not normalized):\n");
-		best_dv.print();
-		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
-		std::cout<<"Sigma = "<<optimizedDesignGradientBased.sigma<<"\n";
-		cout<<"Acquisition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
+		if(output.ifScreenDisplay){
 
-#endif
+			std::cout<<"The most promising design (not normalized):\n";
+			best_dv.print();
+			std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
+			std::cout<<"Sigma = "<<optimizedDesignGradientBased.sigma<<"\n";
+			cout<<"Acquisition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
+
+		}
 
 
-		roundDiscreteParameters(best_dv);
+
+		if(areDiscreteParametersUsed()){
+			roundDiscreteParameters(best_dv);
+		}
 
 		Design currentBestDesign(best_dv);
 		currentBestDesign.tag = "The most promising design";
@@ -1257,7 +1278,9 @@ void Optimizer::EfficientGlobalOptimization(void){
 			abortWithErrorMessage("NaN while reading external executable outputs");
 		}
 
-		currentBestDesign.print();
+		if(output.ifScreenDisplay){
+			currentBestDesign.print();
+		}
 
 		addConstraintValuesToData(currentBestDesign);
 		updateOptimizationHistory(currentBestDesign);
@@ -1275,7 +1298,7 @@ void Optimizer::EfficientGlobalOptimization(void){
 		if(simulationCount >= maxNumberOfSamples){
 
 
-			output.printMessage("number of simulations > max_number_of_samples! Optimization is terminating...");
+			output.printMessage("number of simulations > maximum number of simulations! Optimization is terminating...");
 			output.printDesign(globalOptimalDesign);
 			break;
 		}
@@ -1360,28 +1383,28 @@ void Optimizer::modifySigmaFactor(void){
 
 	vec improvementValues = optimizationHistory.col(sampleDim);
 
-//	improvementValues.print("improvement values");
-    uword i = improvementValues.index_max();
+	//	improvementValues.print("improvement values");
+	uword i = improvementValues.index_max();
 
-    if(i == improvementValues.size()-1){
-
-
-    	std::cout<<"Improvement has been achieved in the last iteration\n";
-    	if(sigmaFactor>2.0) sigmaFactor = 2.0;
-    	sigmaFactor = sigmaFactor*0.8;
-    }
-    else{
-
-    	std::cout<<"No improvement has been achieved in the last iteration\n";
-    	sigmaFactor = sigmaFactor*1.25;
-    }
-
-    if(sigmaFactor > 10) sigmaFactor = 10.0;
-    if(sigmaFactor < 0.5) sigmaFactor = 0.5;
+	if(i == improvementValues.size()-1){
 
 
-    objFun.setSigmaFactor(sigmaFactor);
-    printScalar(sigmaFactor);
+		std::cout<<"Improvement has been achieved in the last iteration\n";
+		if(sigmaFactor>2.0) sigmaFactor = 2.0;
+		sigmaFactor = sigmaFactor*0.8;
+	}
+	else{
+
+		std::cout<<"No improvement has been achieved in the last iteration\n";
+		sigmaFactor = sigmaFactor*1.25;
+	}
+
+	if(sigmaFactor > 10) sigmaFactor = 10.0;
+	if(sigmaFactor < 0.5) sigmaFactor = 0.5;
+
+
+	objFun.setSigmaFactor(sigmaFactor);
+	printScalar(sigmaFactor);
 
 }
 

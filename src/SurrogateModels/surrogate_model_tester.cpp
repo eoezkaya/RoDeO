@@ -38,9 +38,6 @@
 
 SurrogateModelTester::SurrogateModelTester(){}
 
-unsigned int SurrogateModelTester::getDimension(void) const{
-	return dimension;
-}
 
 void SurrogateModelTester::setDimension(unsigned int value){
 	dimension = value;
@@ -77,47 +74,28 @@ void SurrogateModelTester::setSurrogateModelLowFi(SURROGATE_MODEL modelType){
 void SurrogateModelTester::bindSurrogateModels(void){
 
 	assert(ifSurrogateModelSpecified);
-	assert(isNotEmpty(fileNameTraingData));
-	assert(isNotEmpty(name));
-	assert(isNotEmpty(fileNameTestData));
-	assert(dimension>0);
-
-	outputToScreen.ifScreenDisplay = true;
 
 	if(!ifMultiLevel){
 
 		outputToScreen.printMessage("Multi-Fidelity feature is not active...");
 
 		if(surrogateModelType == LINEAR_REGRESSION ){
-			linearModel.setDimension(dimension);
 			surrogateModel = &linearModel;
 		}
 		if(surrogateModelType == ORDINARY_KRIGING){
-			krigingModel.setName(name);
-			krigingModel.setDimension(dimension);
 			surrogateModel = &krigingModel;
 		}
 		if(surrogateModelType == UNIVERSAL_KRIGING){
 			krigingModel.setLinearRegressionOn();
-			krigingModel.setDimension(dimension);
 			surrogateModel = &krigingModel;
 		}
 		if(surrogateModelType == TANGENT_ENHANCED){
 			generalizedGradientEnhancedModel.setDirectionalDerivativesOn();
-			generalizedGradientEnhancedModel.setName(name);
-			generalizedGradientEnhancedModel.setDimension(dimension);
 			surrogateModel = &generalizedGradientEnhancedModel;
 		}
 		if(surrogateModelType == GRADIENT_ENHANCED){
-			generalizedGradientEnhancedModel.setName(name);
-			generalizedGradientEnhancedModel.setDimension(dimension);
 			surrogateModel = &generalizedGradientEnhancedModel;
 		}
-
-
-
-		surrogateModel->setNameOfInputFile(fileNameTraingData);
-
 
 	}
 
@@ -125,20 +103,14 @@ void SurrogateModelTester::bindSurrogateModels(void){
 
 		outputToScreen.printMessage("Multi-Fidelity feature is active...");
 		assert(ifSurrogateModelLowFiSpecified);
-		multilevelModel.setDimension(dimension);
 		multilevelModel.setIDHiFiModel(surrogateModelType);
 		multilevelModel.setIDLowFiModel(surrogateModelTypeLowFi);
 		multilevelModel.setinputFileNameHighFidelityData(fileNameTraingData);
 		multilevelModel.setinputFileNameLowFidelityData(fileNameTraingDataLowFidelity);
 		multilevelModel.bindModels();
-		/* TODO correct this ugly thing */
-		multilevelModel.setDimension(dimension);
-		multilevelModel.setName(name);
 
 		surrogateModel = &multilevelModel;
 	}
-
-	surrogateModel->setNameOfInputFileTest(fileNameTestData);
 
 	ifbindSurrogateModelisDone = true;
 
@@ -150,14 +122,22 @@ void SurrogateModelTester::setBoxConstraints(Bounds boxConstraintsInput){
 	boxConstraints = boxConstraintsInput;
 }
 
-Bounds SurrogateModelTester::getBoxConstraints(void) const{
-	return boxConstraints;
-}
+
 
 void SurrogateModelTester::performSurrogateModelTest(void){
 
 	assert(boxConstraints.areBoundsSet());
 	assert(ifbindSurrogateModelisDone);
+	assert(isNotEmpty(name));
+	assert(dimension>0);
+	assert(isNotEmpty(fileNameTraingData));
+	assert(isNotEmpty(fileNameTestData));
+
+
+	surrogateModel->setDimension(dimension);
+	surrogateModel->setName(name);
+	surrogateModel->setNameOfInputFile(fileNameTraingData);
+	surrogateModel->setNameOfInputFileTest(fileNameTestData);
 
 	outputToScreen.printMessage("Performing surrogate model test...");
 	surrogateModel->setBoxConstraints(boxConstraints);

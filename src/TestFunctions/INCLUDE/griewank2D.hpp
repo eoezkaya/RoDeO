@@ -28,15 +28,17 @@
  *
  *
  */
- 
-#include<gtest/gtest.h>
- 
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
 
-  int result =  RUN_ALL_TESTS();
 
-  system("rm *.csv");
 
-}
 
+#ifndef GRIEWANK2D
+#define GRIEWANK2D
+
+
+
+double griewank2D(double *x);
+double griewank2DTangent(double *x, double *xd, double *fdot);
+double griewank2DAdjoint(double *x, double *xb);
+
+#endif

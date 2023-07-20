@@ -43,9 +43,29 @@
 #include "../../LinearAlgebra/INCLUDE/linear_solver.hpp"
 using namespace arma;
 
+#ifdef UNIT_TESTS
+#include<gtest/gtest.h>
+#endif
 
 
 class GeneralizedDerivativeEnhancedModel : public SurrogateModel{
+
+
+#ifdef UNIT_TESTS
+	friend class GGEKModelTest;
+	FRIEND_TEST(GGEKModelTest, prepareTrainingAndTestFilesForTheAuxiliaryModel);
+	FRIEND_TEST(GGEKModelTest, determineThetaCoefficientForDualBasisAlpine02_5D);
+	FRIEND_TEST(GGEKModelTest, determineThetaCoefficientForDualBasisGriewank2D);
+	FRIEND_TEST(GGEKModelTest, calculatePhiMatrixAdjoints);
+	FRIEND_TEST(GGEKModelTest, calculatePhiMatrixWithDirectionalDerivatives);
+	FRIEND_TEST(GGEKModelTest, assembleLinearSystem);
+	FRIEND_TEST(GGEKModelTest, checkResidual);
+
+
+
+#endif
+
+
 
 private:
 
@@ -93,7 +113,14 @@ private:
 	void calculateBeta0();
 	void solveLinearSystem();
 	void updateCorrelationFunctions(void);
+	void prepareTrainingAndTestFilesForTheAuxiliaryModel();
 
+	void determineThetaCoefficientForDualBasis(void);
+	void assembleLinearSystem(void);
+	void resetPhiMatrix(void);
+	void calculatePhiMatrix(void);
+	bool checkPhiMatrix(void);
+	bool checkResidual(void) const;
 
 public:
 
@@ -134,7 +161,7 @@ public:
 	void setHyperParameters(vec parameters);
 
 	void updateAuxilliaryFields(void);
-	void assembleLinearSystem(void);
+
 
 	void train(void);
 	double interpolate(rowvec x) const;
@@ -144,13 +171,10 @@ public:
 	void addNewLowFidelitySampleToData(rowvec newsample);
 
 
-	void resetPhiMatrix(void);
-	void calculatePhiMatrix(void);
-	bool checkPhiMatrix(void);
-	bool checkResidual(void) const;
+
 
 	void trainTheta(void);
-	void determineThetaCoefficientForDualBasis(void);
+
 
 
 	void prepareTrainingDataForTheKrigingModel(void);

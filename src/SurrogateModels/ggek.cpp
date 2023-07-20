@@ -346,15 +346,17 @@ void GeneralizedDerivativeEnhancedModel::solveLinearSystem(void) {
 
 	linearSystemCorrelationMatrixSVD.setMatrix(Phi);
 	/* SVD decomposition R = U Sigma VT */
+
 	linearSystemCorrelationMatrixSVD.factorize();
 	linearSystemCorrelationMatrixSVD.setThresholdForSingularValues(sigmaThresholdValueForSVD);
 	linearSystemCorrelationMatrixSVD.setRhs(ydot);
 
 	weights = linearSystemCorrelationMatrixSVD.solveLinearSystem();
 
-	//	vec res = ydot - Phi*weights;
-	//	res.print("res");
-
+/*
+	vec res = ydot - Phi*weights;
+	res.print("res");
+*/
 }
 
 void GeneralizedDerivativeEnhancedModel::updateAuxilliaryFields(void){
@@ -413,6 +415,30 @@ void GeneralizedDerivativeEnhancedModel::trainTheta(void){
 
 }
 
+void GeneralizedDerivativeEnhancedModel::prepareTrainingAndTestFilesForTheAuxiliaryModel() {
+
+	assert(ifDataIsRead);
+	assert(dimension>0);
+
+	mat rawData = data.getRawData();
+	unsigned int howManyTrainingSamplesToUse = numberOfSamples / 2;
+	assert(howManyTrainingSamplesToUse > 0);
+	rawData = shuffleRows(rawData);
+	mat halfData = rawData.submat(0, 0, howManyTrainingSamplesToUse - 1,
+			rawData.n_cols - 1);
+	halfData.save("trainingDataForTheThetaAuxModel.csv", csv_ascii);
+	mat secondhalfData = rawData.submat(howManyTrainingSamplesToUse, 0,
+			numberOfSamples - 1, dimension);
+	secondhalfData.save("testDataForTheThetaAuxModel.csv", csv_ascii);
+	if (ifDirectionalDerivativesAreUsed) {
+		assert(halfData.n_cols == 2 * dimension + 2);
+	} else {
+		assert(halfData.n_cols == 2 * dimension + 1);
+	}
+	assert(secondhalfData.n_cols == dimension + 1);
+	assert(halfData.n_rows + secondhalfData.n_rows == numberOfSamples);
+}
+
 void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(void){
 
 	assert(ifDataIsRead);
@@ -423,35 +449,12 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 
 	output.printMessage("Estimation for the theta amplification factor...");
 
+	prepareTrainingAndTestFilesForTheAuxiliaryModel();
+
+
 	GeneralizedDerivativeEnhancedModel auxiliaryModelForThetaCoefficient;
 	auxiliaryModelForThetaCoefficient.setDimension(dimension);
 	auxiliaryModelForThetaCoefficient.setBoxConstraints(boxConstraints);
-
-	mat rawData = data.getRawData();
-
-	unsigned int howManyTrainingSamplesToUse = numberOfSamples/2;
-	assert(howManyTrainingSamplesToUse>0);
-
-	rawData = shuffleRows(rawData);
-
-
-	mat halfData = rawData.submat(0, 0, howManyTrainingSamplesToUse -1, rawData.n_cols-1);
-	halfData.save("trainingDataForTheThetaAuxModel.csv", csv_ascii);
-
-	mat secondhalfData = rawData.submat(howManyTrainingSamplesToUse, 0, numberOfSamples-1, dimension);
-	secondhalfData.save("testDataForTheThetaAuxModel.csv", csv_ascii);
-
-	if(ifDirectionalDerivativesAreUsed){
-
-		assert(halfData.n_cols == 2*dimension+2);
-	}
-	else{
-
-		assert(halfData.n_cols == 2*dimension+1);
-	}
-	assert(secondhalfData.n_cols == dimension+1);
-	assert(halfData.n_rows + secondhalfData.n_rows  == numberOfSamples);
-
 	auxiliaryModelForThetaCoefficient.setNameOfInputFile("trainingDataForTheThetaAuxModel.csv");
 	auxiliaryModelForThetaCoefficient.setNameOfInputFileTest("testDataForTheThetaAuxModel.csv");
 
@@ -484,7 +487,7 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 
 
 		double valueToTry = pow(10.0,exponent);
-		//		printScalar(valueToTry);
+
 
 		auxiliaryModelForThetaCoefficient.setThetaFactor(valueToTry);
 		auxiliaryModelForThetaCoefficient.setHyperParameters(hyperParameters);
@@ -495,7 +498,9 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 		auxiliaryModelForThetaCoefficient.tryOnTestData();
 
 		double MSE = auxiliaryModelForThetaCoefficient.generalizationError;
-//		printScalar(MSE);
+
+//		printTwoScalars(valueToTry, MSE);
+
 		assert(MSE > 0.0);
 
 		if(MSE < bestMSE){
@@ -913,9 +918,15 @@ void GeneralizedDerivativeEnhancedModel::resetPhiMatrix(void){
 
 bool GeneralizedDerivativeEnhancedModel::checkResidual(void) const{
 
+	assert(weights.size() > 0);
+
 	vec residual = ydot - Phi*weights;
 	if(norm(residual) < 10E-3) return true;
-	else return false;
+	else {
+
+		trans(residual).print("residual");
+		return false;
+	}
 }
 
 
@@ -931,7 +942,7 @@ bool GeneralizedDerivativeEnhancedModel::checkPhiMatrix(void){
 
 
 
-	double epsilon = 0.0000001;
+	double epsilon = 0.00001;
 
 
 	for(unsigned int i=0; i<N; i++){
@@ -949,9 +960,14 @@ bool GeneralizedDerivativeEnhancedModel::checkPhiMatrix(void){
 
 		sum+=beta0;
 
-		printTwoScalars(sum, ftilde);
-		double error = fabs(sum - ftilde);
-		if(error > 10E-05) return false;
+
+
+		double error = fabs(sum - ftilde)/ftilde;
+		if(error > 10E-05) {
+			printTwoScalars(sum, ftilde);
+			printScalar(error);
+			return false;
+		}
 
 	}
 
@@ -976,11 +992,15 @@ bool GeneralizedDerivativeEnhancedModel::checkPhiMatrix(void){
 				sum +=Phi(N+i,j)*weights(j);
 			}
 
-//			printTwoScalars(sum, fdValue);
+
 
 			double error = fabs(sum - fdValue);
-//			printScalar(error);
-			if(error > 10E-03) return false;
+
+			if(error > 10E-03) {
+				printTwoScalars(sum, fdValue);
+				printScalar(error);
+				return false;
+			}
 
 		}
 
@@ -1011,9 +1031,14 @@ bool GeneralizedDerivativeEnhancedModel::checkPhiMatrix(void){
 				sum +=Phi(N+i,j)*weights(j);
 			}
 
-			double error = fabs(sum - fdValue);
 
-			if(error > 10E-05) return false;
+			double error = fabs(sum - fdValue)/fdValue;
+
+			if(error > 10E-03) {
+				printTwoScalars(sum, fdValue);
+				printScalar(error);
+				return false;
+			}
 
 		}
 
@@ -1081,7 +1106,7 @@ void GeneralizedDerivativeEnhancedModel::addNewSampleToData(rowvec newsample){
 void GeneralizedDerivativeEnhancedModel::addNewLowFidelitySampleToData(rowvec newsample){
 
 	if(newsample.is_empty()){
-			abortWithErrorMessage("Sample is empty");
+		abortWithErrorMessage("Sample is empty");
 
 	}
 	assert(false);

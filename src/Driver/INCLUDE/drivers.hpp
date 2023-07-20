@@ -41,9 +41,24 @@
 #include "./configkey.hpp"
 using namespace arma;
 
+#ifdef UNIT_TESTS
+#include<gtest/gtest.h>
+#endif
 
 
 class RoDeODriver{
+
+
+#ifdef UNIT_TESTS
+	friend class DriverTest;
+	FRIEND_TEST(DriverTest, constructor);
+	FRIEND_TEST(DriverTest, extractConfigDefinitionsFromString);
+	FRIEND_TEST(DriverTest, extractObjectiveFunctionDefinitionFromString);
+	FRIEND_TEST(DriverTest, extractConfigDefinitionFromString);
+	FRIEND_TEST(DriverTest, extractConstraintDefinitionsFromString);
+
+#endif
+
 
 private:
 
@@ -58,7 +73,8 @@ private:
 	ConfigKeyList configKeysConstraintFunction;
 
 
-	vector<ConstraintDefinition> constraints;
+	vector<ObjectiveFunctionDefinition> constraintDefinitions;
+	vector<ConstraintDefinition> constraintExpressions;
 	int numberOfConstraints = 0;
 
 	ObjectiveFunctionDefinition definitionObjectiveFunction;
@@ -75,9 +91,19 @@ private:
 	string removeComments(const string &configText) const;
 
 	void checkConsistencyOfObjectiveFunctionDefinition(void) const;
-	void checkConsistencyOfConstraintDefinitions(void) const;
 	void checkConsistencyOfConstraint(ConstraintDefinition) const;
 	void abortIfModelTypeIsInvalid(const std::string &modelName) const;
+	void addConfigKeysObjectiveFunction();
+	void addConfigKeysConstraintFunctions();
+	void addConfigKeysSurrogateModelTest();
+	void addConfigKeysOptimization();
+	void addConfigKeysGeneral();
+	void addAvailableSurrogateModels();
+
+	void extractObjectiveFunctionDefinitionFromString(std::string);
+	void extractConfigDefinitionsFromString(std::string);
+	void extractConstraintDefinitionsFromString(std::string);
+	void setConstraintBoxConstraints(ConstraintFunction &constraintFunc) const;
 
 	OutputDevice output;
 
@@ -117,12 +143,10 @@ public:
 
 
 
-	void extractObjectiveFunctionDefinitionFromString(std::string);
-	void extractConfigDefinitionsFromString(std::string);
-	void extractConstraintDefinitionsFromString(std::string);
+
 
 	ObjectiveFunction  setObjectiveFunction(void) const;
-	ConstraintFunction setConstraint(ConstraintDefinition constraintDefinition) const;
+	ConstraintFunction setConstraint(unsigned int) const;
 
 
 	void parseConstraintDefinition(std::string);
@@ -131,7 +155,10 @@ public:
 	void printObjectiveFunctionDefinition(void) const;
 
 	ObjectiveFunctionDefinition getObjectiveFunctionDefinition(void) const;
-	ConstraintDefinition getConstraintDefinition(unsigned int) const;
+	ObjectiveFunctionDefinition getConstraintDefinition(unsigned int) const;
+	ConstraintDefinition getConstraintExpression(unsigned int) const;
+
+
 	unsigned int getDimension(void) const;
 	std::string getProblemType(void) const;
 	std::string getProblemName(void) const;

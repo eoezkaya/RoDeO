@@ -81,7 +81,7 @@ bool isNotEmpty(std::string inputStr){
 
 bool checkIfOn(std::string keyword){
 
-	assert(isNotEmpty(keyword));
+	if(isEmpty(keyword)) return false;
 
 	bool flag = false;
 
@@ -100,7 +100,7 @@ bool checkIfOn(std::string keyword){
 
 bool checkIfOff(std::string keyword){
 
-	assert(isNotEmpty(keyword));
+	if(isEmpty(keyword)) return true;
 	bool flag = false;
 
 	if(keyword == "NO") flag = true;

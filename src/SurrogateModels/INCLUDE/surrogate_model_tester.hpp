@@ -43,7 +43,26 @@
 #include "./multi_level_method.hpp"
 #include "./ggek.hpp"
 
+
+#ifdef UNIT_TESTS
+#include<gtest/gtest.h>
+#endif
+
+
+
+
+
+
+
+
 class SurrogateModelTester{
+
+#ifdef UNIT_TESTS
+	friend class SurrogateTesterTest;
+	FRIEND_TEST(SurrogateTesterTest, constructor);
+	FRIEND_TEST(SurrogateTesterTest, setBoxConstraints);
+#endif
+
 
 
 private:
@@ -80,8 +99,6 @@ public:
 
 	SurrogateModelTester();
 
-	unsigned int getDimension(void) const;
-
 	void setName(string);
 
 	void setDimension(unsigned int);
@@ -96,7 +113,6 @@ public:
 	void bindSurrogateModels(void);
 
 	void setBoxConstraints(Bounds);
-	Bounds getBoxConstraints(void) const;
 
 	void performSurrogateModelTest(void);
 

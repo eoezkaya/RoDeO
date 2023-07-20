@@ -36,6 +36,7 @@
 #include "himmelblau.hpp"
 #include "eggholder.hpp"
 #include "wingweight.hpp"
+#include "griewank2D.hpp"
 
 class HimmelblauFunction{
 
@@ -113,5 +114,11 @@ public:
 	EggholderFunction();
 };
 
+
+class Griewank2DFunction{
+public:
+	TestFunction function;
+	Griewank2DFunction();
+};
 
 #endif

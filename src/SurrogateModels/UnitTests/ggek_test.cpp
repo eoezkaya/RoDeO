@@ -71,6 +71,7 @@ protected:
 
 	HimmelblauFunction himmelblauFunction;
 	Alpine02_5DFunction alpine02Function;
+	Griewank2DFunction griewank2DFunction;
 
 	Bounds boxConstraints;
 
@@ -79,108 +80,8 @@ protected:
 
 };
 
-
-
-TEST_F(GGEKModelTest, tryOnTestDataWithTangentsHimmelblau) {
-
-	this->
-
-	himmelblauFunction.function.numberOfTrainingSamples = 50;
-	himmelblauFunction.function.numberOfTestSamples = 50;
-	himmelblauFunction.function.generateTrainingSamplesWithTangents();
-
-	himmelblauFunction.function.generateTestSamples();
-
-	boxConstraints = himmelblauFunction.function.boxConstraints;
-
-	testModel.setDisplayOn();
-	testModel.setDirectionalDerivativesOn();
-	testModel.setBoxConstraints(boxConstraints);
-	testModel.setName("Himmelblau");
-	testModel.setDimension(2);
-
-	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-
-//	testModel.ifVaryingSampleWeights = true;
-
-	testModel.initializeSurrogateModel();
-
-	testModel.train();
-	ASSERT_TRUE(testModel.checkPhiMatrix());
-	ASSERT_TRUE(testModel.checkResidual());
-
-
-	testModel.setNameOfInputFileTest(himmelblauFunction.function.filenameTestData);
-
-	testModel.readDataTest();
-	testModel.normalizeDataTest();
-
-	testModel.tryOnTestData();
-	testModel.printGeneralizationError();
-
-	double MSE = testModel.generalizationError;
-
-	ASSERT_TRUE(MSE>0.0);
-
-}
-
-
-TEST_F(GGEKModelTest, tryOnTestDataWithTangents) {
-
-	abort();
-	alpine02Function.function.numberOfTrainingSamples = 50;
-	alpine02Function.function.numberOfTestSamples = 50;
-//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
-	alpine02Function.function.generateTrainingSamplesWithTangents();
-
-	alpine02Function.function.generateTestSamples();
-
-	boxConstraints = alpine02Function.function.boxConstraints;
-
-//	testModel.setDisplayOn();
-	testModel.setDirectionalDerivativesOn();
-	testModel.setBoxConstraints(boxConstraints);
-	testModel.setName("Alpine02Model");
-	testModel.setDimension(5);
-
-	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-
-//	testModel.ifVaryingSampleWeights = true;
-
-	testModel.initializeSurrogateModel();
-
-	testModel.train();
-	ASSERT_TRUE(testModel.checkPhiMatrix());
-	ASSERT_TRUE(testModel.checkResidual());
-
-
-	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);
-
-	testModel.readDataTest();
-	testModel.normalizeDataTest();
-
-	testModel.tryOnTestData();
-//	testModel.printGeneralizationError();
-
-	double MSE = testModel.generalizationError;
-
-	ASSERT_TRUE(MSE>0.0);
-
-}
-
-
-
-
-
-
-
 TEST_F(GGEKModelTest, constructor) {
 
-	abort();
 	ASSERT_FALSE(testModel.ifDataIsRead);
 	ASSERT_FALSE(testModel.ifInitialized);
 	ASSERT_FALSE(testModel.ifNormalized);
@@ -219,7 +120,323 @@ TEST_F(GGEKModelTest, readDataWithDirectionalDerivatives) {
 	ASSERT_TRUE(testModel.ifDataIsRead);
 }
 
+TEST_F(GGEKModelTest, calculatePhiMatrixAdjoints) {
 
+
+	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+
+	//	testModel.setDisplayOn();
+	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
+	testModel.initializeCorrelationFunction();
+	testModel.generateWeightingMatrix();
+	testModel.calculatePhiMatrix();
+
+	mat Phi = testModel.getPhiMatrix();
+
+	unsigned int Ndot = testModel.getNumberOfSamplesWithActiveGradients();
+	N    = testModel.getNumberOfSamples();
+
+	ASSERT_TRUE(Phi.n_cols == N + Ndot);
+	ASSERT_TRUE(Phi.n_rows == N + Ndot);
+	ASSERT_TRUE(testModel.checkPhiMatrix());
+
+}
+
+TEST_F(GGEKModelTest, calculatePhiMatrixWithDirectionalDerivatives) {
+
+	himmelblauFunction.function.ifSomeDirectionalDerivativesAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+	testModel.setDirectionalDerivativesOn();
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+
+	//	testModel.setDisplayOn();
+	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
+
+	testModel.initializeCorrelationFunction();
+
+	testModel.generateWeightingMatrix();
+
+	testModel.calculatePhiMatrix();
+
+	mat Phi = testModel.getPhiMatrix();
+
+	unsigned int Ndot = testModel.getNumberOfSamplesWithActiveGradients();
+	N    = testModel.getNumberOfSamples();
+
+	ASSERT_TRUE(Phi.n_cols == N + Ndot);
+	ASSERT_TRUE(Phi.n_rows == N + Ndot);
+	ASSERT_TRUE(testModel.checkPhiMatrix());
+
+}
+
+TEST_F(GGEKModelTest, checkResidual) {
+
+	himmelblauFunction.function.ifSomeDirectionalDerivativesAreLeftBlank = true;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+	testModel.setDirectionalDerivativesOn();
+	testModel.setDimension(2);
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+	testModel.initializeCorrelationFunction();
+
+	//	testModel.setDisplayOn();
+
+	vec parameters(4);
+	parameters(0) = 10.0;
+	parameters(1) = 10.0;
+	parameters(2) = 1.1;
+	parameters(3) = 1.1;
+
+	testModel.thetaFactor = 100;
+
+	testModel.setHyperParameters(parameters);
+
+
+	testModel.assembleLinearSystem();
+	testModel.solveLinearSystem();
+
+	ASSERT_TRUE(testModel.checkResidual());
+
+}
+
+
+
+
+
+TEST_F(GGEKModelTest, prepareTrainingAndTestFilesForTheAuxiliaryModel) {
+
+	himmelblauFunction.function.numberOfTrainingSamples = 100;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+
+	boxConstraints = himmelblauFunction.function.boxConstraints;
+
+//	testModel.setDisplayOn();
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.setName("Himmelblau");
+	testModel.setDimension(2);
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	testModel.readData();
+	testModel.prepareTrainingAndTestFilesForTheAuxiliaryModel();
+
+	mat testData;
+	testData.load("testDataForTheThetaAuxModel.csv", csv_ascii);
+
+	//	testData.print();
+
+	ASSERT_TRUE(testData.n_rows == himmelblauFunction.function.numberOfTrainingSamples/2);
+
+	mat trainingData;
+	trainingData.load("trainingDataForTheThetaAuxModel.csv", csv_ascii);
+
+	//	trainingData.print();
+
+	ASSERT_TRUE(trainingData.n_rows == himmelblauFunction.function.numberOfTrainingSamples/2);
+	ASSERT_TRUE(trainingData.n_cols == 5);
+
+
+
+
+}
+
+
+TEST_F(GGEKModelTest, determineThetaCoefficientForDualBasisGriewank2D) {
+
+	griewank2DFunction.function.numberOfTrainingSamples = 200;
+	griewank2DFunction.function.generateTrainingSamplesWithAdjoints();
+
+	boxConstraints =  griewank2DFunction.function.boxConstraints;
+	testModel.setName("Griewank2D");
+	testModel.setDimension(2);
+	testModel.setBoxConstraints(boxConstraints);
+
+
+	testModel.setNameOfInputFile(griewank2DFunction.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+
+	testModel.trainTheta();
+	testModel.determineThetaCoefficientForDualBasis();
+
+	ASSERT_TRUE(testModel.ifThetaFactorOptimizationIsDone);
+
+	double thetaFactor = testModel.thetaFactor;
+
+	ASSERT_TRUE(thetaFactor>500.0);
+
+
+}
+
+
+TEST_F(GGEKModelTest, determineThetaCoefficientForDualBasisAlpine02_5D) {
+
+
+	alpine02Function.function.generateTrainingSamplesWithAdjoints();
+
+	boxConstraints =  alpine02Function.function.boxConstraints;
+	testModel.setName("Alpine02");
+	testModel.setDimension(5);
+	testModel.setBoxConstraints(boxConstraints);
+
+
+	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+	testModel.initializeSurrogateModel();
+
+	testModel.trainTheta();
+	testModel.determineThetaCoefficientForDualBasis();
+
+	ASSERT_TRUE(testModel.ifThetaFactorOptimizationIsDone);
+
+	double thetaFactor = testModel.thetaFactor;
+
+	ASSERT_TRUE(thetaFactor>100.0);
+
+
+}
+
+
+
+
+TEST_F(GGEKModelTest, tryOnTestDataWithAdjointsHimmelblau) {
+
+
+	himmelblauFunction.function.numberOfTrainingSamples = 100;
+	himmelblauFunction.function.numberOfTestSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+
+	himmelblauFunction.function.generateTestSamples();
+
+	boxConstraints = himmelblauFunction.function.boxConstraints;
+
+//	testModel.setDisplayOn();
+
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.setName("Himmelblau");
+	testModel.setDimension(2);
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+
+	//	testModel.ifVaryingSampleWeights = true;
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+
+	testModel.setNameOfInputFileTest(himmelblauFunction.function.filenameTestData);
+
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+	testModel.printGeneralizationError();
+
+	double MSE = testModel.generalizationError;
+
+	ASSERT_TRUE(MSE>0.0);
+
+}
+
+
+
+TEST_F(GGEKModelTest, tryOnTestDataWithTangentsHimmelblau) {
+
+
+	himmelblauFunction.function.numberOfTrainingSamples = 100;
+	himmelblauFunction.function.numberOfTestSamples = 50;
+	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+
+	himmelblauFunction.function.generateTestSamples();
+
+	boxConstraints = himmelblauFunction.function.boxConstraints;
+
+//	testModel.setDisplayOn();
+	testModel.setDirectionalDerivativesOn();
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.setName("Himmelblau");
+	testModel.setDimension(2);
+
+	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+
+	//	testModel.ifVaryingSampleWeights = true;
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+
+	testModel.setNameOfInputFileTest(himmelblauFunction.function.filenameTestData);
+
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+	testModel.printGeneralizationError();
+
+	double MSE = testModel.generalizationError;
+
+	ASSERT_TRUE(MSE>0.0);
+
+}
+
+
+TEST_F(GGEKModelTest, tryOnTestDataWithTangentsAlpine02_5D) {
+
+
+
+	alpine02Function.function.numberOfTrainingSamples = 100;
+	alpine02Function.function.numberOfTestSamples = 50;
+	//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
+	alpine02Function.function.generateTrainingSamplesWithTangents();
+
+	alpine02Function.function.generateTestSamples();
+
+	boxConstraints = alpine02Function.function.boxConstraints;
+
+//	testModel.setDisplayOn();
+	testModel.setDirectionalDerivativesOn();
+	testModel.setBoxConstraints(boxConstraints);
+	testModel.setName("Alpine02Model");
+	testModel.setDimension(5);
+
+	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
+	testModel.readData();
+	testModel.normalizeData();
+
+	//	testModel.ifVaryingSampleWeights = true;
+
+	testModel.initializeSurrogateModel();
+
+	testModel.train();
+
+
+	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);
+
+	testModel.readDataTest();
+	testModel.normalizeDataTest();
+
+	testModel.tryOnTestData();
+	//	testModel.printGeneralizationError();
+
+	double MSE = testModel.generalizationError;
+
+	ASSERT_TRUE(MSE>0.0);
+
+}
 
 TEST_F(GGEKModelTest, normalizeData) {
 
@@ -265,7 +482,7 @@ TEST_F(GGEKModelTest, generateSampleWeights) {
 
 	testModel.initializeSurrogateModel();
 
-//	testModel.setDisplayOn();
+	//	testModel.setDisplayOn();
 	testModel.generateSampleWeights();
 
 	vec w = testModel.getSampleWeightsVector();
@@ -301,7 +518,7 @@ TEST_F(GGEKModelTest, calculateIndicesOfSamplesWithActiveDerivativesWithDirectio
 	testModel.normalizeData();
 
 
-//	testModel.setDisplayOn();
+	//	testModel.setDisplayOn();
 
 	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
 
@@ -371,72 +588,10 @@ TEST_F(GGEKModelTest, generateRhsForRBFsWithDirectionalDerivatives) {
 
 
 
-TEST_F(GGEKModelTest, calculatePhiMatrix) {
-
-
-	himmelblauFunction.function.ifSomeAdjointsAreLeftBlank = true;
-	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
-
-	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-
-	//	testModel.setDisplayOn();
-	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
-
-	testModel.initializeCorrelationFunction();
-
-	testModel.generateWeightingMatrix();
-
-	testModel.calculatePhiMatrix();
-
-	mat Phi = testModel.getPhiMatrix();
-
-	unsigned int Ndot = testModel.getNumberOfSamplesWithActiveGradients();
-	N    = testModel.getNumberOfSamples();
-
-	ASSERT_TRUE(Phi.n_cols == N + Ndot);
-	ASSERT_TRUE(Phi.n_rows == N + Ndot);
-
-
-	ASSERT_TRUE(testModel.checkPhiMatrix());
-
-}
-
-
-TEST_F(GGEKModelTest, calculatePhiMatrixWithDirectionalDerivatives) {
 
 
 
-	himmelblauFunction.function.ifSomeDirectionalDerivativesAreLeftBlank = true;
-	himmelblauFunction.function.generateTrainingSamplesWithTangents();
 
-	testModel.setDirectionalDerivativesOn();
-	testModel.setNameOfInputFile(himmelblauFunction.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-
-	//	testModel.setDisplayOn();
-	testModel.calculateIndicesOfSamplesWithActiveDerivatives();
-
-	testModel.initializeCorrelationFunction();
-
-	testModel.generateWeightingMatrix();
-
-	testModel.calculatePhiMatrix();
-
-	mat Phi = testModel.getPhiMatrix();
-
-	unsigned int Ndot = testModel.getNumberOfSamplesWithActiveGradients();
-	N    = testModel.getNumberOfSamples();
-
-	ASSERT_TRUE(Phi.n_cols == N + Ndot);
-	ASSERT_TRUE(Phi.n_rows == N + Ndot);
-
-
-	ASSERT_TRUE(testModel.checkPhiMatrix());
-
-}
 
 
 TEST_F(GGEKModelTest, assembleLinearSystem) {
@@ -478,9 +633,7 @@ TEST_F(GGEKModelTest, train) {
 
 	testModel.train();
 
-	ASSERT_TRUE(testModel.checkResidual());
 	ASSERT_TRUE(testModel.ifModelTrainingIsDone);
-
 
 }
 
@@ -502,34 +655,13 @@ TEST_F(GGEKModelTest, interpolate) {
 	x(1) = 0.01;
 	double fVal = testModel.interpolate(x);
 
+	ASSERT_GT(fabs(fVal),0.0);
 	ASSERT_TRUE(testModel.ifModelTrainingIsDone);
 }
 
 
 
-TEST_F(GGEKModelTest, determineThetaCoefficientForDualBasis) {
 
-
-	alpine02Function.function.generateTrainingSamplesWithAdjoints();
-
-	boxConstraints =  alpine02Function.function.boxConstraints;
-	testModel.setName("Alpine02");
-	testModel.setDimension(5);
-	testModel.setBoxConstraints(boxConstraints);
-
-
-	testModel.setNameOfInputFile(alpine02Function.function.filenameTrainingData);
-	testModel.readData();
-	testModel.normalizeData();
-	testModel.initializeSurrogateModel();
-
-	testModel.trainTheta();
-	testModel.determineThetaCoefficientForDualBasis();
-
-	ASSERT_TRUE(testModel.ifThetaFactorOptimizationIsDone);
-
-
-}
 
 
 TEST_F(GGEKModelTest, updateModelWithNewData) {
@@ -587,14 +719,14 @@ TEST_F(GGEKModelTest, tryOnTestData) {
 
 	alpine02Function.function.numberOfTrainingSamples = 50;
 	alpine02Function.function.numberOfTestSamples = 50;
-//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
+	//	alpine02Function.function.ifSomeAdjointsAreLeftBlank = true;
 	alpine02Function.function.generateTrainingSamplesWithAdjoints();
 
 	alpine02Function.function.generateTestSamples();
 
 	boxConstraints = alpine02Function.function.boxConstraints;
 
-//	testModel.setDisplayOn();
+	//	testModel.setDisplayOn();
 	testModel.setBoxConstraints(boxConstraints);
 	testModel.setName("Alpine02Model");
 	testModel.setDimension(5);
@@ -603,13 +735,11 @@ TEST_F(GGEKModelTest, tryOnTestData) {
 	testModel.readData();
 	testModel.normalizeData();
 
-//	testModel.ifVaryingSampleWeights = true;
+	//	testModel.ifVaryingSampleWeights = true;
 
 	testModel.initializeSurrogateModel();
 
 	testModel.train();
-	ASSERT_TRUE(testModel.checkPhiMatrix());
-	ASSERT_TRUE(testModel.checkResidual());
 
 
 	testModel.setNameOfInputFileTest(alpine02Function.function.filenameTestData);

@@ -74,7 +74,10 @@ public:
 
 	void print(void) const;
 
-
+private:
+	void printHighFidelityModel() const;
+	void printLowFidelityModel() const;
+	string getNameOfSurrogateModel(SURROGATE_MODEL) const;
 };
 
 

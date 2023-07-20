@@ -59,14 +59,36 @@ ObjectiveFunctionDefinition::ObjectiveFunctionDefinition(void){}
 
 bool ObjectiveFunctionDefinition::checkIfDefinitionIsOk(void) const{
 
-	if(ifDefined == false) return false;
+	if(ifDefined == false) {
 
-	if(name.empty() ||
-			designVectorFilename.empty() ||
-			executableName.empty() ||
-			outputFilename.empty() ||
-			nameHighFidelityTrainingData.empty()){
+		std::cout<<"ifDefined is false!";
+		return false;
+	}
 
+	if(name.empty()){
+
+		std::cout<<"name is empty!";
+		return false;
+	}
+
+
+	if(designVectorFilename.empty()){
+		std::cout<<"designVectorFilename is empty!";
+		return false;
+
+	}
+	if(executableName.empty()){
+
+		std::cout<<"executableName is empty!";
+		return false;
+	}
+	if(outputFilename.empty()){
+
+		std::cout<<"outputFilename is empty!";
+		return false;
+	}
+	if(nameHighFidelityTrainingData.empty()){
+		std::cout<<"nameHighFidelityTrainingData is empty!";
 		return false;
 	}
 
@@ -87,6 +109,33 @@ bool ObjectiveFunctionDefinition::checkIfDefinitionIsOk(void) const{
 	return true;
 }
 
+string ObjectiveFunctionDefinition::getNameOfSurrogateModel(SURROGATE_MODEL modelType) const {
+
+	string modelName;
+	if (modelType == ORDINARY_KRIGING)
+		modelName = "ORDINARY_KRIGING";
+
+	if (modelType == GRADIENT_ENHANCED)
+		modelName = "GRADIENT_ENHANCED";
+
+	if (modelType == TANGENT_ENHANCED)
+		modelName = "TANGENT_ENHANCED";
+
+	return modelName;
+}
+
+void ObjectiveFunctionDefinition::printHighFidelityModel() const {
+
+	string modelName = getNameOfSurrogateModel(modelHiFi);
+	std::cout << "Surrogate model = " << modelName << "\n";
+
+}
+
+void ObjectiveFunctionDefinition::printLowFidelityModel() const {
+	string modelNameLowFi = getNameOfSurrogateModel(modelLowFi);
+	std::cout << "\tSurrogate model = " << modelNameLowFi << "\n";
+}
+
 void ObjectiveFunctionDefinition::print(void) const{
 
 	std::cout<<"\n================ Objective function definition ================\n";
@@ -96,8 +145,21 @@ void ObjectiveFunctionDefinition::print(void) const{
 	std::cout<< "Output data = " << outputFilename << "\n";
 	std::cout<< "Executable = " << executableName << "\n";
 	std::cout<< "Path = " << path << "\n";
-	std::cout<< "Surrogate model = " << modelHiFi << "\n";
-	std::cout<< "Multilevel = "<<ifMultiLevel<<"\n";
+
+	printHighFidelityModel();
+
+	string ifMultiFidelity;
+	if(ifMultiLevel){
+
+		ifMultiFidelity = "YES";
+	}
+	else{
+
+		ifMultiFidelity = "NO";
+	}
+
+
+	std::cout<< "Multilevel = "<< ifMultiFidelity <<"\n";
 
 	if(ifMultiLevel){
 
@@ -106,8 +168,8 @@ void ObjectiveFunctionDefinition::print(void) const{
 		std::cout<< "Output data = " << outputFilenameLowFi << "\n";
 		std::cout<< "\tExecutable = " << executableNameLowFi << "\n";
 		std::cout<< "\tPath = " << path << "\n";
-		std::cout<< "\tSurrogate model = " << modelLowFi << "\n";
 
+		printLowFidelityModel();
 	}
 
 

@@ -101,6 +101,7 @@ void ConstraintFunction::setConstraintDefinition(ConstraintDefinition definition
 
 	definitionConstraint = definitionInput;
 
+
 }
 
 
