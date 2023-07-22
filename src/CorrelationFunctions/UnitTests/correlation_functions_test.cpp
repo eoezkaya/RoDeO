@@ -64,7 +64,7 @@ protected:
 
 	}
 
-	//  void TearDown() override {}
+	void TearDown() override {}
 
 
 
@@ -102,6 +102,7 @@ TEST_F(CorrelationFunctionsTest, testcomputeCorrelationMatrix){
 	vec theta(dim); theta.fill(0.1);
 	vec gamma(dim); gamma.fill(2.0);
 
+	testCorrelationFunction.setDimension(dim);
 	testCorrelationFunction.setTheta(theta);
 	testCorrelationFunction.setGamma(gamma);
 	testCorrelationFunction.setInputSampleMatrix(testInput);

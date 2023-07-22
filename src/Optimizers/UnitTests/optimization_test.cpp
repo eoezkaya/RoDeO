@@ -296,7 +296,7 @@ TEST_F(OptimizationTest, EGOUnconstrained){
 
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-	testOptimizer.setDisplayOn();
+//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(50);
 
 	testOptimizer.performEfficientGlobalOptimization();
@@ -320,7 +320,7 @@ TEST_F(OptimizationTest, EGOConstrained){
 	prepareSecondConstraint();
 
 	testOptimizer.setZoomInOn();
-	testOptimizer.setMaximumNumberOfIterations(100);
+	testOptimizer.setMaximumNumberOfIterations(50);
 	testOptimizer.setHowOftenZoomIn(20);
 	//	testOptimizer.setDisplayOn();
 	testOptimizer.setBoxConstraints(boxConstraints);
@@ -344,7 +344,7 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithGradientEnhancedModel){
 
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-	testOptimizer.setDisplayOn();
+//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(50);
 	testOptimizer.performEfficientGlobalOptimization();
 
@@ -365,7 +365,7 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithTangentEnhancedModel){
 	prepareObjectiveFunctionWithTangent();
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-	testOptimizer.setDisplayOn();
+//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(50);
 	testOptimizer.performEfficientGlobalOptimization();
 
@@ -389,7 +389,7 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithMLLowFiAdjoint){
 
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-	testOptimizer.setDisplayOn();
+//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(50);
 	testOptimizer.performEfficientGlobalOptimization();
 
@@ -414,7 +414,7 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithML){
 
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-	testOptimizer.setDisplayOn();
+//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(50);
 	testOptimizer.performEfficientGlobalOptimization();
 

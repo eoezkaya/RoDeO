@@ -95,37 +95,26 @@ mat SurrogateModelData::getRawData(void) const{
 
 
 void SurrogateModelData::setDisplayOn(void){
-
 	output.ifScreenDisplay = true;
-	output.printMessage("Setting display on for the SurrogateModelData...");
-
 }
 void SurrogateModelData::setDisplayOff(void){
 	output.ifScreenDisplay = false;
 }
 
 void SurrogateModelData::setGradientsOn(void){
-
 	ifDataHasGradients = true;
-
 }
 
 void SurrogateModelData::setGradientsOff(void){
-
 	ifDataHasGradients = false;
-
 }
 
 void SurrogateModelData::setDirectionalDerivativesOn(void){
-
 	ifDataHasDirectionalDerivatives = true;
-
 }
 
 void SurrogateModelData::setDirectionalDerivativesOff(void){
-
 	ifDataHasDirectionalDerivatives = false;
-
 }
 
 
@@ -151,7 +140,7 @@ void SurrogateModelData::readData(string inputFilename){
 
 	numberOfSamples = rawData.n_rows;
 	output.printMessage("Number of samples = ", numberOfSamples);
-	output.printMessage("Raw data = ", rawData);
+//	output.printMessage("Raw data = ", rawData);
 
 	if(ifDataHasGradients){
 		output.printMessage("Data has gradients...");

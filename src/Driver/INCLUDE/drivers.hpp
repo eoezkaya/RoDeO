@@ -38,6 +38,7 @@
 #include "../../ObjectiveFunctions/INCLUDE/objective_function.hpp"
 #include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
 #include "../../Optimizers/INCLUDE/optimization.hpp"
+#include "../../SurrogateModels/INCLUDE/surrogate_model_tester.hpp"
 #include "./configkey.hpp"
 using namespace arma;
 
@@ -91,7 +92,18 @@ private:
 	string removeComments(const string &configText) const;
 
 	void checkConsistencyOfObjectiveFunctionDefinition(void) const;
-	void checkConsistencyOfConstraint(ConstraintDefinition) const;
+//	void checkConsistencyOfConstraint(ConstraintDefinition) const;
+	void checkIfSurrogateModelTypeIsOK(void) const;
+	void checkSettingsForSurrogateModelTest(void) const;
+	void checkSettingsForOptimization(void) const;
+	void checkIfObjectiveFunctionNameIsDefined(void) const;
+	void checkIfProblemDimensionIsSetProperly(void) const;
+	void checkIfBoxConstraintsAreSetPropertly(void) const;
+	void checkConsistencyOfConfigParams(void) const;
+
+
+
+
 	void abortIfModelTypeIsInvalid(const std::string &modelName) const;
 	void addConfigKeysObjectiveFunction();
 	void addConfigKeysConstraintFunctions();
@@ -104,6 +116,34 @@ private:
 	void extractConfigDefinitionsFromString(std::string);
 	void extractConstraintDefinitionsFromString(std::string);
 	void setConstraintBoxConstraints(ConstraintFunction &constraintFunc) const;
+	void checkIfSurrogateModelTypeIsOkMultiFidelity() const;
+	void parseObjectiveFunctionDefinitionMultiFidelity();
+	void parseConstraintDefinitionMultiFidelity(
+			ObjectiveFunctionDefinition constraintFunctionDefinition);
+	void abortIfProblemNameIsNotDefined(const std::string &name);
+	void abortIfLowerOrUpperBoundsAreMissing(const arma::vec &lb,
+			const arma::vec &ub);
+	void addBoundsToOptimizationStudy(Optimizer &optimizationStudy);
+	void addObjectiveFunctionToOptimizationStudy(Optimizer &optimizationStudy);
+	void addConstraintsToOptimizationStudy(Optimizer &optimizationStudy);
+	void addDiscreteParametersIfExistToOptimizationStudy(
+			Optimizer &optimizationStudy);
+	void abortSurrogateModelTestIfNecessaryParametersAreNotDefined();
+	void addBoundsToSurrogateTester(SurrogateModelTester &surrogateTest);
+	void addParametersToSurrogateTesterMultiFidelity(
+			SurrogateModelTester &surrogateTest);
+	void addModelTypeToSurrogateTester(SurrogateModelTester &surrogateTest);
+	void addTrainingDataToSurrogateModelTester(
+			SurrogateModelTester &surrogateTest);
+	void addTestDataToSurrogateModelTester(SurrogateModelTester &surrogateTest);
+	void addNumberOfTrainingIterationsToSurrogateTester(
+			SurrogateModelTester &surrogateTest);
+	void addLowFiModelTypeToSurrogateTester(
+			SurrogateModelTester &surrogateTest);
+	void addLowFiTrainingDataToSurrogateTester(
+			SurrogateModelTester &surrogateTest);
+	void addProblemNameToSurrogateTester(SurrogateModelTester &surrogateTest);
+	void addDimensionToSurrogateTester(SurrogateModelTester &surrogateTest);
 
 	OutputDevice output;
 
@@ -117,28 +157,9 @@ public:
 
 
 
-	void checkIfProblemDimensionIsSet(void) const;
-	void checkIfNumberOfTrainingAndTestSamplesAreProper(void) const;
-	void checkIfSurrogateModelTypeIsOK(void) const;
-
-	void checkSettingsForSurrogateModelTest(void) const;
-	void checkSettingsForOptimization(void) const;
-
-
-	void checkIfObjectiveFunctionNameIsDefined(void) const;
-	void checkIfProblemDimensionIsSetProperly(void) const;
-
-	void checkIfBoxConstraintsAreSetPropertly(void) const;
-
-	void checkIfNumberOfTrainingSamplesIsDefined(void) const;
-	void checkIfNumberOfTestSamplesIsDefined(void) const;
 
 
 
-	void checkIfConstraintsAreProperlyDefined(void) const;
-
-
-	void checkConsistencyOfConfigParams(void) const;
 	void readConfigFile(void);
 
 

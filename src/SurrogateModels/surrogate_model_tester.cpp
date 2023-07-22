@@ -177,24 +177,13 @@ void SurrogateModelTester::performSurrogateModelTest(void){
 
 void SurrogateModelTester::setDisplayOn(void){
 
-
-	outputToScreen.ifScreenDisplay = true;
-	outputToScreen.printMessage("Setting display on for the surrogate model tester...");
-
 	if(ifbindSurrogateModelisDone){
 
-		outputToScreen.printMessage("Setting display on for the surrogate model...");
 		surrogateModel->setDisplayOn();
-
 	}
-
-
 }
 
 void SurrogateModelTester::setDisplayOff(void){
-
-
-	outputToScreen.ifScreenDisplay = true;
 
 	if(ifSurrogateModelSpecified){
 

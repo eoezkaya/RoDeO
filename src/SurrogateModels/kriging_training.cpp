@@ -134,6 +134,7 @@ void KrigingModel::initializeSurrogateModel(void){
 	correlationFunction.setInputSampleMatrix(X);
 
 	if(!ifCorrelationFunctionIsInitialized){
+		output.printMessage("Initializing the correlation function...");
 		correlationFunction.initialize();
 		ifCorrelationFunctionIsInitialized = true;
 	}
@@ -156,6 +157,8 @@ void KrigingModel::initializeSurrogateModel(void){
 	}
 
 	updateAuxilliaryFields();
+
+	output.printMessage("Initialization is done ...");
 
 	ifInitialized = true;
 
@@ -586,6 +589,8 @@ void KrigingModel::train(void){
 
 	assert(ifInitialized);
 
+	output.printMessage("Model training for the Kriging model ...");
+
 	if(ifReadWarmStartFile){
 
 		loadHyperParameters();
@@ -614,6 +619,10 @@ void KrigingModel::train(void){
 #ifdef OPENMP_SUPPORT
 		omp_set_num_threads(numberOfThreads);
 #endif
+
+		output.printMessage("Number of iterations for the model training = ", numberOfTrainingIterations);
+		output.printMessage("Number of threads used = ", numberOfThreads);
+
 
 		numberOfTrainingIterations = numberOfTrainingIterations/numberOfThreads;
 #ifdef OPENMP_SUPPORT
@@ -679,6 +688,7 @@ void KrigingModel::train(void){
 	}
 	updateAuxilliaryFields();
 
+	output.printMessage("Model training is done ...");
 
 
 	ifModelTrainingIsDone = true;
