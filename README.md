@@ -35,7 +35,8 @@ make
 
 ## Quick Start
 
-- The hello world example for this package can be found in the folder: **Tests/Optimization/Himmelblau/Unconstrained**
+- The hello world example for this package can be found in the folder: 
+**Tests/Optimization/Himmelblau/Unconstrained**
 - Change directory to this folder and run the python script **runOptimization.py**: 
 ```
 python runOptimization.py 
