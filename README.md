@@ -9,7 +9,12 @@ Features of the RoDeO Package:
 - Gradient and tangent enhaced surrogate modeling 
  
  
+External Libraries
+ - RoDeO uses the linear algebra library Armadillo. Therefore, before compiling RoDeO sources, Armadillo must be installed in the system. To download Armadillo and
+ see the documentation please refer to https://arma.sourceforge.net/ 
+ 
 Build Support
 
-External Libraries
- - RoDeO uses the linear algebra library Armadillo. Therefore, before compiling RoDeO sources, Armadillo must be installed in the system.  
+- RoDeO uses cmake utility for the compilation and the build process. 
+- First go to the src directory and call cmake:
+-- cmake -B ../build/
