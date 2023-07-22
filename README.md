@@ -4,7 +4,12 @@ for scientific/engineering applications, in which the objective function and con
 
 Features of the RoDeO Package:
 - Surrogate model based Efficient Global Optimization (EGO) strategy
-- Data driven approach
+- Full data-driven approach
 - Easy and efficient treatment of inequality constraints
-- Surrogate models can be trained also using sensitivity data
+- Gradient and tangent enhaced surrogate modeling 
  
+ 
+Build Support
+
+External Libraries
+ - RoDeO uses the linear algebra library Armadillo. Therefore, before compiling RoDeO sources, Armadillo must be installed in the system.  
