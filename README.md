@@ -12,9 +12,12 @@ Features of the RoDeO Package:
 External Libraries
  - RoDeO uses the linear algebra library Armadillo. Therefore, before compiling RoDeO sources, Armadillo must be installed in the system. To download Armadillo and
  see the documentation please refer to https://arma.sourceforge.net/ 
+ - To build and run unit tests (optional), you will require the testing and mocking library GoogleTest installed in your system. For details, please refer to 
+ https://github.com/google/googletest
  
 Build Support
 
 - RoDeO uses cmake utility for the compilation and the build process. 
-- First go to the src directory and call cmake:
--- cmake -B ../build/
+- First go to the src directory and call cmake: cmake -DUNIT_TESTS=ON -B ../build/  
+- To build with unit tests use option UNIT_TESTS=ON: cmake -DUNIT_TESTS=ON -B ../build/
+- Then go to the build directory and call make for compilation: make
