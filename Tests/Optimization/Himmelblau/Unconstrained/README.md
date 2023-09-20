@@ -19,6 +19,8 @@ $f(-3.779319, -3.283186) = 0.0$
 $f(3.584428, -1.848126) = 0.0$
 
 
+<img src="./himmelblau.png" alt="Himmelblau function" title="Himmelblau function">
+
 The Himmelblau function is implemented in the c-file "himmelblau.cpp". This small program reads the values of $x_1$ and $x_2$ from the file "dv.dat" and writes the output to 
 the file "objFunVal.dat". 
 
