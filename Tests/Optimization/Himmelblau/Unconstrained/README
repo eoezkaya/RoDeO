@@ -1,7 +1,9 @@
 In this example, the Himmelblau test function is minimized without any constraint. The Himmelblau
 function is given as
 
-f(x1,x2) = (x1^2+x2-11.0)^2 + (x1+x2^2-7.0)^2
+
+
+$f(x1,x2) = (x1^2+x2-11.0)^2 + (x1+x2^2-7.0)^2$
 
 It has four identical local minima
 
