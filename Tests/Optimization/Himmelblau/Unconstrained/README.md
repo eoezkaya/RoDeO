@@ -2,8 +2,8 @@
 
 In this example, the Himmelblau test function is minimized without any constraint. The optimization problem is given as
 
-$minimize f(x1,x2) = (x1^2+x2-11.0)^2 + (x1+x2^2-7.0)^2$. \\
-$subject \; to \; -6.0 < x1 < 6.0 \; and \; -6.0 < x2 < 6.0$ \\
+$minimize$ $f(x1,x2) = (x1^2+x2-11.0)^2 + (x1+x2^2-7.0)^2$ \\ 
+$subject$ $to$ $-6.0 < x1 < 6.0$ and $-6.0 < x2 < 6.0$ \\
 
 
 
