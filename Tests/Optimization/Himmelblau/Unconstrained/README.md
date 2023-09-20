@@ -2,10 +2,12 @@
 
 In this example, the Himmelblau test function is minimized without any external constraint. The optimization problem is given as
 
-$\text{minimize  } f(x_1,x_2) = (x_1^2+x_2-11.0)^2 + (x_1+x_2^2-7.0)^2$ 
-
-$\text{subject to  }  -6.0 < x_1 < 6.0  \text{ and } -6.0 < x_2 < 6.0$.
-
+```math
+\text{minimize  } f(x_1,x_2) = (x_1^2+x_2-11.0)^2 + (x_1+x_2^2-7.0)^2
+```
+```math
+\text{subject to  }  -6.0 < x_1 < 6.0  \text{ and } -6.0 < x_2 < 6.0.
+```
 The optimization problem has four identical local solutions:
 
 $f(3.0,2.0) = 0.0$
