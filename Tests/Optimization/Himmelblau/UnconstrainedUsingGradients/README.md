@@ -28,7 +28,7 @@ f(x_1,x_2) = (x_1^2+x_2-11.0)^2 + (x_1+x_2^2-7.0)^2
 ```
 and
 ```math
-\nabla f(x_1,x_2) =  (\frac{\partial f}{\partial x_1} , \frac{\partial f}{\partial x_1} )  =  (x_1^2+x_2-11.0)^2 + (x_1+x_2^2-7.0)^2
+\nabla f(x_1,x_2) =  (\frac{\partial f}{\partial x_1} , \frac{\partial f}{\partial x_1} )^T  =  4x_1(x_1^2+x_2-11.0) + 2(x_1+x_2^2-7.0) , 2(x_1^2+x_2-11.0) + 2x_2(x_1+x_2^2-7.0))^T
 ```
 
 The Himmelblau adjoint function is implemented in the c-file "himmelblau.cpp". This small program reads the values of $x_1$ and $x_2$ from the file "dv.dat" and writes the output to 
