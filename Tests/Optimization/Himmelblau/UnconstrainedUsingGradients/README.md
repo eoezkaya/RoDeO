@@ -30,9 +30,9 @@ and
 ```math
 \nabla f(x_1,x_2) =  (\frac{\partial f}{\partial x_1} , \frac{\partial f}{\partial x_1} )^T  =  4x_1(x_1^2+x_2-11.0) + 2(x_1+x_2^2-7.0) , 2(x_1^2+x_2-11.0) + 2x_2(x_1+x_2^2-7.0))^T
 ```
-
+By using the reverse mode of Algorithmic Differentiation one can easily generate the adjoint version of the Himmelblau function, which evaulates $f(x_1,x_2)$ and $\nabla f(x_1,x_2)$ simultaneously. 
 The Himmelblau adjoint function is implemented in the c-file "himmelblau.cpp". This small program reads the values of $x_1$ and $x_2$ from the file "dv.dat" and writes the output to 
-the file "objFunVal.dat". 
+the file "objFunVal.dat". For this example, the output file consists of just three numbers: First the function value, then the derivatives of the function with respect to $x_1$ and $x_2$.
 
 
 ## Running the test case
