@@ -34,3 +34,14 @@ the file "objFunVal.dat".
 python runOptimization.py 
 ```
 
+
+## Visualizing the results 
+
+- To visualize the samples generated in the optimization process, run the python file "plotResults.py" in terminal:
+
+```
+python plotResults.py 
+```
+
+<img src="./himmelblauResults.png" alt="Himmelblau function" title="Himmelblau function">
+
