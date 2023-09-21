@@ -45,6 +45,7 @@ int main(int argc, char* argv[]){
 
 
 	printRoDeOIntro();
+
 	/* initialize random seed*/
 	srand (time(NULL));
 
@@ -54,11 +55,9 @@ int main(int argc, char* argv[]){
 
 	std::string fileNameConfig = argv[1];
 
-
 	RoDeODriver driverToRun;
 	driverToRun.setConfigFilename(fileNameConfig);
 	driverToRun.readConfigFile();
-
 	driverToRun.run();
 
 	return 0;

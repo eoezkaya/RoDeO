@@ -176,8 +176,8 @@ void RoDeODriver::readConfigFile(void){
 
 	assert(isNotEmpty(configFileName));
 
-	output.printMessage("Reading the configuration file: ", configFileName);
-
+	std::string msg = "Reading the configuration file: ";
+	output.printMessage(msg, configFileName);
 
 	std::string stringCompleteFile;
 
@@ -185,9 +185,9 @@ void RoDeODriver::readConfigFile(void){
 
 	string configFileWithoutComments = removeComments(stringCompleteFile);
 
-	output.printMessage("Configuration file = ");
+	msg = "Configuration file = ";
+	output.printMessage(msg);
 	output.printMessage(configFileWithoutComments);
-
 
 	extractConfigDefinitionsFromString(configFileWithoutComments);
 
@@ -197,7 +197,8 @@ void RoDeODriver::readConfigFile(void){
 
 	checkConsistencyOfConfigParams();
 
-	output.printMessage("Parsing of the configuration file is done...");
+	msg = "Parsing of the configuration file is done...";
+	output.printMessage(msg);
 }
 
 
@@ -389,8 +390,6 @@ bool RoDeODriver::checkifProblemTypeIsValid(std::string s) const{
 
 void RoDeODriver::checkConsistencyOfObjectiveFunctionDefinition(void) const{
 
-	output.printMessage("Checking the consistency of the objective function definition...");
-
 	assert(definitionObjectiveFunction.ifDefined);
 
 	string exeName = definitionObjectiveFunction.executableName;
@@ -449,8 +448,6 @@ void RoDeODriver::checkConsistencyOfObjectiveFunctionDefinition(void) const{
 
 
 ObjectiveFunction RoDeODriver::setObjectiveFunction(void) const{
-
-	output.printMessage("Setting the objective function...");
 
 	std::string objFunName = configKeysObjectiveFunction.getConfigKeyStringValue("NAME");
 	int dim = configKeys.getConfigKeyIntValue("DIMENSION");
@@ -904,24 +901,13 @@ void RoDeODriver::setOptimizationFeatures(Optimizer &optimizationStudy) const{
 		optimizationStudy.setMaximumNumberOfInnerIterations(numberOfMaxInnerIterations);
 
 	}
-
-
-
 }
 
 void RoDeODriver::runOptimization(void){
 
-	output.printMessage("Running Optimization...");
-
 	Optimizer optimizationStudy = setOptimizationStudy();
 	setOptimizationFeatures(optimizationStudy);
-
-	if(output.ifScreenDisplay){
-		optimizationStudy.print();
-	}
-
 	optimizationStudy.performEfficientGlobalOptimization();
-
 }
 
 void RoDeODriver::abortIfProblemNameIsNotDefined(const string &name) {
@@ -1165,6 +1151,10 @@ void RoDeODriver::runSurrogateModelTest(void){
 
 void RoDeODriver::run(void){
 
+	string isDisplayOn = configKeys.getConfigKeyStringValue("DISPLAY");
+	if(checkIfOn(isDisplayOn)){
+		output.ifScreenDisplay = true;
+	}
 
 	std::string problemType = configKeys.getConfigKeyStringValue("PROBLEM_TYPE");
 

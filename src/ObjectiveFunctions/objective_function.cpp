@@ -61,7 +61,7 @@ bool ObjectiveFunctionDefinition::checkIfDefinitionIsOk(void) const{
 
 	if(ifDefined == false) {
 
-		std::cout<<"ifDefined is false!";
+//		std::cout<<"ifDefined is false!";
 		return false;
 	}
 

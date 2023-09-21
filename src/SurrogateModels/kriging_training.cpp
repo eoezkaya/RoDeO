@@ -363,17 +363,9 @@ void KrigingModel::setLinearRegressionOff(void){
 }
 
 
-
-
-/** Adds the rowvector newsample to the data of the Kriging model and updates model parameters
- * @param[in] newsample
- *
- */
-
 void KrigingModel::addNewSampleToData(rowvec newsample){
 
-	unsigned int dim = data.getDimension();
-	assert(newsample.size() == dim+1);
+	assert(newsample.size() == data.getDimension()+1);
 
 	/* avoid points that are too close to each other */
 

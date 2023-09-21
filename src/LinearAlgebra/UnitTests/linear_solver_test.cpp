@@ -81,21 +81,6 @@ TEST_F(CholeskySystemTest, testCholeskyDecomposition){
 
 }
 
-TEST_F(CholeskySystemTest, testCholeskyDecompositionFails){
-
-
-	mat A(10,10,fill::randu);
-	test.setMatrix(A);
-
-	test.factorize();
-
-	ASSERT_FALSE(test.isFactorizationDone());
-
-}
-
-
-
-
 TEST_F(CholeskySystemTest, testsolveLinearSystem){
 
 

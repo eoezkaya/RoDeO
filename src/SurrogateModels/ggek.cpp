@@ -903,9 +903,7 @@ void GeneralizedDerivativeEnhancedModel::calculatePhiMatrix(void){
 
 
 	if(ifVaryingSampleWeights){
-
-		unsigned int sizeOfWeightMatrix = howManyTotalDataPoints;
-		assert(weightMatrix.n_rows == sizeOfWeightMatrix);
+		assert(weightMatrix.n_rows == howManyTotalDataPoints);
 		Phi = weightMatrix*Phi;
 	}
 

@@ -34,6 +34,8 @@ endif(ASSERTS)
 
 project(rodeo VERSION 1.0)
 add_executable(${PROJECT_NAME}  Rodeo.cpp)
+install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
 target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wpedantic -O2)
 
 

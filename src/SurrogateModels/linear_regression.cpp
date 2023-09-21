@@ -217,11 +217,12 @@ void LinearModel::printSurrogateModel(void) const{
 
 void LinearModel::addNewSampleToData(rowvec newsample){
 
-	assert(newsample.size() > 0);
+	cout<<newsample.size();
+	assert(false);
 }
 
 void LinearModel::addNewLowFidelitySampleToData(rowvec newsample){
-	assert(newsample.size() > 0);
+	cout<<newsample.size();
 	assert(false);
 }
 
@@ -234,7 +235,8 @@ void LinearModel::setNameOfInputFile(std::string filename){
 }
 
 void LinearModel::setNumberOfTrainingIterations(unsigned int nIters){
-	assert(nIters > 0);
+
+	numberOfTrainingIterations = nIters;
 
 }
 
