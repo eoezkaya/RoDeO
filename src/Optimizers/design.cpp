@@ -546,6 +546,13 @@ void DesignForBayesianOptimization::print(void) const{
 		std::cout<<"Constraint values = \n";
 		constraintValues.print();
 	}
+	if(constraintValues.size() > 0){
+
+		std::cout<<"Constraint feasibility probabilities = \n";
+		constraintFeasibilityProbabilities.print();
+
+	}
+
 
 	std::cout<<"\n";
 }

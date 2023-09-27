@@ -398,10 +398,17 @@ void ObjectiveFunction::initializeSurrogate(void){
 	surrogate->printSurrogateModel();
 #endif
 
-	yMin = min(surrogate->gety());
+
 
 	ifInitialized = true;
 }
+
+void ObjectiveFunction::setFeasibleMinimum(double value){
+
+	sampleMinimum = value;
+
+}
+
 
 void ObjectiveFunction::trainSurrogate(void){
 
@@ -466,7 +473,7 @@ void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimizati
 	if(fabs(sigma) > EPSILON){
 
 		double improvement = 0.0;
-		improvement = yMin   - ftilde;
+		improvement = sampleMinimum   - ftilde;
 
 		double	Z = (improvement)/sigma;
 #if 0
@@ -500,7 +507,7 @@ void ObjectiveFunction::calculateProbabilityOfImprovement(DesignForBayesianOptim
 	double	sigma = sqrt(ssqr)	;
 	designCalculated.sigma = sigma;
 
-	double PI = designCalculated.calculateProbalityThatTheEstimateIsLessThanAValue(yMin);
+	double PI = designCalculated.calculateProbalityThatTheEstimateIsLessThanAValue(sampleMinimum);
 
 	designCalculated.valueAcqusitionFunction = PI;
 

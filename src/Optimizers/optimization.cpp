@@ -694,6 +694,12 @@ void Optimizer::findTheMostPromisingDesign(void){
 
 	output.printMessage("Searching the best potential design...");
 
+	double bestFeasibleObjectiveFunctionValue = globalOptimalDesign.trueValue;
+	output.printMessage("Best feasible objective value = ", bestFeasibleObjectiveFunctionValue);
+
+	objFun.setFeasibleMinimum(bestFeasibleObjectiveFunctionValue);
+
+
 	assert(ifSurrogatesAreInitialized);
 
 	vec &lb = lowerBoundsForAcqusitionFunctionMaximization;
@@ -1232,10 +1238,13 @@ void Optimizer::performEfficientGlobalOptimization(void){
 		findTheMostPromisingDesign();
 
 		DesignForBayesianOptimization optimizedDesignGradientBased = MaximizeAcqusitionFunctionGradientBased(theMostPromisingDesigns.at(0));
+//		DesignForBayesianOptimization optimizedDesignGradientBased = theMostPromisingDesigns.at(0);
 
 #if 0
 		optimizedDesignGradientBased.print();
 #endif
+
+
 
 
 		rowvec best_dvNorm = optimizedDesignGradientBased.dv;

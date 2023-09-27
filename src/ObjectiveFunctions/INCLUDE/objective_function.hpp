@@ -138,7 +138,7 @@ protected:
 
 	unsigned int dim = 0;
 
-	double yMin = 0.0;
+	double sampleMinimum = 0.0;
 
 	double sigmaFactor = 1.5;
 
@@ -197,7 +197,7 @@ public:
 	std::string getFileNameTrainingData(void) const;
 
 
-
+	void setFeasibleMinimum(double value);
 
 	void calculateExpectedImprovement(DesignForBayesianOptimization &designCalculated) const;
 	void calculateProbabilityOfImprovement(DesignForBayesianOptimization &designCalculated) const;
