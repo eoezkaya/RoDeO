@@ -3,19 +3,23 @@
 In this example, the Wingweight test function is minimized without any constraint. The Wingweight
 function is given as
 
+```math
+W = 0.036S_w^0.758 W_{fw}^0.0035 * (A/(cos(deg)*cos(deg)))^0.6 * q^0.006 * lambda^ 0.04 * (100.0*tc/cos(deg))^{-0.3}) (N_z*W_dg)^0.49 + S_w*W_p
+```
 
-$W = 0.036S_w^0.758 W_{fw}^0.0035 *pow((A/(cos(deg)*cos(deg))),0.6) * pow(q,0.006)*pow(lambda,0.04)*pow( (100.0*tc/cos(deg)), -0.3) *pow( (Nz*Wdg),0.49) + Sw*Wp$
+The parameters of the function are:
 
-Sw: Wing Area (ft^2) (150,200)
-Wfw: Weight of fuel in the wing (lb) (220,300)
-A: Aspect ratio (6,10)
-Lambda: quarter chord sweep (deg) (-10,10)
-q: dynamic pressure at cruise (lb/ft^2)  (16,45)
-lambda: taper ratio (0.5,1)
-tc: aerofoil thickness to chord ratio (0.08,0.18)
-Nz: ultimate load factor (2.5,6)
-Wdg: flight design gross weight (lb)  (1700,2500)
-Wp: paint weight (lb/ft^2) (0.025, 0.08)
+
+- $S_w$: Wing Area (ft^2) (150,200)
+- Wfw: Weight of fuel in the wing (lb) (220,300)
+- A: Aspect ratio (6,10)
+- $/Lambda$: quarter chord sweep (deg) (-10,10)
+- q: dynamic pressure at cruise (lb/ft^2)  (16,45)
+- $/lambda$: taper ratio (0.5,1)
+- $t_c$: aerofoil thickness to chord ratio (0.08,0.18)
+- $N_z$: ultimate load factor (2.5,6)
+- $W_{dg}$: flight design gross weight (lb)  (1700,2500)
+- $W_p$ : paint weight (lb/ft^2) (0.025, 0.08)
 
 
 Brute Force Global Optimization Results:
