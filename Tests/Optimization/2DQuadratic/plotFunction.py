@@ -9,4 +9,4 @@ plt.xlabel('x1')
 plt.ylabel('x2') 
 plt.title('2D Quadratic function')
 plt.show()
-plt.savefig('2DQuadratic.png')
+
