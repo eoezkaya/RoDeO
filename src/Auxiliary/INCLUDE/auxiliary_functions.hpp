@@ -50,7 +50,14 @@ vec getDoubleValuesFromString(std::string sub_str, char delimiter);
 std::string removeSpacesFromString(std::string );
 std::string removeKeywordFromString(std::string inputStr,  std::string keyword);
 
-
+template <typename T>
+std::string convertToString(const T a_value, const int n = 6)
+{
+    std::ostringstream out;
+    out.precision(n);
+    out << std::fixed << a_value;
+    return std::move(out).str();
+}
 
 
 

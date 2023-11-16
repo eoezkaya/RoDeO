@@ -186,4 +186,11 @@ TEST(testStringFunctions, isEqualString){
 
 }
 
+TEST(testStringFunctions, convertToString){
+
+	double someNumber = 0.0000123124;
+	std::string sameNumber = convertToString(someNumber,12);
+	ASSERT_TRUE(sameNumber == "0.000012312400");
+}
+
 

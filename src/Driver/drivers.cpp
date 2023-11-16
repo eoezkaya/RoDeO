@@ -47,7 +47,7 @@
 #include "./INCLUDE/configkey.hpp"
 #include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 
-#define ARMA_DONT_PRINT_ERRORS
+
 #include <armadillo>
 
 void RoDeODriver::addConfigKeysObjectiveFunction() {
@@ -595,6 +595,9 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	constraintFunctionDefinition.outputFilename = outputFilename;
 	constraintFunctionDefinition.path = exePath;
 	constraintFunctionDefinition.modelHiFi = getSurrogateModelID(surrogateModel);
+
+
+
 	constraintFunctionDefinition.nameHighFidelityTrainingData = filenameTrainingData;
 
 

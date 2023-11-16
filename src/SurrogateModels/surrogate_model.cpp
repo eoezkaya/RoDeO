@@ -453,7 +453,7 @@ void SurrogateModel::printGeneralizationError(void) const{
 	if(generalizationError>0.0){
 
 		unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
-		string msg = "Generalization error (MSE) = " + std::to_string(generalizationError) + " ";
+		string msg = "Generalization error (MSE) = " + convertToString(generalizationError,15) + " ";
 		msg += "(Evaluated at " + std::to_string(numberOfTestSamples) + " samples)";
 		output.printMessage(msg);
 		msg = "standard deviation of the MSE = " + std::to_string(standardDeviationOfGeneralizationError);

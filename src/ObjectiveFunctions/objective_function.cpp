@@ -138,7 +138,7 @@ void ObjectiveFunctionDefinition::printLowFidelityModel() const {
 
 void ObjectiveFunctionDefinition::print(void) const{
 
-	std::cout<<"\n================ Objective function definition ================\n";
+	std::cout<<"\n================ Objective/Constraint function definition ================\n";
 	std::cout<< "Name = "<<name<<"\n";
 	std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
 	std::cout<< "Training data = " << nameHighFidelityTrainingData << "\n";

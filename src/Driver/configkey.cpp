@@ -40,7 +40,7 @@
 #include "./INCLUDE/configkey.hpp"
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 #include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
-#define ARMA_DONT_PRINT_ERRORS
+
 #include <armadillo>
 
 
@@ -102,6 +102,17 @@ void ConfigKey::abortIfNotSet(void) const{
 		abortWithErrorMessage(msg);
 	}
 }
+
+void ConfigKey::clear(void){
+
+	stringValue.clear();
+	intValue = 0;
+	doubleValue = 0.0;
+	vectorStringValue.clear();
+	vectorDoubleValue.reset();
+	ifValueSet = false;
+}
+
 
 void ConfigKey::setValue(std::string val){
 
@@ -489,10 +500,18 @@ void ConfigKeyList::printKeywords(void) const{
 
 	}
 
-
-
-
 }
+
+
+void ConfigKeyList::clearKeywords(void){
+
+	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
+
+		it->clear();
+
+	}
+}
+
 
 void ConfigKeyList::abortifConfigKeyIsNotSet(std::string key) const{
 

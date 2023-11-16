@@ -509,3 +509,42 @@ TEST(testConfigkey, testparseString){
 
 }
 
+
+TEST(testConfigkey, testClearValue){
+
+
+	ConfigKey testKey("WARM_START","string");
+	testKey.stringValue = "ON";
+	testKey.clear();
+
+	std::string value = testKey.stringValue;
+	ASSERT_TRUE(value.empty());
+	ASSERT_FALSE(testKey.ifValueSet);
+
+}
+
+
+TEST(testConfigkey, configKeyListClearKeywords){
+
+	ConfigKeyList testList;
+	testList.add(ConfigKey("NAME","string") );
+	testList.add(ConfigKey("DESIGN_VECTOR_FILE","string") );
+
+	testList.add(ConfigKey("OUTPUT_FILE","stringVector") );
+	testList.add(ConfigKey("PATH","stringVector") );
+	testList.add(ConfigKey("GRADIENT","stringVector") );
+	testList.add(ConfigKey("EXECUTABLE","stringVector") );
+
+	std::string name = "somename";
+	testList.assignKeywordValue("NAME", name);
+
+	std::string value = testList.getConfigKeyStringValue("NAME");
+
+	ASSERT_TRUE(value == "somename");
+
+	testList.clearKeywords();
+	value = testList.getConfigKeyStringValue("NAME");
+	ASSERT_TRUE(value.empty());
+
+}
+
