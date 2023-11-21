@@ -128,6 +128,12 @@ void Optimizer::setMaximumNumberOfIterations(unsigned int maxIterations){
 
 }
 
+void Optimizer::setMinimumNumberOfSamplesAfterZoomIn(unsigned int nSamples){
+
+	minimumNumberOfSamplesAfterZoomIn = nSamples;
+
+}
+
 void Optimizer::setMaximumNumberOfIterationsLowFidelity(unsigned int maxIterations){
 
 	maxNumberOfSamplesLowFidelity =  maxIterations;
@@ -186,14 +192,24 @@ void Optimizer::setZoomInOn(void){
 	ifZoomInDesignSpaceIsAllowed = true;
 }
 
-void Optimizer::setZoomFactor(double value){
-	assert(value>0.0);
-	assert(value<1.0);
+//void Optimizer::setZoomFactor(double value){
+//	assert(value>0.0);
+//	assert(value<1.0);
+//
+//	zoomFactorShrinkageRate = value;
+//
+//}
 
-	zoomFactorShrinkageRate = value;
+void Optimizer::setMaxSigmaFactor(double value){
+	assert(value>0.0);
+	maximumSigma = value;
 
 }
+void Optimizer::setMinSigmaFactor(double value){
+	assert(value>0.0);
+	minimumSigma = value;
 
+}
 
 
 void Optimizer::setZoomInOff(void){
@@ -534,6 +550,9 @@ void Optimizer::zoomInDesignSpace(void){
 
 	output.printMessage("Zooming in design space...");
 
+	assert(minimumNumberOfSamplesAfterZoomIn>0);
+	assert(dimension>0);
+
 	findTheGlobalOptimalDesign();
 
 #if 0
@@ -544,36 +563,55 @@ void Optimizer::zoomInDesignSpace(void){
 	rowvec dvNormalized = normalizeVector(globalOptimalDesign.designParameters, lowerBounds, upperBounds);
 
 #if 0
-	printVector(dvNormalized,"dvNormalized");
+	dvNormalized.print("dvNormalized");
 #endif
 
-	for(unsigned int i=0; i<dimension; i++){
 
-		double delta = dx(i)*zoomInFactor;
+	unsigned int numberOfSamplesWithinZoomWindow = 0;
 
-		if(delta < minDeltaXForZoom){
+	vec lbZoomWindow(dimension, fill::zeros);
+	vec ubZoomWindow(dimension, fill::zeros);
 
-			delta = minDeltaXForZoom;
+	double deltaStepSize = (1.0/dimension)*0.001;
+	double delta = deltaStepSize;
+
+
+	while(numberOfSamplesWithinZoomWindow < minimumNumberOfSamplesAfterZoomIn){
+
+
+		lbZoomWindow = trans(dvNormalized) - delta;
+		ubZoomWindow = trans(dvNormalized) + delta;
+#if 0
+		trans(lbZoomWindow).print("lbZoomWindow");
+		trans(ubZoomWindow).print("ubZoomWindow");
+#endif
+		for(unsigned int i=0; i<dimension; i++){
+
+			if(lbZoomWindow(i) < 0.0) {
+				lbZoomWindow(i) = 0.0;
+			}
+			if(ubZoomWindow(i) > 1.0/dimension) {
+				ubZoomWindow(i) = 1.0/dimension;
+			}
+
 		}
 
-		lowerBoundsForAcqusitionFunctionMaximization(i) =  dvNormalized(i) - delta;
-		upperBoundsForAcqusitionFunctionMaximization(i) =  dvNormalized(i) + delta;
+		vec lbNotNormalized = normalizeVectorBack(lbZoomWindow,lowerBounds, upperBounds);
+		vec ubNotNormalized = normalizeVectorBack(ubZoomWindow,lowerBounds, upperBounds);
 
-		if(lowerBoundsForAcqusitionFunctionMaximization(i) < 0.0) {
-			lowerBoundsForAcqusitionFunctionMaximization(i) = 0.0;
-		}
-
-		if(upperBoundsForAcqusitionFunctionMaximization(i) > 1.0/dimension) {
-			upperBoundsForAcqusitionFunctionMaximization(i) = 1.0/dimension;
-
-		}
-
+		numberOfSamplesWithinZoomWindow = objFun.countHowManySamplesAreWithinBounds(lbNotNormalized, ubNotNormalized);
+#if 0
+		printScalar(numberOfSamplesWithinZoomWindow);
+#endif
+		delta +=deltaStepSize;
 	}
+
+	lowerBoundsForAcqusitionFunctionMaximization = lbZoomWindow;
+	upperBoundsForAcqusitionFunctionMaximization = ubZoomWindow;
 
 	output.printMessage("New bounds for the acquisition function are set...");
 	output.printBoxConstraints(lowerBoundsForAcqusitionFunctionMaximization,upperBoundsForAcqusitionFunctionMaximization);
 
-	zoomInFactor = zoomInFactor * zoomFactorShrinkageRate;
 }
 
 
@@ -607,14 +645,12 @@ void Optimizer::reduceTrainingDataFiles(void) const{
 
 	output.printMessage("Reducing size of training data...");
 
-	objFun.reduceTrainingDataFiles(howManySamplesReduceAfterZoomIn, globalOptimalDesign.trueValue);
+	objFun.reduceTrainingDataFiles(lowerBounds,upperBounds);
 
 	if(isConstrained()){
 
 		for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-			double targetValue = it->getInequalityTargetValue();
-			it->reduceTrainingDataFiles(howManySamplesReduceAfterZoomIn,targetValue );
+			it->reduceTrainingDataFiles(lowerBounds,upperBounds);
 		}
 	}
 
@@ -1210,23 +1246,22 @@ void Optimizer::performEfficientGlobalOptimization(void){
 	}
 
 	/* main loop for optimization */
-	unsigned int simulationCount = 0;
-	unsigned int iterOpt=0;
 
 	while(1){
 
-		iterOpt++;
+		outerIterationNumber++;
 
-		output.printIteration(iterOpt);
 
-		if(simulationCount%howOftenTrainModels == 0) {
+		output.printIteration(outerIterationNumber);
+
+		if(outerIterationNumber%howOftenTrainModels == 1) {
 
 			initializeSurrogates();
 			trainSurrogates();
 		}
 
 
-		if(isToZoomInIteration(iterOpt)){
+		if(isToZoomInIteration(outerIterationNumber)){
 
 			zoomInDesignSpace();
 			reduceBoxConstraints();
@@ -1238,7 +1273,7 @@ void Optimizer::performEfficientGlobalOptimization(void){
 		findTheMostPromisingDesign();
 
 		DesignForBayesianOptimization optimizedDesignGradientBased = MaximizeAcqusitionFunctionGradientBased(theMostPromisingDesigns.at(0));
-//		DesignForBayesianOptimization optimizedDesignGradientBased = theMostPromisingDesigns.at(0);
+		//		DesignForBayesianOptimization optimizedDesignGradientBased = theMostPromisingDesigns.at(0);
 
 #if 0
 		optimizedDesignGradientBased.print();
@@ -1300,11 +1335,8 @@ void Optimizer::performEfficientGlobalOptimization(void){
 			modifySigmaFactor();
 		}
 
-
-		simulationCount ++;
-
 		/* terminate optimization */
-		if(simulationCount >= maxNumberOfSamples){
+		if(outerIterationNumber >= maxNumberOfSamples){
 
 
 			output.printMessage("number of simulations > maximum number of simulations! Optimization is terminating...");
@@ -1390,30 +1422,29 @@ void Optimizer::calculateImprovementValue(Design &d){
 
 void Optimizer::modifySigmaFactor(void){
 
-	vec improvementValues = optimizationHistory.col(sampleDim);
+	std::cout<<"modifySigmaFactor ... \n";
 
-	//	improvementValues.print("improvement values");
-	uword i = improvementValues.index_max();
+	assert(minimumSigma<= maximumSigma);
 
-	if(i == improvementValues.size()-1){
+	double b = maximumSigma;
+	double a = (minimumSigma - maximumSigma)/(0.5*maxNumberOfSamples);
 
 
-		std::cout<<"Improvement has been achieved in the last iteration\n";
-		if(sigmaFactor>2.0) sigmaFactor = 2.0;
-		sigmaFactor = sigmaFactor*0.8;
+	if(outerIterationNumber < maxNumberOfSamples/2){
+
+		sigmaFactor = a*outerIterationNumber + b;
 	}
 	else{
 
-		std::cout<<"No improvement has been achieved in the last iteration\n";
-		sigmaFactor = sigmaFactor*1.25;
+		sigmaFactor = minimumSigma;
 	}
 
-	if(sigmaFactor > 10) sigmaFactor = 10.0;
-	if(sigmaFactor < 0.5) sigmaFactor = 0.5;
-
-
 	objFun.setSigmaFactor(sigmaFactor);
+
+
 	printScalar(sigmaFactor);
+
+
 
 }
 

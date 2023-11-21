@@ -183,7 +183,8 @@ public:
 	rowvec getRowX(unsigned int index) const;
 	rowvec getRowXRaw(unsigned int index) const;
 
-	void reduceTrainingData(unsigned int, double) const;
+    unsigned int countHowManySamplesAreWithinBounds(vec lb, vec ub);
+	void reduceTrainingData(vec lb, vec ub) const;
 
 	void printGeneralizationError(void) const;
 

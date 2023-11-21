@@ -214,7 +214,7 @@ TEST_F(SurrogateModelBaseTest, reduceTrainingData) {
 
 	mat readDataInitial;
 	readDataInitial.load("trainingData.csv", csv_ascii);
-//	readDataInitial.print("training data");
+	//	readDataInitial.print("training data");
 
 	testModel.readData();
 
@@ -224,23 +224,60 @@ TEST_F(SurrogateModelBaseTest, reduceTrainingData) {
 	lb.fill(-3.0);
 	ub.fill(3.0);
 
-	Bounds newBoxConstraints(2);
-	newBoxConstraints.setBounds(lb,ub);
-
-	testModel.setBoxConstraints(newBoxConstraints);
-
-	/* reduce size of training data around the 5.0 */
-	testModel.reduceTrainingData(10, 5.0);
+	testModel.reduceTrainingData(lb, ub);
 
 
 	mat readDataReduced;
 	readDataReduced.load("trainingData.csv", csv_ascii);
 
-//	readDataReduced.print("reduced training data");
+	//	readDataReduced.print("reduced training data");
 
-	ASSERT_TRUE(readDataReduced.n_rows + 10 ==  readDataInitial.n_rows);
 
+	for(unsigned int i=0; i<readDataReduced.n_rows; i++){
+
+		rowvec sample = readDataReduced.row(i);
+		double x1 = sample(0);
+		double x2 = sample(1);
+
+		bool ifIsBetween = isNumberBetween(x1, lb(0),ub(0));
+		ASSERT_TRUE(ifIsBetween);
+		ifIsBetween = isNumberBetween(x2, lb(1),ub(1));
+		ASSERT_TRUE(ifIsBetween);
+
+
+	}
 
 }
 
+TEST_F(SurrogateModelBaseTest, countHowManySamplesAreWithinBounds) {
 
+
+	himmelblauFunction.function.generateTrainingSamples();
+
+	testModel.readData();
+
+	vec lb(2);
+	vec ub(2);
+
+	lb.fill(-0.0000000001);
+	ub.fill( 0.0000000001);
+
+	unsigned int howMany =testModel.countHowManySamplesAreWithinBounds(lb, ub);
+
+	ASSERT_TRUE(howMany == 0);
+
+	lb.fill(-6.01);
+	ub.fill( 6.01);
+
+	howMany = testModel.countHowManySamplesAreWithinBounds(lb, ub);
+
+	ASSERT_TRUE(howMany == himmelblauFunction.function.numberOfTrainingSamples);
+
+	lb.fill(-3.0);
+	ub.fill( 3.0);
+
+	howMany = testModel.countHowManySamplesAreWithinBounds(lb, ub);
+
+	ASSERT_TRUE(howMany < himmelblauFunction.function.numberOfTrainingSamples);
+
+}

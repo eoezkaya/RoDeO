@@ -464,6 +464,8 @@ void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimizati
 
 	sigma = sigmaFactor*sigma;
 
+	/* larger sigma means model uncertainty is higher. In this case, more exploration will take place */
+
 #if 0
 	printf("standart_ERROR = %15.10f\n",sigma);
 #endif
@@ -853,10 +855,17 @@ void ObjectiveFunction::printSurrogate(void) const{
 	surrogate->printSurrogateModel();
 }
 
-void ObjectiveFunction::reduceTrainingDataFiles(unsigned howManySamples, double targetValue) const{
 
-	surrogate->reduceTrainingData(howManySamples,targetValue);
+void ObjectiveFunction::reduceTrainingDataFiles(vec lb, vec ub) const{
+
+	surrogate->reduceTrainingData(lb,ub);
 }
+
+unsigned int ObjectiveFunction::countHowManySamplesAreWithinBounds(vec lb, vec ub) const{
+
+	return surrogate->countHowManySamplesAreWithinBounds(lb,ub);
+}
+
 
 void ObjectiveFunction::setSigmaFactor(double factor){
 

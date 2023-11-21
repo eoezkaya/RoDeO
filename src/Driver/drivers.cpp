@@ -100,17 +100,30 @@ void RoDeODriver::addConfigKeysOptimization() {
 
 	configKeys.add(ConfigKey("VISUALIZATION", "string"));
 	configKeys.add(ConfigKey("DISPLAY", "string"));
-	configKeys.add(ConfigKey("ZOOM_IN", "string"));
+
 	configKeys.add(ConfigKey("TARGET_VALUE_FOR_VARIABLE_SAMPLE_WEIGHTS", "string"));
 
-	configKeys.add(ConfigKey("ZOOM_IN_CONTRACTION_FACTOR", "double"));
+
 
 	configKeys.add(ConfigKey("DISCRETE_VARIABLES", "doubleVector"));
 	configKeys.add(ConfigKey("DISCRETE_VARIABLES_VALUE_INCREMENTS", "doubleVector"));
 
+	configKeys.add(ConfigKey("ZOOM_IN", "string"));
 	configKeys.add(ConfigKey("ZOOM_IN_HOW_OFTEN", "int"));
+	configKeys.add(ConfigKey("NUMBER_OF_MINIMUM_SAMPLES_AFTER_ZOOM_IN", "int"));
+
+
+
 	configKeys.add(ConfigKey("MAX_NUMBER_OF_INNER_ITERATIONS", "int"));
 	configKeys.add(ConfigKey("MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS", "int"));
+
+
+	configKeys.add(ConfigKey("VARIABLE_MODEL_UNCERTAINTY", "string"));
+	configKeys.add(ConfigKey("MAX_SIGMA_FACTOR", "double"));
+	configKeys.add(ConfigKey("MIN_SIGMA_FACTOR", "double"));
+
+
+
 
 }
 
@@ -883,27 +896,71 @@ ConstraintFunction RoDeODriver::setConstraint(unsigned int index) const{
 
 }
 
+void RoDeODriver::setOptimizationFeaturesMandatory(
+		Optimizer &optimizationStudy) const {
+	string keyword = "MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS";
+	configKeys.abortifConfigKeyIsNotSet(keyword);
+	int nFunctionEvals = configKeys.getConfigKeyIntValue(keyword);
+	optimizationStudy.setMaximumNumberOfIterations(nFunctionEvals);
+	keyword = "MAX_NUMBER_OF_INNER_ITERATIONS";
+	if (configKeys.ifConfigKeyIsSet(keyword)) {
+		int numberOfMaxInnerIterations = configKeys.getConfigKeyIntValue(
+				keyword);
+		optimizationStudy.setMaximumNumberOfInnerIterations(
+				numberOfMaxInnerIterations);
+	}
+}
+
+void RoDeODriver::setOptimizationFeaturesVariableModelUncertainty(
+		Optimizer &optimizationStudy) const {
+	string keyword = "VARIABLE_MODEL_UNCERTAINTY";
+	if (configKeys.ifConfigKeyIsSet(keyword)) {
+		string adaptiveSigma = configKeys.getConfigKeyStringValue(keyword);
+		if (checkIfOn(adaptiveSigma)) {
+			optimizationStudy.ifAdaptSigmaFactor = true;
+		}
+		double maxSigma = configKeys.getConfigKeyDoubleValue(
+				"MAX_SIGMA_FACTOR");
+		double minSigma = configKeys.getConfigKeyDoubleValue(
+				"MIN_SIGMA_FACTOR");
+		optimizationStudy.setMaxSigmaFactor(maxSigma);
+		optimizationStudy.setMinSigmaFactor(minSigma);
+	}
+}
+
+void RoDeODriver::setOptimizationFeaturesZoomInDesignSpace(
+		Optimizer &optimizationStudy) const {
+	string keyword = "ZOOM_IN";
+	if (configKeys.ifConfigKeyIsSet(keyword)) {
+		string ifZoomIn = configKeys.getConfigKeyStringValue(keyword);
+		if (checkIfOn(ifZoomIn)) {
+			optimizationStudy.setZoomInOn();
+			keyword = "NUMBER_OF_MINIMUM_SAMPLES_AFTER_ZOOM_IN";
+			if (!configKeys.ifConfigKeyIsSet(keyword)) {
+				string msg =
+						"NUMBER_OF_MINIMUM_SAMPLES_AFTER_ZOOM_IN is not set! Check the configuration file.";
+				abortWithErrorMessage(msg);
+			}
+			unsigned int nSamples = configKeys.getConfigKeyIntValue(keyword);
+			optimizationStudy.setMinimumNumberOfSamplesAfterZoomIn(nSamples);
+			keyword = "ZOOM_IN_HOW_OFTEN";
+			if (configKeys.ifConfigKeyIsSet(keyword)) {
+				unsigned int howOftenZoomIn = configKeys.getConfigKeyIntValue(keyword);
+				optimizationStudy.setHowOftenZoomIn(howOftenZoomIn);
+			}
+		}
+	}
+}
+
 void RoDeODriver::setOptimizationFeatures(Optimizer &optimizationStudy) const{
 
 	if(output.ifScreenDisplay){
 		optimizationStudy.setDisplayOn();
 	}
 
-	string keyword  = "MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS";
-	configKeys.abortifConfigKeyIsNotSet(keyword);
-
-	int nFunctionEvals = configKeys.getConfigKeyIntValue(keyword);
-	optimizationStudy.setMaximumNumberOfIterations(nFunctionEvals);
-
-
-	keyword = "MAX_NUMBER_OF_INNER_ITERATIONS";
-	if(configKeys.ifConfigKeyIsSet(keyword)){
-
-
-		int numberOfMaxInnerIterations = configKeys.getConfigKeyIntValue(keyword);
-		optimizationStudy.setMaximumNumberOfInnerIterations(numberOfMaxInnerIterations);
-
-	}
+	setOptimizationFeaturesMandatory(optimizationStudy);
+	setOptimizationFeaturesVariableModelUncertainty(optimizationStudy);
+	setOptimizationFeaturesZoomInDesignSpace(optimizationStudy);
 }
 
 void RoDeODriver::runOptimization(void){
@@ -995,10 +1052,10 @@ SURROGATE_MODEL RoDeODriver::getSurrogateModelID(string modelName) const{
 		return ORDINARY_KRIGING;
 	}
 	if(modelName == "Kriging" ||
-	   modelName == "kriging" ||
-	   modelName == "KRIGING" ||
-	   modelName == "ORDINARY_KRIGING" ||
-	   modelName == "ordinary_kriging")
+			modelName == "kriging" ||
+			modelName == "KRIGING" ||
+			modelName == "ORDINARY_KRIGING" ||
+			modelName == "ordinary_kriging")
 
 	{
 		return ORDINARY_KRIGING;

@@ -175,85 +175,160 @@ void SurrogateModel::readDataTest(void){
 	ifTestDataIsRead = true;
 }
 
-
-void SurrogateModel::reduceTrainingData(unsigned howManySamples, double targetValue) const{
+unsigned int SurrogateModel::countHowManySamplesAreWithinBounds(vec lb, vec ub){
 
 	assert(ifDataIsRead);
-	Bounds boxConstraints = data.getBoxConstraints();
-	assert(boxConstraints.areBoundsSet());
-
-	unsigned int dim = data.getDimension();
-	unsigned int N   = data.getNumberOfSamples();
 
 	mat trainingData;
 	trainingData = data.getRawData();
 
-	vec lb = boxConstraints.getLowerBounds();
-	vec ub = boxConstraints.getUpperBounds();
+	unsigned int N   = data.getNumberOfSamples();
+	unsigned int dim = data.getDimension();
 
-	vector<pair<unsigned int, double >> samplesThatCanBeRemoved;
+	unsigned int counter = 0;
+	for(unsigned int i=0; i<N; i++){
+
+		rowvec sample     = trainingData.row(i);
+		rowvec dv         = sample.head(dim);
+		vec x = trans(dv);
+
+		if(isBetween(x,lb,ub)){
+			counter++;
+		}
+
+	}
+
+	return counter;
+}
+
+
+void SurrogateModel::reduceTrainingData(vec lb, vec ub) const{
+
+	assert(ifDataIsRead);
+
+	mat trainingData;
+	trainingData = data.getRawData();
+
+#if 0
+	trainingData.print();
+#endif
+	unsigned int dim = data.getDimension();
+	unsigned int N   = data.getNumberOfSamples();
+
+	vector<int> samplesThatCanBeRemoved;
 
 	for(unsigned int i=0; i<N; i++){
 
 		rowvec sample     = trainingData.row(i);
 		rowvec dv         = sample.head(dim);
-		double value      = sample(dim);
 		vec x = trans(dv);
 
 		if(!isBetween(x,lb,ub)){
-
-			pair<unsigned int, double> sampleToRemove;
-
-			sampleToRemove.first = i;
-			sampleToRemove.second = fabs(value - targetValue);
-
-			samplesThatCanBeRemoved.push_back(sampleToRemove);
+			samplesThatCanBeRemoved.push_back(i);
 		}
-	}
-
-	unsigned int Nreduced = samplesThatCanBeRemoved.size();
-
-	if(Nreduced == 0){
-		howManySamples = 0;
 
 	}
 
-	for(unsigned int i=0; i<Nreduced; i++){
+	unsigned int howManySamplesToBeRemoved = samplesThatCanBeRemoved.size();
 
-		for(unsigned int j=i; j<Nreduced; j++){
+	if(howManySamplesToBeRemoved>0){
 
-			pair<unsigned int, double> sample1;
-			pair<unsigned int, double> sample2;
 
-			sample1 = samplesThatCanBeRemoved.at(i);
-			sample2 = samplesThatCanBeRemoved.at(j);
+		uvec indicesToRemove(howManySamplesToBeRemoved);
 
-			double value1 = sample1.second;
-			double value2 = sample2.second;
-
-			if(value2 > value1){
-
-				pair<unsigned int, double> temp;
-				temp = samplesThatCanBeRemoved.at(i);
-				samplesThatCanBeRemoved.at(i) = samplesThatCanBeRemoved.at(j);
-				samplesThatCanBeRemoved.at(j) = temp;
-			}
+		for(unsigned int i=0; i<howManySamplesToBeRemoved; i++){
+			indicesToRemove(i) = samplesThatCanBeRemoved.at(i);
 		}
+
+
+		trainingData.shed_rows(indicesToRemove);
+		trainingData.save(filenameDataInput, csv_ascii);
+
 	}
 
-	uvec indicesToRemove(howManySamples);
-
-	for(unsigned int i=0; i<howManySamples; i++){
-		indicesToRemove(i) = samplesThatCanBeRemoved.at(i).first;
-	}
-
-	unsigned int Nleft = N - howManySamples;
-	mat writeBuffer(Nleft,trainingData.n_cols);
-
-	trainingData.shed_rows(indicesToRemove);
-	trainingData.save(filenameDataInput, csv_ascii);
 
 }
+
+
+
+//void SurrogateModel::reduceTrainingData(unsigned howManySamples, double targetValue) const{
+//
+//	assert(ifDataIsRead);
+//	Bounds boxConstraints = data.getBoxConstraints();
+//	assert(boxConstraints.areBoundsSet());
+//
+//	unsigned int dim = data.getDimension();
+//	unsigned int N   = data.getNumberOfSamples();
+//
+//	mat trainingData;
+//	trainingData = data.getRawData();
+//
+//	vec lb = boxConstraints.getLowerBounds();
+//	vec ub = boxConstraints.getUpperBounds();
+//
+//	vector<pair<unsigned int, double >> samplesThatCanBeRemoved;
+//
+//	for(unsigned int i=0; i<N; i++){
+//
+//		rowvec sample     = trainingData.row(i);
+//		rowvec dv         = sample.head(dim);
+//		double value      = sample(dim);
+//		vec x = trans(dv);
+//
+//		if(!isBetween(x,lb,ub)){
+//
+//			pair<unsigned int, double> sampleToRemove;
+//
+//			sampleToRemove.first = i;
+//			sampleToRemove.second = fabs(value - targetValue);
+//
+//			samplesThatCanBeRemoved.push_back(sampleToRemove);
+//		}
+//	}
+//
+//	unsigned int Nreduced = samplesThatCanBeRemoved.size();
+//
+//	if(Nreduced == 0){
+//		howManySamples = 0;
+//
+//	}
+//
+//	for(unsigned int i=0; i<Nreduced; i++){
+//
+//		for(unsigned int j=i; j<Nreduced; j++){
+//
+//			pair<unsigned int, double> sample1;
+//			pair<unsigned int, double> sample2;
+//
+//			sample1 = samplesThatCanBeRemoved.at(i);
+//			sample2 = samplesThatCanBeRemoved.at(j);
+//
+//			double value1 = sample1.second;
+//			double value2 = sample2.second;
+//
+//			if(value2 > value1){
+//
+//				pair<unsigned int, double> temp;
+//				temp = samplesThatCanBeRemoved.at(i);
+//				samplesThatCanBeRemoved.at(i) = samplesThatCanBeRemoved.at(j);
+//				samplesThatCanBeRemoved.at(j) = temp;
+//			}
+//		}
+//	}
+//
+//	uvec indicesToRemove(howManySamples);
+//
+//	for(unsigned int i=0; i<howManySamples; i++){
+//		indicesToRemove(i) = samplesThatCanBeRemoved.at(i).first;
+//	}
+//
+//	unsigned int Nleft = N - howManySamples;
+//	mat writeBuffer(Nleft,trainingData.n_cols);
+//
+//	trainingData.shed_rows(indicesToRemove);
+//	trainingData.save(filenameDataInput, csv_ascii);
+//
+//}
 
 
 void SurrogateModel::normalizeDataTest(void){

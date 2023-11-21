@@ -140,7 +140,7 @@ protected:
 
 	double sampleMinimum = 0.0;
 
-	double sigmaFactor = 1.5;
+	double sigmaFactor = 1.0;
 
 
 
@@ -222,8 +222,8 @@ public:
 	void print(void) const;
 	std::string getExecutionCommand(string, string) const;
 
-
-	void reduceTrainingDataFiles(unsigned int, double) const;
+	void reduceTrainingDataFiles(vec, vec) const;
+	unsigned int countHowManySamplesAreWithinBounds(vec lb, vec ub) const;
 
 	void setSigmaFactor(double);
 

@@ -290,6 +290,76 @@ TEST_F(OptimizationTest, setOptimizationHistory){
 }
 
 
+
+TEST_F(OptimizationTest, zoomInDesignSpace){
+
+	prepareObjectiveFunction();
+	prepareFirstConstraint();
+
+	testOptimizer.setBoxConstraints(boxConstraints);
+
+	vec lbInitial = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
+	vec ubInitial = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
+
+	testOptimizer.initializeSurrogates();
+	testOptimizer.clearOptimizationHistoryFile();
+	testOptimizer.prepareOptimizationHistoryFile();
+	testOptimizer.setOptimizationHistory();
+
+	testOptimizer.setMinimumNumberOfSamplesAfterZoomIn(10);
+
+	testOptimizer.zoomInDesignSpace();
+
+	vec lbFinal = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
+	vec ubFinal = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
+
+	unsigned int dim = testOptimizer.dimension;
+	for(unsigned int i=0; i<dim; i++){
+
+		ASSERT_TRUE(lbFinal(i) > lbInitial(i));
+		ASSERT_TRUE(ubFinal(i) < ubInitial(i));
+
+	}
+
+
+}
+
+
+TEST_F(OptimizationTest, reduceTrainingDataFiles){
+
+	prepareObjectiveFunction();
+	prepareFirstConstraint();
+	testOptimizer.setBoxConstraints(boxConstraints);
+	testOptimizer.initializeSurrogates();
+	testOptimizer.clearOptimizationHistoryFile();
+	testOptimizer.prepareOptimizationHistoryFile();
+	testOptimizer.setOptimizationHistory();
+	testOptimizer.setZoomInOn();
+	testOptimizer.setMinimumNumberOfSamplesAfterZoomIn(10);
+
+
+
+
+	//	testOptimizer.setDisplayOn();
+	testOptimizer.zoomInDesignSpace();
+	testOptimizer.reduceBoxConstraints();
+
+
+	mat readData;
+	readData.load(definition.nameHighFidelityTrainingData, csv_ascii);
+
+	unsigned int N1 = readData.n_rows;
+
+
+	testOptimizer.reduceTrainingDataFiles();
+	readData.load(definition.nameHighFidelityTrainingData, csv_ascii);
+
+	unsigned int N2 = readData.n_rows;
+	EXPECT_TRUE(N2 < N1);
+
+}
+
+
 TEST_F(OptimizationTest, EGOUnconstrained){
 
 	prepareObjectiveFunction();
@@ -462,65 +532,7 @@ TEST_F(OptimizationTest, updateOptimizationHistory){
 }
 
 
-TEST_F(OptimizationTest, reduceTrainingDataFiles){
 
-	prepareObjectiveFunction();
-	prepareFirstConstraint();
-	testOptimizer.setBoxConstraints(boxConstraints);
-	testOptimizer.initializeSurrogates();
-	testOptimizer.clearOptimizationHistoryFile();
-	testOptimizer.prepareOptimizationHistoryFile();
-	testOptimizer.setOptimizationHistory();
-	testOptimizer.setZoomInOn();
-	testOptimizer.setZoomFactor(0.5);
-	//	testOptimizer.setDisplayOn();
-	testOptimizer.zoomInDesignSpace();
-	testOptimizer.reduceBoxConstraints();
-
-
-	mat readData;
-	readData.load(definition.nameHighFidelityTrainingData, csv_ascii);
-
-	unsigned int N1 = readData.n_rows;
-
-
-	testOptimizer.reduceTrainingDataFiles();
-	readData.load(definition.nameHighFidelityTrainingData, csv_ascii);
-
-	unsigned int N2 = readData.n_rows;
-	EXPECT_TRUE(N2 < N1);
-
-}
-
-
-
-TEST_F(OptimizationTest, zoomInDesignSpace){
-
-	prepareObjectiveFunction();
-	prepareFirstConstraint();
-
-	testOptimizer.setBoxConstraints(boxConstraints);
-	testOptimizer.initializeSurrogates();
-	testOptimizer.clearOptimizationHistoryFile();
-	testOptimizer.prepareOptimizationHistoryFile();
-	testOptimizer.setOptimizationHistory();
-
-	testOptimizer.zoomInDesignSpace();
-	testOptimizer.zoomInDesignSpace();
-
-	vec lb = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
-	vec ub = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
-
-	Design optimalDesign = testOptimizer.globalOptimalDesign;
-
-	double J = optimalDesign.trueValue;
-
-	EXPECT_TRUE( ub(0) - lb(0) < 0.5 );
-	EXPECT_TRUE( ub(1) - lb(1) < 0.5 );
-	EXPECT_TRUE( J < 500.0 );
-	EXPECT_TRUE( J > 0.0 );
-
-}
 
 
 

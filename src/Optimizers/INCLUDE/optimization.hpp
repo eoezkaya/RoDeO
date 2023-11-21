@@ -96,13 +96,22 @@ private:
 	double initialImprovementValue = 0.0;
 
 	bool ifZoomInDesignSpaceIsAllowed = false;
-	double zoomInFactor = 0.5;
-	double zoomFactorShrinkageRate = 0.75;
-	unsigned int howManySamplesReduceAfterZoomIn = 5;
+	unsigned int howOftenZoomIn = 10;
+	unsigned int minimumNumberOfSamplesAfterZoomIn = 0;
+
+
+//	double zoomInFactor = 0.5;
+//	double zoomFactorShrinkageRate = 0.75;
+//	unsigned int howManySamplesReduceAfterZoomIn = 5;
 
 
 	unsigned int iterMaxAcquisitionFunction;
+	unsigned int outerIterationNumber = 0;
+
+
 	double sigmaFactor = 1.0;
+	double maximumSigma = 2.0;
+	double minimumSigma = 0.1;
 
 
 	unsigned int numberOfDisceteVariables = 0;
@@ -161,7 +170,7 @@ public:
 	unsigned int maxNumberOfSamplesLowFidelity = 0;
 
 	unsigned int howOftenTrainModels = 100000;
-	unsigned int howOftenZoomIn = 10;
+
 	double minDeltaXForZoom;
 
 	unsigned int sampleDim;
@@ -210,13 +219,19 @@ public:
 
 	void setZoomInOn(void);
 	void setZoomInOff(void);
-	void setZoomFactor(double value);
+	void setHowOftenZoomIn(unsigned int value);
+	void setMinimumNumberOfSamplesAfterZoomIn(unsigned int nSamples);
+
+//	void setZoomFactor(double value);
+
+
+	void setMaxSigmaFactor(double value);
+	void setMinSigmaFactor(double value);
 
 
 
 
 	void setHowOftenTrainModels(unsigned int value);
-	void setHowOftenZoomIn(unsigned int value);
 
 
 
