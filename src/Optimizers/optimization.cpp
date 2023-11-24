@@ -578,14 +578,11 @@ void Optimizer::zoomInDesignSpace(void){
 
 	while(numberOfSamplesWithinZoomWindow < minimumNumberOfSamplesAfterZoomIn){
 
-
-		lbZoomWindow = trans(dvNormalized) - delta;
-		ubZoomWindow = trans(dvNormalized) + delta;
-#if 0
-		trans(lbZoomWindow).print("lbZoomWindow");
-		trans(ubZoomWindow).print("ubZoomWindow");
-#endif
 		for(unsigned int i=0; i<dimension; i++){
+
+			lbZoomWindow = dvNormalized(i) - delta;
+			ubZoomWindow = dvNormalized(i) + delta;
+
 
 			if(lbZoomWindow(i) < 0.0) {
 				lbZoomWindow(i) = 0.0;
@@ -596,14 +593,25 @@ void Optimizer::zoomInDesignSpace(void){
 
 		}
 
+#if 0
+		trans(lbZoomWindow).print("lbZoomWindow");
+		trans(ubZoomWindow).print("ubZoomWindow");
+#endif
+
+
 		vec lbNotNormalized = normalizeVectorBack(lbZoomWindow,lowerBounds, upperBounds);
 		vec ubNotNormalized = normalizeVectorBack(ubZoomWindow,lowerBounds, upperBounds);
-
+#if 0
+		trans(lbNotNormalized).print("lbNotNormalized");
+		trans(ubNotNormalized).print("ubNotNormalized");
+#endif
 		numberOfSamplesWithinZoomWindow = objFun.countHowManySamplesAreWithinBounds(lbNotNormalized, ubNotNormalized);
 #if 0
 		printScalar(numberOfSamplesWithinZoomWindow);
 #endif
 		delta +=deltaStepSize;
+
+
 	}
 
 	lowerBoundsForAcqusitionFunctionMaximization = lbZoomWindow;
