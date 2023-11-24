@@ -61,7 +61,7 @@ bool ObjectiveFunctionDefinition::checkIfDefinitionIsOk(void) const{
 
 	if(ifDefined == false) {
 
-//		std::cout<<"ifDefined is false!";
+		//		std::cout<<"ifDefined is false!";
 		return false;
 	}
 
@@ -523,11 +523,15 @@ std::string ObjectiveFunction::getExecutionCommand(string path, string exename) 
 
 	std::string runCommand;
 
-	if(isNotEmpty(path)) {
-		runCommand = path +"/" + exename;
-	}
-	else{
-		runCommand = "./" + exename;
+	if(isNotEmpty(exename)) {
+
+		if(isNotEmpty(path)) {
+			runCommand = path +"/" + exename;
+		}
+		else{
+			runCommand = "./" + exename;
+		}
+
 	}
 	return runCommand;
 }
@@ -814,18 +818,24 @@ void ObjectiveFunction::evaluateObjectiveFunction(void){
 
 		assert(isNotEmpty(definition.executableName));
 
-		runCommand = getExecutionCommand(definition.path, definition.executableName);
-
+		if(!isEqual(definition.executableName, "NONE")){
+			runCommand = getExecutionCommand(definition.path, definition.executableName);
+		}
 	}
 	if(isLowFiEvaluation()){
 
 		assert(isNotEmpty(definition.executableNameLowFi));
-		runCommand = getExecutionCommand(definition.pathLowFi, definition.executableNameLowFi);
+
+		if(!isEqual(definition.executableName, "NONE")){
+			runCommand = getExecutionCommand(definition.pathLowFi, definition.executableNameLowFi);
+		}
 	}
 
-	output.printMessage("Calling executable for the objective function:", definition.name);
+	if(!isNotEmpty(runCommand)){
 
-	system(runCommand.c_str());
+		output.printMessage("Calling executable for the objective function:", definition.name);
+		system(runCommand.c_str());
+	}
 
 }
 

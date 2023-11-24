@@ -580,8 +580,8 @@ void Optimizer::zoomInDesignSpace(void){
 
 		for(unsigned int i=0; i<dimension; i++){
 
-			lbZoomWindow = dvNormalized(i) - delta;
-			ubZoomWindow = dvNormalized(i) + delta;
+			lbZoomWindow(i) = dvNormalized(i) - delta;
+			ubZoomWindow(i) = dvNormalized(i) + delta;
 
 
 			if(lbZoomWindow(i) < 0.0) {
