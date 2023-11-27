@@ -353,10 +353,10 @@ void GeneralizedDerivativeEnhancedModel::solveLinearSystem(void) {
 
 	weights = linearSystemCorrelationMatrixSVD.solveLinearSystem();
 
-/*
+	/*
 	vec res = ydot - Phi*weights;
 	res.print("res");
-*/
+	 */
 }
 
 void GeneralizedDerivativeEnhancedModel::updateAuxilliaryFields(void){
@@ -420,23 +420,101 @@ void GeneralizedDerivativeEnhancedModel::prepareTrainingAndTestFilesForTheAuxili
 	assert(ifDataIsRead);
 	assert(dimension>0);
 
+	calculateIndicesOfSamplesWithActiveDerivatives();
+
+	string msg = "Indices of samples with active gradients";
+	output.printList(indicesOfSamplesWithActiveDerivatives, msg);
+
+	std::vector<int> indicesForTrainingData;
+	std::vector<int> indicesForTestData;
+
+
 	mat rawData = data.getRawData();
 	unsigned int howManyTrainingSamplesToUse = numberOfSamples / 2;
+	unsigned int howManyTestSamplesToUse      = numberOfSamples - howManyTrainingSamplesToUse;
+
+
 	assert(howManyTrainingSamplesToUse > 0);
-	rawData = shuffleRows(rawData);
-	mat halfData = rawData.submat(0, 0, howManyTrainingSamplesToUse - 1,
-			rawData.n_cols - 1);
-	halfData.save("trainingDataForTheThetaAuxModel.csv", csv_ascii);
-	mat secondhalfData = rawData.submat(howManyTrainingSamplesToUse, 0,
-			numberOfSamples - 1, dimension);
-	secondhalfData.save("testDataForTheThetaAuxModel.csv", csv_ascii);
-	if (ifDirectionalDerivativesAreUsed) {
-		assert(halfData.n_cols == 2 * dimension + 2);
-	} else {
-		assert(halfData.n_cols == 2 * dimension + 1);
+	assert(howManyTestSamplesToUse > 0);
+
+	int N = numberOfSamples;
+
+	for(int i=0; i<N; i++){
+
+		if(isIntheList(indicesOfSamplesWithActiveDerivatives,i)){
+			indicesForTrainingData.push_back(i);
+		}
+		int size = indicesForTrainingData.size();
+		if( size == int(howManyTrainingSamplesToUse)){
+			break;
+		}
+
 	}
-	assert(secondhalfData.n_cols == dimension + 1);
-	assert(halfData.n_rows + secondhalfData.n_rows == numberOfSamples);
+
+	for(int i=0; i<N; i++){
+
+		int size = indicesForTrainingData.size();
+
+		if( size == int(howManyTrainingSamplesToUse)){
+			break;
+		}
+
+		if(!isIntheList(indicesForTrainingData,i)){
+			indicesForTrainingData.push_back(i);
+		}
+
+	}
+
+	assert(indicesForTrainingData.size() == howManyTrainingSamplesToUse);
+
+	for(int i=0; i<N; i++){
+
+		if(!isIntheList(indicesForTrainingData,i)){
+			indicesForTestData.push_back(i);
+		}
+
+	}
+
+	assert(indicesForTestData.size() == howManyTestSamplesToUse);
+
+	msg = "Indices of aux training samples";
+	output.printList(indicesForTrainingData, msg);
+
+	msg = "Indices of aux test samples";
+	output.printList(indicesForTestData, msg);
+
+	mat trainingData;
+	if (ifDirectionalDerivativesAreUsed) {
+		trainingData = zeros<mat>( howManyTrainingSamplesToUse, 2 * dimension + 2);
+	} else {
+		trainingData = zeros<mat>( howManyTrainingSamplesToUse, 2 * dimension + 1);
+	}
+
+
+
+	for(unsigned int i=0; i<howManyTrainingSamplesToUse;i++){
+
+		int index = indicesForTrainingData.at(i);
+		trainingData.row(i) = rawData.row(index);
+	}
+	trainingData.save("trainingDataForTheThetaAuxModel.csv", csv_ascii);
+
+	mat testData( howManyTestSamplesToUse, dimension + 1);
+
+	for(unsigned int i=0; i<howManyTestSamplesToUse;i++){
+
+		int index = indicesForTestData.at(i);
+		rowvec testSample(dimension+1);
+		rowvec rawSample = rawData.row(index);
+		copyVectorFirstKElements(testSample,rawSample,dimension+1);
+
+
+		testData.row(i) = testSample;
+	}
+	testData.save("testDataForTheThetaAuxModel.csv", csv_ascii);
+
+	assert(testData.n_cols == dimension + 1);
+	assert(trainingData.n_rows + testData.n_rows == numberOfSamples);
 }
 
 void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(void){
@@ -499,7 +577,7 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 
 		double MSE = auxiliaryModelForThetaCoefficient.generalizationError;
 
-//		printTwoScalars(valueToTry, MSE);
+		//		printTwoScalars(valueToTry, MSE);
 
 		assert(MSE > 0.0);
 
@@ -512,7 +590,7 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 		exponent +=deltaExponent;
 	}
 
-//	printTwoScalars(bestMSE, bestFactor);
+	//	printTwoScalars(bestMSE, bestFactor);
 
 	thetaFactor = bestFactor;
 
@@ -635,13 +713,13 @@ void GeneralizedDerivativeEnhancedModel::calculateIndicesOfSamplesWithActiveDeri
 			}
 		}
 
+
 		unsigned int howManyActiveSamples = indicesOfSamplesWithActiveDerivatives.size();
 
 		output.printMessage("Number of samples with active gradients = ",howManyActiveSamples);
 
 		string msg = "Indices of samples with active gradients";
 		output.printList(indicesOfSamplesWithActiveDerivatives, msg);
-
 
 	}
 

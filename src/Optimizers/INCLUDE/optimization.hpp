@@ -171,8 +171,6 @@ public:
 
 	unsigned int howOftenTrainModels = 100000;
 
-	double minDeltaXForZoom;
-
 	unsigned int sampleDim;
 
 	unsigned int iterGradientEILoop = 100;

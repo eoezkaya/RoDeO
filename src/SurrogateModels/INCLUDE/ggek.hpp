@@ -54,6 +54,7 @@ class GeneralizedDerivativeEnhancedModel : public SurrogateModel{
 #ifdef UNIT_TESTS
 	friend class GGEKModelTest;
 	FRIEND_TEST(GGEKModelTest, prepareTrainingAndTestFilesForTheAuxiliaryModel);
+	FRIEND_TEST(GGEKModelTest, prepareTrainingAndTestFilesForTheAuxiliaryModelWithSomeZeroGradients);
 	FRIEND_TEST(GGEKModelTest, determineThetaCoefficientForDualBasisAlpine02_5D);
 	FRIEND_TEST(GGEKModelTest, determineThetaCoefficientForDualBasisGriewank2D);
 	FRIEND_TEST(GGEKModelTest, calculatePhiMatrixAdjoints);

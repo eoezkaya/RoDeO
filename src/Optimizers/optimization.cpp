@@ -81,7 +81,6 @@ void Optimizer::setDimension(unsigned int dim){
 	initializeBoundsForAcquisitionFunctionMaximization();
 	iterMaxAcquisitionFunction = dimension*10000;
 
-	minDeltaXForZoom = 0.01/dimension;
 	globalOptimalDesign.setDimension(dim);
 }
 
@@ -1272,10 +1271,10 @@ void Optimizer::performEfficientGlobalOptimization(void){
 		if(isToZoomInIteration(outerIterationNumber)){
 
 			zoomInDesignSpace();
-			reduceBoxConstraints();
-			reduceTrainingDataFiles();
-			initializeSurrogates();
-			trainSurrogates();
+//			reduceBoxConstraints();
+//			reduceTrainingDataFiles();
+//			initializeSurrogates();
+//			trainSurrogates();
 		}
 
 		findTheMostPromisingDesign();

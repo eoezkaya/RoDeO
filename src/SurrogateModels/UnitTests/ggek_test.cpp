@@ -210,9 +210,6 @@ TEST_F(GGEKModelTest, checkResidual) {
 }
 
 
-
-
-
 TEST_F(GGEKModelTest, prepareTrainingAndTestFilesForTheAuxiliaryModel) {
 
 	himmelblauFunction.function.numberOfTrainingSamples = 100;
@@ -247,6 +244,7 @@ TEST_F(GGEKModelTest, prepareTrainingAndTestFilesForTheAuxiliaryModel) {
 
 
 }
+
 
 
 TEST_F(GGEKModelTest, determineThetaCoefficientForDualBasisGriewank2D) {

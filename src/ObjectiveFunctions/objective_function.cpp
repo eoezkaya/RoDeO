@@ -523,16 +523,15 @@ std::string ObjectiveFunction::getExecutionCommand(string path, string exename) 
 
 	std::string runCommand;
 
-	if(isNotEmpty(exename)) {
 
-		if(isNotEmpty(path)) {
-			runCommand = path +"/" + exename;
-		}
-		else{
-			runCommand = "./" + exename;
-		}
-
+	if(isNotEmpty(path)) {
+		runCommand = path +"/" + exename;
 	}
+	else{
+		runCommand = "./" + exename;
+	}
+
+
 	return runCommand;
 }
 
@@ -814,6 +813,8 @@ void ObjectiveFunction::evaluateObjectiveFunction(void){
 	assert(isNotEmpty(definition.designVectorFilename));
 
 	std::string runCommand;
+	runCommand.clear();
+
 	if(isHiFiEvaluation()){
 
 		assert(isNotEmpty(definition.executableName));
@@ -821,6 +822,7 @@ void ObjectiveFunction::evaluateObjectiveFunction(void){
 		if(!isEqual(definition.executableName, "NONE")){
 			runCommand = getExecutionCommand(definition.path, definition.executableName);
 		}
+
 	}
 	if(isLowFiEvaluation()){
 
@@ -831,10 +833,18 @@ void ObjectiveFunction::evaluateObjectiveFunction(void){
 		}
 	}
 
-	if(!isNotEmpty(runCommand)){
+	if(isNotEmpty(runCommand)){
 
 		output.printMessage("Calling executable for the objective function:", definition.name);
-		system(runCommand.c_str());
+
+		int systemReturn = system(runCommand.c_str()) ;
+
+		if(systemReturn == -1){
+
+			abortWithErrorMessage("ERROR: System command could not be run properly");
+
+		}
+
 	}
 
 }
