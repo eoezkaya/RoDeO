@@ -289,75 +289,71 @@ TEST_F(OptimizationTest, setOptimizationHistory){
 
 }
 
-
-
-TEST_F(OptimizationTest, zoomInDesignSpace){
+TEST_F(OptimizationTest, modifyBoundsForInnerIterations){
 
 	prepareObjectiveFunction();
 	prepareFirstConstraint();
+	prepareSecondConstraint();
 
 	testOptimizer.setBoxConstraints(boxConstraints);
+	testOptimizer.initializeSurrogates();
+	testOptimizer.clearOptimizationHistoryFile();
+	testOptimizer.prepareOptimizationHistoryFile();
+
+	testOptimizer.setOptimizationHistory();
 
 	vec lbInitial = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
 	vec ubInitial = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
 
 	testOptimizer.initializeSurrogates();
-	testOptimizer.clearOptimizationHistoryFile();
-	testOptimizer.prepareOptimizationHistoryFile();
-	testOptimizer.setOptimizationHistory();
+	testOptimizer.modifyBoundsForInnerIterations();
 
-	testOptimizer.setMinimumNumberOfSamplesAfterZoomIn(10);
+	vec lbAfterZoom = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
+	vec ubAfterZoom = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
 
-	testOptimizer.zoomInDesignSpace();
 
-	vec lbFinal = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
-	vec ubFinal = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
+	for(unsigned int i=0; i<lbInitial.size(); i++){
 
-	unsigned int dim = testOptimizer.dimension;
-	for(unsigned int i=0; i<dim; i++){
-
-		ASSERT_TRUE(lbFinal(i) > lbInitial(i));
-		ASSERT_TRUE(ubFinal(i) < ubInitial(i));
-
+		ASSERT_TRUE(lbAfterZoom(i) > lbInitial(i));
+		ASSERT_TRUE(ubAfterZoom(i) < ubInitial(i));
 	}
 
-
 }
 
+//TEST_F(OptimizationTest, zoomInDesignSpace){
+//
+//	prepareObjectiveFunction();
+//	prepareFirstConstraint();
+//
+//	testOptimizer.setBoxConstraints(boxConstraints);
+//
+//	vec lbInitial = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
+//	vec ubInitial = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
+//
+//	testOptimizer.initializeSurrogates();
+//	testOptimizer.clearOptimizationHistoryFile();
+//	testOptimizer.prepareOptimizationHistoryFile();
+//	testOptimizer.setOptimizationHistory();
+//
+//	testOptimizer.setMinimumNumberOfSamplesAfterZoomIn(10);
+//
+//	testOptimizer.zoomInDesignSpace();
+//
+//	vec lbFinal = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
+//	vec ubFinal = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
+//
+//	unsigned int dim = testOptimizer.dimension;
+//	for(unsigned int i=0; i<dim; i++){
+//
+//		ASSERT_TRUE(lbFinal(i) > lbInitial(i));
+//		ASSERT_TRUE(ubFinal(i) < ubInitial(i));
+//
+//	}
+//
+//
+//}
 
-TEST_F(OptimizationTest, reduceTrainingDataFiles){
 
-	prepareObjectiveFunction();
-	prepareFirstConstraint();
-	testOptimizer.setBoxConstraints(boxConstraints);
-	testOptimizer.initializeSurrogates();
-	testOptimizer.clearOptimizationHistoryFile();
-	testOptimizer.prepareOptimizationHistoryFile();
-	testOptimizer.setOptimizationHistory();
-	testOptimizer.setZoomInOn();
-	testOptimizer.setMinimumNumberOfSamplesAfterZoomIn(10);
-
-
-
-
-	//	testOptimizer.setDisplayOn();
-	testOptimizer.zoomInDesignSpace();
-	testOptimizer.reduceBoxConstraints();
-
-
-	mat readData;
-	readData.load(definition.nameHighFidelityTrainingData, csv_ascii);
-
-	unsigned int N1 = readData.n_rows;
-
-
-	testOptimizer.reduceTrainingDataFiles();
-	readData.load(definition.nameHighFidelityTrainingData, csv_ascii);
-
-	unsigned int N2 = readData.n_rows;
-	EXPECT_TRUE(N2 < N1);
-
-}
 
 
 TEST_F(OptimizationTest, EGOUnconstrained){
@@ -366,7 +362,7 @@ TEST_F(OptimizationTest, EGOUnconstrained){
 
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-//	testOptimizer.setDisplayOn();
+	//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(10);
 
 	testOptimizer.performEfficientGlobalOptimization();
@@ -389,9 +385,9 @@ TEST_F(OptimizationTest, EGOConstrained){
 	prepareFirstConstraint();
 	prepareSecondConstraint();
 
-//	testOptimizer.setZoomInOn();
+	//	testOptimizer.setZoomInOn();
 	testOptimizer.setMaximumNumberOfIterations(10);
-//	testOptimizer.setHowOftenZoomIn(20);
+	//	testOptimizer.setHowOftenZoomIn(20);
 	//	testOptimizer.setDisplayOn();
 	testOptimizer.setBoxConstraints(boxConstraints);
 	testOptimizer.performEfficientGlobalOptimization();
@@ -414,7 +410,7 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithGradientEnhancedModel){
 
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-//	testOptimizer.setDisplayOn();
+	//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(10);
 	testOptimizer.performEfficientGlobalOptimization();
 
@@ -435,7 +431,7 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithTangentEnhancedModel){
 	prepareObjectiveFunctionWithTangent();
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-//	testOptimizer.setDisplayOn();
+	//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(10);
 	testOptimizer.performEfficientGlobalOptimization();
 
@@ -459,7 +455,7 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithMLLowFiAdjoint){
 
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-//	testOptimizer.setDisplayOn();
+	//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(10);
 	testOptimizer.performEfficientGlobalOptimization();
 
@@ -484,7 +480,7 @@ TEST_F(OptimizationTest, EGOUnconstrainedWithML){
 
 	testOptimizer.setBoxConstraints(boxConstraints);
 
-//	testOptimizer.setDisplayOn();
+	//	testOptimizer.setDisplayOn();
 	testOptimizer.setMaximumNumberOfIterations(10);
 	testOptimizer.performEfficientGlobalOptimization();
 

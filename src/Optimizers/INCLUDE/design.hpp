@@ -158,6 +158,7 @@ public:
 	rowvec constructSampleObjectiveFunction(void) const;
 	rowvec constructSampleObjectiveFunctionLowFi(void) const;
 	rowvec constructSampleObjectiveFunctionWithGradient(void) const;
+	rowvec constructSampleObjectiveFunctionWithZeroGradient(void) const;
 	rowvec constructSampleObjectiveFunctionWithGradientLowFi(void) const;
 	rowvec constructSampleObjectiveFunctionWithTangent(void) const;
 	rowvec constructSampleObjectiveFunctionWithTangentLowFi(void) const;

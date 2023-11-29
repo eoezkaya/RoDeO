@@ -191,14 +191,6 @@ void Optimizer::setZoomInOn(void){
 	ifZoomInDesignSpaceIsAllowed = true;
 }
 
-//void Optimizer::setZoomFactor(double value){
-//	assert(value>0.0);
-//	assert(value<1.0);
-//
-//	zoomFactorShrinkageRate = value;
-//
-//}
-
 void Optimizer::setMaxSigmaFactor(double value){
 	assert(value>0.0);
 	maximumSigma = value;
@@ -520,9 +512,6 @@ void Optimizer::computeConstraintsandPenaltyTerm(Design &d) {
 
 		d.isDesignFeasible = true;
 	}
-
-
-
 }
 
 void Optimizer::addConstraintValuesToData(Design &d){
@@ -545,127 +534,78 @@ void Optimizer::checkIfSettingsAreOK(void) const{
 
 }
 
-void Optimizer::zoomInDesignSpace(void){
+void Optimizer::modifyBoundsForInnerIterations(void){
 
-	output.printMessage("Zooming in design space...");
+	output.printMessage("modifying inner iteration bounds...");
 
-	assert(minimumNumberOfSamplesAfterZoomIn>0);
+	assert(zoomFactorShrinkageRate < 1.0 && zoomFactorShrinkageRate > 0.0);
 	assert(dimension>0);
+	assert(zoomFactor>0);
 
 	findTheGlobalOptimalDesign();
 
-#if 0
-	globalOptimalDesign.print();
-#endif
-	vec dx = upperBoundsForAcqusitionFunctionMaximization - lowerBoundsForAcqusitionFunctionMaximization;
+	vec dvGlobalOptimum = trans(globalOptimalDesign.designParametersNormalized);
 
-	rowvec dvNormalized = normalizeVector(globalOptimalDesign.designParameters, lowerBounds, upperBounds);
+	vec deltaFromGlobalOptimimToLowerBounds = dvGlobalOptimum - 0.0;
+	vec deltaFromGlobalOptimimToUpperBounds = 1.0/dimension - dvGlobalOptimum;
 
-#if 0
-	dvNormalized.print("dvNormalized");
-#endif
-
-
-	unsigned int numberOfSamplesWithinZoomWindow = 0;
-
-	vec lbZoomWindow(dimension, fill::zeros);
-	vec ubZoomWindow(dimension, fill::zeros);
-
-	double deltaStepSize = (1.0/dimension)*0.001;
-	double delta = deltaStepSize;
-
-
-	while(numberOfSamplesWithinZoomWindow < minimumNumberOfSamplesAfterZoomIn){
-
-		for(unsigned int i=0; i<dimension; i++){
-
-			lbZoomWindow(i) = dvNormalized(i) - delta;
-			ubZoomWindow(i) = dvNormalized(i) + delta;
-
-
-			if(lbZoomWindow(i) < 0.0) {
-				lbZoomWindow(i) = 0.0;
-			}
-			if(ubZoomWindow(i) > 1.0/dimension) {
-				ubZoomWindow(i) = 1.0/dimension;
-			}
-
-		}
-
-#if 0
-		trans(lbZoomWindow).print("lbZoomWindow");
-		trans(ubZoomWindow).print("ubZoomWindow");
-#endif
-
-
-		vec lbNotNormalized = normalizeVectorBack(lbZoomWindow,lowerBounds, upperBounds);
-		vec ubNotNormalized = normalizeVectorBack(ubZoomWindow,lowerBounds, upperBounds);
-#if 0
-		trans(lbNotNormalized).print("lbNotNormalized");
-		trans(ubNotNormalized).print("ubNotNormalized");
-#endif
-		numberOfSamplesWithinZoomWindow = objFun.countHowManySamplesAreWithinBounds(lbNotNormalized, ubNotNormalized);
-#if 0
-		printScalar(numberOfSamplesWithinZoomWindow);
-#endif
-		delta +=deltaStepSize;
-
-
+	if(IfSchrinkBounds){
+		zoomFactor = zoomFactor*zoomFactorShrinkageRate;
+	}
+	if(IfEnlargeBounds){
+		double oneOverShrinkageRate = 1.0/zoomFactorShrinkageRate;
+		zoomFactor = zoomFactor* oneOverShrinkageRate;
 	}
 
-	lowerBoundsForAcqusitionFunctionMaximization = lbZoomWindow;
-	upperBoundsForAcqusitionFunctionMaximization = ubZoomWindow;
+	output.printMessage("Factor for zoom in = ", zoomFactor);
+	output.printMessage("Max Factor for zoom in = ", maxValueForZoomFactor);
+	output.printMessage("Min Factor for zoom in = ", maxValueForZoomFactor);
 
-	output.printMessage("New bounds for the acquisition function are set...");
-	output.printBoxConstraints(lowerBoundsForAcqusitionFunctionMaximization,upperBoundsForAcqusitionFunctionMaximization);
+	if(zoomFactor > maxValueForZoomFactor){
 
-}
+		IfSchrinkBounds = true;
+		IfEnlargeBounds = false;
+		maxValueForZoomFactor = maxValueForZoomFactor*0.5;
+		if(maxValueForZoomFactor < 0.1){
+			maxValueForZoomFactor = 0.1;
+		}
 
+	}
+	if(zoomFactor < minValueForZoomFactor ){
 
-void Optimizer::reduceBoxConstraints(void){
-
-	output.printMessage("Reducing box constraints...");
-
-	vec lb = lowerBoundsForAcqusitionFunctionMaximization;
-	vec ub = upperBoundsForAcqusitionFunctionMaximization;
-
-	vec lbNotNormalized = normalizeVectorBack(lb, lowerBounds, upperBounds);
-	vec ubNotNormalized = normalizeVectorBack(ub, lowerBounds, upperBounds);
-
-
-	output.printMessage("Updated box constraints = ");
-
-	output.printBoxConstraints(lbNotNormalized,ubNotNormalized);
-
-	Bounds newBoxConstraints(lbNotNormalized,ubNotNormalized);
-
-	setBoxConstraints(newBoxConstraints);
+		IfSchrinkBounds = false;
+		IfEnlargeBounds = true;
+	}
 
 
-}
+	vec newDeltasToLowerBound = deltaFromGlobalOptimimToLowerBounds*zoomFactor;
+	vec newDeltasToUpperBound = deltaFromGlobalOptimimToUpperBounds*zoomFactor;
 
 
+	lowerBoundsForAcqusitionFunctionMaximization = dvGlobalOptimum - newDeltasToLowerBound;
+	upperBoundsForAcqusitionFunctionMaximization = dvGlobalOptimum + newDeltasToUpperBound;
 
-void Optimizer::reduceTrainingDataFiles(void) const{
+	for(unsigned int i=0; i<dimension; i++){
 
-	assert(ifBoxConstraintsSet);
-
-	output.printMessage("Reducing size of training data...");
-
-	objFun.reduceTrainingDataFiles(lowerBounds,upperBounds);
-
-	if(isConstrained()){
-
-		for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-			it->reduceTrainingDataFiles(lowerBounds,upperBounds);
+		if(lowerBoundsForAcqusitionFunctionMaximization(i) < 0.0){
+			lowerBoundsForAcqusitionFunctionMaximization(i) = 0;
+		}
+		if(upperBoundsForAcqusitionFunctionMaximization(i) > (1.0/dimension) ){
+			upperBoundsForAcqusitionFunctionMaximization(i) = 1.0/dimension;
 		}
 	}
+
+
+
+//	output.printMessage("lower bounds for inner iterations", lowerBoundsForAcqusitionFunctionMaximization);
+//	output.printMessage("upper bounds for inner iterations", upperBoundsForAcqusitionFunctionMaximization);
 
 }
 
 void Optimizer::findTheGlobalOptimalDesign(void){
 
 	assert(optimizationHistory.n_rows > 0);
+	assert(ifBoxConstraintsSet);
 
 	unsigned int indexLastCol = optimizationHistory.n_cols -1;
 
@@ -721,6 +661,9 @@ void Optimizer::findTheGlobalOptimalDesign(void){
 
 	globalOptimalDesign.constraintTrueValues = constraintValues;
 
+	rowvec dvNormalized = normalizeVector(dv,lowerBounds,upperBounds);
+	globalOptimalDesign.designParametersNormalized = dvNormalized;
+
 	output.printDesign(globalOptimalDesign);
 
 	globalOptimalDesign.saveToAFile(globalOptimumDesignFileName);
@@ -744,6 +687,7 @@ void Optimizer::findTheMostPromisingDesign(void){
 
 
 	assert(ifSurrogatesAreInitialized);
+	assert(globalOptimalDesign.designParametersNormalized.size() > 0);
 
 	vec &lb = lowerBoundsForAcqusitionFunctionMaximization;
 	vec &ub = upperBoundsForAcqusitionFunctionMaximization;
@@ -754,7 +698,13 @@ void Optimizer::findTheMostPromisingDesign(void){
 	DesignForBayesianOptimization designWithMaxAcqusition(dimension,numberOfConstraints);
 	designWithMaxAcqusition.valueAcqusitionFunction = -LARGE;
 
+#ifdef OPENMP_SUPPORT
+	omp_set_num_threads(numberOfThreads);
+#endif
+
+#ifdef OPENMP_SUPPORT
 #pragma omp parallel for
+#endif
 	for(unsigned int i = 0; i <iterMaxAcquisitionFunction; i++ ){
 
 
@@ -768,8 +718,13 @@ void Optimizer::findTheMostPromisingDesign(void){
 		addPenaltyToAcqusitionFunctionForConstraints(designToBeTried);
 
 		if(designToBeTried.valueAcqusitionFunction > designWithMaxAcqusition.valueAcqusitionFunction){
+#ifdef OPENMP_SUPPORT
+#pragma omp critical
+#endif
+			{
+				designWithMaxAcqusition = designToBeTried;
 
-			designWithMaxAcqusition = designToBeTried;
+			}
 #if 0
 			printf("A design with a better EI value has been found\n");
 			designToBeTried.print();
@@ -781,14 +736,16 @@ void Optimizer::findTheMostPromisingDesign(void){
 	//	designWithMaxEI.print();
 
 
-
+#ifdef OPENMP_SUPPORT
 #pragma omp parallel for
+#endif
 	for(unsigned int i = 0; i < iterMaxAcquisitionFunction; i++ ){
 
 
 		DesignForBayesianOptimization designToBeTried(dimension,numberOfConstraints);
 
-		designToBeTried.generateRandomDesignVectorAroundASample(designWithMaxAcqusition.dv, lb, ub);
+		rowvec dv0 = globalOptimalDesign.designParametersNormalized;
+		designToBeTried.generateRandomDesignVectorAroundASample(dv0, lb, ub);
 
 		objFun.calculateExpectedImprovement(designToBeTried);
 		addPenaltyToAcqusitionFunctionForConstraints(designToBeTried);
@@ -797,8 +754,12 @@ void Optimizer::findTheMostPromisingDesign(void){
 		designToBeTried.print();
 #endif
 		if(designToBeTried.valueAcqusitionFunction > designWithMaxAcqusition.valueAcqusitionFunction){
-
-			designWithMaxAcqusition = designToBeTried;
+#ifdef OPENMP_SUPPORT
+#pragma omp critical
+#endif
+			{
+				designWithMaxAcqusition = designToBeTried;
+			}
 #if 0
 			printf("A design with a better EI value has been found (second loop) \n");
 			designToBeTried.print();
@@ -1070,6 +1031,14 @@ void Optimizer::setOptimizationHistoryFeasibilityValues(mat inputObjectiveFuncti
 
 }
 
+void Optimizer::setNumberOfThread(unsigned int n){
+
+	numberOfThreads = n;
+
+}
+
+
+
 void Optimizer::calculateInitialImprovementValue(void){
 
 	unsigned int N = optimizationHistory.n_rows;
@@ -1155,7 +1124,7 @@ void Optimizer::evaluateObjectiveFunctionMultiFidelityWithBothPrimal(Design &cur
 	objFun.setEvaluationMode("primalLowFi");
 	objFun.evaluateDesign(currentBestDesign);
 	objFun.setDataAddMode("primalBoth");
-	objFun.addDesignToData(currentBestDesign);
+
 }
 
 void Optimizer::evaluateObjectiveFunctionMultiFidelityWithLowFiAdjoint(Design &currentBestDesign) {
@@ -1165,7 +1134,7 @@ void Optimizer::evaluateObjectiveFunctionMultiFidelityWithLowFiAdjoint(Design &c
 	objFun.setEvaluationMode("adjointLowFi");
 	objFun.evaluateDesign(currentBestDesign);
 	objFun.setDataAddMode("primalHiFiAdjointLowFi");
-	objFun.addDesignToData(currentBestDesign);
+
 }
 
 void Optimizer::evaluateObjectiveFunctionMultiFidelity(Design &currentBestDesign) {
@@ -1212,7 +1181,7 @@ void Optimizer::evaluateObjectiveFunctionSingleFidelity(Design &currentBestDesig
 	}
 
 	objFun.evaluateDesign(currentBestDesign);
-	objFun.addDesignToData(currentBestDesign);
+
 }
 
 void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
@@ -1230,6 +1199,7 @@ void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
 	}
 
 }
+
 
 void Optimizer::performEfficientGlobalOptimization(void){
 
@@ -1270,11 +1240,7 @@ void Optimizer::performEfficientGlobalOptimization(void){
 
 		if(isToZoomInIteration(outerIterationNumber)){
 
-			zoomInDesignSpace();
-//			reduceBoxConstraints();
-//			reduceTrainingDataFiles();
-//			initializeSurrogates();
-//			trainSurrogates();
+			modifyBoundsForInnerIterations();
 		}
 
 		findTheMostPromisingDesign();
@@ -1299,7 +1265,7 @@ void Optimizer::performEfficientGlobalOptimization(void){
 			std::cout<<"The most promising design (not normalized):\n";
 			best_dv.print();
 			std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
-			std::cout<<"Sigma = "<<optimizedDesignGradientBased.sigma<<"\n";
+			std::cout<<"Variance = "<<optimizedDesignGradientBased.sigma<<"\n";
 			cout<<"Acquisition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
 
 		}
@@ -1333,10 +1299,29 @@ void Optimizer::performEfficientGlobalOptimization(void){
 			currentBestDesign.print();
 		}
 
-		addConstraintValuesToData(currentBestDesign);
-		updateOptimizationHistory(currentBestDesign);
-
 		findTheGlobalOptimalDesign();
+
+
+		SURROGATE_MODEL type = objFun.getSurrogateModelType();
+
+		if (type == GRADIENT_ENHANCED) {
+
+			std::cout<<"currentBestDesign = "<<currentBestDesign.improvementValue<<"\n";
+			std::cout<<"globalOptimalDesign = "<<globalOptimalDesign.improvementValue<<"\n";
+
+			if(currentBestDesign.improvementValue <= globalOptimalDesign.improvementValue){
+
+				std::cout<<"adding with zero gradients\n";
+				objFun.setDataAddMode("adjointWithZeroGradient");
+			}
+
+		}
+
+
+		objFun.addDesignToData(currentBestDesign);
+		addConstraintValuesToData(currentBestDesign);
+
+		updateOptimizationHistory(currentBestDesign);
 
 		if(ifAdaptSigmaFactor){
 			modifySigmaFactor();
@@ -1446,12 +1431,8 @@ void Optimizer::modifySigmaFactor(void){
 		sigmaFactor = minimumSigma;
 	}
 
-	objFun.setSigmaFactor(sigmaFactor);
-
-
-	printScalar(sigmaFactor);
-
-
+	//	objFun.setSigmaFactor(sigmaFactor);
+	//	printScalar(sigmaFactor);
 
 }
 

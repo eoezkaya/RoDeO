@@ -49,11 +49,9 @@ class Optimizer {
 	friend class OptimizationTest;
 	FRIEND_TEST(OptimizationTest, constructor);
 	FRIEND_TEST(OptimizationTest, setOptimizationProblem);
-	FRIEND_TEST(OptimizationTest, reduceTrainingDataFiles);
-	FRIEND_TEST(OptimizationTest, zoomInDesignSpace);
 	FRIEND_TEST(OptimizationTest, setOptimizationHistory);
 	FRIEND_TEST(OptimizationTest, updateOptimizationHistory);
-	FRIEND_TEST(OptimizationTest, zoomInDesignSpace);
+	FRIEND_TEST(OptimizationTest, modifyBoundsForInnerIterations);
 	FRIEND_TEST(OptimizationTest, estimateConstraints);
 	FRIEND_TEST(OptimizationTest, calculateFeasibilityProbabilities);
 
@@ -68,6 +66,7 @@ private:
 
 	vec lowerBoundsForAcqusitionFunctionMaximization;
 	vec upperBoundsForAcqusitionFunctionMaximization;
+
 
 
 	std::string designVectorFileName;
@@ -98,11 +97,13 @@ private:
 	bool ifZoomInDesignSpaceIsAllowed = false;
 	unsigned int howOftenZoomIn = 10;
 	unsigned int minimumNumberOfSamplesAfterZoomIn = 0;
+	double zoomFactorShrinkageRate = 0.75;
+	double zoomFactor = 1.0;
+	double maxValueForZoomFactor = 1.0;
+	double minValueForZoomFactor = 0.01;
 
-
-//	double zoomInFactor = 0.5;
-//	double zoomFactorShrinkageRate = 0.75;
-//	unsigned int howManySamplesReduceAfterZoomIn = 5;
+	bool IfEnlargeBounds = false;
+	bool IfSchrinkBounds = true;
 
 
 	unsigned int iterMaxAcquisitionFunction;
@@ -117,6 +118,9 @@ private:
 	unsigned int numberOfDisceteVariables = 0;
 	std::vector<double> incrementsForDiscreteVariables;
 	std::vector<int> indicesForDiscreteVariables;
+
+
+	unsigned int numberOfThreads = 1;
 
 	void setOptimizationHistoryConstraints(mat inputObjectiveFunction);
 	void setOptimizationHistoryFeasibilityValues(mat inputObjectiveFunction);
@@ -145,9 +149,9 @@ private:
 	bool isConstrained(void) const;
 	bool isNotConstrained(void) const;
 
-	void zoomInDesignSpace(void);
-	void reduceTrainingDataFiles(void) const;
-	void reduceBoxConstraints(void);
+
+	void modifyBoundsForInnerIterations(void);
+
 	bool isToZoomInIteration(unsigned int) const;
 
 	void trainSurrogatesForConstraints();
@@ -220,8 +224,7 @@ public:
 	void setHowOftenZoomIn(unsigned int value);
 	void setMinimumNumberOfSamplesAfterZoomIn(unsigned int nSamples);
 
-//	void setZoomFactor(double value);
-
+	void setNumberOfThread(unsigned int);
 
 	void setMaxSigmaFactor(double value);
 	void setMinSigmaFactor(double value);

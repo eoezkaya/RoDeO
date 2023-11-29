@@ -120,6 +120,18 @@ void GeneralizedDerivativeEnhancedModel::setThetaFactor(double value){
 	thetaFactor = value;
 }
 
+void GeneralizedDerivativeEnhancedModel::setAdjustThetaFactorOff(void){
+
+	ifAdjustThetaFactor = false;
+}
+void GeneralizedDerivativeEnhancedModel::setAdjustThetaFactorOn(void){
+
+	ifAdjustThetaFactor = true;
+}
+
+
+
+
 void GeneralizedDerivativeEnhancedModel::setDirectionalDerivativesOn(void){
 	ifDirectionalDerivativesAreUsed = true;
 }
@@ -377,15 +389,15 @@ void GeneralizedDerivativeEnhancedModel::train(void){
 	assert(ifNormalized);
 	assert(ifInitialized);
 
-
 	trainTheta();
-	determineThetaCoefficientForDualBasis();
 
+	if(ifAdjustThetaFactor){
+
+		determineThetaCoefficientForDualBasis();
+	}
 
 	updateAuxilliaryFields();
-
 	ifModelTrainingIsDone = true;
-
 }
 
 
@@ -593,6 +605,7 @@ void GeneralizedDerivativeEnhancedModel::determineThetaCoefficientForDualBasis(v
 	//	printTwoScalars(bestMSE, bestFactor);
 
 	thetaFactor = bestFactor;
+
 
 	output.printMessage("optimized theta factor = ", thetaFactor);
 

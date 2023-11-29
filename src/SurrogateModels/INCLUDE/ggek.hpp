@@ -91,6 +91,10 @@ private:
 
 	double thetaFactor = 1.0;
 	unsigned int numberOfIterationsToDetermineThetaFactor = 1000;
+	bool ifAdjustThetaFactor = true;
+
+
+
 	vec theta;
 	vec gamma;
 
@@ -141,7 +145,10 @@ public:
 
 	void setNameOfHyperParametersFile(string filename);
 	void setNumberOfTrainingIterations(unsigned int);
+
 	void setThetaFactor(double);
+	void setAdjustThetaFactorOff(void);
+	void setAdjustThetaFactorOn(void);
 
 	void readData(void);
 	void normalizeData(void);

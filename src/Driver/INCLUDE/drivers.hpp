@@ -149,6 +149,8 @@ private:
 			Optimizer &optimizationStudy) const;
 	void setOptimizationFeaturesZoomInDesignSpace(
 			Optimizer &optimizationStudy) const;
+	void setOptimizationFeaturesNumberOfThreads(
+			Optimizer &optimizationStudy) const;
 
 	OutputDevice output;
 

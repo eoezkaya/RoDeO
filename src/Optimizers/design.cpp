@@ -173,6 +173,22 @@ rowvec Design::constructSampleObjectiveFunctionWithGradient(void) const{
 	return sample;
 }
 
+rowvec Design::constructSampleObjectiveFunctionWithZeroGradient(void) const{
+
+	assert(gradient.size() == dimension);
+	rowvec sample(2*dimension+1);
+
+	copyVectorFirstKElements(sample,designParameters, dimension);
+	sample(dimension) = trueValue;
+
+	for(unsigned int i=0; i<dimension; i++){
+		sample(dimension+1+i) = 0.0;
+	}
+	return sample;
+}
+
+
+
 rowvec Design::constructSampleObjectiveFunctionWithGradientLowFi(void) const{
 
 	assert(gradientLowFidelity.size() == dimension);

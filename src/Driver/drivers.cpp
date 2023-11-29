@@ -110,8 +110,6 @@ void RoDeODriver::addConfigKeysOptimization() {
 
 	configKeys.add(ConfigKey("ZOOM_IN", "string"));
 	configKeys.add(ConfigKey("ZOOM_IN_HOW_OFTEN", "int"));
-	configKeys.add(ConfigKey("NUMBER_OF_MINIMUM_SAMPLES_AFTER_ZOOM_IN", "int"));
-
 
 
 	configKeys.add(ConfigKey("MAX_NUMBER_OF_INNER_ITERATIONS", "int"));
@@ -122,6 +120,7 @@ void RoDeODriver::addConfigKeysOptimization() {
 	configKeys.add(ConfigKey("MAX_SIGMA_FACTOR", "double"));
 	configKeys.add(ConfigKey("MIN_SIGMA_FACTOR", "double"));
 
+	configKeys.add(ConfigKey("NUMBER_OF_THREADS", "int"));
 
 
 
@@ -935,20 +934,21 @@ void RoDeODriver::setOptimizationFeaturesZoomInDesignSpace(
 		string ifZoomIn = configKeys.getConfigKeyStringValue(keyword);
 		if (checkIfOn(ifZoomIn)) {
 			optimizationStudy.setZoomInOn();
-			keyword = "NUMBER_OF_MINIMUM_SAMPLES_AFTER_ZOOM_IN";
-			if (!configKeys.ifConfigKeyIsSet(keyword)) {
-				string msg =
-						"NUMBER_OF_MINIMUM_SAMPLES_AFTER_ZOOM_IN is not set! Check the configuration file.";
-				abortWithErrorMessage(msg);
-			}
-			unsigned int nSamples = configKeys.getConfigKeyIntValue(keyword);
-			optimizationStudy.setMinimumNumberOfSamplesAfterZoomIn(nSamples);
 			keyword = "ZOOM_IN_HOW_OFTEN";
 			if (configKeys.ifConfigKeyIsSet(keyword)) {
 				unsigned int howOftenZoomIn = configKeys.getConfigKeyIntValue(keyword);
 				optimizationStudy.setHowOftenZoomIn(howOftenZoomIn);
 			}
 		}
+	}
+}
+
+void RoDeODriver::setOptimizationFeaturesNumberOfThreads(
+		Optimizer &optimizationStudy) const {
+	string keyword = "NUMBER_OF_THREADS";
+	if (configKeys.ifConfigKeyIsSet(keyword)) {
+		unsigned int numberOfThreads = configKeys.getConfigKeyIntValue(keyword);
+		optimizationStudy.setNumberOfThread(numberOfThreads);
 	}
 }
 
@@ -961,6 +961,8 @@ void RoDeODriver::setOptimizationFeatures(Optimizer &optimizationStudy) const{
 	setOptimizationFeaturesMandatory(optimizationStudy);
 	setOptimizationFeaturesVariableModelUncertainty(optimizationStudy);
 	setOptimizationFeaturesZoomInDesignSpace(optimizationStudy);
+
+	setOptimizationFeaturesNumberOfThreads(optimizationStudy);
 }
 
 void RoDeODriver::runOptimization(void){

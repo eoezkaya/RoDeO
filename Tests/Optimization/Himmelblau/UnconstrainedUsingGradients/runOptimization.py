@@ -20,6 +20,8 @@ print("DoE samples = \n", Xsamples)
 
 ObjFunSamples = np.random.rand(NTrainingSamples,5)
 
+bestValue = 1000000
+bestValueIndex = 0
 for i in range(NTrainingSamples):
 	xp = Xsamples[i,0]
 	yp = Xsamples[i,1]
@@ -28,11 +30,17 @@ for i in range(NTrainingSamples):
 	ObjFunSamples[i,1] = yp
 	fValue = (((xp**2+yp-11)**2) + (((xp+yp**2-7)**2)))
 	ObjFunSamples[i,2] = fValue
+	if(fValue<bestValue):
+	    bestValue = fValue
+	    bestValueIndex = i
+	
 	ObjFunSamples[i,3] = 0.0
 	ObjFunSamples[i,4] = 0.0
-	if(fValue < 100):
-	    ObjFunSamples[i,3] = 4*xp*(xp**2+yp-11) + 2*(xp+yp**2-7)
-	    ObjFunSamples[i,4] = (xp**2+yp-11) + 4*yp*(xp+yp**2-7)
+
+xp = Xsamples[bestValueIndex,0]
+yp = Xsamples[bestValueIndex,1]
+ObjFunSamples[bestValueIndex,3] = 4*xp*(xp**2+yp-11) + 2*(xp+yp**2-7)
+ObjFunSamples[bestValueIndex,4] = (xp**2+yp-11) + 4*yp*(xp+yp**2-7)
 
 
 

@@ -229,6 +229,7 @@ void ObjectiveFunction::bindWithUniversalKrigingModel() {
 void ObjectiveFunction::bindWithGradientEnhancedModel() {
 	output.printMessage(
 			"Binding the surrogate model with the GRADIENT_ENHANCED modeĺ...");
+	surrogateModelGradient.setAdjustThetaFactorOff();
 	surrogate = &surrogateModelGradient;
 
 }
@@ -558,6 +559,10 @@ void ObjectiveFunction::addDesignToData(Design &d){
 		if(addDataMode.compare("adjoint") == 0 ){
 			newsample = d.constructSampleObjectiveFunctionWithGradient();
 		}
+		if(addDataMode.compare("adjointWithZeroGradient") == 0 ){
+			newsample = d.constructSampleObjectiveFunctionWithZeroGradient();
+		}
+
 
 		assert(newsample.size()>0);
 		surrogate->addNewSampleToData(newsample);
