@@ -60,6 +60,6 @@ int main(int argc, char* argv[]){
 	driverToRun.readConfigFile();
 	driverToRun.run();
 
-	return 0;
+	return EXIT_SUCCESS;
 
 }

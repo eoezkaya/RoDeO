@@ -66,6 +66,19 @@ TEST(testMatrixOperations, findIndexOfRow){
 
 }
 
+TEST(testMatrixOperations, findIndexOfRowVeryCloseSamples){
+
+	mat m1(5,5,fill::randu);
+	rowvec v = m1.row(2);
+	rowvec w = v + 10E-06;
+	m1.row(0) = w;
+
+	ASSERT_TRUE(findIndexOfRow(v, m1,10E-04) == 2 );
+
+
+}
+
+
 
 
 TEST(testMatrixOperations, normalizeMatrix){
@@ -122,110 +135,18 @@ TEST(testMatrixOperations, joinMatricesByRows){
 
 }
 
-//TEST(testMatrixVectorOperations, isIntheListStdVector){
-//
-//	vector<int> list(4);
-//	list[0] = 1;
-//	list[1] = 6;
-//	list[2] = 3;
-//	list[3] = 10;
-//
-//	ASSERT_TRUE(isIntheList(list,10));
-//
-//}
-//
-//TEST(testMatrixVectorOperations, isIntheListStdVectorFalse){
-//
-//	vector<int> list(4);
-//	list[0] = 1;
-//	list[1] = 6;
-//	list[2] = 3;
-//	list[3] = 10;
-//
-//	ASSERT_FALSE(isIntheList(list,11));
-//
-//}
-//
-//
-//TEST(testMatrixVectorOperations, returnKMinIndices){
-//
-//	vec v(6);
-//	v(0) = 1.9; v(1) = -1.9; v(2) = 5.23; v(3) = 8.9; v(4) = 11.9; v(5) = 1.9;
-//
-//	vector<int> kBest = returnKMinIndices(v,3);
-//
-//	ASSERT_TRUE(isIntheList(kBest,1));
-//	ASSERT_TRUE(isIntheList(kBest,0));
-//	ASSERT_TRUE(isIntheList(kBest,5));
-//	ASSERT_FALSE(isIntheList(kBest,2));
-//	ASSERT_FALSE(isIntheList(kBest,3));
-//	ASSERT_FALSE(isIntheList(kBest,4));
-//
-//}
-//
-//
-//TEST(testMatrixVectorOperations, returnKMinIndices2){
-//
-//	vec v(10);
-//	v(0) =  0.0;
-//	v(1) = -12.9;
-//	v(2) =  5.23;
-//	v(3) =  8.9;
-//	v(4) = 11.9;
-//	v(5) = 1.912;
-//	v(6) = 2.912;
-//	v(7) = 3.912;
-//	v(8) = 4.912;
-//	v(9) = -5.912;
-//
-//	vector<int> kBest = returnKMinIndices(v,2);
-//
-//	ASSERT_TRUE(isIntheList(kBest,1));
-//	ASSERT_TRUE(isIntheList(kBest,9));
-//	ASSERT_FALSE(isIntheList(kBest,0));
-//	ASSERT_TRUE(kBest.size() == 2);
-//
-//
-//}
-//
-//
-//
-//
-//
-//
-//TEST(testMatrixVectorOperations, shuffleRows){
-//
-//	mat A(6,5,fill::randu);
-//	A = shuffleRows(A);
-//
-//	ASSERT_TRUE(A.n_rows == 6);
-//	ASSERT_TRUE(A.n_cols == 5);
-//}
-//
-//
-//TEST(testMatrixVectorOperations, isBetweenRowVec){
-//
-//	rowvec v1(3);
-//	rowvec lb(3);
-//	rowvec ub(3);
-//
-//	v1(0) = 0.2;  v1(1) = 0.8; v1(2) = 0.9;
-//	lb(0) = 0.1;  lb(1) = 0.0; lb(2) = -1.9;
-//	ub(0) = 0.3;  ub(1) = 1.0; ub(2) = 1.9;
-//
-//	bool ifBetween = isBetween(v1,lb,ub);
-//
-//	ASSERT_TRUE(ifBetween);
-//
-//	v1(0) = 0.1;
-//	ifBetween = isBetween(v1,lb,ub);
-//
-//	ASSERT_TRUE(ifBetween);
-//
-//	v1(0) = -0.1;
-//	ifBetween = isBetween(v1,lb,ub);
-//
-//	ASSERT_FALSE(ifBetween);
-//}
+TEST(testMatrixOperations, checkifTooCLoseVectorMatrixVersion){
+
+	rowvec x1(3, fill::randu);
+	mat M(20,3,fill::randu);
+	M.row(5) = x1;
+	bool check = checkifTooCLose(x1,M, 10E-08);
+	ASSERT_TRUE(check);
+
+	M.row(5) = 2*x1;
+	check = checkifTooCLose(x1,M,10E-08);
+	ASSERT_FALSE(check);
+
+}
 
 

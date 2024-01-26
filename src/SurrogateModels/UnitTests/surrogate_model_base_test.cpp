@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -75,6 +75,7 @@ public:
 	}
 	void setNameOfHyperParametersFile(string filename){
 
+		assert(isNotEmpty(filename));
 	}
 	void setNumberOfTrainingIterations(unsigned int){
 
@@ -103,17 +104,30 @@ public:
 	}
 	double interpolate(rowvec x) const {
 
-		return -21.1;
+		return norm(x,2);
 	}
+
+	double interpolateUsingDerivatives(rowvec x) const {
+
+		return norm(x,2);
+	}
+
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const {
+
+		assert(!xp.is_empty());
+		*f_tilde  = 0.0;
+		*ssqr = 0.0;
 
 	}
 
 	void addNewSampleToData(rowvec newsample){
 
+		assert(!newsample.is_empty());
+
 	}
 	void addNewLowFidelitySampleToData(rowvec newsample){
 
+		assert(!newsample.is_empty());
 	}
 
 

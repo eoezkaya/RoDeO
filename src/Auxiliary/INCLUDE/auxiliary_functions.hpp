@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -150,9 +150,6 @@ bool file_exist(std::string filename);
 void readFileToaString(std::string, std::string &);
 
 
-
-bool checkifTooCLose(const rowvec &, const rowvec &, double = 10E-6);
-bool checkifTooCLose(const rowvec &, const mat &,double = 10E-6);
 
 
 

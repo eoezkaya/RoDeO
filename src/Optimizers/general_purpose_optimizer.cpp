@@ -2,7 +2,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2022 Chair for Scientific Computing (SciComp), TU Kaiserslautern
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), TU Kaiserslautern
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -35,7 +35,7 @@
 #include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "../Random/INCLUDE/random_functions.hpp"
 
-#define ARMA_DONT_PRINT_ERRORS
+
 #include <armadillo>
 #include<cassert>
 

@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -372,7 +372,7 @@ void KrigingModel::addNewSampleToData(rowvec newsample){
 	mat rawData = data.getRawData();
 
 
-	bool flagTooClose= checkifTooCLose(newsample, rawData);
+	bool flagTooClose= checkifTooCLose(newsample, rawData, 10E-8);
 
 
 	if(!flagTooClose){
@@ -494,6 +494,14 @@ double KrigingModel::interpolate(rowvec xp ) const{
 
 }
 
+double KrigingModel::interpolateUsingDerivatives(rowvec x ) const{
+
+	abortWithErrorMessage("Kriging model cannot interpolate using derivatives!");
+	return norm(x,2);
+}
+
+
+
 
 void KrigingModel::interpolateWithVariance(rowvec xp,double *ftildeOutput,double *sSqrOutput) const{
 
@@ -608,6 +616,8 @@ void KrigingModel::train(void){
 
 		KrigingHyperParameterOptimizer bestOptimizer;
 
+//		numberOfThreads = 4;
+
 #ifdef OPENMP_SUPPORT
 		omp_set_num_threads(numberOfThreads);
 #endif
@@ -626,11 +636,20 @@ void KrigingModel::train(void){
 
 			parameterOptimizer.setDimension(2*dim);
 			parameterOptimizer.initializeKrigingModelObject(*this);
-			//		parameterOptimizer.setDisplayOn();
+//			parameterOptimizer.setDisplayOn();
 
 			parameterOptimizer.setBounds(boxConstraintsForTheTraining);
 			parameterOptimizer.setNumberOfNewIndividualsInAGeneration(200*dim);
 			parameterOptimizer.setNumberOfDeathsInAGeneration(180*dim);
+
+			unsigned int initialPopulationSize = 2*dim*100;
+
+			if(initialPopulationSize > 5000){
+
+				initialPopulationSize = 5000;
+			}
+
+
 			parameterOptimizer.setInitialPopulationSize(2*dim*100);
 			parameterOptimizer.setMutationProbability(0.1);
 			parameterOptimizer.setMaximumNumberOfGeneratedIndividuals(numberOfTrainingIterations);

@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -518,6 +518,20 @@ void ObjectiveFunction::calculateProbabilityOfImprovement(DesignForBayesianOptim
 
 }
 
+void ObjectiveFunction::calculateSurrogateEstimate(DesignForBayesianOptimization &designCalculated) const{
+
+	double ftilde;
+	ftilde = surrogate->interpolate(designCalculated.dv);
+	designCalculated.objectiveFunctionValue = ftilde;
+}
+
+void ObjectiveFunction::calculateSurrogateEstimateUsingDerivatives(DesignForBayesianOptimization &designCalculated) const{
+
+	double ftilde;
+	ftilde = surrogate->interpolateUsingDerivatives(designCalculated.dv);
+	designCalculated.objectiveFunctionValue = ftilde;
+}
+
 std::string ObjectiveFunction::getExecutionCommand(string path, string exename) const{
 
 	assert(isNotEmpty(exename));
@@ -652,7 +666,8 @@ rowvec ObjectiveFunction::readOutput(string filename, unsigned int howMany) cons
 	std::ifstream inputFileStream(filename);
 
 	if (!inputFileStream.is_open()) {
-		abortWithErrorMessage("There was a problem opening the output file!\n");
+		string msg = "There was a problem opening the output file : " + filename;
+		abortWithErrorMessage(msg);
 	}
 
 	for(unsigned int i=0; i<howMany;i++){
@@ -846,13 +861,38 @@ void ObjectiveFunction::evaluateObjectiveFunction(void){
 
 		if(systemReturn == -1){
 
-			abortWithErrorMessage("ERROR: System command could not be run properly");
+			string msg = "A process for the objective function/constraint execution could not be created, or its status could not be retrieved";
 
+			abortWithErrorMessage(msg);
+
+		}
+
+		else{
+
+
+			printWaitStatusIfSystemCallFails(systemReturn);
 		}
 
 	}
 
 }
+
+void ObjectiveFunction::printWaitStatusIfSystemCallFails(int status) const{
+
+	if (WIFEXITED(status)) {
+
+		int statusCode = WEXITSTATUS(status);
+		if (statusCode == 0) {
+
+			output.printMessage("Objective function/constraint execution is succesfull!");
+		} else {
+			string msg  = "There has been some problem with the objective function/constraint execution!";
+			abortWithErrorMessage(msg);
+
+		}
+	}
+}
+
 
 
 double ObjectiveFunction::interpolate(rowvec x) const{

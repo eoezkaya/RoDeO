@@ -422,6 +422,12 @@ double MultiLevelModel::interpolate(rowvec x) const{
 	return result;
 }
 
+double MultiLevelModel::interpolateUsingDerivatives(rowvec x) const{
+
+	abortWithErrorMessage("No need to use this function within the MultiLevelModel model!");
+}
+
+
 
 double MultiLevelModel::interpolateLowFi(rowvec x) const{
 

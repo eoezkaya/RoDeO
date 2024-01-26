@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -270,7 +270,21 @@ int findInterval(double value, const T & discreteValues){
 	return -1;
 }
 
+template <typename T>
+bool checkifTooCLose(const T &v1, const T &v2, double tol = 10E-8){
 
+	T diff = v1 - v2;
+
+	double distance = norm(diff, 1);
+
+	if(distance < tol) {
+		return true;
+	}
+	else {
+		return false;
+	}
+
+}
 
 
 #endif

@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -133,6 +133,7 @@ protected:
 
 
 	}
+
 
 	void prepareObjectiveFunctionWithAdjoint(void){
 
@@ -289,11 +290,16 @@ TEST_F(OptimizationTest, setOptimizationHistory){
 
 }
 
-TEST_F(OptimizationTest, modifyBoundsForInnerIterations){
+TEST_F(OptimizationTest, doesObjectiveFunctionHaveGradients){
 
-	prepareObjectiveFunction();
-	prepareFirstConstraint();
-	prepareSecondConstraint();
+	prepareObjectiveFunctionWithAdjoint();
+	ASSERT_TRUE(testOptimizer.doesObjectiveFunctionHaveGradients());
+
+}
+
+TEST_F(OptimizationTest, setGradientGlobalOptimum){
+
+	prepareObjectiveFunctionWithAdjoint();
 
 	testOptimizer.setBoxConstraints(boxConstraints);
 	testOptimizer.initializeSurrogates();
@@ -302,56 +308,175 @@ TEST_F(OptimizationTest, modifyBoundsForInnerIterations){
 
 	testOptimizer.setOptimizationHistory();
 
-	vec lbInitial = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
-	vec ubInitial = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
+	testOptimizer.setGradientGlobalOptimum();
 
-	testOptimizer.initializeSurrogates();
-	testOptimizer.modifyBoundsForInnerIterations();
-
-	vec lbAfterZoom = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
-	vec ubAfterZoom = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
-
-
-	for(unsigned int i=0; i<lbInitial.size(); i++){
-
-		ASSERT_TRUE(lbAfterZoom(i) > lbInitial(i));
-		ASSERT_TRUE(ubAfterZoom(i) < ubInitial(i));
-	}
+	ASSERT_TRUE(testOptimizer.globalOptimalDesign.gradient.size() > 0);
 
 }
 
-//TEST_F(OptimizationTest, zoomInDesignSpace){
-//
-//	prepareObjectiveFunction();
-//	prepareFirstConstraint();
-//
-//	testOptimizer.setBoxConstraints(boxConstraints);
-//
-//	vec lbInitial = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
-//	vec ubInitial = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
-//
-//	testOptimizer.initializeSurrogates();
-//	testOptimizer.clearOptimizationHistoryFile();
-//	testOptimizer.prepareOptimizationHistoryFile();
-//	testOptimizer.setOptimizationHistory();
-//
-//	testOptimizer.setMinimumNumberOfSamplesAfterZoomIn(10);
-//
-//	testOptimizer.zoomInDesignSpace();
-//
-//	vec lbFinal = testOptimizer.lowerBoundsForAcqusitionFunctionMaximization;
-//	vec ubFinal = testOptimizer.upperBoundsForAcqusitionFunctionMaximization;
-//
-//	unsigned int dim = testOptimizer.dimension;
-//	for(unsigned int i=0; i<dim; i++){
-//
-//		ASSERT_TRUE(lbFinal(i) > lbInitial(i));
-//		ASSERT_TRUE(ubFinal(i) < ubInitial(i));
-//
-//	}
-//
-//
-//}
+
+
+TEST_F(OptimizationTest, changeSettingsForAGradientBasedStep){
+
+	prepareObjectiveFunctionWithAdjoint();
+
+	testOptimizer.setBoxConstraints(boxConstraints);
+	testOptimizer.initializeSurrogates();
+	testOptimizer.clearOptimizationHistoryFile();
+	testOptimizer.prepareOptimizationHistoryFile();
+
+	testOptimizer.setOptimizationHistory();
+
+	testOptimizer.setGradientGlobalOptimum();
+	testOptimizer.changeSettingsForAGradientBasedStep();
+
+	ASSERT_TRUE(testOptimizer.lowerBoundsForAcqusitionFunctionMaximizationGradientStep.size() == 2);
+	ASSERT_TRUE(testOptimizer.upperBoundsForAcqusitionFunctionMaximizationGradientStep.size() == 2);
+
+
+}
+
+TEST_F(OptimizationTest, checkIfDesignIsWithinBounds){
+
+	rowvec x(3);
+	x(0) =  0.2; x(1) = 0.15; x(2) = 0.22;
+
+	testOptimizer.dimension = 3;
+	testOptimizer.lowerBoundsForAcqusitionFunctionMaximizationGradientStep = zeros<vec>(3);
+	testOptimizer.upperBoundsForAcqusitionFunctionMaximizationGradientStep = zeros<vec>(3);
+
+	testOptimizer.lowerBoundsForAcqusitionFunctionMaximizationGradientStep.fill(0.1);
+	testOptimizer.upperBoundsForAcqusitionFunctionMaximizationGradientStep.fill(0.25);
+
+
+	bool flag = testOptimizer.checkIfDesignIsWithinBounds(x);
+	ASSERT_TRUE(flag);
+	x(0) =  0.2; x(1) = 0.15; x(2) = 0.27;
+	flag = testOptimizer.checkIfDesignTouchesBounds(x);
+	ASSERT_FALSE(flag);
+
+}
+
+
+TEST_F(OptimizationTest, checkIfDesignTouchesBounds){
+
+	rowvec x(3);
+	x(0) =  0.2; x(1) = 0.15; x(2) = 0.25;
+
+	testOptimizer.dimension = 3;
+	testOptimizer.lowerBoundsForAcqusitionFunctionMaximizationGradientStep = zeros<vec>(3);
+	testOptimizer.upperBoundsForAcqusitionFunctionMaximizationGradientStep = zeros<vec>(3);
+
+	testOptimizer.lowerBoundsForAcqusitionFunctionMaximizationGradientStep.fill(0.1);
+	testOptimizer.upperBoundsForAcqusitionFunctionMaximizationGradientStep.fill(0.25);
+
+
+	bool flag = testOptimizer.checkIfDesignTouchesBounds(x);
+	ASSERT_TRUE(flag);
+	x(0) =  0.2; x(1) = 0.15; x(2) = 0.2;
+	flag = testOptimizer.checkIfDesignTouchesBounds(x);
+	ASSERT_FALSE(flag);
+
+}
+
+
+
+
+TEST_F(OptimizationTest, determineMaxStepSizeForGradientStep){
+
+	rowvec x(3);
+	rowvec g(3);
+
+	x(0) =  0.2; x(1) = 0.15; x(2) = 0.20;
+	g(0) = -0.2; g(1) = 0.01; g(2) = -0.001;
+
+	testOptimizer.dimension = 3;
+	testOptimizer.lowerBoundsForAcqusitionFunctionMaximizationGradientStep = zeros<vec>(3);
+	testOptimizer.upperBoundsForAcqusitionFunctionMaximizationGradientStep = zeros<vec>(3);
+
+	testOptimizer.lowerBoundsForAcqusitionFunctionMaximizationGradientStep.fill(0.1);
+	testOptimizer.upperBoundsForAcqusitionFunctionMaximizationGradientStep.fill(0.25);
+	double maxStep = testOptimizer.determineMaxStepSizeForGradientStep(x,g);
+	double err = fabs( 0.25 - maxStep);
+
+	EXPECT_LT(err,10E-08);
+
+
+}
+
+
+
+
+TEST_F(OptimizationTest, findTheMostPromisingDesignGradientStep){
+
+	prepareObjectiveFunctionWithAdjoint();
+
+	testOptimizer.setBoxConstraints(boxConstraints);
+	testOptimizer.initializeSurrogates();
+	testOptimizer.clearOptimizationHistoryFile();
+	testOptimizer.prepareOptimizationHistoryFile();
+
+	testOptimizer.setOptimizationHistory();
+
+	testOptimizer.findTheMostPromisingDesignGradientStep();
+
+	ASSERT_TRUE(testOptimizer.theMostPromisingDesigns.size() == 1);
+
+
+}
+
+TEST_F(OptimizationTest, EGOUnconstrainedWithGradientEnhancedModel){
+
+	prepareObjectiveFunctionWithAdjoint();
+
+	testOptimizer.setBoxConstraints(boxConstraints);
+
+	testOptimizer.setDisplayOn();
+	testOptimizer.setMaximumNumberOfIterations(20);
+	testOptimizer.performEfficientGlobalOptimization();
+
+	mat results;
+	results.load("himmelblau.csv", csv_ascii);
+
+	vec objectiveFunctionValues = results.col(2);
+
+	double minObjFun = min(objectiveFunctionValues);
+
+	EXPECT_LT(minObjFun, 0.01);
+
+	abort();
+
+}
+
+
+TEST_F(OptimizationTest, EGOconstrainedWithGradientEnhancedModel){
+
+	prepareObjectiveFunctionWithAdjoint();
+	prepareFirstConstraint();
+
+	testOptimizer.setBoxConstraints(boxConstraints);
+
+	testOptimizer.setDisplayOn();
+	testOptimizer.setMaximumNumberOfIterations(20);
+	testOptimizer.performEfficientGlobalOptimization();
+
+	mat results;
+	results.load("himmelblau.csv", csv_ascii);
+
+	vec objectiveFunctionValues = results.col(2);
+
+	double minObjFun = min(objectiveFunctionValues);
+
+	EXPECT_LT(minObjFun, 0.01);
+
+
+
+}
+
+
+
+
+
 
 
 
@@ -379,51 +504,9 @@ TEST_F(OptimizationTest, EGOUnconstrained){
 }
 
 
-TEST_F(OptimizationTest, EGOConstrained){
-
-	prepareObjectiveFunction();
-	prepareFirstConstraint();
-	prepareSecondConstraint();
-
-	//	testOptimizer.setZoomInOn();
-	testOptimizer.setMaximumNumberOfIterations(10);
-	//	testOptimizer.setHowOftenZoomIn(20);
-	//	testOptimizer.setDisplayOn();
-	testOptimizer.setBoxConstraints(boxConstraints);
-	testOptimizer.performEfficientGlobalOptimization();
-
-	mat results;
-	results.load("himmelblau.csv", csv_ascii);
-
-	vec objectiveFunctionValues = results.col(2);
-
-	double minObjFun = min(objectiveFunctionValues);
-
-	EXPECT_LT(minObjFun, 20.0);
-
-}
 
 
-TEST_F(OptimizationTest, EGOUnconstrainedWithGradientEnhancedModel){
 
-	prepareObjectiveFunctionWithAdjoint();
-
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	//	testOptimizer.setDisplayOn();
-	testOptimizer.setMaximumNumberOfIterations(10);
-	testOptimizer.performEfficientGlobalOptimization();
-
-	mat results;
-	results.load("himmelblau.csv", csv_ascii);
-
-	vec objectiveFunctionValues = results.col(2);
-
-	double minObjFun = min(objectiveFunctionValues);
-
-	EXPECT_LT(minObjFun, 20.0);
-
-}
 
 
 TEST_F(OptimizationTest, EGOUnconstrainedWithTangentEnhancedModel){
@@ -594,6 +677,10 @@ TEST_F(OptimizationTest, estimateConstraints){
 }
 
 
+
+
+
+
 TEST_F(OptimizationTest, findTheMostPromisingDesignWithConstraint){
 
 	prepareObjectiveFunction();
@@ -603,7 +690,7 @@ TEST_F(OptimizationTest, findTheMostPromisingDesignWithConstraint){
 	testOptimizer.initializeSurrogates();
 	testOptimizer.trainSurrogates();
 
-	testOptimizer.findTheMostPromisingDesign();
+	testOptimizer.findTheMostPromisingDesignEGO();
 
 	DesignForBayesianOptimization design = testOptimizer.getDesignWithMaxExpectedImprovement();
 

@@ -51,9 +51,15 @@ class Optimizer {
 	FRIEND_TEST(OptimizationTest, setOptimizationProblem);
 	FRIEND_TEST(OptimizationTest, setOptimizationHistory);
 	FRIEND_TEST(OptimizationTest, updateOptimizationHistory);
-	FRIEND_TEST(OptimizationTest, modifyBoundsForInnerIterations);
 	FRIEND_TEST(OptimizationTest, estimateConstraints);
 	FRIEND_TEST(OptimizationTest, calculateFeasibilityProbabilities);
+	FRIEND_TEST(OptimizationTest, findTheMostPromisingDesignGradientStep);
+	FRIEND_TEST(OptimizationTest, setGradientGlobalOptimum);
+	FRIEND_TEST(OptimizationTest, changeSettingsForAGradientBasedStep);
+	FRIEND_TEST(OptimizationTest, determineMaxStepSizeForGradientStep);
+	FRIEND_TEST(OptimizationTest, checkIfDesignTouchesBounds);
+	FRIEND_TEST(OptimizationTest, checkIfDesignIsWithinBounds);
+	FRIEND_TEST(OptimizationTest, doesObjectiveFunctionHaveGradients);
 
 
 #endif
@@ -66,6 +72,9 @@ private:
 
 	vec lowerBoundsForAcqusitionFunctionMaximization;
 	vec upperBoundsForAcqusitionFunctionMaximization;
+
+	vec lowerBoundsForAcqusitionFunctionMaximizationGradientStep;
+	vec upperBoundsForAcqusitionFunctionMaximizationGradientStep;
 
 
 
@@ -90,20 +99,18 @@ private:
 
 	bool IfinitialValueForObjFunIsSet= false;
 
+	unsigned int iterationNumberGradientStep = 0;
+	unsigned int maximumIterationGradientStep = 5;
+	double trustRegionFactorGradientStep = 1.0;
+	bool WillGradientStepBePerformed = false;
+
 	Design globalOptimalDesign;
+	Design currentBestDesign;
 
 	double initialImprovementValue = 0.0;
 
-	bool ifZoomInDesignSpaceIsAllowed = false;
-	unsigned int howOftenZoomIn = 10;
-	unsigned int minimumNumberOfSamplesAfterZoomIn = 0;
-	double zoomFactorShrinkageRate = 0.75;
-	double zoomFactor = 1.0;
-	double maxValueForZoomFactor = 1.0;
-	double minValueForZoomFactor = 0.01;
 
-	bool IfEnlargeBounds = false;
-	bool IfSchrinkBounds = true;
+	double factorForGradientStepWindow = 0.01;
 
 
 	unsigned int iterMaxAcquisitionFunction;
@@ -111,8 +118,6 @@ private:
 
 
 	double sigmaFactor = 1.0;
-	double maximumSigma = 2.0;
-	double minimumSigma = 0.1;
 
 
 	unsigned int numberOfDisceteVariables = 0;
@@ -122,8 +127,10 @@ private:
 
 	unsigned int numberOfThreads = 1;
 
+	void initializeOptimizerSettings(void);
+
 	void setOptimizationHistoryConstraints(mat inputObjectiveFunction);
-	void setOptimizationHistoryFeasibilityValues(mat inputObjectiveFunction);
+	void setOptimizationHistoryFeasibilityValues(void);
 	void calculateInitialImprovementValue(void);
 
 	void findTheGlobalOptimalDesign(void);
@@ -148,6 +155,7 @@ private:
 
 	bool isConstrained(void) const;
 	bool isNotConstrained(void) const;
+	bool doesObjectiveFunctionHaveGradients(void) const;
 
 
 	void modifyBoundsForInnerIterations(void);
@@ -162,6 +170,25 @@ private:
 	void prepareOptimizationHistoryFile(void) const;
 
 	void estimateConstraints(DesignForBayesianOptimization &) const;
+
+	double determineMaxStepSizeForGradientStep(rowvec x0, rowvec gradient) const;
+	bool checkIfDesignTouchesBounds(const rowvec &x0) const;
+	bool checkIfDesignIsWithinBounds(const rowvec &x0) const;
+
+	void changeSettingsForAGradientBasedStep(void);
+	void findTheMostPromisingDesignGradientStep(void);
+
+	bool checkIfGlobalOptimaHasGradientVector(void) const;
+	void setGradientGlobalOptimum(void);
+	void setDataAddModeForGradientBasedStep(const Design &currentBestDesign);
+	void findTheMostPromisingDesignToBeSimulated();
+	void initializeCurrentBestDesign(void);
+	void abortIfCurrentDesignHasANaN();
+	void findPromisingDesignUnconstrainedGradientStep(
+			DesignForBayesianOptimization &designToBeTried);
+	bool checkIfBoxConstraintsAreSatisfied(const rowvec &dv) const;
+	void decideIfAGradientStepShouldBeTakenForTheFirstIteration();
+	double trimVectorSoThatItStaysWithinTheBounds(const arma::rowvec &x);
 
 public:
 
@@ -182,8 +209,6 @@ public:
 	bool ifBoxConstraintsSet = false;
 	bool ifObjectFunctionIsSpecied = false;
 	bool ifSurrogatesAreInitialized = false;
-	bool ifreduceTrainingDataZoomIn = false;
-	bool ifAdaptSigmaFactor         = false;
 
 
 
@@ -219,23 +244,12 @@ public:
 	void setDisplayOn(void);
 	void setDisplayOff(void);
 
-	void setZoomInOn(void);
-	void setZoomInOff(void);
-	void setHowOftenZoomIn(unsigned int value);
-	void setMinimumNumberOfSamplesAfterZoomIn(unsigned int nSamples);
-
-	void setNumberOfThread(unsigned int);
-
-	void setMaxSigmaFactor(double value);
-	void setMinSigmaFactor(double value);
 
 
+	void setNumberOfThreads(unsigned int);
 
 
 	void setHowOftenTrainModels(unsigned int value);
-
-
-
 
 	void setInitialImprovementValue(double);
 	void calculateImprovementValue(Design &);
@@ -261,7 +275,7 @@ public:
 
 	rowvec calculateGradientOfAcqusitionFunction(DesignForBayesianOptimization &) const;
 	DesignForBayesianOptimization MaximizeAcqusitionFunctionGradientBased(DesignForBayesianOptimization ) const;
-	void findTheMostPromisingDesign(void);
+	void findTheMostPromisingDesignEGO(void);
 	DesignForBayesianOptimization getDesignWithMaxExpectedImprovement(void) const;
 
 

@@ -103,22 +103,12 @@ void RoDeODriver::addConfigKeysOptimization() {
 
 	configKeys.add(ConfigKey("TARGET_VALUE_FOR_VARIABLE_SAMPLE_WEIGHTS", "string"));
 
-
-
 	configKeys.add(ConfigKey("DISCRETE_VARIABLES", "doubleVector"));
 	configKeys.add(ConfigKey("DISCRETE_VARIABLES_VALUE_INCREMENTS", "doubleVector"));
-
-	configKeys.add(ConfigKey("ZOOM_IN", "string"));
-	configKeys.add(ConfigKey("ZOOM_IN_HOW_OFTEN", "int"));
-
 
 	configKeys.add(ConfigKey("MAX_NUMBER_OF_INNER_ITERATIONS", "int"));
 	configKeys.add(ConfigKey("MAXIMUM_NUMBER_OF_FUNCTION_EVALUATIONS", "int"));
 
-
-	configKeys.add(ConfigKey("VARIABLE_MODEL_UNCERTAINTY", "string"));
-	configKeys.add(ConfigKey("MAX_SIGMA_FACTOR", "double"));
-	configKeys.add(ConfigKey("MIN_SIGMA_FACTOR", "double"));
 
 	configKeys.add(ConfigKey("NUMBER_OF_THREADS", "int"));
 
@@ -910,45 +900,16 @@ void RoDeODriver::setOptimizationFeaturesMandatory(
 	}
 }
 
-void RoDeODriver::setOptimizationFeaturesVariableModelUncertainty(
-		Optimizer &optimizationStudy) const {
-	string keyword = "VARIABLE_MODEL_UNCERTAINTY";
-	if (configKeys.ifConfigKeyIsSet(keyword)) {
-		string adaptiveSigma = configKeys.getConfigKeyStringValue(keyword);
-		if (checkIfOn(adaptiveSigma)) {
-			optimizationStudy.ifAdaptSigmaFactor = true;
-		}
-		double maxSigma = configKeys.getConfigKeyDoubleValue(
-				"MAX_SIGMA_FACTOR");
-		double minSigma = configKeys.getConfigKeyDoubleValue(
-				"MIN_SIGMA_FACTOR");
-		optimizationStudy.setMaxSigmaFactor(maxSigma);
-		optimizationStudy.setMinSigmaFactor(minSigma);
-	}
-}
 
-void RoDeODriver::setOptimizationFeaturesZoomInDesignSpace(
-		Optimizer &optimizationStudy) const {
-	string keyword = "ZOOM_IN";
-	if (configKeys.ifConfigKeyIsSet(keyword)) {
-		string ifZoomIn = configKeys.getConfigKeyStringValue(keyword);
-		if (checkIfOn(ifZoomIn)) {
-			optimizationStudy.setZoomInOn();
-			keyword = "ZOOM_IN_HOW_OFTEN";
-			if (configKeys.ifConfigKeyIsSet(keyword)) {
-				unsigned int howOftenZoomIn = configKeys.getConfigKeyIntValue(keyword);
-				optimizationStudy.setHowOftenZoomIn(howOftenZoomIn);
-			}
-		}
-	}
-}
+
+
 
 void RoDeODriver::setOptimizationFeaturesNumberOfThreads(
 		Optimizer &optimizationStudy) const {
 	string keyword = "NUMBER_OF_THREADS";
 	if (configKeys.ifConfigKeyIsSet(keyword)) {
 		unsigned int numberOfThreads = configKeys.getConfigKeyIntValue(keyword);
-		optimizationStudy.setNumberOfThread(numberOfThreads);
+		optimizationStudy.setNumberOfThreads(numberOfThreads);
 	}
 }
 
@@ -959,8 +920,6 @@ void RoDeODriver::setOptimizationFeatures(Optimizer &optimizationStudy) const{
 	}
 
 	setOptimizationFeaturesMandatory(optimizationStudy);
-	setOptimizationFeaturesVariableModelUncertainty(optimizationStudy);
-	setOptimizationFeaturesZoomInDesignSpace(optimizationStudy);
 
 	setOptimizationFeaturesNumberOfThreads(optimizationStudy);
 }

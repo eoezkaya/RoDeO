@@ -80,10 +80,12 @@ mat normalizeMatrix(mat matrixIn, Bounds &boxConstraints);
 
 
 
-int findIndexOfRow(const rowvec &v, const mat &A, double);
+int findIndexOfRow(const rowvec &v, const mat &A, double tol = 10E-8);
 
 
 mat shuffleRows(mat A);
+
+bool checkifTooCLose(const rowvec &v1, const mat &M, double tol);
 
 
 #endif

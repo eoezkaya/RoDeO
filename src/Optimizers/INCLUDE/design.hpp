@@ -73,6 +73,7 @@ public:
 
 	void gradientUpdateDesignVector(const rowvec &, const vec &, const vec &, double);
 	void print(void) const;
+	void reset(void);
 
 
 };

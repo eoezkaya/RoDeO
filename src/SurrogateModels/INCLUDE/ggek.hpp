@@ -79,7 +79,6 @@ private:
 	double beta0 = 0.0;
 	double sigmaSquared = 0.0;
 
-
 	bool ifCorrelationFunctionIsInitialized = false;
 	bool ifActiveDeritiveSampleIndicesAreCalculated = false;
 
@@ -87,12 +86,11 @@ private:
 
 	double weightFactorForDerivatives = 0.5;
 
-	double sigmaThresholdValueForSVD = 10E-012;
+	double sigmaThresholdValueForSVD = 10E-014;
 
 	double thetaFactor = 1.0;
 	unsigned int numberOfIterationsToDetermineThetaFactor = 1000;
-	bool ifAdjustThetaFactor = true;
-
+	bool ifAdjustThetaFactor = false;
 
 
 	vec theta;
@@ -173,6 +171,7 @@ public:
 
 	void train(void);
 	double interpolate(rowvec x) const;
+	double interpolateUsingDerivatives(rowvec x ) const;
 	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const ;
 
 	void addNewSampleToData(rowvec newsample);

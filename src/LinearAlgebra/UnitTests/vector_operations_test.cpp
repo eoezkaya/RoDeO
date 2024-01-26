@@ -318,3 +318,20 @@ TEST(testVectorOperations, findIntervalRowVector){
 }
 
 
+TEST(testVectorOperations, checkifTooCLose){
+
+	rowvec x1(3, fill::randu);
+
+	rowvec x2 = x1*2;
+	bool check = checkifTooCLose(x1,x2);
+	ASSERT_FALSE(check);
+
+	x2 = x1;
+	check = checkifTooCLose(x1,x2);
+	ASSERT_TRUE(check);
+	x2(0)+= 0.0000001;
+	check = checkifTooCLose(x1,x2);
+	ASSERT_TRUE(check);
+
+}
+

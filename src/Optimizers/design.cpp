@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -35,6 +35,8 @@
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 #include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
 #include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../INCLUDE/Rodeo_macros.hpp"
+
 
 
 #define ARMA_DONT_PRINT_ERRORS
@@ -379,15 +381,13 @@ void Design::print(void) const{
 	}
 
 	if(isDesignFeasible){
-		std::cout<<"Feasibility = YES\n";
+		std::cout<<"Feasibility = " << FGRN("YES")<<"\n";
 	}
 	else{
-		std::cout<<"Feasibility = NO\n";
+		std::cout<<"Feasibility = " << FRED("NO")<<"\n";
 	}
 	std::cout<<"Improvement = "<<improvementValue<<"\n";
-	std::cout<<"\n";
-	std::cout<< "\n*********************************************************\n\n\n";
-
+	std::cout<< "*********************************************************\n\n";
 
 }
 
@@ -599,4 +599,16 @@ void DesignForBayesianOptimization::updateAcqusitionFunctionAccordingToConstrain
 
 }
 
+
+void DesignForBayesianOptimization::reset(void){
+
+	constraintFeasibilityProbabilities.fill(0.0);
+	constraintSigmas.fill(0.0);
+	constraintValues.fill(0.0);
+	dv.fill(0.0);
+	objectiveFunctionValue  = 0.0;
+	sigma  = 0.0;
+	valueAcqusitionFunction = 0.0;
+
+}
 

@@ -181,6 +181,12 @@ double LinearModel::interpolate(rowvec x ) const{
 
 }
 
+double LinearModel::interpolateUsingDerivatives(rowvec x ) const{
+
+	abortWithErrorMessage("Linear model cannot interpolate using derivatives!");
+}
+
+
 void LinearModel::interpolateWithVariance(rowvec xp,double *fTilde,double *ssqr) const{
 
 	assert(false);

@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -308,13 +308,30 @@ bool isEqual(const mat &A, const mat&B, double tolerance){
 
 
 
-int findIndexOfRow(const rowvec &v, const mat &A, double tolerance = 10E-8){
+int findIndexOfRow(const rowvec &v, const mat &A, double tolerance){
 
 	assert(v.size() == A.n_cols);
+
+	double minNorm = LARGE;
+	int minIndex = 0;
+
 	for(unsigned int i=0; i<A.n_rows; i++){
-		if(isEqual(v,A.row(i), tolerance)) return i;
+		rowvec a = A.row(i);
+		rowvec diff = v-a;
+		double normL1 = norm(diff,1);
+
+		if(normL1 < minNorm){
+			minNorm = normL1;
+			minIndex = i;
+		}
 	}
-	return -1;
+
+	if(minNorm < tolerance){
+		return minIndex;
+	}
+	else{
+		return -1;
+	}
 }
 
 
@@ -336,7 +353,25 @@ mat shuffleRows(mat A){
 }
 
 
+bool checkifTooCLose(const rowvec &v1, const mat &M, double tol){
 
+
+	unsigned int nRows = M.n_rows;
+	bool ifTooClose = false;
+
+	for(unsigned int i=0; i<nRows; i++){
+
+		rowvec r = M.row(i);
+		ifTooClose = checkifTooCLose(v1,r, tol);
+
+		if(ifTooClose) {
+			break;
+		}
+
+	}
+
+	return ifTooClose;
+}
 
 
 

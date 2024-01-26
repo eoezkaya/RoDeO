@@ -163,6 +163,7 @@ public:
 	virtual void updateAuxilliaryFields(void);
 	virtual void train(void) = 0;
 	virtual double interpolate(rowvec x) const = 0;
+	virtual double interpolateUsingDerivatives(rowvec x) const = 0;
 	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
 
 	virtual void addNewSampleToData(rowvec newsample) = 0;

@@ -253,42 +253,6 @@ double calculateProbalityGreaterThanAValue(double value, double mu, double sigma
 }
 
 
-
-
-bool checkifTooCLose(const rowvec &v1, const rowvec &v2, double tol){
-
-	rowvec diff = v1 - v2;
-
-	double distance = norm(diff, 1);
-
-	if(distance < tol) return true;
-	else return false;
-
-}
-
-bool checkifTooCLose(const rowvec &v1, const mat &M, double tol){
-
-
-	unsigned int nRows = M.n_rows;
-	bool ifTooClose = false;
-
-	for(unsigned int i=0; i<nRows; i++){
-
-		rowvec r = M.row(i);
-		ifTooClose = checkifTooCLose(v1,r, tol);
-
-		if(ifTooClose) {
-			break;
-		}
-
-	}
-
-	return ifTooClose;
-}
-
-
-
-
 bool file_exist(std::string filename)
 {
 

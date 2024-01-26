@@ -112,6 +112,8 @@ private:
 	bool isLowFiEvaluation(void) const;
 	void bindSurrogateModelSingleFidelity();
 
+	void printWaitStatusIfSystemCallFails(int status) const;
+
 protected:
 
 
@@ -201,6 +203,9 @@ public:
 
 	void calculateExpectedImprovement(DesignForBayesianOptimization &designCalculated) const;
 	void calculateProbabilityOfImprovement(DesignForBayesianOptimization &designCalculated) const;
+	void calculateSurrogateEstimate(DesignForBayesianOptimization &designCalculated) const;
+	void calculateSurrogateEstimateUsingDerivatives(DesignForBayesianOptimization &designCalculated) const;
+
 
 	void evaluateDesign(Design &d);
 	void evaluateObjectiveFunction(void);

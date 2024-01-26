@@ -145,10 +145,7 @@ private:
 	void addProblemNameToSurrogateTester(SurrogateModelTester &surrogateTest);
 	void addDimensionToSurrogateTester(SurrogateModelTester &surrogateTest);
 	void setOptimizationFeaturesMandatory(Optimizer &optimizationStudy) const;
-	void setOptimizationFeaturesVariableModelUncertainty(
-			Optimizer &optimizationStudy) const;
-	void setOptimizationFeaturesZoomInDesignSpace(
-			Optimizer &optimizationStudy) const;
+
 	void setOptimizationFeaturesNumberOfThreads(
 			Optimizer &optimizationStudy) const;
 
