@@ -32,7 +32,7 @@
 #ifndef RODEO_MACROS_HPP
 #define RODEO_MACROS_HPP
 
-#define PRINT_HERE printf("Here : %s(%d)--:\n",__FILE__,__LINE__);
+
 
 enum SURROGATE_MODEL {
 	NONE,

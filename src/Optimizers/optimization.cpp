@@ -38,6 +38,7 @@
 
 
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../Auxiliary/INCLUDE/print.hpp"
 #include "../SurrogateModels/INCLUDE/kriging_training.hpp"
 #include "../INCLUDE/Rodeo_macros.hpp"
 #include "../INCLUDE/Rodeo_globals.hpp"
@@ -422,6 +423,7 @@ void Optimizer::updateOptimizationHistory(Design d) {
 
 #endif
 
+	findTheGlobalOptimalDesign();
 
 }
 
@@ -622,17 +624,10 @@ void Optimizer::changeSettingsForAGradientBasedStep(void){
 	lowerBoundsForAcqusitionFunctionMaximizationGradientStep = dv -  delta;
 	upperBoundsForAcqusitionFunctionMaximizationGradientStep = dv +  delta;
 
+	trimVectorSoThatItStaysWithinTheBounds(lowerBoundsForAcqusitionFunctionMaximizationGradientStep);
+	trimVectorSoThatItStaysWithinTheBounds(upperBoundsForAcqusitionFunctionMaximizationGradientStep);
 
-	for(unsigned int i=0; i<dimension; i++){
-		if(lowerBoundsForAcqusitionFunctionMaximizationGradientStep(i) < 0.0){
-			lowerBoundsForAcqusitionFunctionMaximizationGradientStep(i)  = 0.0;
-		}
 
-		if(upperBoundsForAcqusitionFunctionMaximizationGradientStep(i) > 1.0/dimension){
-			upperBoundsForAcqusitionFunctionMaximizationGradientStep(i)  = 1.0/dimension;
-		}
-
-	}
 }
 
 void Optimizer::setGradientGlobalOptimum(void){
@@ -753,7 +748,7 @@ double Optimizer::determineMaxStepSizeForGradientStep(rowvec x0, rowvec gradient
 
 }
 
-double Optimizer::trimVectorSoThatItStaysWithinTheBounds(const rowvec &x) {
+void Optimizer::trimVectorSoThatItStaysWithinTheBounds(rowvec &x) {
 	assert(dimension>0);
 	double oneOverDim = 1.0 / dimension;
 	for (unsigned int i = 0; i < dimension; i++) {
@@ -764,7 +759,19 @@ double Optimizer::trimVectorSoThatItStaysWithinTheBounds(const rowvec &x) {
 			x(i) = oneOverDim;
 		}
 	}
-	return oneOverDim;
+}
+
+void Optimizer::trimVectorSoThatItStaysWithinTheBounds(vec &x) {
+	assert(dimension>0);
+	double oneOverDim = 1.0 / dimension;
+	for (unsigned int i = 0; i < dimension; i++) {
+		if (x(i) < 0.0) {
+			x(i) = 0.0;
+		}
+		if (x(i) > oneOverDim) {
+			x(i) = oneOverDim;
+		}
+	}
 }
 
 void Optimizer::findPromisingDesignUnconstrainedGradientStep(
@@ -781,12 +788,17 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 	output.printMessage("Staring point for the gradient step x0 = \n",x0);
 
 
-
-
 	double maxStepSize = determineMaxStepSizeForGradientStep(x0, gradient);
 	double minStepSize = (1.0/dimension)/10000;
 
 	maxStepSize = maxStepSize * trustRegionFactorGradientStep;
+
+	if(maxStepSize < 10.0*minStepSize){
+
+		maxStepSize = 10.0* minStepSize;
+	}
+
+
 	output.printMessage("Maximum step size",maxStepSize);
 	output.printMessage("Minimum step size",minStepSize);
 
@@ -803,7 +815,7 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 	for (unsigned int i = 0; i < iterMaxAcquisitionFunction; i++) {
 		rowvec x = x0 - stepSize * gradient;
 
-		double oneOverDim = trimVectorSoThatItStaysWithinTheBounds(x);
+		trimVectorSoThatItStaysWithinTheBounds(x);
 		//						x.print("x");
 		designToBeTried.dv = x;
 		objFun.calculateSurrogateEstimateUsingDerivatives(designToBeTried);
@@ -812,14 +824,23 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 		if (surrogateEstimate < bestObjectiveFunctionValue) {
 			bestObjectiveFunctionValue = surrogateEstimate;
 			bestDesignNormalized = x;
-			//					printScalar(bestObjectiveFunctionValue);
+			//			printScalar(bestObjectiveFunctionValue);
 		}
 		stepSize += deltaStepSize;
 	}
 
 	output.printMessage("Best design (inner iteration) = \n", bestDesignNormalized);
+	output.printMessage("At the step size (inner iteration) = \n", stepSize);
 
 	designToBeTried.dv = bestDesignNormalized;
+}
+
+void Optimizer::decideIfNextStepWouldBeAGradientStep() {
+	if (iterationNumberGradientStep == maximumIterationGradientStep) {
+		trustRegionFactorGradientStep = 1.0;
+		iterationNumberGradientStep = 0;
+		WillGradientStepBePerformed = false;
+	}
 }
 
 void Optimizer::findTheMostPromisingDesignGradientStep(void){
@@ -834,7 +855,7 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
 
 
-	if(ifGradientVectorExists){
+	if(WillGradientStepBePerformed){
 
 		DesignForBayesianOptimization designToBeTried(dimension,numberOfConstraints);
 
@@ -858,12 +879,7 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 		iterationNumberGradientStep++;
 		trustRegionFactorGradientStep = trustRegionFactorGradientStep * 0.5;
 
-		if(iterationNumberGradientStep == maximumIterationGradientStep){
-
-			trustRegionFactorGradientStep = 1.0;
-			iterationNumberGradientStep = 0;
-			WillGradientStepBePerformed = false;
-		}
+		decideIfNextStepWouldBeAGradientStep();
 
 
 
@@ -1498,10 +1514,14 @@ void Optimizer::abortIfCurrentDesignHasANaN() {
 }
 
 void Optimizer::decideIfAGradientStepShouldBeTakenForTheFirstIteration() {
+
+	assert(isHistoryFileInitialized);
+	findTheGlobalOptimalDesign();
+
 	if (doesObjectiveFunctionHaveGradients()) {
 		setGradientGlobalOptimum();
-		bool ifGradientVectorExists = checkIfGlobalOptimaHasGradientVector();
-		if (ifGradientVectorExists) {
+
+		if (checkIfGlobalOptimaHasGradientVector()) {
 			WillGradientStepBePerformed = true;
 		}
 	}
@@ -1539,7 +1559,7 @@ void Optimizer::performEfficientGlobalOptimization(void){
 
 		output.printIteration(outerIterationNumber);
 
-		findTheGlobalOptimalDesign();
+
 
 		if(outerIterationNumber == 1){
 			decideIfAGradientStepShouldBeTakenForTheFirstIteration();
@@ -1563,6 +1583,10 @@ void Optimizer::performEfficientGlobalOptimization(void){
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 
 		calculateImprovementValue(currentBestDesign);
+		printScalar(currentBestDesign.improvementValue);
+
+
+
 
 		abortIfCurrentDesignHasANaN();
 
@@ -1576,7 +1600,34 @@ void Optimizer::performEfficientGlobalOptimization(void){
 		objFun.addDesignToData(currentBestDesign);
 		addConstraintValuesToData(currentBestDesign);
 
+
+		if(currentBestDesign.improvementValue > globalOptimalDesign.improvementValue){
+
+			double deltaImprovement = currentBestDesign.improvementValue - globalOptimalDesign.improvementValue;
+
+			if(deltaImprovement > bestDeltaImprovementValueAchieved){
+
+				bestDeltaImprovementValueAchieved = deltaImprovement;
+			}
+
+			output.printMessage("An IMPROVEMENT has been achieved!");
+
+			double percentImprovementRelativeToBest = (deltaImprovement/ bestDeltaImprovementValueAchieved)*100;
+			printScalar(percentImprovementRelativeToBest);
+
+			if(percentImprovementRelativeToBest < 5){
+
+				WillGradientStepBePerformed = false;
+				trustRegionFactorGradientStep = 1.0;
+				iterationNumberGradientStep = 0;
+			}
+
+		}
+
+
+
 		updateOptimizationHistory(currentBestDesign);
+
 
 		/* terminate optimization */
 		if(outerIterationNumber >= maxNumberOfSamples){
@@ -1585,6 +1636,9 @@ void Optimizer::performEfficientGlobalOptimization(void){
 			output.printDesign(globalOptimalDesign);
 			break;
 		}
+
+		objFun.removeVeryCloseSamples(globalOptimalDesign);
+
 
 	} /* end of the optimization loop */
 
@@ -1661,8 +1715,6 @@ void Optimizer::calculateImprovementValue(Design &d){
 
 	}
 }
-
-
 
 
 

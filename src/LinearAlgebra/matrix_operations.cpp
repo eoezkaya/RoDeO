@@ -33,41 +33,30 @@
 
 
 #include "./INCLUDE/matrix_operations.hpp"
-
+#include "../INCLUDE/Rodeo_macros.hpp"
 #include "./INCLUDE/vector_operations.hpp"
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../Auxiliary/INCLUDE/print.hpp"
 #include "../Random/INCLUDE/random_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 
 
-void printScalarValueWithName(std::string name, int value) {
 
-	std::cout<<name<<" = "<<value<<"\n";
 
+void removeSomeRows(mat &A, std::vector<unsigned int> indices){
+
+	assert(A.n_rows >= indices.size());
+
+	uvec indx(indices.size());
+	int count = 0;
+	for (std::vector<unsigned int>::const_iterator i = indices.begin(); i != indices.end(); ++i){
+			indx(count) = *i;
+			count++;
+	}
+	A.shed_rows(indx);
 }
-void printScalarValueWithName(std::string name, double value) {
-
-	std::cout<<name<<" = "<<value<<"\n";
-}
-
-
-void printScalarValueWithName(std::string name, unsigned int value) {
-
-	std::cout<<name<<" = "<<value<<"\n";
-}
-
-
-
-
-void printTwoScalarValuesWithNames(std::string name1, double value1,std::string name2, double value2 ){
-
-	std::cout<<name1<<" = "<<value1<<" "<<name2<<" = "<<value2<<"\n";
-
-}
-
-
 
 
 
@@ -373,5 +362,31 @@ bool checkifTooCLose(const rowvec &v1, const mat &M, double tol){
 	return ifTooClose;
 }
 
+int returnIndexOfTheRowClosestTo(const rowvec &v1, const mat &M, double tol){
+
+	unsigned int nRows = M.n_rows;
+
+	double minNorm = LARGE;
+	int minNormIndex = -1;
+
+	for(unsigned int i=0; i<nRows; i++){
+
+		rowvec r = M.row(i);
+		rowvec diff = v1 - r;
+		double normdiff = norm(diff,1);
+		if(normdiff < minNorm){
+
+			minNorm =  normdiff;
+			minNormIndex = i;
+		}
+	}
+	if(minNorm < tol){
+
+		return minNormIndex;
+	}else{
+		return -1;
+	}
+
+}
 
 

@@ -921,14 +921,12 @@ void ObjectiveFunction::printSurrogate(void) const{
 }
 
 
-void ObjectiveFunction::reduceTrainingDataFiles(vec lb, vec ub) const{
+void ObjectiveFunction::removeVeryCloseSamples(const Design& globalOptimalDesign){
 
-	surrogate->reduceTrainingData(lb,ub);
-}
 
-unsigned int ObjectiveFunction::countHowManySamplesAreWithinBounds(vec lb, vec ub) const{
+	surrogate->removeVeryCloseSamples(globalOptimalDesign);
+	surrogate->updateModelWithNewData();
 
-	return surrogate->countHowManySamplesAreWithinBounds(lb,ub);
 }
 
 

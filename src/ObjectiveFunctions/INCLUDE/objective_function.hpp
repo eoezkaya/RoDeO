@@ -227,8 +227,7 @@ public:
 	void print(void) const;
 	std::string getExecutionCommand(string, string) const;
 
-	void reduceTrainingDataFiles(vec, vec) const;
-	unsigned int countHowManySamplesAreWithinBounds(vec lb, vec ub) const;
+	void removeVeryCloseSamples(const Design& globalOptimalDesign);
 
 	void setSigmaFactor(double);
 

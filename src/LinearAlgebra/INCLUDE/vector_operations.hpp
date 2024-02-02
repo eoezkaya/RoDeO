@@ -37,6 +37,7 @@
 
 #include "../../INCLUDE/Rodeo_globals.hpp"
 #include "../../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../../Auxiliary/INCLUDE/print.hpp"
 
 
 using namespace arma;

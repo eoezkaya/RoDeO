@@ -13,6 +13,7 @@ get_target_property(MAIN_CFLAGS linearAlgebra COMPILE_OPTIONS)
 
 target_link_libraries(linearAlgebra random)
 target_link_libraries(linearAlgebra bounds)
+target_link_libraries(linearAlgebra auxiliary)
 
 # also see: COMPILE_DEFINITIONS INCLUDE_DIRECTORIES
 message("-- Target compiler flags for linearAlgebra are: ${MAIN_CFLAGS}")

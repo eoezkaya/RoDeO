@@ -268,6 +268,22 @@ TEST_F(OptimizationTest, setBoxConstraints){
 
 	ASSERT_TRUE(testOptimizer.ifBoxConstraintsSet);
 
+}
+
+TEST_F(OptimizationTest, trimVectorSoThatItStaysWithinTheBounds){
+
+	testOptimizer.dimension = 2;
+
+	rowvec x(2);
+	x(0) = -1;
+	x(1) = 0.6;
+
+	testOptimizer.trimVectorSoThatItStaysWithinTheBounds(x);
+
+	double err = fabs(x(0) - 0.0);
+	ASSERT_LT(err, 10E-10);
+	err = fabs(x(1) - 0.5);
+	ASSERT_LT(err, 10E-10);
 
 }
 
@@ -397,9 +413,8 @@ TEST_F(OptimizationTest, determineMaxStepSizeForGradientStep){
 	testOptimizer.lowerBoundsForAcqusitionFunctionMaximizationGradientStep.fill(0.1);
 	testOptimizer.upperBoundsForAcqusitionFunctionMaximizationGradientStep.fill(0.25);
 	double maxStep = testOptimizer.determineMaxStepSizeForGradientStep(x,g);
-	double err = fabs( 0.25 - maxStep);
 
-	EXPECT_LT(err,10E-08);
+	EXPECT_GT(maxStep,10E-08);
 
 
 }

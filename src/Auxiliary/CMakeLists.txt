@@ -1,4 +1,4 @@
-add_library(auxiliary auxiliary_functions.cpp string_functions.cpp)
+add_library(auxiliary auxiliary_functions.cpp string_functions.cpp print.cpp)
 target_compile_options(auxiliary PUBLIC -Wall -Wextra -Wpedantic -O2)
 
 get_target_property(MAIN_CFLAGS auxiliary COMPILE_OPTIONS)

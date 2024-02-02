@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -49,18 +49,7 @@ bool isEqual(const mat &A, const mat&B, double tolerance);
 
 
 
-
-#define printScalar(name) printScalarValueWithName(#name, (name))
-#define printTwoScalars(name1,name2) printTwoScalarValuesWithNames(#name1, (name1), #name2, (name2))
-
-void printScalarValueWithName(std::string name, int value) ;
-void printScalarValueWithName(std::string name, double value);
-void printScalarValueWithName(std::string name, unsigned int value);
-
-
-void printTwoScalarValuesWithNames(std::string name1, double value1,std::string name2, double value2 );
-
-
+void removeSomeRows(mat &A, std::vector<unsigned int> indices);
 
 
 
@@ -86,6 +75,7 @@ int findIndexOfRow(const rowvec &v, const mat &A, double tol = 10E-8);
 mat shuffleRows(mat A);
 
 bool checkifTooCLose(const rowvec &v1, const mat &M, double tol);
+int returnIndexOfTheRowClosestTo(const rowvec &v1, const mat &M, double tol);
 
 
 #endif

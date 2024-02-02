@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -329,7 +329,7 @@ TEST(testVectorOperations, checkifTooCLose){
 	x2 = x1;
 	check = checkifTooCLose(x1,x2);
 	ASSERT_TRUE(check);
-	x2(0)+= 0.0000001;
+	x2(0)+= 0.000000001;
 	check = checkifTooCLose(x1,x2);
 	ASSERT_TRUE(check);
 

@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -37,6 +37,20 @@
  
 #include<math.h>
 #include<gtest/gtest.h>
+
+
+TEST(testMatrixOperations, removeSomeRows){
+
+	mat A(10,5,fill::randu);
+	std::vector<unsigned int> indx;
+	indx.push_back(4);
+	indx.push_back(0);
+	indx.push_back(6);
+
+	removeSomeRows(A,indx);
+
+	ASSERT_TRUE(A.n_rows == 7);
+}
 
 
 
@@ -147,6 +161,19 @@ TEST(testMatrixOperations, checkifTooCLoseVectorMatrixVersion){
 	check = checkifTooCLose(x1,M,10E-08);
 	ASSERT_FALSE(check);
 
+}
+
+TEST(testMatrixOperations, returnIndexOfTheRowClosestTo){
+
+	mat M(20,3,fill::randu);
+	rowvec x = M.row(6);
+
+	int index = returnIndexOfTheRowClosestTo(x,M,10E-8);
+	ASSERT_TRUE(index == 6);
+
+	x(0) +=0.001;
+	index = returnIndexOfTheRowClosestTo(x,M,10E-8);
+	ASSERT_TRUE(index == -1);
 }
 
 

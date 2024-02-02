@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -60,6 +60,7 @@ class Optimizer {
 	FRIEND_TEST(OptimizationTest, checkIfDesignTouchesBounds);
 	FRIEND_TEST(OptimizationTest, checkIfDesignIsWithinBounds);
 	FRIEND_TEST(OptimizationTest, doesObjectiveFunctionHaveGradients);
+	FRIEND_TEST(OptimizationTest, trimVectorSoThatItStaysWithinTheBounds);
 
 
 #endif
@@ -76,6 +77,11 @@ private:
 	vec lowerBoundsForAcqusitionFunctionMaximizationGradientStep;
 	vec upperBoundsForAcqusitionFunctionMaximizationGradientStep;
 
+	double bestDeltaImprovementValueAchieved = 0.0;
+	double initialImprovementValue = 0.0;
+
+
+	std::string filenameCurrentIterateInfo = "currentIterate.dat";
 
 
 	std::string designVectorFileName;
@@ -107,7 +113,7 @@ private:
 	Design globalOptimalDesign;
 	Design currentBestDesign;
 
-	double initialImprovementValue = 0.0;
+
 
 
 	double factorForGradientStepWindow = 0.01;
@@ -188,7 +194,10 @@ private:
 			DesignForBayesianOptimization &designToBeTried);
 	bool checkIfBoxConstraintsAreSatisfied(const rowvec &dv) const;
 	void decideIfAGradientStepShouldBeTakenForTheFirstIteration();
-	double trimVectorSoThatItStaysWithinTheBounds(const arma::rowvec &x);
+	void trimVectorSoThatItStaysWithinTheBounds(rowvec &x);
+	void trimVectorSoThatItStaysWithinTheBounds(vec &x);
+	void decideIfNextStepWouldBeAGradientStep();
+
 
 public:
 
