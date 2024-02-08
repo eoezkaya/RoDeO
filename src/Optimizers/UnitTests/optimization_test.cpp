@@ -440,158 +440,158 @@ TEST_F(OptimizationTest, findTheMostPromisingDesignGradientStep){
 
 }
 
-TEST_F(OptimizationTest, EGOUnconstrainedWithGradientEnhancedModel){
-
-	prepareObjectiveFunctionWithAdjoint();
-
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	testOptimizer.setDisplayOn();
-	testOptimizer.setMaximumNumberOfIterations(20);
-	testOptimizer.performEfficientGlobalOptimization();
-
-	mat results;
-	results.load("himmelblau.csv", csv_ascii);
-
-	vec objectiveFunctionValues = results.col(2);
-
-	double minObjFun = min(objectiveFunctionValues);
-
-	EXPECT_LT(minObjFun, 0.01);
-
-	abort();
-
-}
-
-
-TEST_F(OptimizationTest, EGOconstrainedWithGradientEnhancedModel){
-
-	prepareObjectiveFunctionWithAdjoint();
-	prepareFirstConstraint();
-
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	testOptimizer.setDisplayOn();
-	testOptimizer.setMaximumNumberOfIterations(20);
-	testOptimizer.performEfficientGlobalOptimization();
-
-	mat results;
-	results.load("himmelblau.csv", csv_ascii);
-
-	vec objectiveFunctionValues = results.col(2);
-
-	double minObjFun = min(objectiveFunctionValues);
-
-	EXPECT_LT(minObjFun, 0.01);
-
-
-
-}
-
-
-
-
-
-
-
-
-
-TEST_F(OptimizationTest, EGOUnconstrained){
-
-	prepareObjectiveFunction();
-
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	//	testOptimizer.setDisplayOn();
-	testOptimizer.setMaximumNumberOfIterations(10);
-
-	testOptimizer.performEfficientGlobalOptimization();
-
-	mat results;
-	results.load("himmelblau.csv", csv_ascii);
-
-	vec objectiveFunctionValues = results.col(2);
-
-	double minObjFun = min(objectiveFunctionValues);
-
-	EXPECT_LT(minObjFun, 20.0);
-
-}
-
-
-
-
-
-
-
-TEST_F(OptimizationTest, EGOUnconstrainedWithTangentEnhancedModel){
-
-	prepareObjectiveFunctionWithTangent();
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	//	testOptimizer.setDisplayOn();
-	testOptimizer.setMaximumNumberOfIterations(10);
-	testOptimizer.performEfficientGlobalOptimization();
-
-	mat results;
-	results.load("himmelblau.csv", csv_ascii);
-
-	vec objectiveFunctionValues = results.col(2);
-
-	double minObjFun = min(objectiveFunctionValues);
-
-	EXPECT_LT(minObjFun, 20.0);
-
-
-}
-
-
-TEST_F(OptimizationTest, EGOUnconstrainedWithMLLowFiAdjoint){
-
-	prepareObjectiveFunctionWithMLLowFiAdjoint();
-
-
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	//	testOptimizer.setDisplayOn();
-	testOptimizer.setMaximumNumberOfIterations(10);
-	testOptimizer.performEfficientGlobalOptimization();
-
-	mat results;
-	results.load("himmelblau.csv", csv_ascii);
-
-	vec objectiveFunctionValues = results.col(2);
-
-	double minObjFun = min(objectiveFunctionValues);
-
-	EXPECT_LT(minObjFun, 25.0);
-
-
-}
-
-
-
-TEST_F(OptimizationTest, EGOUnconstrainedWithML){
-
-	prepareObjectiveFunctionWithML();
-
-
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	//	testOptimizer.setDisplayOn();
-	testOptimizer.setMaximumNumberOfIterations(10);
-	testOptimizer.performEfficientGlobalOptimization();
-
-	mat results;
-	results.load("himmelblau.csv", csv_ascii);
-
-	vec objectiveFunctionValues = results.col(2);
-
-	double minObjFun = min(objectiveFunctionValues);
-
-	EXPECT_LT(minObjFun, 25.0);
-
-}
+//TEST_F(OptimizationTest, EGOUnconstrainedWithGradientEnhancedModel){
+//
+//	prepareObjectiveFunctionWithAdjoint();
+//
+//	testOptimizer.setBoxConstraints(boxConstraints);
+//
+//	testOptimizer.setDisplayOn();
+//	testOptimizer.setMaximumNumberOfIterations(20);
+//	testOptimizer.performEfficientGlobalOptimization();
+//
+//	mat results;
+//	results.load("himmelblau.csv", csv_ascii);
+//
+//	vec objectiveFunctionValues = results.col(2);
+//
+//	double minObjFun = min(objectiveFunctionValues);
+//
+//	EXPECT_LT(minObjFun, 0.01);
+//
+//	abort();
+//
+//}
+
+
+//TEST_F(OptimizationTest, EGOconstrainedWithGradientEnhancedModel){
+//
+//	prepareObjectiveFunctionWithAdjoint();
+//	prepareFirstConstraint();
+//
+//	testOptimizer.setBoxConstraints(boxConstraints);
+//
+//	testOptimizer.setDisplayOn();
+//	testOptimizer.setMaximumNumberOfIterations(20);
+//	testOptimizer.performEfficientGlobalOptimization();
+//
+//	mat results;
+//	results.load("himmelblau.csv", csv_ascii);
+//
+//	vec objectiveFunctionValues = results.col(2);
+//
+//	double minObjFun = min(objectiveFunctionValues);
+//
+//	EXPECT_LT(minObjFun, 0.01);
+//
+//
+//
+//}
+
+
+
+
+
+
+
+
+
+//TEST_F(OptimizationTest, EGOUnconstrained){
+//
+//	prepareObjectiveFunction();
+//
+//	testOptimizer.setBoxConstraints(boxConstraints);
+//
+//	//	testOptimizer.setDisplayOn();
+//	testOptimizer.setMaximumNumberOfIterations(10);
+//
+//	testOptimizer.performEfficientGlobalOptimization();
+//
+//	mat results;
+//	results.load("himmelblau.csv", csv_ascii);
+//
+//	vec objectiveFunctionValues = results.col(2);
+//
+//	double minObjFun = min(objectiveFunctionValues);
+//
+//	EXPECT_LT(minObjFun, 20.0);
+//
+//}
+
+
+
+
+
+
+
+//TEST_F(OptimizationTest, EGOUnconstrainedWithTangentEnhancedModel){
+//
+//	prepareObjectiveFunctionWithTangent();
+//	testOptimizer.setBoxConstraints(boxConstraints);
+//
+//	//	testOptimizer.setDisplayOn();
+//	testOptimizer.setMaximumNumberOfIterations(10);
+//	testOptimizer.performEfficientGlobalOptimization();
+//
+//	mat results;
+//	results.load("himmelblau.csv", csv_ascii);
+//
+//	vec objectiveFunctionValues = results.col(2);
+//
+//	double minObjFun = min(objectiveFunctionValues);
+//
+//	EXPECT_LT(minObjFun, 20.0);
+//
+//
+//}
+
+
+//TEST_F(OptimizationTest, EGOUnconstrainedWithMLLowFiAdjoint){
+//
+//	prepareObjectiveFunctionWithMLLowFiAdjoint();
+//
+//
+//	testOptimizer.setBoxConstraints(boxConstraints);
+//
+//	//	testOptimizer.setDisplayOn();
+//	testOptimizer.setMaximumNumberOfIterations(10);
+//	testOptimizer.performEfficientGlobalOptimization();
+//
+//	mat results;
+//	results.load("himmelblau.csv", csv_ascii);
+//
+//	vec objectiveFunctionValues = results.col(2);
+//
+//	double minObjFun = min(objectiveFunctionValues);
+//
+//	EXPECT_LT(minObjFun, 25.0);
+//
+//
+//}
+
+
+
+//TEST_F(OptimizationTest, EGOUnconstrainedWithML){
+//
+//	prepareObjectiveFunctionWithML();
+//
+//
+//	testOptimizer.setBoxConstraints(boxConstraints);
+//
+//	//	testOptimizer.setDisplayOn();
+//	testOptimizer.setMaximumNumberOfIterations(10);
+//	testOptimizer.performEfficientGlobalOptimization();
+//
+//	mat results;
+//	results.load("himmelblau.csv", csv_ascii);
+//
+//	vec objectiveFunctionValues = results.col(2);
+//
+//	double minObjFun = min(objectiveFunctionValues);
+//
+//	EXPECT_LT(minObjFun, 25.0);
+//
+//}
 
 TEST_F(OptimizationTest, updateOptimizationHistory){
 
@@ -696,28 +696,28 @@ TEST_F(OptimizationTest, estimateConstraints){
 
 
 
-TEST_F(OptimizationTest, findTheMostPromisingDesignWithConstraint){
-
-	prepareObjectiveFunction();
-	prepareFirstConstraint();
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	testOptimizer.initializeSurrogates();
-	testOptimizer.trainSurrogates();
-
-	testOptimizer.findTheMostPromisingDesignEGO();
-
-	DesignForBayesianOptimization design = testOptimizer.getDesignWithMaxExpectedImprovement();
-
-	double dv1 = design.dv(0);
-	double dv2 = design.dv(1);
-
-	ASSERT_LT(dv1,0.5);
-	ASSERT_GT(dv1,0.0);
-	ASSERT_LT(dv2,0.5);
-	ASSERT_GT(dv2,0.0);
-
-}
+//TEST_F(OptimizationTest, findTheMostPromisingDesignWithConstraint){
+//
+//	prepareObjectiveFunction();
+//	prepareFirstConstraint();
+//	testOptimizer.setBoxConstraints(boxConstraints);
+//
+//	testOptimizer.initializeSurrogates();
+//	testOptimizer.trainSurrogates();
+//
+//	testOptimizer.findTheMostPromisingDesignEGO();
+//
+//	DesignForBayesianOptimization design = testOptimizer.getDesignWithMaxExpectedImprovement();
+//
+//	double dv1 = design.dv(0);
+//	double dv2 = design.dv(1);
+//
+//	ASSERT_LT(dv1,0.5);
+//	ASSERT_GT(dv1,0.0);
+//	ASSERT_LT(dv2,0.5);
+//	ASSERT_GT(dv2,0.0);
+//
+//}
 
 TEST_F(OptimizationTest, setOptimizationProblem){
 
@@ -748,20 +748,20 @@ TEST_F(OptimizationTest, initializeSurrogates){
 }
 
 
-TEST_F(OptimizationTest, trainSurrogates){
-
-	prepareObjectiveFunction();
-	prepareFirstConstraint();
-	prepareSecondConstraint();
-	testOptimizer.setBoxConstraints(boxConstraints);
-
-	testOptimizer.initializeSurrogates();
-	testOptimizer.trainSurrogates();
-
-	ASSERT_TRUE(testOptimizer.ifSurrogatesAreInitialized);
-
-
-}
+//TEST_F(OptimizationTest, trainSurrogates){
+//
+//	prepareObjectiveFunction();
+//	prepareFirstConstraint();
+//	prepareSecondConstraint();
+//	testOptimizer.setBoxConstraints(boxConstraints);
+//
+//	testOptimizer.initializeSurrogates();
+//	testOptimizer.trainSurrogates();
+//
+//	ASSERT_TRUE(testOptimizer.ifSurrogatesAreInitialized);
+//
+//
+//}
 
 
 

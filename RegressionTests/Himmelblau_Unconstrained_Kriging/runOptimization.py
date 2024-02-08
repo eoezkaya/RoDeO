@@ -5,9 +5,6 @@ import pandas as pd
 RODEO_HOME = "/home/eoezkaya/RoDeO"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
 configFilename = "himmelblau.cfg"
-# compile the code that evaluates the objective function
-os.system("g++ himmelblau.cpp -o himmelblau")
-
 
 NTrainingSamples = 50
 

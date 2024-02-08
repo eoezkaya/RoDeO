@@ -21,7 +21,7 @@ def print_result(value, target):
     else:
         print(f"{Fore.GREEN}Tess passed{Style.RESET_ALL}")
 
-
+    print("\n")
 
 def change_directory(new_path):
     try:
@@ -70,9 +70,17 @@ print("\n\n")
 # Create an array (list) of RegressionTest instances
 regression_tests = []
 
+
 # Add instances to the array
+regression_tests.append(RegressionTest("Gas Transmission Compressor Design","/Gas_transmission_compressor_design_Constrained_Kriging",
+                                         1,    
+                                         2971313.722654272, 
+                                         3271313.722654272,   
+                                         0.01))
+regression_tests.append(RegressionTest("Eggholder Unconstrained","/Eggholder_Unconstrained_Kriging",  5,    -959.64, -800,   0.01))
+regression_tests.append(RegressionTest("Rosenbrock Constrained","/Rosenbrock_Constrained_Kriging",  1,    0.0, 1.0,   10.0))
 regression_tests.append(RegressionTest("Wingweight Unconstrained","/Wingweight_Unconstrained_Kriging",  3,    100.0, 150.0,   0.01))
-regression_tests.append(RegressionTest("Himmelblau Unconstrained","/Himmelblau_Unconstrained_Kriging",  5,    0.0, 1.0,   10.0))
+regression_tests.append(RegressionTest("Himmelblau Unconstrained","/Himmelblau_Unconstrained_Kriging",  5,    0.0, 1.0,   100.0))
 regression_tests.append(RegressionTest("Alpine02 5D Uncostrained","/Alpine02_5D_Unconstrained_Kriging", 3, -174.617, -30, 0.005))
 
 #regression_tests.append(RegressionTest("/Himmelblau_Constrained_Kriging",20, 35.7))
@@ -85,7 +93,7 @@ for test in regression_tests:
     print("Test ID = ", testID)
     print("Problem name:", test.name)
     print("Number of Trials:", test.num_trials)
-    print("Exact optimal Value:", test.optimal_value)
+    print("Expected optimal Value:", test.optimal_value)
     
     
     DIR_TEST = DIR_REGRESSION_TEST + test.directory_name
@@ -113,7 +121,7 @@ for test in regression_tests:
     print("Difference = ", mean_score)
     mean_score = mean_score*test.scale_factor
     print("Mean score = ", mean_score)
-     print("\n")
+    print("\n")
     print_result(mean_value, test.target_value)
     
     total_mean_score += mean_score 

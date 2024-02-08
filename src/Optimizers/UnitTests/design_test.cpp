@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), Rheinland-Pfälzische Technische Universität
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), Rheinland-Pfälzische Technische Universität
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -43,7 +43,7 @@ protected:
 	void SetUp() override {
 		testDesign.setDimension(2);
 		rowvec dv(2);
-		dv(0) = 1.0; dv(1) = -1.0;
+		dv(0) = 1.2; dv(1) = -1.777;
 		testDesign.designParameters = dv;
 
 	}
@@ -121,8 +121,8 @@ TEST_F(DesignTest, constructSampleObjectiveFunction){
 	rowvec samples = testDesign.constructSampleObjectiveFunction();
 
 	ASSERT_EQ(samples.size(), 3);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 8.9);
 
 }
@@ -133,8 +133,8 @@ TEST_F(DesignTest, constructSampleObjectiveFunctionLowFi){
 	rowvec samples = testDesign.constructSampleObjectiveFunctionLowFi();
 
 	ASSERT_EQ(samples.size(), 3);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 8.9);
 
 
@@ -154,8 +154,8 @@ TEST_F(DesignTest, constructSampleObjectiveFunctionTangent){
 	rowvec samples = testDesign.constructSampleObjectiveFunctionWithTangent();
 
 	ASSERT_EQ(samples.size(), 6);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 8.9);
 	ASSERT_EQ(samples(3), 12.8);
 	ASSERT_EQ(samples(4), 1.0);
@@ -175,8 +175,8 @@ TEST_F(DesignTest, constructSampleObjectiveFunctionTangentLowFi){
 	rowvec samples = testDesign.constructSampleObjectiveFunctionWithTangentLowFi();
 
 	ASSERT_EQ(samples.size(), 6);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 8.9);
 	ASSERT_EQ(samples(3), 12.8);
 	ASSERT_EQ(samples(4), 1.0);
@@ -196,8 +196,8 @@ TEST_F(DesignTest, constructSampleObjectiveFunctionGradient){
 	rowvec samples = testDesign.constructSampleObjectiveFunctionWithGradient();
 
 	ASSERT_EQ(samples.size(), 5);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 8.9);
 	ASSERT_EQ(samples(3), 11.0);
 	ASSERT_EQ(samples(4), 6.0);
@@ -214,8 +214,8 @@ TEST_F(DesignTest, constructSampleObjectiveFunctionGradientLowFi){
 	rowvec samples = testDesign.constructSampleObjectiveFunctionWithGradientLowFi();
 
 	ASSERT_EQ(samples.size(), 5);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 8.9);
 	ASSERT_EQ(samples(3), 11.0);
 	ASSERT_EQ(samples(4), 6.0);
@@ -232,8 +232,8 @@ TEST_F(DesignTest, constructSampleConstraint){
 	rowvec samples = testDesign.constructSampleConstraint(0);
 
 	ASSERT_EQ(samples.size(), 3);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 2.2);
 
 	samples = testDesign.constructSampleConstraint(1);
@@ -251,8 +251,8 @@ TEST_F(DesignTest, constructSampleConstraintLowFi){
 	rowvec samples = testDesign.constructSampleConstraintLowFi(0);
 
 	ASSERT_EQ(samples.size(), 3);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 2.2);
 
 
@@ -274,8 +274,8 @@ TEST_F(DesignTest, constructSampleConstraintTangent){
 	rowvec samples = testDesign.constructSampleConstraintWithTangent(0);
 
 	ASSERT_EQ(samples.size(), 6);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 2.2);
 	ASSERT_EQ(samples(3), 4.42);
 	ASSERT_EQ(samples(4), 1.0);
@@ -297,8 +297,8 @@ TEST_F(DesignTest, constructSampleConstraintTangentLowFi){
 	rowvec samples = testDesign.constructSampleConstraintWithTangentLowFi(0);
 
 	ASSERT_EQ(samples.size(), 6);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 2.2);
 	ASSERT_EQ(samples(3), 4.42);
 	ASSERT_EQ(samples(4), 1.0);
@@ -320,8 +320,8 @@ TEST_F(DesignTest, constructSampleConstraintAdjoint){
 	rowvec samples = testDesign.constructSampleConstraintWithGradient(0);
 
 	ASSERT_EQ(samples.size(), 5);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 2.2);
 	ASSERT_EQ(samples(3), 51.2);
 	ASSERT_EQ(samples(4), -20.0);
@@ -341,8 +341,8 @@ TEST_F(DesignTest, constructSampleConstraintAdjointLowFi){
 	rowvec samples = testDesign.constructSampleConstraintWithGradientLowFi(0);
 
 	ASSERT_EQ(samples.size(), 5);
-	ASSERT_EQ(samples(0), 1.0);
-	ASSERT_EQ(samples(1),-1.0);
+	ASSERT_EQ(samples(0), 1.2);
+	ASSERT_EQ(samples(1),-1.777);
 	ASSERT_EQ(samples(2), 2.2);
 	ASSERT_EQ(samples(3), 51.2);
 	ASSERT_EQ(samples(4), -20.0);
@@ -366,6 +366,48 @@ TEST_F(DesignTest, saveToAFile){
 	remove("testDesign.dat");
 
 }
+
+TEST_F(DesignTest, saveToAnXMLFile){
+
+	testDesign.trueValue = 1.22;
+	testDesign.tag = "Global Optimum Design";
+	testDesign.ID = 22;
+	testDesign.numberOfConstraints = 2;
+	rowvec constraints(2);
+	constraints(0) = 1.3; constraints(1) = 0.12;
+	testDesign.constraintTrueValues = constraints;
+
+	testDesign.saveToXMLFile("testDesign.xml");
+
+	remove("testDesign.xml");
+
+}
+
+TEST_F(DesignTest, readFromXmlFile){
+
+	testDesign.trueValue = 1.22;
+	testDesign.tag = "Global Optimum Design";
+	testDesign.ID = 22;
+	testDesign.numberOfConstraints = 2;
+	rowvec constraints(2);
+	constraints(0) = 1.3; constraints(1) = 0.12;
+	testDesign.constraintTrueValues = constraints;
+
+	testDesign.saveToXMLFile("testDesign.xml");
+
+	testDesign.reset();
+	testDesign.readFromXmlFile("testDesign.xml");
+
+	testDesign.print();
+
+	ASSERT_EQ(testDesign.ID, 22);
+
+
+	remove("testDesign.xml");
+
+}
+
+
 
 class DesignForBayesianOptimizationTest: public ::testing::Test {
 protected:

@@ -491,13 +491,15 @@ void Optimizer::computeConstraintsandPenaltyTerm(Design &d) {
 			d.isDesignFeasible = false;
 
 		}
+		else{
+
+			output.printMessage("The new sample satisfies all the constraints");
+			d.isDesignFeasible = true;
+		}
 
 		output.printMessage("Evaluation of the constraints is ready...");
 	}
-	else{
 
-		d.isDesignFeasible = true;
-	}
 }
 
 void Optimizer::addConstraintValuesToData(Design &d){
@@ -1637,7 +1639,10 @@ void Optimizer::performEfficientGlobalOptimization(void){
 			break;
 		}
 
-		objFun.removeVeryCloseSamples(globalOptimalDesign);
+		if(doesObjectiveFunctionHaveGradients()){
+			objFun.removeVeryCloseSamples(globalOptimalDesign);
+		}
+
 
 
 	} /* end of the optimization loop */
