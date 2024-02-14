@@ -183,7 +183,7 @@ void Optimizer::setBoxConstraints(Bounds boxConstraints){
 
 	}
 
-
+	globalOptimalDesign.setBoxConstraints(boxConstraints);
 	ifBoxConstraintsSet = true;
 }
 
@@ -425,6 +425,8 @@ void Optimizer::updateOptimizationHistory(Design d) {
 
 	findTheGlobalOptimalDesign();
 
+
+
 }
 
 
@@ -523,93 +525,16 @@ void Optimizer::checkIfSettingsAreOK(void) const{
 }
 
 
-
 void Optimizer::findTheGlobalOptimalDesign(void){
 
 	assert(optimizationHistory.n_rows > 0);
 	assert(ifBoxConstraintsSet);
 
-	unsigned int indexLastCol = optimizationHistory.n_cols -1;
-
-	bool isFeasibleDesignFound = false;
-	double bestObjectiveFunctionValue = LARGE;
-	unsigned int bestIndex;
-
-	for(unsigned int i=0; i<optimizationHistory.n_rows; i++){
-
-		double feasibility = optimizationHistory(i,indexLastCol);
-		double objectiveFunctionValue = optimizationHistory(i,dimension);
-
-		if(feasibility>0.0 && objectiveFunctionValue < bestObjectiveFunctionValue){
-			isFeasibleDesignFound = true;
-			bestObjectiveFunctionValue = objectiveFunctionValue;
-			bestIndex = i;
-		}
-
-	}
-
-	rowvec bestSample;
-	if(isFeasibleDesignFound){
-
-		bestSample = optimizationHistory.row(bestIndex);
-
-		globalOptimalDesign.isDesignFeasible = true;
-		globalOptimalDesign.ID = bestIndex;
-	}
-
-	else{
-
-		vec objectiveFunctionValues = optimizationHistory.col(dimension);
-
-		uword indexMin = index_min(objectiveFunctionValues);
-		bestSample = optimizationHistory.row(indexMin);
-
-		globalOptimalDesign.isDesignFeasible = false;
-		globalOptimalDesign.ID = indexMin;
-	}
-
-	rowvec dv = bestSample.head(dimension);
-
-	globalOptimalDesign.tag = "Global optimum design";
-	globalOptimalDesign.designParameters  = dv;
-	globalOptimalDesign.trueValue = bestSample(dimension);
-	globalOptimalDesign.improvementValue = bestSample(optimizationHistory.n_cols-2);
-
-	rowvec constraintValues(numberOfConstraints);
-	for(unsigned int i=0; i<numberOfConstraints; i++){
-
-		constraintValues(i) = bestSample(i+dimension+1);
-	}
-
-	globalOptimalDesign.constraintTrueValues = constraintValues;
-
-	rowvec dvNormalized = normalizeVector(dv,lowerBounds,upperBounds);
-	globalOptimalDesign.designParametersNormalized = dvNormalized;
-
-	output.printDesign(globalOptimalDesign);
-
-	globalOptimalDesign.saveToAFile(globalOptimumDesignFileName);
+	globalOptimalDesign.setGlobalOptimalDesignFromHistoryFile(optimizationHistory);
+	globalOptimalDesign.saveToXMLFile();
 
 }
 
-
-
-bool Optimizer::checkIfGlobalOptimaHasGradientVector(void) const{
-
-	if(globalOptimalDesign.gradient.empty()) {
-		return false;
-	}
-	else{
-
-		if(globalOptimalDesign.gradient.is_zero()){
-			return false;
-		}
-		else{
-			return true;
-		}
-	}
-
-}
 
 void Optimizer::changeSettingsForAGradientBasedStep(void){
 
@@ -629,42 +554,6 @@ void Optimizer::changeSettingsForAGradientBasedStep(void){
 	trimVectorSoThatItStaysWithinTheBounds(lowerBoundsForAcqusitionFunctionMaximizationGradientStep);
 	trimVectorSoThatItStaysWithinTheBounds(upperBoundsForAcqusitionFunctionMaximizationGradientStep);
 
-
-}
-
-void Optimizer::setGradientGlobalOptimum(void){
-
-
-	string fileNameObjectiveFunctionTrainingData = objFun.getFileNameTrainingData();
-	assert(isNotEmpty(fileNameObjectiveFunctionTrainingData));
-
-
-	mat trainingDataToSearch;
-	trainingDataToSearch.load(fileNameObjectiveFunctionTrainingData, csv_ascii);
-
-	assert(dimension>0);
-	mat trainingDataInput = trainingDataToSearch.submat(0,0,trainingDataToSearch.n_rows-1,dimension-1);
-
-
-	rowvec x = globalOptimalDesign.designParameters;
-
-	int indexOfTheGlobalOptimalDesignInTrainingData = findIndexOfRow(x, trainingDataInput,10E-06);
-
-	if(indexOfTheGlobalOptimalDesignInTrainingData  == -1){
-
-		cout<<"ERROR: Could not found the row in training data!\n";
-		x.print("x");
-		trainingDataInput.print("trainingDataInput");
-		abort();
-	}
-
-	assert(indexOfTheGlobalOptimalDesignInTrainingData  != -1);
-	assert(indexOfTheGlobalOptimalDesignInTrainingData < int(trainingDataToSearch.size()));
-
-	rowvec temp = trainingDataToSearch.row(indexOfTheGlobalOptimalDesignInTrainingData);
-	rowvec gradient = temp.tail(dimension);
-
-	globalOptimalDesign.gradient = gradient;
 
 }
 
@@ -847,9 +736,11 @@ void Optimizer::decideIfNextStepWouldBeAGradientStep() {
 
 void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
-	setGradientGlobalOptimum();
+	globalOptimalDesign.setGradientGlobalOptimumFromTrainingData(objFun.getFileNameTrainingData());
 
-	bool ifGradientVectorExists = checkIfGlobalOptimaHasGradientVector();
+	globalOptimalDesign.setGradientGlobalOptimumFromTrainingData(objFun.getFileNameTrainingData());
+
+	bool ifGradientVectorExists = globalOptimalDesign.checkIfGlobalOptimaHasGradientVector();
 
 	if(!ifGradientVectorExists){
 		WillGradientStepBePerformed = false;
@@ -1521,9 +1412,9 @@ void Optimizer::decideIfAGradientStepShouldBeTakenForTheFirstIteration() {
 	findTheGlobalOptimalDesign();
 
 	if (doesObjectiveFunctionHaveGradients()) {
-		setGradientGlobalOptimum();
+		globalOptimalDesign.setGradientGlobalOptimumFromTrainingData(objFun.getFileNameTrainingData());
 
-		if (checkIfGlobalOptimaHasGradientVector()) {
+		if (globalOptimalDesign.checkIfGlobalOptimaHasGradientVector()) {
 			WillGradientStepBePerformed = true;
 		}
 	}

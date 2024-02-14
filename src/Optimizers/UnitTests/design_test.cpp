@@ -367,45 +367,45 @@ TEST_F(DesignTest, saveToAFile){
 
 }
 
-TEST_F(DesignTest, saveToAnXMLFile){
-
-	testDesign.trueValue = 1.22;
-	testDesign.tag = "Global Optimum Design";
-	testDesign.ID = 22;
-	testDesign.numberOfConstraints = 2;
-	rowvec constraints(2);
-	constraints(0) = 1.3; constraints(1) = 0.12;
-	testDesign.constraintTrueValues = constraints;
-
-	testDesign.saveToXMLFile("testDesign.xml");
-
-	remove("testDesign.xml");
-
-}
-
-TEST_F(DesignTest, readFromXmlFile){
-
-	testDesign.trueValue = 1.22;
-	testDesign.tag = "Global Optimum Design";
-	testDesign.ID = 22;
-	testDesign.numberOfConstraints = 2;
-	rowvec constraints(2);
-	constraints(0) = 1.3; constraints(1) = 0.12;
-	testDesign.constraintTrueValues = constraints;
-
-	testDesign.saveToXMLFile("testDesign.xml");
-
-	testDesign.reset();
-	testDesign.readFromXmlFile("testDesign.xml");
-
-	testDesign.print();
-
-	ASSERT_EQ(testDesign.ID, 22);
-
-
-	remove("testDesign.xml");
-
-}
+//TEST_F(DesignTest, saveToAnXMLFile){
+//
+//	testDesign.trueValue = 1.22;
+//	testDesign.tag = "Global Optimum Design";
+//	testDesign.ID = 22;
+//	testDesign.numberOfConstraints = 2;
+//	rowvec constraints(2);
+//	constraints(0) = 1.3; constraints(1) = 0.12;
+//	testDesign.constraintTrueValues = constraints;
+//
+//	testDesign.saveToXMLFile("testDesign.xml");
+//
+//	remove("testDesign.xml");
+//
+//}
+//
+//TEST_F(DesignTest, readFromXmlFile){
+//
+//	testDesign.trueValue = 1.22;
+//	testDesign.tag = "Global Optimum Design";
+//	testDesign.ID = 22;
+//	testDesign.numberOfConstraints = 2;
+//	rowvec constraints(2);
+//	constraints(0) = 1.3; constraints(1) = 0.12;
+//	testDesign.constraintTrueValues = constraints;
+//
+//	testDesign.saveToXMLFile("testDesign.xml");
+//
+//	testDesign.reset();
+//	testDesign.readFromXmlFile("testDesign.xml");
+//
+//	testDesign.print();
+//
+//	ASSERT_EQ(testDesign.ID, 22);
+//
+//
+//	remove("testDesign.xml");
+//
+//}
 
 
 

@@ -1,4 +1,4 @@
-set(src_files design.cpp ea_optimizer.cpp general_purpose_optimizer.cpp gradient_optimizer.cpp optimization.cpp)
+set(src_files design.cpp ea_optimizer.cpp general_purpose_optimizer.cpp gradient_optimizer.cpp optimization.cpp globalOptimalDesign.cpp)
 add_library(optimizers ${src_files})
 
 find_package(OpenMP)
@@ -18,6 +18,7 @@ else()
 endif(ASSERTS)
 
 target_link_libraries(optimizers linearAlgebra)
+target_link_libraries(optimizers   auxiliary)
 
 get_target_property(MAIN_CFLAGS optimizers COMPILE_OPTIONS)
 

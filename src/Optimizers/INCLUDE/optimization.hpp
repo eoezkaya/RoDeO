@@ -37,6 +37,7 @@
 #include "../../ObjectiveFunctions/INCLUDE/objective_function.hpp"
 #include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
 #include "../../Random/INCLUDE/random_functions.hpp"
+#include "../INCLUDE/globalOptimalDesign.hpp"
 
 #ifdef UNIT_TESTS
 #include<gtest/gtest.h>
@@ -88,6 +89,7 @@ private:
 
 	const std::string optimizationHistoryFileName = "optimizationHistory.csv";
 	const std::string globalOptimumDesignFileName = "globalOptimumDesign";
+	const std::string currentDesignFileName = "currentDesign";
 
 	mat optimizationHistory;
 
@@ -110,7 +112,10 @@ private:
 	double trustRegionFactorGradientStep = 1.0;
 	bool WillGradientStepBePerformed = false;
 
-	Design globalOptimalDesign;
+//	Design globalOptimalDesign;
+
+	GlobalOptimalDesign globalOptimalDesign;
+
 	Design currentBestDesign;
 
 
@@ -184,8 +189,7 @@ private:
 	void changeSettingsForAGradientBasedStep(void);
 	void findTheMostPromisingDesignGradientStep(void);
 
-	bool checkIfGlobalOptimaHasGradientVector(void) const;
-	void setGradientGlobalOptimum(void);
+
 	void setDataAddModeForGradientBasedStep(const Design &currentBestDesign);
 	void findTheMostPromisingDesignToBeSimulated();
 	void initializeCurrentBestDesign(void);

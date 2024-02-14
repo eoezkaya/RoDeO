@@ -1,5 +1,5 @@
 if(UNIT_TESTS)
-	set(src_files auxiliary_functions_test.cpp string_functions_test.cpp)
+	set(src_files auxiliary_functions_test.cpp string_functions_test.cpp xml_functions_test.cpp)
 	add_executable(runTestsAuxiliary runTests.cpp ${src_files})
 	find_package(Armadillo REQUIRED)
 	include_directories(${ARMADILLO_INCLUDE_DIRS})

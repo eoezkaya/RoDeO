@@ -139,8 +139,9 @@ public:
 	void print(void) const;
 
 	void saveToAFile(std::string) const;
-	void saveToXMLFile(std::string) const;
-	void readFromXmlFile(const std::string& filename);
+
+//	void saveToXMLFile(std::string) const;
+//	void readFromXmlFile(const std::string& filename);
 
 
 
@@ -180,16 +181,16 @@ public:
 
 
 private:
-	template <typename T>
-	void writeXmlElement(std::ofstream& file, const std::string& elementName, const T& value) const;
-
-	template <typename T>
-	void writeXmlElementVector(std::ofstream& file, const std::string& elementName, const T& value) const;
-
-	template <typename T>
-	void readVectorFromXmlFile(std::istringstream& iss, T& vec);
-
-	void trim(std::string& str);
+//	template <typename T>
+//	void writeXmlElement(std::ofstream& file, const std::string& elementName, const T& value) const;
+//
+//	template <typename T>
+//	void writeXmlElementVector(std::ofstream& file, const std::string& elementName, const T& value) const;
+//
+//	template <typename T>
+//	void readVectorFromXmlFile(std::istringstream& iss, T& vec);
+//
+//	void trim(std::string& str);
 
 };
 

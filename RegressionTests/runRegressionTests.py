@@ -8,6 +8,24 @@ import colorama
 from colorama import Fore, Style
 
 
+import xml.etree.ElementTree as ET
+
+def read_objective_function(xml_file_path):
+    # Parse the XML file
+    tree = ET.parse(xml_file_path)
+    root = tree.getroot()
+
+    # Find the "ObjectiveFunction" element and extract its text content
+    objective_function_element = root.find('ObjectiveFunction')
+    
+    if objective_function_element is not None:
+        objective_function_value = float(objective_function_element.text)
+        return objective_function_value
+    else:
+        # Handle the case where the "ObjectiveFunction" element is not found
+        raise ValueError('ObjectiveFunction element not found in the XML file.')
+
+
 def print_result(value, target):
     """
     Print "failed" in red if the value is less than the target, otherwise print "pass" in green.
@@ -36,29 +54,6 @@ def change_directory(new_path):
         
 import re
 
-def read_objective_function(file_path):
-    try:
-        with open(file_path, 'r') as file:
-            file_content = file.read()
-
-            # Use regular expression to find the objective function value
-            match = re.search(r'Objective function = ([-+]?[0-9]*\.?[0-9]+)', file_content)
-
-            if match:
-                objective_function_value = float(match.group(1))
-                return objective_function_value
-            else:
-                print("Objective function not found in the file.")
-                return None
-
-    except FileNotFoundError:
-        print(f"File not found: {file_path}")
-        return None
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        return None
-
-
 
 
 RODEO_HOME = "/home/eoezkaya/RoDeO"
@@ -76,10 +71,25 @@ regression_tests.append(RegressionTest("Gas Transmission Compressor Design","/Ga
                                          1,    
                                          2971313.722654272, 
                                          3271313.722654272,   
+                                         0.0001))
+regression_tests.append(RegressionTest("Eggholder Unconstrained",
+                                       "/Eggholder_Unconstrained_Kriging",  
+                                       5,    
+                                       -959.64, 
+                                       -800,   
+                                       0.01))
+regression_tests.append(RegressionTest("Rosenbrock Constrained",
+                                       "/Rosenbrock_Constrained_Kriging",
+                                         1,    
+                                         0.0, 
+                                         1.0,   
+                                         10.0))
+regression_tests.append(RegressionTest("Wingweight Unconstrained",
+                                       "/Wingweight_Unconstrained_Kriging",
+                                         3,
+                                         100.0,
+                                         150.0,
                                          0.01))
-regression_tests.append(RegressionTest("Eggholder Unconstrained","/Eggholder_Unconstrained_Kriging",  5,    -959.64, -800,   0.01))
-regression_tests.append(RegressionTest("Rosenbrock Constrained","/Rosenbrock_Constrained_Kriging",  1,    0.0, 1.0,   10.0))
-regression_tests.append(RegressionTest("Wingweight Unconstrained","/Wingweight_Unconstrained_Kriging",  3,    100.0, 150.0,   0.01))
 regression_tests.append(RegressionTest("Himmelblau Unconstrained","/Himmelblau_Unconstrained_Kriging",  5,    0.0, 1.0,   100.0))
 regression_tests.append(RegressionTest("Alpine02 5D Uncostrained","/Alpine02_5D_Unconstrained_Kriging", 3, -174.617, -30, 0.005))
 

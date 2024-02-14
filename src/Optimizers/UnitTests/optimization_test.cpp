@@ -313,22 +313,7 @@ TEST_F(OptimizationTest, doesObjectiveFunctionHaveGradients){
 
 }
 
-TEST_F(OptimizationTest, setGradientGlobalOptimum){
 
-	prepareObjectiveFunctionWithAdjoint();
-
-	testOptimizer.setBoxConstraints(boxConstraints);
-	testOptimizer.initializeSurrogates();
-	testOptimizer.clearOptimizationHistoryFile();
-	testOptimizer.prepareOptimizationHistoryFile();
-
-	testOptimizer.setOptimizationHistory();
-
-	testOptimizer.setGradientGlobalOptimum();
-
-	ASSERT_TRUE(testOptimizer.globalOptimalDesign.gradient.size() > 0);
-
-}
 
 
 
@@ -343,7 +328,7 @@ TEST_F(OptimizationTest, changeSettingsForAGradientBasedStep){
 
 	testOptimizer.setOptimizationHistory();
 
-	testOptimizer.setGradientGlobalOptimum();
+
 	testOptimizer.changeSettingsForAGradientBasedStep();
 
 	ASSERT_TRUE(testOptimizer.lowerBoundsForAcqusitionFunctionMaximizationGradientStep.size() == 2);

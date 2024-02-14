@@ -39,10 +39,8 @@
 
 
 
-#define ARMA_DONT_PRINT_ERRORS
+
 #include <armadillo>
-
-
 using namespace arma;
 
 
@@ -366,9 +364,11 @@ void Design::reset(void){
 
 void Design::print(void) const{
 
+
 	std::cout<< "\n***************** " << tag << " *****************\n";
 	std::cout<<"Design parameters = \n";
 	designParameters.print();
+
 	std::cout<<"Function value = "<<trueValue<<"\n";
 
 	if(fabs(trueValueLowFidelity) > 0.0 ){
@@ -424,7 +424,8 @@ void Design::saveToAFile(std::string filename) const{
 	fileOut << tag<<"\n";
 	fileOut << "Design parameters vector:\n";
 	fileOut << designParameters;
-	fileOut << "Objective function = " << trueValue << "\n";
+
+	fileOut << std::fixed << "Objective function = " << trueValue << "\n";
 
 	if(numberOfConstraints>0){
 
@@ -443,117 +444,119 @@ void Design::saveToAFile(std::string filename) const{
 	fileOut.close();
 
 }
-
-
-void Design::saveToXMLFile(std::string filename) const{
-
-	assert(isNotEmpty(filename));
-	std::ofstream file(filename);
-	if (!file.is_open()) {
-		std::cerr << "Error opening file: " << filename << std::endl;
-		return;
-	}
-	file << "<Design>" << std::endl;
-	writeXmlElement(file, "DesignID", ID);
-	writeXmlElement(file, "ObjectiveFunction", trueValue);
-	writeXmlElementVector(file, "DesignParameters", designParameters);
-	writeXmlElementVector(file, "ConstraintValues", constraintTrueValues);
-	if(isDesignFeasible){
-		writeXmlElement(file, "Feasibility", "YES");
-	}
-	else{
-		writeXmlElement(file, "Feasibility", "NO");
-	}
-
-	file << "</Design>" << std::endl;
-	file.close();
-}
-
-
-void Design::readFromXmlFile(const std::string& filename) {
-	std::ifstream file(filename);
-	if (!file.is_open()) {
-		std::cerr << "Error opening file: " << filename << std::endl;
-		return;
-	}
-
-	std::string line;
-	std::string tag;
-	std::string content;
-
-	while (std::getline(file, line)) {
-		std::istringstream iss(line);
-		if (std::getline(iss, tag, '>') && std::getline(iss, content, '<')) {
-			trim(tag);
-			trim(content);
-
-			if (tag == "DesignID") {
-				ID = std::stoi(content);
-			} else if (tag == "ObjectiveFunction") {
-				surrogateEstimate = std::stod(content);
-			} else if (tag == "DesignParameters") {
-				readVectorFromXmlFile(iss, designParameters);
-			} else if (tag == "ConstraintValues") {
-				readVectorFromXmlFile(iss, constraintSurrogateEstimates);
-			} else if (tag == "Feasibility") {
-				isDesignFeasible = (content == "YES");
-			}
-		}
-	}
-
-	file.close();
-}
-
-
-
-void Design::trim(std::string& str) {
-	size_t first = str.find_first_not_of(' ');
-	size_t last = str.find_last_not_of(' ');
-	str = str.substr(first, (last - first + 1));
-}
-
-// Helper function to read a vector from XML
-template <typename T>
-void Design::readVectorFromXmlFile(std::istringstream& iss, T& vec) {
-	std::string line;
-	int cnt = 0;
-	while (std::getline(iss, line)) {
-		trim(line);
-		if (line == "</Item>") {
-			break;
-		}
-		if (!line.empty()) {
-			vec(cnt)= std::stod(line);
-			cnt++;
-		}
-	}
-}
-
-template void Design::readVectorFromXmlFile(std::istringstream& iss, rowvec& vec);
-
-
-
-template <typename T>
-void Design::writeXmlElement(std::ofstream& file, const std::string& elementName, const T& value) const {
-	file << "\t<" << elementName << ">" << value << "</" << elementName << ">" << std::endl;
-}
-
-template <typename T>
-void Design::writeXmlElementVector(std::ofstream& file, const std::string& elementName, const T& values) const {
-	file << "\t<" << elementName << ">" << std::endl;
-	for (unsigned int i=0; i<values.size(); i++) {
-		double val = values(i);
-		file << "\t\t<Item>" << val << "</Item>" << std::endl;
-	}
-	file << "\t</" << elementName << ">" << std::endl;
-}
-
-
-
-template void Design::writeXmlElementVector(std::ofstream& file, const std::string& elementName, const rowvec& values) const;
-template void Design::writeXmlElement(std::ofstream& file, const std::string& elementName, const unsigned int& value) const;
-template void Design::writeXmlElement(std::ofstream& file, const std::string& elementName, const double& value) const;
-template void Design::writeXmlElement(std::ofstream& file, const std::string& elementName, const string& value) const;
+//
+//
+//void Design::saveToXMLFile(std::string filename) const{
+//
+//	assert(isNotEmpty(filename));
+//	std::ofstream file(filename);
+//	if (!file.is_open()) {
+//		std::cerr << "Error opening file: " << filename << std::endl;
+//		return;
+//	}
+//	file << "<Design>" << std::endl;
+//	writeXmlElement(file, "DesignID", ID);
+//	writeXmlElement(file, "ObjectiveFunction", trueValue);
+//	writeXmlElementVector(file, "DesignParameters", designParameters);
+//	writeXmlElementVector(file, "ConstraintValues", constraintTrueValues);
+//	if(isDesignFeasible){
+//		writeXmlElement(file, "Feasibility", "YES");
+//	}
+//	else{
+//		writeXmlElement(file, "Feasibility", "NO");
+//	}
+//
+//	file << "</Design>" << std::endl;
+//	file.close();
+//}
+//
+//
+//void Design::readFromXmlFile(const std::string& filename) {
+//
+//	assert(isNotEmpty(filename));
+//	std::ifstream file(filename);
+//	if (!file.is_open()) {
+//		std::cerr << "Error opening file: " << filename << std::endl;
+//		return;
+//	}
+//
+//	std::string line;
+//	std::string tag;
+//	std::string content;
+//
+//	while (std::getline(file, line)) {
+//		std::istringstream iss(line);
+//		if (std::getline(iss, tag, '>') && std::getline(iss, content, '<')) {
+//			trim(tag);
+//			trim(content);
+//
+//			if (tag == "DesignID") {
+//				ID = std::stoi(content);
+//			} else if (tag == "ObjectiveFunction") {
+//				surrogateEstimate = std::stod(content);
+//			} else if (tag == "DesignParameters") {
+//				readVectorFromXmlFile(iss, designParameters);
+//			} else if (tag == "ConstraintValues") {
+//				readVectorFromXmlFile(iss, constraintSurrogateEstimates);
+//			} else if (tag == "Feasibility") {
+//				isDesignFeasible = (content == "YES");
+//			}
+//		}
+//	}
+//
+//	file.close();
+//}
+//
+//
+//
+//void Design::trim(std::string& str) {
+//	size_t first = str.find_first_not_of(' ');
+//	size_t last = str.find_last_not_of(' ');
+//	str = str.substr(first, (last - first + 1));
+//}
+//
+//// Helper function to read a vector from XML
+//template <typename T>
+//void Design::readVectorFromXmlFile(std::istringstream& iss, T& vec) {
+//	std::string line;
+//	int cnt = 0;
+//	while (std::getline(iss, line)) {
+//		trim(line);
+//		if (line == "</Item>") {
+//			break;
+//		}
+//		if (!line.empty()) {
+//			vec(cnt)= std::stod(line);
+//			cnt++;
+//		}
+//	}
+//}
+//
+//template void Design::readVectorFromXmlFile(std::istringstream& iss, rowvec& vec);
+//
+//
+//
+//template <typename T>
+//void Design::writeXmlElement(std::ofstream& file, const std::string& elementName, const T& value) const {
+//	file << "\t<" << elementName << ">" << value << "</" << elementName << ">" << std::endl;
+//}
+//
+//template <typename T>
+//void Design::writeXmlElementVector(std::ofstream& file, const std::string& elementName, const T& values) const {
+//	file << "\t<" << elementName << ">" << std::endl;
+//	for (unsigned int i=0; i<values.size(); i++) {
+//		double val = values(i);
+//		file << "\t\t<Item>" << val << "</Item>" << std::endl;
+//	}
+//	file << "\t</" << elementName << ">" << std::endl;
+//}
+//
+//
+//
+//template void Design::writeXmlElementVector(std::ofstream& file, const std::string& elementName, const rowvec& values) const;
+//template void Design::writeXmlElement(std::ofstream& file, const std::string& elementName, const unsigned int& value) const;
+//template void Design::writeXmlElement(std::ofstream& file, const std::string& elementName, const double& value) const;
+//template void Design::writeXmlElement(std::ofstream& file, const std::string& elementName, const string& value) const;
 
 void Design::saveDesignVectorAsCSVFile(std::string fileName) const{
 
