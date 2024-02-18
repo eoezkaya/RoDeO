@@ -198,6 +198,9 @@ public:
 	std::string getFileNameDesignVector(void) const;
 	std::string getFileNameTrainingData(void) const;
 
+	mat getTrainingData(void) const;
+	std::string getName(void) const;
+
 
 	void setFeasibleMinimum(double value);
 

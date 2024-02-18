@@ -340,7 +340,17 @@ std::string ObjectiveFunction::getFileNameTrainingData(void) const{
 	return definition.nameHighFidelityTrainingData;
 }
 
+mat ObjectiveFunction::getTrainingData(void) const{
 
+	assert(ifSurrogateModelIsDefined);
+	return surrogate->getRawData();
+
+}
+
+std::string ObjectiveFunction::getName(void) const{
+	assert(ifDefinitionIsSet);
+	return definition.name;
+}
 
 void ObjectiveFunction::setExecutablePath(std::string path){
 

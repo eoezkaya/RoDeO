@@ -389,48 +389,6 @@ void Optimizer::trainSurrogates(void){
 }
 
 
-
-
-void Optimizer::updateOptimizationHistory(Design d) {
-
-	rowvec newSample(sampleDim+2);
-
-	for(unsigned int i=0; i<dimension; i++) {
-		newSample(i) = d.designParameters(i);
-	}
-
-	newSample(dimension) = d.trueValue;
-
-	for(unsigned int i=0; i<numberOfConstraints; i++){
-		newSample(i+dimension+1) = 	d.constraintTrueValues(i);
-	}
-
-	newSample(sampleDim)   = d.improvementValue;
-
-	if(d.isDesignFeasible){
-		newSample(sampleDim+1) = 1.0;
-	}
-	else{
-		newSample(sampleDim+1) = 0.0;
-	}
-
-	optimizationHistory.insert_rows( optimizationHistory.n_rows, newSample );
-	appendRowVectorToCSVData(newSample,"optimizationHistory.csv");
-
-#if 0
-	printf("optimizationHistory:\n");
-	optimizationHistory.print();
-
-#endif
-
-	findTheGlobalOptimalDesign();
-
-
-
-}
-
-
-
 void Optimizer::addPenaltyToAcqusitionFunctionForConstraints(DesignForBayesianOptimization &designCalculated) const{
 
 	if(isConstrained()){
@@ -527,10 +485,11 @@ void Optimizer::checkIfSettingsAreOK(void) const{
 
 void Optimizer::findTheGlobalOptimalDesign(void){
 
-	assert(optimizationHistory.n_rows > 0);
 	assert(ifBoxConstraintsSet);
 
-	globalOptimalDesign.setGlobalOptimalDesignFromHistoryFile(optimizationHistory);
+	mat historyData = history.getData();
+
+	globalOptimalDesign.setGlobalOptimalDesignFromHistoryFile(historyData);
 	globalOptimalDesign.saveToXMLFile();
 
 }
@@ -545,7 +504,7 @@ void Optimizer::changeSettingsForAGradientBasedStep(void){
 
 	vec dv = trans(globalOptimalDesign.designParametersNormalized);
 
-	/* we divide by dimension since all 1/dimension is always a factor in normalizetion */
+	/* we divide by dimension since all 1/dimension is always a factor in normalization */
 	double delta = factorForGradientStepWindow/dimension;
 
 	lowerBoundsForAcqusitionFunctionMaximizationGradientStep = dv -  delta;
@@ -736,7 +695,6 @@ void Optimizer::decideIfNextStepWouldBeAGradientStep() {
 
 void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
-	globalOptimalDesign.setGradientGlobalOptimumFromTrainingData(objFun.getFileNameTrainingData());
 
 	globalOptimalDesign.setGradientGlobalOptimumFromTrainingData(objFun.getFileNameTrainingData());
 
@@ -1033,66 +991,29 @@ DesignForBayesianOptimization Optimizer::MaximizeAcqusitionFunctionGradientBased
 
 
 }
-void Optimizer::prepareOptimizationHistoryFile(void) const{
 
-	std::string header;
-	for(unsigned int i=0; i<dimension; i++){
-
-		header+="x";
-		header+=std::to_string(i+1);
-		header+=",";
-
-	}
-
-	header+="Objective Function,";
-
-
-	for(unsigned int i=0; i<numberOfConstraints; i++){
-		header+="Constraint";
-		header+=std::to_string(i+1);
-
-		header+=",";
-
-	}
-
-	header+="Improvement,";
-	header+="Feasibility";
-	header+="\n";
-
-	std::ofstream optimizationHistoryFile;
-	optimizationHistoryFile.open (optimizationHistoryFileName);
-	optimizationHistoryFile << header;
-	optimizationHistoryFile.close();
-
-
-
-}
-
-void Optimizer::clearOptimizationHistoryFile(void) const{
-
-	remove(optimizationHistoryFileName.c_str());
-
-}
 
 
 void Optimizer::setHowOftenTrainModels(unsigned int value){
 	howOftenTrainModels = value;
 }
 
-void Optimizer::setOptimizationHistoryConstraints(mat inputObjectiveFunction) {
 
-	unsigned int N = inputObjectiveFunction.n_rows;
+void Optimizer::setOptimizationHistoryConstraintsData(mat& historyData) const {
+
+	assert(!historyData.is_empty());
+	assert(dimension>0);
+	unsigned int N = historyData.n_rows;
+
+	mat inputObjectiveFunction = historyData.submat(0,0,N-1,dimension-1);
 
 	for (auto it = constraintFunctions.begin();it != constraintFunctions.end(); it++) {
-
 		int ID = it->getID();
 		assert(ID>=0 && ID < int(numberOfConstraints) );
-		mat dataRead;
-		string fileNameConstraint = it->getFileNameTrainingData();
-		dataRead.load(fileNameConstraint, csv_ascii);
 
-		mat inputConstraint = dataRead.submat(0, 0, dataRead.n_rows - 1,
-				dimension - 1);
+		mat dataRead = it->getTrainingData();
+
+		mat inputConstraint = dataRead.submat(0, 0, dataRead.n_rows - 1,dimension - 1);
 
 		string type = it->getInequalityType();
 
@@ -1101,20 +1022,24 @@ void Optimizer::setOptimizationHistoryConstraints(mat inputObjectiveFunction) {
 			rowvec input = inputObjectiveFunction.row(i);
 			int indx = findIndexOfRow(input, inputConstraint, 10E-8);
 			if (indx >= 0) {
-				optimizationHistory(i, dimension + ID + 1) = dataRead(indx,
+				historyData(i, dimension + ID + 1) = dataRead(indx,
 						dimension);
 			} else {
 
 				if (isEqual(type, ">")) {
-					optimizationHistory(i, dimension + ID + 1) = -LARGE;
+					historyData(i, dimension + ID + 1) = -LARGE;
 				}
 				if (isEqual(type, "<")) {
-					optimizationHistory(i, dimension + ID + 1) = LARGE;
+					historyData(i, dimension + ID + 1) = LARGE;
 				}
 			}
 		}
 	}
 }
+
+
+
+
 
 bool Optimizer::checkIfBoxConstraintsAreSatisfied(const rowvec &designVariables) const{
 
@@ -1132,15 +1057,16 @@ bool Optimizer::checkIfBoxConstraintsAreSatisfied(const rowvec &designVariables)
 	return isDesignFeasible;
 }
 
-void Optimizer::setOptimizationHistoryFeasibilityValues(void){
+void Optimizer::setOptimizationHistoryDataFeasibilityValues(mat &historyData) const{
 
-	assert(optimizationHistory.n_rows > 0);
+	assert(historyData.n_rows > 0);
 	assert(dimension>0);
 
-	unsigned int N = optimizationHistory.n_rows;
+	unsigned int N = historyData.n_rows;
 	for (unsigned int i = 0; i < N; i++) {
 
-		rowvec rowOfTheHistoryFile = optimizationHistory.row(i);
+		rowvec rowOfTheHistoryFile = historyData.row(i);
+
 		bool isFeasible = true;
 
 		if(isConstrained()){
@@ -1157,95 +1083,88 @@ void Optimizer::setOptimizationHistoryFeasibilityValues(void){
 		rowvec dv = rowOfTheHistoryFile.head(dimension);
 		bool ifBoxConstraintsAreSatisfied = checkIfBoxConstraintsAreSatisfied(dv);
 
-		unsigned int nCols = optimizationHistory.n_cols;
+		unsigned int nCols = historyData.n_cols;
 
 		if(isFeasible && ifBoxConstraintsAreSatisfied) {
 
-			optimizationHistory(i,nCols-1) = 1.0;
+			historyData(i,nCols-1) = 1.0;
 		}
 		else{
 
-			optimizationHistory(i,nCols-1) = 0.0;
+			historyData(i,nCols-1) = 0.0;
 		}
 
 	}
 
 }
+
 
 void Optimizer::setNumberOfThreads(unsigned int n){
 	numberOfThreads = n;
 }
 
-void Optimizer::calculateInitialImprovementValue(void){
-
-	unsigned int N = optimizationHistory.n_rows;
-	assert(N>0);
-	unsigned int nCols = optimizationHistory.n_cols;
-	unsigned int indexLastCol = nCols - 1;
 
 
-	bool ifFeasibleDesignFound = false;
+void Optimizer::initializeOptimizationHistory(void){
 
-	double bestFeasibleObjectiveFunctionValue = LARGE;
+	assert(dimension>0);
+	assert(ifObjectFunctionIsSpecied);
+	assert(ifSurrogatesAreInitialized);
+	history.setDimension(dimension);
 
+	history.setObjectiveFunctionName(objFun.getName());
 
-	vec objectiveFunctionValues = optimizationHistory.col(dimension);
+	if(isConstrained()){
+		for (auto it = constraintFunctions.begin();it != constraintFunctions.end(); it++) {
 
-	for(unsigned int i=0; i<N; i++){
-
-		double feasibility = optimizationHistory(i,indexLastCol);
-
-		if(feasibility>0.0 && objectiveFunctionValues(i) < bestFeasibleObjectiveFunctionValue){
-			ifFeasibleDesignFound = true;
-			bestFeasibleObjectiveFunctionValue = objectiveFunctionValues(i);
+			history.addConstraintName((it->getName()));
 
 		}
 	}
 
-	if(ifFeasibleDesignFound){
-		setInitialImprovementValue(bestFeasibleObjectiveFunctionValue);
-	}
+	setOptimizationHistoryData();
+	isHistoryFileInitialized = true;
 
 }
 
-void Optimizer::setOptimizationHistory(void){
+void Optimizer::setOptimizationHistoryData(void){
 
 	assert(ifSurrogatesAreInitialized);
+	assert(ifObjectFunctionIsSpecied);
+	assert(dimension>0);
 
-	string filenameObjFun = objFun.getFileNameTrainingData();
-
-	mat trainingDataObjectiveFunction;
-
-	trainingDataObjectiveFunction.load(filenameObjFun, csv_ascii);
+	mat trainingDataObjectiveFunction = objFun.getTrainingData();
 	unsigned int N = trainingDataObjectiveFunction.n_rows;
-
 	mat inputObjectiveFunction = trainingDataObjectiveFunction.submat(0, 0, N-1, dimension-1 );
 
-	optimizationHistory.reset();
-	optimizationHistory = zeros<mat>(N,dimension + numberOfConstraints +3);
+	unsigned int numberOfEntries = dimension + 1 + numberOfConstraints + 2;
 
-	for(unsigned int i=0; i<dimension; i++){
-		optimizationHistory.col(i) = inputObjectiveFunction.col(i);
+	mat optimizationHistoryData(N,numberOfEntries, fill::zeros);
+
+	for(unsigned int i=0; i<dimension+1; i++){
+		optimizationHistoryData.col(i) = trainingDataObjectiveFunction.col(i);
 	}
-
-	optimizationHistory.col(dimension) = trainingDataObjectiveFunction.col(dimension);
 
 	if(isConstrained()){
-		setOptimizationHistoryConstraints(inputObjectiveFunction);
+		setOptimizationHistoryConstraintsData(optimizationHistoryData);
 	}
 
-	setOptimizationHistoryFeasibilityValues();
 
-	appendMatrixToCSVData(optimizationHistory,"optimizationHistory.csv");
+	setOptimizationHistoryDataFeasibilityValues(optimizationHistoryData);
 
-	calculateInitialImprovementValue();
+
+	history.setData(optimizationHistoryData);
+
+	initialImprovementValue = history.calculateInitialImprovementValue();
+
+	history.saveOptimizationHistoryFile();
 
 	findTheGlobalOptimalDesign();
 
-#if 0
-	globalOptimalDesign.print();
-#endif
+
 }
+
+
 
 
 
@@ -1438,10 +1357,8 @@ void Optimizer::performEfficientGlobalOptimization(void){
 
 	if(!isHistoryFileInitialized){
 
-		clearOptimizationHistoryFile();
-		prepareOptimizationHistoryFile();
-		setOptimizationHistory();
-		isHistoryFileInitialized = true;
+		initializeOptimizationHistory();
+
 	}
 
 	/* main loop for optimization */
@@ -1519,7 +1436,10 @@ void Optimizer::performEfficientGlobalOptimization(void){
 
 
 
-		updateOptimizationHistory(currentBestDesign);
+		history.updateOptimizationHistory(currentBestDesign);
+		findTheGlobalOptimalDesign();
+
+//		updateOptimizationHistory(currentBestDesign);
 
 
 		/* terminate optimization */

@@ -1,4 +1,4 @@
-set(src_files design.cpp ea_optimizer.cpp general_purpose_optimizer.cpp gradient_optimizer.cpp optimization.cpp globalOptimalDesign.cpp)
+set(src_files design.cpp ea_optimizer.cpp general_purpose_optimizer.cpp gradient_optimizer.cpp optimization.cpp globalOptimalDesign.cpp optimization_history.cpp)
 add_library(optimizers ${src_files})
 
 find_package(OpenMP)

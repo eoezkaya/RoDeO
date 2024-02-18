@@ -1,5 +1,5 @@
 if(UNIT_TESTS)
-	set(src_files ea_optimizer_test.cpp general_purpose_optimizer_test.cpp gradient_optimizer_test.cpp optimization_test.cpp global_optimal_design_test.cpp design_test.cpp)
+	set(src_files ea_optimizer_test.cpp general_purpose_optimizer_test.cpp gradient_optimizer_test.cpp optimization_test.cpp global_optimal_design_test.cpp design_test.cpp test_optimization_history.cpp)
 	add_executable(runTestsOptimizers runTests.cpp ${src_files})
 	find_package(Armadillo REQUIRED)
 	include_directories(${ARMADILLO_INCLUDE_DIRS})

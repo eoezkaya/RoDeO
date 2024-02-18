@@ -67,11 +67,20 @@ regression_tests = []
 
 
 # Add instances to the array
-regression_tests.append(RegressionTest("Gas Transmission Compressor Design","/Gas_transmission_compressor_design_Constrained_Kriging",
+regression_tests.append(RegressionTest("Wingweight Unconstrained",
+                                       "/Wingweight_Unconstrained_Kriging",
+                                         3,
+                                         100.0,
+                                         150.0,
+                                         0.01))
+
+
+regression_tests.append(RegressionTest("Gas Transmission Compressor Design",
+                                       "/Gas_transmission_compressor_design_Constrained_Kriging",
                                          1,    
                                          2971313.722654272, 
                                          3271313.722654272,   
-                                         0.0001))
+                                         0.00001))
 regression_tests.append(RegressionTest("Eggholder Unconstrained",
                                        "/Eggholder_Unconstrained_Kriging",  
                                        5,    
@@ -84,14 +93,19 @@ regression_tests.append(RegressionTest("Rosenbrock Constrained",
                                          0.0, 
                                          1.0,   
                                          10.0))
-regression_tests.append(RegressionTest("Wingweight Unconstrained",
-                                       "/Wingweight_Unconstrained_Kriging",
-                                         3,
-                                         100.0,
-                                         150.0,
-                                         0.01))
-regression_tests.append(RegressionTest("Himmelblau Unconstrained","/Himmelblau_Unconstrained_Kriging",  5,    0.0, 1.0,   100.0))
-regression_tests.append(RegressionTest("Alpine02 5D Uncostrained","/Alpine02_5D_Unconstrained_Kriging", 3, -174.617, -30, 0.005))
+
+regression_tests.append(RegressionTest("Himmelblau Unconstrained",
+                                       "/Himmelblau_Unconstrained_Kriging",
+                                         5, 
+                                            0.0, 
+                                            1.0,   
+                                            100.0))
+regression_tests.append(RegressionTest("Alpine02 5D Uncostrained",
+                                       "/Alpine02_5D_Unconstrained_Kriging", 
+                                       3, 
+                                       -174.617, 
+                                       -30, 
+                                       0.005))
 
 #regression_tests.append(RegressionTest("/Himmelblau_Constrained_Kriging",20, 35.7))
 
@@ -118,7 +132,7 @@ for test in regression_tests:
             subprocess.call(['python', script_path], stdout=output_file, stderr=subprocess.STDOUT)
         
         
-        objective_function_value = read_objective_function("./globalOptimumDesign")
+        objective_function_value = read_objective_function("./globalOptimalDesign.xml")
 
         if objective_function_value is not None:
             print(f"Objective Function Value: {objective_function_value}")

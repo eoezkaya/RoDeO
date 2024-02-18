@@ -38,6 +38,7 @@
 #include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
 #include "../../Random/INCLUDE/random_functions.hpp"
 #include "../INCLUDE/globalOptimalDesign.hpp"
+#include "../INCLUDE/optimization_history.hpp"
 
 #ifdef UNIT_TESTS
 #include<gtest/gtest.h>
@@ -51,6 +52,7 @@ class Optimizer {
 	FRIEND_TEST(OptimizationTest, constructor);
 	FRIEND_TEST(OptimizationTest, setOptimizationProblem);
 	FRIEND_TEST(OptimizationTest, setOptimizationHistory);
+	FRIEND_TEST(OptimizationTest, setOptimizationHistoryData);
 	FRIEND_TEST(OptimizationTest, updateOptimizationHistory);
 	FRIEND_TEST(OptimizationTest, estimateConstraints);
 	FRIEND_TEST(OptimizationTest, calculateFeasibilityProbabilities);
@@ -62,7 +64,7 @@ class Optimizer {
 	FRIEND_TEST(OptimizationTest, checkIfDesignIsWithinBounds);
 	FRIEND_TEST(OptimizationTest, doesObjectiveFunctionHaveGradients);
 	FRIEND_TEST(OptimizationTest, trimVectorSoThatItStaysWithinTheBounds);
-
+	FRIEND_TEST(OptimizationTest, initializeOptimizationHistory);
 
 #endif
 
@@ -87,11 +89,9 @@ private:
 
 	std::string designVectorFileName;
 
-	const std::string optimizationHistoryFileName = "optimizationHistory.csv";
-	const std::string globalOptimumDesignFileName = "globalOptimumDesign";
 	const std::string currentDesignFileName = "currentDesign";
 
-	mat optimizationHistory;
+	OptimizationHistory history;
 
 	std::vector<Design> lowFidelityDesigns;
 	std::vector<Design> highFidelityDesigns;
@@ -112,7 +112,6 @@ private:
 	double trustRegionFactorGradientStep = 1.0;
 	bool WillGradientStepBePerformed = false;
 
-//	Design globalOptimalDesign;
 
 	GlobalOptimalDesign globalOptimalDesign;
 
@@ -140,8 +139,12 @@ private:
 
 	void initializeOptimizerSettings(void);
 
-	void setOptimizationHistoryConstraints(mat inputObjectiveFunction);
-	void setOptimizationHistoryFeasibilityValues(void);
+	void initializeOptimizationHistory(void);
+
+	void setOptimizationHistoryConstraintsData(mat &historyData) const;
+
+	void setOptimizationHistoryDataFeasibilityValues(mat &historyData) const;
+
 	void calculateInitialImprovementValue(void);
 
 	void findTheGlobalOptimalDesign(void);
@@ -175,10 +178,11 @@ private:
 
 	void trainSurrogatesForConstraints();
 
-	void setOptimizationHistory(void);
-	void updateOptimizationHistory(Design d);
-	void clearOptimizationHistoryFile(void) const;
-	void prepareOptimizationHistoryFile(void) const;
+
+	void setOptimizationHistoryData(void);
+
+//	void updateOptimizationHistory(Design d);
+
 
 	void estimateConstraints(DesignForBayesianOptimization &) const;
 
