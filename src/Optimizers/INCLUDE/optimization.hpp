@@ -103,8 +103,6 @@ private:
 	std::vector<DesignForBayesianOptimization> theMostPromisingDesigns;
 
 
-	bool isHistoryFileInitialized = false;
-
 	bool IfinitialValueForObjFunIsSet= false;
 
 	unsigned int iterationNumberGradientStep = 0;
@@ -181,8 +179,6 @@ private:
 
 	void setOptimizationHistoryData(void);
 
-//	void updateOptimizationHistory(Design d);
-
 
 	void estimateConstraints(DesignForBayesianOptimization &) const;
 
@@ -218,8 +214,6 @@ public:
 	unsigned int maxNumberOfSamplesLowFidelity = 0;
 
 	unsigned int howOftenTrainModels = 100000;
-
-	unsigned int sampleDim;
 
 	unsigned int iterGradientEILoop = 100;
 

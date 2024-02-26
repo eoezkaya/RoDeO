@@ -30,6 +30,7 @@ class ObjectiveFunction:
         return xml_string
     
     def print(self):
+        print("-"*30)
         print("Name: ",self.name)
         print("Executable :",self.executable_name)
         print("Input file name:", self.input_file_name)
@@ -37,6 +38,7 @@ class ObjectiveFunction:
         print("Training data file name:",self.training_data_name)
         print("Surrogate model type:", self.surrogate_model_type)
         print("Number of training iterations:", self.number_of_training_iterations)
+        print("-"*30)
         
         
     def parse_xml_string(self,xml_string):

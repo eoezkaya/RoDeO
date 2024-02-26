@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 
 class ConstraintFunction:
     def __init__(self, name = None):
+        self.ID = 0
         self.name = name
         self.constraint_type = None
         self.input_file_name = None
@@ -15,6 +16,7 @@ class ConstraintFunction:
         
     def print(self):
         print("Name: ",self.name)
+        print("ID: ",  self.ID)
         print("Value:", self.constraint_value)
         print("Type:", self.constraint_type)
         print("Executable :",self.executable_name)

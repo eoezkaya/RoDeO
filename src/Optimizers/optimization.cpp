@@ -86,7 +86,6 @@ void Optimizer::initializeOptimizerSettings(void) {
 void Optimizer::setDimension(unsigned int dim){
 
 	dimension = dim;
-	sampleDim = dimension;
 	lowerBounds.zeros(dimension);
 	upperBounds.zeros(dimension);
 	initializeBoundsForAcquisitionFunctionMaximization();
@@ -202,7 +201,6 @@ void Optimizer::addConstraint(ConstraintFunction &constFunc){
 	constraintFunctions.push_back(constFunc);
 	numberOfConstraints++;
 	globalOptimalDesign.setNumberOfConstraints(numberOfConstraints);
-	sampleDim++;
 
 }
 
@@ -217,7 +215,6 @@ void Optimizer::addObjectFunction(ObjectiveFunction &objFunc){
 
 	objFun.setSigmaFactor(sigmaFactor);
 
-	sampleDim++;
 	ifObjectFunctionIsSpecied = true;
 
 }
@@ -1123,7 +1120,6 @@ void Optimizer::initializeOptimizationHistory(void){
 	}
 
 	setOptimizationHistoryData();
-	isHistoryFileInitialized = true;
 
 }
 
@@ -1327,7 +1323,6 @@ void Optimizer::abortIfCurrentDesignHasANaN() {
 
 void Optimizer::decideIfAGradientStepShouldBeTakenForTheFirstIteration() {
 
-	assert(isHistoryFileInitialized);
 	findTheGlobalOptimalDesign();
 
 	if (doesObjectiveFunctionHaveGradients()) {
@@ -1354,12 +1349,9 @@ void Optimizer::performEfficientGlobalOptimization(void){
 
 	initializeSurrogates();
 	initializeCurrentBestDesign();
+	initializeOptimizationHistory();
 
-	if(!isHistoryFileInitialized){
 
-		initializeOptimizationHistory();
-
-	}
 
 	/* main loop for optimization */
 
@@ -1439,9 +1431,6 @@ void Optimizer::performEfficientGlobalOptimization(void){
 		history.updateOptimizationHistory(currentBestDesign);
 		findTheGlobalOptimalDesign();
 
-//		updateOptimizationHistory(currentBestDesign);
-
-
 		/* terminate optimization */
 		if(outerIterationNumber >= maxNumberOfSamples){
 
@@ -1506,14 +1495,9 @@ void Optimizer::roundDiscreteParameters(rowvec &designVector){
 				designVector(index) =  discreteValues[whichInterval+1];
 			}
 
-
 		}
-
 	}
-
-
 }
-
 
 void Optimizer::calculateImprovementValue(Design &d){
 
