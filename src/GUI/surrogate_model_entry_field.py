@@ -4,7 +4,7 @@ from font_and_color_settings import *
 
 class SurrogateModelSelectionField(ctk.CTkFrame):
     def __init__(self, parent, selectedModel ):
-        self.availableSurrogateModels = ["Only with functional values", "Gradient enhanced","Tangent enhanced"]
+        self.availableSurrogateModels = ["Only with functional values", "Gradient enhanced"]
         super().__init__(master=parent, corner_radius=0, fg_color = "transparent")
 
         self.selected_value = selectedModel

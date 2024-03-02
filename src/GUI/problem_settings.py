@@ -3,11 +3,11 @@ import customtkinter as ctk
 
 from integer_entry_field import IntegerEntryField
 from font_and_color_settings import *
-
+from tkinter import messagebox
 
 class ProblemSettings(ctk.CTkScrollableFrame):
 
-    def __init__(self, parent, info, settings):
+    def __init__(self, parent, settings):
         super().__init__(master=parent,
                          fg_color= OBJECTIVE_FUNCTION_PANEL_COLOR, 
                          corner_radius= PANEL_CORNER_RADIUS, 
@@ -19,7 +19,7 @@ class ProblemSettings(ctk.CTkScrollableFrame):
              
         self.problemName = ctk.StringVar()  
          
-        self.info = info
+
         self.globalSettings = settings
         
         nameFrame = ctk.CTkFrame(self, bg_color = "transparent", fg_color= "transparent")    
@@ -32,9 +32,8 @@ class ProblemSettings(ctk.CTkScrollableFrame):
                                  anchor = "w",
                                  font = (FONT , LABELSIZE_NORMAL)) 
         
-        self.problemName.set("OptimizationStudy")
+        self.problemName.set("Optimization Study")
         nameEntry = ctk.CTkEntry(nameFrame, textvariable = self.problemName)  
-        nameEntry.bind('<FocusIn>',  lambda event: info.updateInfoText("enter the problem name")) 
         nameLabel.pack(side = "left", padx=3, pady=3)
         nameEntry.pack(side = "left", fill = "x")
 #        nameFrame.pack(fill = "x")
@@ -42,9 +41,7 @@ class ProblemSettings(ctk.CTkScrollableFrame):
         
         self.problemDim = ctk.StringVar() 
         dimensionFrame = IntegerEntryField(self,self.problemDim, 
-                                           "Problem dimension",
-                                           "enter the number of parameters", 
-                                           self.info)
+                                           "Problem dimension")
 #        dimensionFrame.pack(fill = "x")
         self.problemDim.trace('w',self.updateProblemDimension)
         
@@ -62,13 +59,15 @@ class ProblemSettings(ctk.CTkScrollableFrame):
         
         
     def updateProblemDimension(self,*args):
-        try:
-            val = int(self.problemDim.get())
-            self.info.updateInfoText("entered value is valid")
-            self.globalSettings.dimension = val
-            self.globalSettings.print()
+        if(self.problemDim.get()):
+            try:
+                val = int(self.problemDim.get())
+                self.globalSettings.dimension = val
+                self.globalSettings.print()
             
-        except ValueError:
-            self.info.updateInfoText("The dimension must be an integer value")
+            except ValueError:
+                messagebox.showerror("Error", "The dimension must be an integer")
+            
+            
             
         

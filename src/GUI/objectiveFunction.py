@@ -2,8 +2,8 @@ import xml.etree.ElementTree as ET
 
 
 class ObjectiveFunction:
-    def __init__(self, name = None):
-        self.name = name
+    def __init__(self):
+        self.name = "Objective Function"
         self.number_of_training_iterations = 10000
         self.executable_name = None
         self.input_file_name = None

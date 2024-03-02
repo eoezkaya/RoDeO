@@ -8,7 +8,7 @@ from font_and_color_settings import *
 
 
 class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):    
-    def __init__(self, parent, info, settings):
+    def __init__(self, parent, settings):
         super().__init__(master=parent, 
                          corner_radius= PANEL_CORNER_RADIUS, 
                          fg_color = OBJECTIVE_FUNCTION_PANEL_COLOR, 
@@ -16,7 +16,7 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
                          label_text = "Objective Function",
                          label_font = (FONT, 20),
                          label_fg_color = SCROLLABLE_FRAME_TITLE_COLOR)
-        self.info = info
+        
         self.globalSettings = settings
         self.objectiveFunction = ObjectiveFunction()
         
@@ -37,7 +37,6 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
                                  font = (FONT, LABELSIZE_NORMAL))
            
         nameEntry = ctk.CTkEntry(nameFrame, textvariable = self.name,bg_color = "transparent",fg_color = "WHITE" )  
-        nameEntry.bind('<FocusIn>',  lambda event: info.updateInfoText("enter the name of objective function")) 
         nameLabel.pack(side = "left", padx=6, pady=6)
         nameEntry.pack(side = "left")
        
@@ -52,25 +51,29 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
         
         self.trainingDataFileName = ctk.StringVar()
         trainingDataField = FileEntryField(self,"Training data", self.trainingDataFileName, [("CVS files", "*.csv")])
+        self.trainingDataFileName.trace('w',self.setTrainingDataFileName)
+        
         
         
         self.outputfilename = ctk.StringVar()
         outputfilenameField = FileEntryField(self,"Output file", self.outputfilename)
-#
+        self.outputfilename.trace('w',self.setOutputFileName)
+
         
         self.designVectorFilename = ctk.StringVar()
         designVectorFilenameField = FileEntryField(self,"Design vector file", self.designVectorFilename)
-#        self.designVectorFilenameField.pack()
+        self.designVectorFilename.trace('w',self.setDesignVectorFileName)
+
+
         
         self.surrogateModelName = ctk.StringVar()
-        surrogateModelEntry = SurrogateModelSelectionField(self,self.surrogateModelName)  
-#        self.surrogateModelEntry.pack(side = "left")       
+        surrogateModelEntry = SurrogateModelSelectionField(self,self.surrogateModelName)   
         self.surrogateModelName.trace('w',self.setSurrogateModel)
         
         self.numberOfTrainingIterations = ctk.StringVar()
         self.numberOfTrainingIterations.set(10000)
-        numberOfTrainingIterationsField = IntegerEntryField(self,self.numberOfTrainingIterations, "Number of training iterations","enter maximum number iterations used for model training", self.info )
-
+        numberOfTrainingIterationsField = IntegerEntryField(self,self.numberOfTrainingIterations, "Number of training iterations" )
+        self.numberOfTrainingIterations.trace('w',self.setNumberOfTrainingIterations)
         
         nameFrame.pack(fill = "x", padx = 3, pady = 3)
         executableField.pack(fill = "x", padx = 3, pady = 3)
@@ -93,10 +96,23 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
         self.objectiveFunction.surrogate_model_type = self.surrogateModelName.get()
         self.objectiveFunction.print()    
         
+    def setTrainingDataFileName(self, *args):
+        print(self.trainingDataFileName.get())
+        self.objectiveFunction.training_data_name = self.trainingDataFileName.get()
+        self.objectiveFunction.print()        
         
-        
-
+    def setOutputFileName(self, *args):
+        self.objectiveFunction.output_file_name = self.outputfilename.get()
+        self.objectiveFunction.print()       
+             
+    def setDesignVectorFileName(self, *args):
+        self.objectiveFunction.input_file_name = self.designVectorFilename.get()
+        self.objectiveFunction.print()     
             
+    def setNumberOfTrainingIterations(self, *args):
+        self.objectiveFunction.number_of_training_iterations = self.numberOfTrainingIterations.get()
+        self.objectiveFunction.print()       
+        
             
             
             

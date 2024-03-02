@@ -10,7 +10,7 @@ from singleConstraintFrame import SingleConstraintFrame
 
 
 class ConstraintFunctionsFrame(ctk.CTkScrollableFrame):    
-    def __init__(self, parent, info, settings):
+    def __init__(self, parent, mainWindow, settings):
         super().__init__(master=parent, corner_radius= PANEL_CORNER_RADIUS, 
                          fg_color = OBJECTIVE_FUNCTION_PANEL_COLOR, 
                          border_width = 0,
@@ -19,14 +19,14 @@ class ConstraintFunctionsFrame(ctk.CTkScrollableFrame):
                          label_text = "Constraints",
                          label_font = (FONT, 20),
                          label_fg_color = SCROLLABLE_FRAME_TITLE_COLOR )
-        self.info = info
+        
+        self.mainWindow = mainWindow
         self.settings = settings
         
-        image_path = "./Icons/constraintFunction.png"
-        self.image = ctk.CTkImage(dark_image = Image.open(image_path), light_image = Image.open(image_path),size=(40, 40))
+#        image_path = "./Icons/constraintFunction.png"
+#        self.image = ctk.CTkImage(dark_image = Image.open(image_path), light_image = Image.open(image_path),size=(40, 40))
         
         addConstraintButton = ctk.CTkButton(self, text = 'Add constraint', 
-                                            image = self.image, 
                                             fg_color = "white", 
                                             text_color = "black", 
                                             border_color = "black",
@@ -39,8 +39,8 @@ class ConstraintFunctionsFrame(ctk.CTkScrollableFrame):
         
         
         
-    def addConstraint(self):
-        constraintFrame = SingleConstraintFrame(self, self.info, self.settings)
+    def addConstraint(self):        
+        constraintFrame = SingleConstraintFrame(self, self.mainWindow, self.settings)
         constraintFrame.pack(expand = True, fill = "x")
             
             

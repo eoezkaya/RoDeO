@@ -1,7 +1,6 @@
 
 from objectiveFunction import ObjectiveFunction
 from constraintFunction import ConstraintFunction
-from scipy.sparse.linalg._eigen.lobpcg.lobpcg import _get_indx
 
 class GUISettings():
     def __init__(self):
@@ -40,4 +39,15 @@ class GUISettings():
                 
         self.constraints.pop(indexToRemove)       
                 
-                
+    def updateConstraintName(self, newName, ID):
+        
+        for constraint in self.constraints:
+            
+            if(constraint.ID == ID):
+                constraint.name = newName
+                break
+     
+     
+     
+     
+     
