@@ -403,10 +403,10 @@ void Design::print(void) const{
 	}
 
 	if(isDesignFeasible){
-		std::cout<<"Feasibility = " << FGRN("YES")<<"\n";
+		std::cout<<"Feasibility = " << "YES"<<"\n";
 	}
 	else{
-		std::cout<<"Feasibility = " << FRED("NO")<<"\n";
+		std::cout<<"Feasibility = " << "NO"<<"\n";
 	}
 	std::cout<<"Improvement = "<<improvementValue<<"\n";
 	std::cout<< "*********************************************************\n\n";
@@ -660,7 +660,7 @@ void DesignForBayesianOptimization::generateRandomDesignVector(vec lb, vec ub){
 	dv = generateRandomVector<rowvec>(lb, ub);
 }
 
-void DesignForBayesianOptimization::generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub){
+void DesignForBayesianOptimization::generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub, double factor){
 
 	assert(sample.size() == dim);
 
@@ -668,30 +668,27 @@ void DesignForBayesianOptimization::generateRandomDesignVectorAroundASample(cons
 	vec upperBounds(dim, fill::zeros);
 
 
-	double factor = 1.0/dim;
-	double dx = factor*0.01;
-
+	double dx = factor/dim;
 
 	for(unsigned int i=0; i<dim; i++){
 
 		lowerBounds(i) = sample(i) - dx;
 		upperBounds(i) = sample(i) + dx;
 		if(lowerBounds(i) < lb(i))    lowerBounds(i) = lb(i);
-		if(upperBounds(i) > lb(i))    upperBounds(i) = ub(i);
+		if(upperBounds(i) > ub(i))    upperBounds(i) = ub(i);
 
 	}
-
 	dv = generateRandomVector<rowvec>(lowerBounds, upperBounds);
 }
 
 void DesignForBayesianOptimization::print(void) const{
 	std::cout.precision(15);
-	std::cout<<"CDesignExpectedImprovement\n";
+	std::cout<<tag<<"n";
 	std::cout<<"Design vector = \n";
 	dv.print();
 	std::cout<<"Objective function value = "<<objectiveFunctionValue<<"\n";
 	std::cout<<"Sigma = " << sigma << "\n";
-	std::cout<<"Acqusition function value = "<< valueAcqusitionFunction <<"\n";
+	std::cout<<"Acquisition function value = "<< valueAcqusitionFunction <<"\n";
 
 	if(constraintValues.size() > 0){
 

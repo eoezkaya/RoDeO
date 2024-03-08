@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import numpy as np 
+from rosenbrock_optimization import RosenbrockOptimization
 
-def Rosenbrock(x):
-    return (1-x[0])**2 + 100.0 * (x[1] - x[0]*x[0])**2	
     
-    
-
+rosenbrockOpt = RosenbrockOptimization()
 
 print("Evaulating the Rosenbrock function...\n")
 
@@ -21,7 +19,7 @@ f.close()
 
 print('design variables = ',dv)
             
-functionValue = Rosenbrock(dv)   
+functionValue = rosenbrockOpt.evaluateFunction(dv) 
 
 print('function value = ', functionValue)
 

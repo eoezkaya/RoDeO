@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -43,6 +43,7 @@
 #include "../TestFunctions/INCLUDE/test_functions.hpp"
 #include "../Optimizers/INCLUDE/optimization.hpp"
 #include "../Bounds/INCLUDE/bounds.hpp"
+
 
 
 #include "./INCLUDE/constraint_functions.hpp"
@@ -230,6 +231,49 @@ void ConstraintFunction::addDesignToData(Design &d){
 
 
 }
+
+double ConstraintFunction::interpolate(rowvec x) const{
+	if(ifFunctionExplictlyDefined){
+
+		return functionPtr(x.memptr());
+	}
+	else{
+		return surrogate->interpolate(x);
+	}
+
+}
+
+
+pair<double, double> ConstraintFunction::interpolateWithVariance(rowvec x) const{
+
+
+	pair<double, double> result;
+
+	if(ifFunctionExplictlyDefined){
+
+		result.first = functionPtr(x.memptr());
+		result.second = 0.0;
+	}
+	else{
+		double ftilde,sigmaSqr;
+		surrogate->interpolateWithVariance(x, &ftilde, &sigmaSqr);
+		result.first = ftilde;
+		result.second = sqrt(sigmaSqr);
+	}
+	return result;
+}
+
+
+void ConstraintFunction::setUseExplicitFunctionOn(void){
+
+
+	int ID = definitionConstraint.ID;
+	functionPtr = functionVector.at(ID);
+	ifFunctionExplictlyDefined = true;
+
+
+}
+
 
 
 void ConstraintFunction::print(void) const{

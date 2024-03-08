@@ -46,7 +46,7 @@ class OptimizationHistory{
 	friend class OptimizationHistoryTest;
 	FRIEND_TEST(OptimizationHistoryTest, constructor);
 	FRIEND_TEST(OptimizationHistoryTest, setHeader);
-
+	FRIEND_TEST(OptimizationHistoryTest, calculateCrowdingFactor);
 #endif
 
 private:
@@ -60,15 +60,22 @@ private:
 	unsigned int dimension = 0;
 
 
+	double crowdingFactor = 0;
 
 public:
+
+	unsigned int numberOfDoESamples = 0;
 
 	void setFileName(string);
 	void setDimension(unsigned int);
 	void setData(mat);
+
+	void reset(void);
+
 	mat getData(void) const;
 	vec getObjectiveFunctionValues(void) const;
 	vec getFeasibilityValues(void) const;
+	double getCrowdingFactor(void) const;
 
 	field<std::string> setHeader(void) const;
 	void addConstraintName(string);
@@ -80,6 +87,8 @@ public:
 
 	double calculateInitialImprovementValue(void) const;
 	void print(void) const;
+
+	void calculateCrowdingFactor(void);
 
 };
 

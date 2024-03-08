@@ -103,8 +103,6 @@ private:
 	std::vector<DesignForBayesianOptimization> theMostPromisingDesigns;
 
 
-	bool IfinitialValueForObjFunIsSet= false;
-
 	unsigned int iterationNumberGradientStep = 0;
 	unsigned int maximumIterationGradientStep = 5;
 	double trustRegionFactorGradientStep = 1.0;
@@ -124,9 +122,13 @@ private:
 	unsigned int iterMaxAcquisitionFunction;
 	unsigned int outerIterationNumber = 0;
 
-
+	bool ifVariableSigmaStrategy = true;
 	double sigmaFactor = 1.0;
-
+	double sigmaFactorMax = 3.0;
+	double sigmaFactorMin = 0.9;
+	double crowdingCoefficient = 0.0;
+	double sigmaMultiplier = 1.0;
+	double sigmaGrowthFactor = 1.01;
 
 	unsigned int numberOfDisceteVariables = 0;
 	std::vector<double> incrementsForDiscreteVariables;
@@ -134,6 +136,11 @@ private:
 
 
 	unsigned int numberOfThreads = 1;
+
+	unsigned int numberOfGlobalSearchSteps = 0;
+	unsigned int numberOfLocalSearchSteps = 0;
+
+	double improvementPercentThresholdForGradientStep;
 
 	void initializeOptimizerSettings(void);
 
@@ -201,7 +208,7 @@ private:
 	void trimVectorSoThatItStaysWithinTheBounds(rowvec &x);
 	void trimVectorSoThatItStaysWithinTheBounds(vec &x);
 	void decideIfNextStepWouldBeAGradientStep();
-
+	void adjustSigmaFactor(void);
 
 public:
 
@@ -223,6 +230,8 @@ public:
 
 
 
+
+
 	OutputDevice output;
 
 	Optimizer();
@@ -239,6 +248,10 @@ public:
 	void printConstraints(void) const;
 
 	void performEfficientGlobalOptimization(void);
+	void performEfficientGlobalOptimizationOnlyWithFunctionalValues(void);
+	void performEfficientGlobalOptimizationOnlyWithGradients(void);
+
+
 
 	void initializeSurrogates(void);
 	void trainSurrogates(void);
@@ -262,7 +275,6 @@ public:
 
 	void setHowOftenTrainModels(unsigned int value);
 
-	void setInitialImprovementValue(double);
 	void calculateImprovementValue(Design &);
 
 	void addConstraint(ConstraintFunction &);

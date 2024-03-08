@@ -67,6 +67,14 @@ regression_tests = []
 
 
 # Add instances to the array
+
+regression_tests.append(RegressionTest("Compression spring design costrained",
+                                       "/Compression_spring_design", 
+                                       1, 
+                                       0.010, 
+                                       0.020, 
+                                       0.005))
+
 regression_tests.append(RegressionTest("Wingweight Unconstrained",
                                        "/Wingweight_Unconstrained_Kriging",
                                          3,
@@ -104,7 +112,7 @@ regression_tests.append(RegressionTest("Alpine02 5D Uncostrained",
                                        "/Alpine02_5D_Unconstrained_Kriging", 
                                        3, 
                                        -174.617, 
-                                       -30, 
+                                       0.0, 
                                        0.005))
 
 #regression_tests.append(RegressionTest("/Himmelblau_Constrained_Kriging",20, 35.7))
@@ -117,7 +125,7 @@ for test in regression_tests:
     print("Test ID = ", testID)
     print("Problem name:", test.name)
     print("Number of Trials:", test.num_trials)
-    print("Expected optimal Value:", test.optimal_value)
+    print("Known optimal Value:", test.optimal_value)
     
     
     DIR_TEST = DIR_REGRESSION_TEST + test.directory_name

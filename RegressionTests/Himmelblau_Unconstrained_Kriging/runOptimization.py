@@ -2,28 +2,29 @@ import os
 import numpy as np
 import pandas as pd 
 
+from himmelblau_optimization import HimmelblauOptimization
+
+himmelblauOpt = HimmelblauOptimization()
+    
+ub = [6.0, 6.0]
+lb = [-6.0, -6.0]
+NTrainingSamples = 50
 RODEO_HOME = "/home/eoezkaya/RoDeO"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
 configFilename = "himmelblau.cfg"
 
-NTrainingSamples = 50
-
-Xsamples = np.random.rand(NTrainingSamples,2)
-Xsamples[:,0] = Xsamples[:,0] * 12 - 6.0
-Xsamples[:,1] = Xsamples[:,1] * 12 - 6.0
 
 print("Number of samples used in the DoE = \n",NTrainingSamples)
-print("DoE samples = \n", Xsamples)
 
 ObjFunSamples = np.random.rand(NTrainingSamples,3)
 
 for i in range(NTrainingSamples):
-	xp = Xsamples[i,0]
-	yp = Xsamples[i,1]
-	
-	ObjFunSamples[i,0] = xp
-	ObjFunSamples[i,1] = yp
-	ObjFunSamples[i,2] = (((xp**2+yp-11)**2) + (((xp+yp**2-7)**2)))
+    x = np.random.rand(2)
+    x[0] = x[0]*(ub[0]-lb[0])+lb[0]
+    x[1] = x[1]*(ub[1]-lb[1])+lb[1]
+    ObjFunSamples[i,0] = x[0]
+    ObjFunSamples[i,1] = x[1]
+    ObjFunSamples[i,2] = himmelblauOpt.evaluateFunction(x)	
 	
 
 

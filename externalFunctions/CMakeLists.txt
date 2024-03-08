@@ -10,8 +10,8 @@ project(externalFunctions)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Define your source files
-set(SOURCE_FILES externalFunctions.cpp)
+file(GLOB SOURCE_FILES *.cpp)
+
 
 # Include directory
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/INCLUDE)

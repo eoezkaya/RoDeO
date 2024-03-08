@@ -35,11 +35,27 @@
 
 
 
-double inequalityConstraint1(double *x);
-double inequalityConstraint2(double *x);
-double inequalityConstraint3(double *x);
-double inequalityConstraint4(double *x);
-double inequalityConstraint5(double *x);
+double constraintFunction0(double* x);
+double constraintFunction1(double* x);
+double constraintFunction2(double* x);
+double constraintFunction3(double* x);
+double constraintFunction4(double* x);
+double constraintFunction5(double* x);
+double constraintFunction6(double* x);
+double constraintFunction7(double* x);
+double constraintFunction8(double* x);
+double constraintFunction9(double* x);
+double constraintFunction10(double* x);
+double constraintFunction11(double* x);
+double constraintFunction12(double* x);
+double constraintFunction13(double* x);
+double constraintFunction14(double* x);
+double constraintFunction15(double* x);
+double constraintFunction16(double* x);
+double constraintFunction17(double* x);
+double constraintFunction18(double* x);
+double constraintFunction19(double* x);
+
 
 
 #endif

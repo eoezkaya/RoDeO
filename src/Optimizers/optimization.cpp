@@ -80,25 +80,13 @@ void Optimizer::initializeOptimizerSettings(void) {
 	numberOfThreads  = 1;
 	sigmaFactor = 1.0;
 	iterGradientEILoop = 100;
+	improvementPercentThresholdForGradientStep = 1.0;
 }
 
 
-void Optimizer::setDimension(unsigned int dim){
 
-	dimension = dim;
-	lowerBounds.zeros(dimension);
-	upperBounds.zeros(dimension);
-	initializeBoundsForAcquisitionFunctionMaximization();
-	iterMaxAcquisitionFunction = dimension*10000;
 
-	globalOptimalDesign.setDimension(dim);
-	currentBestDesign.setDimension(dim);
 
-}
-
-void Optimizer::setName(std::string problemName){
-	name = problemName;
-}
 
 void Optimizer::setParameterToDiscrete(unsigned int index, double increment){
 
@@ -126,83 +114,8 @@ bool Optimizer::checkSettings(void) const{
 }
 
 
-void Optimizer::setInitialImprovementValue(double value){
-
-	initialImprovementValue = value;
-	IfinitialValueForObjFunIsSet = true;
-
-}
-
-void Optimizer::setMaximumNumberOfIterations(unsigned int maxIterations){
-
-	maxNumberOfSamples = maxIterations;
-
-}
 
 
-void Optimizer::setMaximumNumberOfIterationsLowFidelity(unsigned int maxIterations){
-
-	maxNumberOfSamplesLowFidelity =  maxIterations;
-
-
-}
-
-
-
-void Optimizer::setMaximumNumberOfInnerIterations(unsigned int maxIterations){
-
-	iterMaxAcquisitionFunction = maxIterations;
-
-}
-
-
-void Optimizer::setFileNameDesignVector(std::string filename){
-
-	assert(!filename.empty());
-	designVectorFileName = filename;
-
-}
-
-
-void Optimizer::setBoxConstraints(Bounds boxConstraints){
-
-	lowerBounds = boxConstraints.getLowerBounds();
-	upperBounds = boxConstraints.getUpperBounds();
-
-
-	assert(ifObjectFunctionIsSpecied);
-	objFun.setParameterBounds(boxConstraints);
-
-	if(isConstrained()){
-
-		for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-			it->setParameterBounds(boxConstraints);
-		}
-
-	}
-
-	globalOptimalDesign.setBoxConstraints(boxConstraints);
-	ifBoxConstraintsSet = true;
-}
-
-
-void Optimizer::setDisplayOn(void){
-	output.ifScreenDisplay = true;
-}
-void Optimizer::setDisplayOff(void){
-	output.ifScreenDisplay = false;
-}
-
-
-
-void Optimizer::addConstraint(ConstraintFunction &constFunc){
-
-	constraintFunctions.push_back(constFunc);
-	numberOfConstraints++;
-	globalOptimalDesign.setNumberOfConstraints(numberOfConstraints);
-
-}
 
 
 void Optimizer::addObjectFunction(ObjectiveFunction &objFunc){
@@ -230,21 +143,6 @@ void Optimizer::evaluateConstraints(Design &d){
 }
 
 
-
-void Optimizer::estimateConstraints(DesignForBayesianOptimization &design) const{
-
-	rowvec x = design.dv;
-	assert(design.constraintValues.size() == numberOfConstraints);
-
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-		std::pair<double, double> result = it->interpolateWithVariance(x);
-
-		design.constraintValues(it->getID()) = result.first;
-		design.constraintSigmas(it->getID()) = result.second;
-
-	}
-}
 
 
 bool Optimizer::checkBoxConstraints(void) const{
@@ -503,6 +401,7 @@ void Optimizer::changeSettingsForAGradientBasedStep(void){
 
 	/* we divide by dimension since all 1/dimension is always a factor in normalization */
 	double delta = factorForGradientStepWindow/dimension;
+	delta *= trustRegionFactorGradientStep;
 
 	lowerBoundsForAcqusitionFunctionMaximizationGradientStep = dv -  delta;
 	upperBoundsForAcqusitionFunctionMaximizationGradientStep = dv +  delta;
@@ -684,7 +583,9 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 
 void Optimizer::decideIfNextStepWouldBeAGradientStep() {
 	if (iterationNumberGradientStep == maximumIterationGradientStep) {
+		output.printMessage("Maximum number of gradient-based iterations...");
 		trustRegionFactorGradientStep = 1.0;
+		output.printMessage("Thrust region factor:", trustRegionFactorGradientStep);
 		iterationNumberGradientStep = 0;
 		WillGradientStepBePerformed = false;
 	}
@@ -695,9 +596,12 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
 	globalOptimalDesign.setGradientGlobalOptimumFromTrainingData(objFun.getFileNameTrainingData());
 
+	globalOptimalDesign.print();
+
 	bool ifGradientVectorExists = globalOptimalDesign.checkIfGlobalOptimaHasGradientVector();
 
 	if(!ifGradientVectorExists){
+		output.printMessage("globalOptimalDesign has no gradient!");
 		WillGradientStepBePerformed = false;
 	}
 
@@ -712,11 +616,93 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
 		if(isConstrained()){
 
+			assert(numberOfConstraints>0);
+			globalOptimalDesign.print();
 
-			PRINT_HERE
-			abort();
 
-		}
+			printScalar(trustRegionFactorGradientStep);
+			vec lb = lowerBoundsForAcqusitionFunctionMaximizationGradientStep;
+			vec ub = upperBoundsForAcqusitionFunctionMaximizationGradientStep;
+
+			//			trans(lb).print("lb");
+			//			trans(ub).print("ub");
+
+			double maxImprovement = 0.0;
+			DesignForBayesianOptimization designWithMaxImprovement(dimension,numberOfConstraints);
+
+			bool ifADesignWithPositiveImprovementIsFound = false;
+
+
+#ifdef OPENMP_SUPPORT
+			omp_set_num_threads(numberOfThreads);
+#endif
+
+#ifdef OPENMP_SUPPORT
+#pragma omp parallel for
+#endif
+			for(unsigned int i = 0; i <iterMaxAcquisitionFunction; i++ ){
+
+
+				/* generate a design around the global optimal design */
+				designToBeTried.generateRandomDesignVector(lb,ub);
+				//				designToBeTried.dv.print("dv random");
+
+				objFun.calculateSurrogateEstimate(designToBeTried);
+
+				double improvement = 0.0;
+				if(designToBeTried.objectiveFunctionValue < globalOptimalDesign.trueValue){
+
+					improvement = globalOptimalDesign.trueValue - designToBeTried.objectiveFunctionValue;
+				}
+
+				estimateConstraints(designToBeTried);
+				calculateFeasibilityProbabilities(designToBeTried);
+
+				rowvec p = designToBeTried.constraintFeasibilityProbabilities;
+
+				for(unsigned int i=0; i<numberOfConstraints; i++){
+
+					improvement *= p(i);
+
+				}
+
+				//				designToBeTried.print();
+				//				printScalar(improvement);
+
+
+
+
+				if(improvement > maxImprovement){
+#ifdef OPENMP_SUPPORT
+#pragma omp critical
+#endif
+					{
+						//						printScalar(maxImprovement);
+						maxImprovement = improvement;
+						designWithMaxImprovement = designToBeTried;
+						ifADesignWithPositiveImprovementIsFound = true;
+
+					}
+#if 0
+					printf("A design with a better improvement value has been found\n");
+					designToBeTried.print();
+#endif
+				}
+
+			}
+
+			printScalar(maxImprovement);
+			if(ifADesignWithPositiveImprovementIsFound){
+				designToBeTried = designWithMaxImprovement;
+			}
+			else{
+				/* safety mechanism */
+				designToBeTried.generateRandomDesignVector(lb,ub);
+			}
+
+			designToBeTried.print();
+
+		} /* end of ifConstrained */
 
 		else{
 
@@ -729,8 +715,15 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
 		decideIfNextStepWouldBeAGradientStep();
 
+		numberOfLocalSearchSteps++;
 
 
+
+	}
+	else{
+		output.printMessage("No gradient-based step, back to fallback EGO step");
+		/* fallback solution if a gradient-based step cannot be done */
+		findTheMostPromisingDesignEGO();
 	}
 
 }
@@ -834,6 +827,7 @@ void Optimizer::findTheMostPromisingDesignEGO(void){
 	}
 
 	theMostPromisingDesigns.push_back(designWithMaxAcqusition);
+	numberOfGlobalSearchSteps++;
 
 }
 
@@ -990,7 +984,6 @@ DesignForBayesianOptimization Optimizer::MaximizeAcqusitionFunctionGradientBased
 }
 
 
-
 void Optimizer::setHowOftenTrainModels(unsigned int value){
 	howOftenTrainModels = value;
 }
@@ -1096,11 +1089,6 @@ void Optimizer::setOptimizationHistoryDataFeasibilityValues(mat &historyData) co
 }
 
 
-void Optimizer::setNumberOfThreads(unsigned int n){
-	numberOfThreads = n;
-}
-
-
 
 void Optimizer::initializeOptimizationHistory(void){
 
@@ -1108,6 +1096,7 @@ void Optimizer::initializeOptimizationHistory(void){
 	assert(ifObjectFunctionIsSpecied);
 	assert(ifSurrogatesAreInitialized);
 	history.setDimension(dimension);
+
 
 	history.setObjectiveFunctionName(objFun.getName());
 
@@ -1120,6 +1109,13 @@ void Optimizer::initializeOptimizationHistory(void){
 	}
 
 	setOptimizationHistoryData();
+
+	if(ifVariableSigmaStrategy){
+
+		history.calculateCrowdingFactor();
+		crowdingCoefficient = history.getCrowdingFactor() * sigmaFactor;
+	}
+
 
 }
 
@@ -1153,10 +1149,12 @@ void Optimizer::setOptimizationHistoryData(void){
 
 	initialImprovementValue = history.calculateInitialImprovementValue();
 
+	output.printMessage("Initial improvement value:", initialImprovementValue );
+
 	history.saveOptimizationHistoryFile();
+	history.numberOfDoESamples = N;
 
 	findTheGlobalOptimalDesign();
-
 
 }
 
@@ -1352,8 +1350,119 @@ void Optimizer::performEfficientGlobalOptimization(void){
 	initializeOptimizationHistory();
 
 
+	if(doesObjectiveFunctionHaveGradients()){
+		performEfficientGlobalOptimizationOnlyWithGradients();
+	}
 
-	/* main loop for optimization */
+	else{
+
+		performEfficientGlobalOptimizationOnlyWithFunctionalValues();
+	}
+
+}
+
+void Optimizer::adjustSigmaFactor(void) {
+	history.calculateCrowdingFactor();
+	double cFactor = history.getCrowdingFactor();
+	output.printMessage("cFactor", cFactor);
+	sigmaFactor = sigmaMultiplier*(crowdingCoefficient / cFactor);
+	if (sigmaFactor < sigmaFactorMin)
+		sigmaFactor = sigmaFactorMin;
+
+	if (sigmaFactor > sigmaFactorMax)
+		sigmaFactor = sigmaFactorMax;
+
+	output.printMessage("sigmaFactor", sigmaFactor);
+	objFun.setSigmaFactor(sigmaFactor);
+}
+
+void Optimizer::performEfficientGlobalOptimizationOnlyWithFunctionalValues(void){
+
+	while(1){
+
+		outerIterationNumber++;
+
+		output.printIteration(outerIterationNumber);
+
+		if(outerIterationNumber%howOftenTrainModels == 1) {
+			initializeSurrogates();
+			trainSurrogates();
+		}
+
+		findTheMostPromisingDesignToBeSimulated();
+
+		DesignForBayesianOptimization optimizedDesignGradientBased = MaximizeAcqusitionFunctionGradientBased(theMostPromisingDesigns.at(0));
+
+#if 0
+		optimizedDesignGradientBased.print();
+#endif
+
+		/* now make a simulation for the most promising design */
+		evaluateObjectiveFunction(currentBestDesign);
+		computeConstraintsandPenaltyTerm(currentBestDesign);
+
+		calculateImprovementValue(currentBestDesign);
+		printScalar(currentBestDesign.improvementValue);
+
+		abortIfCurrentDesignHasANaN();
+
+		output.printDesign(currentBestDesign);
+
+		objFun.addDesignToData(currentBestDesign);
+		addConstraintValuesToData(currentBestDesign);
+
+
+		history.updateOptimizationHistory(currentBestDesign);
+
+		if(currentBestDesign.improvementValue > globalOptimalDesign.improvementValue){
+
+			double deltaImprovement = currentBestDesign.improvementValue - globalOptimalDesign.improvementValue;
+
+			if(deltaImprovement > bestDeltaImprovementValueAchieved){
+
+				bestDeltaImprovementValueAchieved = deltaImprovement;
+			}
+
+			output.printMessage("An IMPROVEMENT has been achieved!");
+
+			double percentImprovementRelativeToBest = (deltaImprovement/ bestDeltaImprovementValueAchieved)*100;
+			printScalar(percentImprovementRelativeToBest);
+
+			if(percentImprovementRelativeToBest > 10){
+				sigmaMultiplier = 1.0;
+
+			}
+
+		}
+
+
+
+
+		if(ifVariableSigmaStrategy){
+
+			adjustSigmaFactor();
+			sigmaMultiplier = sigmaMultiplier*sigmaGrowthFactor;
+		}
+
+
+		findTheGlobalOptimalDesign();
+
+		/* terminate optimization */
+		if(outerIterationNumber >= maxNumberOfSamples){
+
+			output.printMessage("number of simulations > maximum number of simulations! Optimization is terminating...");
+			output.printDesign(globalOptimalDesign);
+			break;
+		}
+
+
+	} /* end of the optimization loop */
+
+}
+
+void Optimizer::performEfficientGlobalOptimizationOnlyWithGradients(void){
+
+
 
 	while(1){
 
@@ -1410,15 +1519,19 @@ void Optimizer::performEfficientGlobalOptimization(void){
 			if(deltaImprovement > bestDeltaImprovementValueAchieved){
 
 				bestDeltaImprovementValueAchieved = deltaImprovement;
+
 			}
 
 			output.printMessage("An IMPROVEMENT has been achieved!");
 
+			output.printMessage("best delta improvement: ", bestDeltaImprovementValueAchieved);
+			output.printMessage("delta improvement: ", deltaImprovement);
+
 			double percentImprovementRelativeToBest = (deltaImprovement/ bestDeltaImprovementValueAchieved)*100;
-			printScalar(percentImprovementRelativeToBest);
+			output.printMessage("Percent improvement relative to best improvement so far:",percentImprovementRelativeToBest);
 
-			if(percentImprovementRelativeToBest < 5){
-
+			if(percentImprovementRelativeToBest < improvementPercentThresholdForGradientStep){
+				output.printMessage("Improvement is too small, the next step will be an EGO step");
 				WillGradientStepBePerformed = false;
 				trustRegionFactorGradientStep = 1.0;
 				iterationNumberGradientStep = 0;
@@ -1436,6 +1549,10 @@ void Optimizer::performEfficientGlobalOptimization(void){
 
 			output.printMessage("number of simulations > maximum number of simulations! Optimization is terminating...");
 			output.printDesign(globalOptimalDesign);
+			if(doesObjectiveFunctionHaveGradients()){
+				output.printMessage("number of local search steps: ", numberOfLocalSearchSteps);
+				output.printMessage("number of global search steps: ", numberOfGlobalSearchSteps);
+			}
 			break;
 		}
 
@@ -1448,8 +1565,6 @@ void Optimizer::performEfficientGlobalOptimization(void){
 	} /* end of the optimization loop */
 
 }
-
-
 
 void Optimizer::roundDiscreteParameters(rowvec &designVector){
 
@@ -1501,17 +1616,21 @@ void Optimizer::roundDiscreteParameters(rowvec &designVector){
 
 void Optimizer::calculateImprovementValue(Design &d){
 
+	d.improvementValue = 0.0;
+
 	if(d.isDesignFeasible){
 
-		if(!IfinitialValueForObjFunIsSet){
+		if(fabs(initialImprovementValue) < 10E-08){
+			/* This means there is no feasible sample in the DoE data */
+			d.improvementValue = d.trueValue;
+		}
+		else{
 
-			initialImprovementValue  = d.trueValue;
-			IfinitialValueForObjFunIsSet = true;
+			if(d.trueValue < initialImprovementValue){
+				d.improvementValue = initialImprovementValue - d.trueValue;
+			}
 		}
 
-		if(d.trueValue < initialImprovementValue){
-			d.improvementValue = initialImprovementValue - d.trueValue;
-		}
 
 	}
 }

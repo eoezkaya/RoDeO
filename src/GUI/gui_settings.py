@@ -47,7 +47,33 @@ class GUISettings():
                 constraint.name = newName
                 break
      
-     
-     
-     
+    def updateConstraintExeName(self, exeName, ID):
+        
+        for constraint in self.constraints:
+            
+            if(constraint.ID == ID):
+                constraint.executable_name = exeName
+                break 
+    def updateConstraintTrainingFileName(self, filename, ID):
+        
+        for constraint in self.constraints:
+            
+            if(constraint.ID == ID):
+                constraint.training_data_name = filename
+                break  
+    def updateConstraintDesignVectorFileName(self, filename, ID):
+        
+        for constraint in self.constraints:
+            
+            if(constraint.ID == ID):
+                constraint.input_file_name = filename
+                break          
+             
+    def updateConstraintOutputFileName(self, filename, ID):
+        
+        for constraint in self.constraints:
+            
+            if(constraint.ID == ID):
+                constraint.output_file_name = filename
+                break  
      

@@ -559,20 +559,7 @@ TEST_F(OptimizationTest, initializeSurrogates){
 }
 
 
-//TEST_F(OptimizationTest, trainSurrogates){
-//
-//	prepareObjectiveFunction();
-//	prepareFirstConstraint();
-//	prepareSecondConstraint();
-//	testOptimizer.setBoxConstraints(boxConstraints);
-//
-//	testOptimizer.initializeSurrogates();
-//	testOptimizer.trainSurrogates();
-//
-//	ASSERT_TRUE(testOptimizer.ifSurrogatesAreInitialized);
-//
-//
-//}
+
 
 
 

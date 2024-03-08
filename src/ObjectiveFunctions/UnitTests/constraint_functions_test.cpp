@@ -37,8 +37,12 @@
 #include "../../TestFunctions/INCLUDE/standard_test_functions.hpp"
 #include "../../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 #include "../../Optimizers/INCLUDE/design.hpp"
+#include "../../../externalFunctions/INCLUDE/externalFunctions.hpp"
 
+double testFunction(double *x){
 
+		return x[0] + x[1];
+	}
 
 
 class ConstraintFunctionTest : public ::testing::Test {
@@ -107,6 +111,7 @@ protected:
 		definition.outputFilenameLowFi = "objFunValLowFi.dat";
 		definition.nameLowFidelityTrainingData = filenameTrainingDataLowFi;
 	}
+
 
 
 };
@@ -433,6 +438,48 @@ TEST_F(ConstraintFunctionTest, addDesignToDataWithGradient){
 
 	remove(filenameTrainingData.c_str());
 
+
+}
+
+TEST_F(ConstraintFunctionTest, useFunctionPointer){
+
+	constraintFunTest.setParametersByDefinition(definition);
+	constraintFunTest.setID(0);
+	constraintFunTest.setUseExplicitFunctionOn();
+	double x[2];
+	x[0] = 1.0;
+	x[1] = 1.0;
+	double result = constraintFunTest.functionPtr(x);
+	ASSERT_TRUE(fabs(result-2.0) < 10E-6);
+
+}
+
+TEST_F(ConstraintFunctionTest, interpolateWithExternalFunction){
+
+	constraintFunTest.setParametersByDefinition(definition);
+	constraintFunTest.setID(0);
+	constraintFunTest.setUseExplicitFunctionOn();
+	rowvec x(2);
+	x(0) = 1.0;
+	x(1) = 1.0;
+	double result = constraintFunTest.interpolate(x);
+	ASSERT_TRUE(fabs(result-2.0) < 10E-6);
+
+}
+
+TEST_F(ConstraintFunctionTest, interpolate){
+
+	himmelblauFunction.function.generateTrainingSamples();
+	constraintFunTest.setParametersByDefinition(definition);
+	constraintFunTest.setID(0);
+	constraintFunTest.initializeSurrogate();
+	constraintFunTest.trainSurrogate();
+
+	rowvec x(2);
+	x(0) = 1.0;
+	x(1) = 1.0;
+	double result = constraintFunTest.interpolate(x);
+	ASSERT_TRUE(fabs(result-0.0) > 0.0);
 
 }
 

@@ -11,37 +11,26 @@ class FileEntryField(ctk.CTkFrame):
         self.filename = entryVariable
         
        # widgets 
-        label = ctk.CTkLabel(self, text = labelText,
+        self.label = ctk.CTkLabel(self, text = labelText,
                              bg_color = "transparent", 
                              width= 200, 
                              fg_color= "transparent",
                              font = (FONT, LABELSIZE_NORMAL), anchor ="w")  
-        entry = ctk.CTkEntry(self, textvariable = self.filename, width= 300)
-        selectButton = FileSelectButton(self, self.filename, filetypes)
+        self.entry = ctk.CTkEntry(self, textvariable = self.filename, width= 300)
+        self.selectButton = FileSelectButton(self, self.filename, filetypes)
         
         # layout
        
-        label.pack(side = "left", padx = 7, pady = 2)
-        entry.pack(side = "left", padx = 7, pady = 2)
-        selectButton.pack(side = "left", padx = 7, pady = 2)
+        self.label.pack(side = "left", padx = 7, pady = 2)
+        self.entry.pack(side = "left", padx = 7, pady = 2)
+        self.selectButton.pack(side = "left", padx = 7, pady = 2)
         
         
         
+    def deactivateField(self):
+        self.entry.configure(state = "disabled")
+        self.entry.configure(fg_color = GRAY)    
+    def activateField(self):
+        self.entry.configure(state = "normal")
+        self.entry.configure(fg_color = WHITE)        
         
-        
-        
-        
-        
-# Example of using the custom button
-def main():
-    root = tk.Tk()
-    root.title("File Select Button Example")
-
-    executableName = ctk.StringVar()
-    field = FileEntryField(root, "test",executableName)
-    field.pack(pady=20)
-
-    root.mainloop()
-
-if __name__ == "__main__":
-    main()        

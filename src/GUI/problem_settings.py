@@ -12,10 +12,11 @@ class ProblemSettings(ctk.CTkScrollableFrame):
                          fg_color= OBJECTIVE_FUNCTION_PANEL_COLOR, 
                          corner_radius= PANEL_CORNER_RADIUS, 
                          border_width = 0,
+                         height = 80,
                          label_text = "Problem Settings",
                          label_font = (FONT, 20),
                          label_fg_color = SCROLLABLE_FRAME_TITLE_COLOR)
-        
+        self._scrollbar.configure(height=0)
              
         self.problemName = ctk.StringVar()  
          
@@ -36,18 +37,9 @@ class ProblemSettings(ctk.CTkScrollableFrame):
         nameEntry = ctk.CTkEntry(nameFrame, textvariable = self.problemName)  
         nameLabel.pack(side = "left", padx=3, pady=3)
         nameEntry.pack(side = "left", fill = "x")
-#        nameFrame.pack(fill = "x")
-        self.problemName.trace('w',self.updateProblemName)
-        
-        self.problemDim = ctk.StringVar() 
-        dimensionFrame = IntegerEntryField(self,self.problemDim, 
-                                           "Problem dimension")
-#        dimensionFrame.pack(fill = "x")
-        self.problemDim.trace('w',self.updateProblemDimension)
-        
-        
+
+        self.problemName.trace('w',self.updateProblemName)        
         nameFrame.pack(expand = True, fill  = "x", padx = 3, pady = 3)
-        dimensionFrame.pack(expand = True, fill = "x", padx = 3, pady = 3)
         
         
         
@@ -58,15 +50,7 @@ class ProblemSettings(ctk.CTkScrollableFrame):
         self.globalSettings.print()    
         
         
-    def updateProblemDimension(self,*args):
-        if(self.problemDim.get()):
-            try:
-                val = int(self.problemDim.get())
-                self.globalSettings.dimension = val
-                self.globalSettings.print()
-            
-            except ValueError:
-                messagebox.showerror("Error", "The dimension must be an integer")
+
             
             
             

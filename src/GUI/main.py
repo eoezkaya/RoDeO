@@ -5,6 +5,7 @@ from problem_settings import ProblemSettings
 from gui_settings import GUISettings
 from objective_function_frame import ObjectiveFunctionFrame
 from constraint_functions_frame import ConstraintFunctionsFrame
+from parametersFrame import ParametersFrame
 
 #from PIL import Image
 
@@ -22,9 +23,12 @@ class MyTabView(ctk.CTkTabview):
         # create tabs
         self.add("Optimization Study")
         
+        
         self.problemSettings = ProblemSettings(self.tab("Optimization Study"), self.settings)
         self.problemSettings.pack(fill = "x", padx = 3, pady = 3)
         
+        self.parametersField = ParametersFrame(self.tab("Optimization Study"),self,self.settings)
+        self.parametersField.pack(fill = "x", padx = 3, pady = 3)
        
         self.objectiveFunctionWindow = ObjectiveFunctionFrame(self.tab("Optimization Study"), self.settings)
         self.objectiveFunctionWindow.pack(fill = "x", padx = 3, pady = 3)
@@ -39,7 +43,7 @@ class App(ctk.CTk):
 
         ctk.set_appearance_mode('light')
         self.title('rodeo')
-        self.geometry('1200x800')
+        self.geometry('1200x900')
         self.resizable(False, False)
         
         self.tab_view = MyTabView(master=self, fg_color = WHITE)

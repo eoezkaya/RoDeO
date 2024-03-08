@@ -52,6 +52,7 @@ public:
 	rowvec constraintFeasibilityProbabilities;
 	unsigned int dim = 0;
 
+	std::string tag = "DesignForBayesianOptimization";
 
 	DesignForBayesianOptimization();
 	DesignForBayesianOptimization(unsigned int dimension, unsigned int numberOfConstraints);
@@ -62,7 +63,7 @@ public:
 	void generateRandomDesignVector(void);
 	void generateRandomDesignVector(vec lb, vec ub);
 
-	void generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub);
+	void generateRandomDesignVectorAroundASample(const rowvec &sample, vec lb, vec ub, double factor = 0.01);
 
 
 	double calculateProbalityThatTheEstimateIsLessThanAValue(double value);

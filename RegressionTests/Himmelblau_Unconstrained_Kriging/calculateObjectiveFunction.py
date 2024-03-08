@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
 import numpy as np 
-
+from himmelblau_optimization import HimmelblauOptimization
+himmelblauOpt = HimmelblauOptimization()
 def Himmelblau(x):
     return (((x[0]**2+x[1]-11)**2) + (((x[0]+x[1]**2-7)**2)))
     
     
 
 
-print("Evaulating the Himmelblau function...\n")
+print("Evaluating the Himmelblau function...\n")
 
 dim = 2
 dv = np.zeros(dim)
@@ -21,7 +22,7 @@ f.close()
 
 print('design variables = ',dv)
             
-functionValue = Himmelblau(dv)   
+functionValue = himmelblauOpt.evaluateFunction(dv)   
 
 print('function value = ', functionValue)
 

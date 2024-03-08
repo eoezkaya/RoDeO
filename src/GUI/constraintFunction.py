@@ -1,5 +1,5 @@
 import xml.etree.ElementTree as ET
-
+import re
 class ConstraintFunction:
     def __init__(self, name = None):
         self.ID = 0
@@ -10,9 +10,50 @@ class ConstraintFunction:
         self.constraint_value = 0.0
         self.executable_name = None
         self.constraint_type = ">"
-        self.surrogate_model_type = "ORDINARY_KRIGING"
+        self.surrogate_model_type = "ONLY_FUNCTION_VALUES"
         self.number_of_training_iterations = 10000
         self.training_data_name = None
+        self.expression = None
+        self.ifUseExternalFunction = False
+        self.CFunctionBody = None
+        self.CFunctionName = None
+    
+    def generateCFunctionFromExpression(self):
+        functionName = "constraintFunction" + str(self.ID)
+        self.CFunctionBody = "#include <math.h>\n"
+        self.CFunctionBody += "double " + functionName + "(double* x){\n"
+        self.CFunctionBody += self.replace_power_notation() + ";\n"
+        self.CFunctionBody +="}"
+        
+        
+    def saveCFunctionToAFile(self):
+        
+        self.CFunctionName = "constraintFunction" + str(self.ID) + ".c"
+        filename = "../../externalFunctions/" + self.CFunctionName
+        
+        try:
+            with open(filename, 'w') as file:
+                file.write(self.CFunctionBody)
+        except Exception as e:
+            print(f"Error saving file: {e}")
+    
+        
+    
+    
+    def replace_power_notation(self):
+    # Define a regular expression pattern to match the desired notation
+        pattern = re.compile(r'x\[(\d+)\]\*\*(\d+)')
+
+    # Define a replacement pattern
+        replacement = r'pow(x[\1],\2)'
+
+    # Use re.sub to replace all occurrences of the pattern in the input string
+        result_string = re.sub(pattern, replacement, self.expression)
+
+        return result_string
+
+    
+    
         
     def print(self):
         print("Name: ",self.name)
@@ -25,6 +66,8 @@ class ConstraintFunction:
         print("Training data file name:",self.training_data_name)
         print("Surrogate model type:", self.surrogate_model_type)
         print("Number of training iterations:", self.number_of_training_iterations)
+        print("Expression:", self.expression)
+        print("ifUseExternalFunction", self.ifUseExternalFunction)
     
     def generate_xml_string(self):
         # Create the root element

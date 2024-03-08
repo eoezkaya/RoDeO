@@ -112,3 +112,22 @@ TEST_F(OptimizationHistoryTest, calculateInitialImprovementValue){
 	ASSERT_TRUE(fabs(val-3) < 10E-10);
 
 }
+
+TEST_F(OptimizationHistoryTest, calculateCrowdingFactor){
+
+	mat testData;
+	field<std::string> header;
+	string filename = "../../../src/Optimizers/UnitTests/Auxiliary/optimizationHistoryWingweight.csv";
+	testData.load( csv_name(filename, header) );
+
+	testHistory.reset();
+	testHistory.setDimension(10);
+	testHistory.setData(testData);
+
+	testHistory.calculateCrowdingFactor();
+
+//	std::cout<<testHistory.crowdingFactor<<"\n";
+	ASSERT_TRUE(testHistory.crowdingFactor>0);
+}
+
+

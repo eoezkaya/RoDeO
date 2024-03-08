@@ -19,7 +19,12 @@ class SurrogateModelSelectionField(ctk.CTkFrame):
 
     def modelSelect(self, *args):
         self.selected_value.set(self.comboBox.get())
-
+        
+    def deactivate(self):
+        self.comboBox.configure(state = "disabled")
+            
+    def activate(self):
+        self.comboBox.configure(state = "normal")    
     
 
 # Example of using the custom combobox

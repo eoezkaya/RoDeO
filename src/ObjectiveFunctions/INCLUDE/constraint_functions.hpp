@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -38,8 +38,9 @@
 #include "./objective_function.hpp"
 #include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
 #include "../../Optimizers/INCLUDE/design.hpp"
+#include "../../../externalFunctions/INCLUDE/externalFunctions.hpp"
 
-
+typedef double (*FunctionPtr)(double*);
 
 class ConstraintDefinition{
 
@@ -60,17 +61,31 @@ public:
 
 class ConstraintFunction: public ObjectiveFunction {
 
+#ifdef UNIT_TESTS
+	friend class ConstraintFunctionTest;
+	FRIEND_TEST(ConstraintFunctionTest, useFunctionPointer);
+
+#endif
 
 private:
 
 	ConstraintDefinition definitionConstraint;
 
 	bool ifFunctionExplictlyDefined = false;
+	double (*functionPtr)(double*) = NULL;
+
+
+	std::vector<FunctionPtr> functionVector = { constraintFunction0,
+			constraintFunction1,
+			constraintFunction2};
 
 
 public:
 
 	ConstraintFunction();
+
+	double interpolate(rowvec x) const;
+	pair<double, double> interpolateWithVariance(rowvec x) const;
 
 	void setConstraintDefinition(ConstraintDefinition);
 
@@ -92,6 +107,7 @@ public:
 
 	void print(void) const;
 
+	void setUseExplicitFunctionOn(void);
 
 };
 

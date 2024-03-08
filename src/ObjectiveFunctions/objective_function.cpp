@@ -894,7 +894,7 @@ void ObjectiveFunction::printWaitStatusIfSystemCallFails(int status) const{
 		int statusCode = WEXITSTATUS(status);
 		if (statusCode == 0) {
 
-			output.printMessage("Objective function/constraint execution is succesfull!");
+			output.printMessage("Objective function/constraint execution is done!");
 		} else {
 			string msg  = "There has been some problem with the objective function/constraint execution!";
 			abortWithErrorMessage(msg);

@@ -53,6 +53,11 @@ class SingleConstraintFrame(ctk.CTkFrame):
         self.surrogateModelName = ctk.StringVar()   
         self.surrogateModelName.trace('w',self.updateSurrogateModel)
         
+        self.ifUseMathExpression = ctk.StringVar(value="off")
+        self.mathematicalExpression = ctk.StringVar(value = "e.g., x[0]**2.0 + sqrt(x[1]) - 2.12*sin(x[3]) + exp(x[0]*x[1])")
+        
+        self.constraintValue = ctk.StringVar()
+        
         settings.constraints.append(self.constraint)
         
         self.editConstraint()
@@ -60,7 +65,13 @@ class SingleConstraintFrame(ctk.CTkFrame):
 #        settings.printConstraints()
 
     def deleteConstraint(self):
-        self.mainWindow.delete(self.initialTabName)
+        try:
+            # if the tab is already there
+            currentTab = self.mainWindow.tab(self.initialTabName)
+            self.mainWindow.delete(self.initialTabName)
+        except: 
+            pass     
+        
         self.settings.deleteConstraint(self.ID)
         self.destroy()  
 #        self.settings.printConstraints()  
@@ -80,30 +91,86 @@ class SingleConstraintFrame(ctk.CTkFrame):
                                  font = (FONT, LABELSIZE_NORMAL))
            
         nameEntry = ctk.CTkEntry(nameFrame, textvariable = self.name,bg_color = "transparent",fg_color = "WHITE" )  
-        nameLabel.pack(side = "left", padx=6, pady=6)
+        nameLabel.pack(side = "left", padx=3, pady=3)
         nameEntry.pack(side = "left")
         
         nameFrame.pack(fill = "x", padx = 3, pady = 3)
           
         self.name.trace('w',self.updateName)
         
-        executableField = FileEntryField(self.mainWindow.tab(self.tabName),"Name of the executable file", self.executableName)   
-        executableField.pack(fill = "x", padx = 3, pady = 3)
+        constraintDefinitionField = ctk.CTkFrame(self.mainWindow.tab(self.tabName), 
+                                 corner_radius = 0,
+                                 bg_color = "transparent",
+                                 fg_color = "transparent",
+                                 border_width = 0)    
         
-        trainingDataField = FileEntryField(self.mainWindow.tab(self.tabName),"Training data", self.trainingDataFileName, [("CVS files", "*.csv")])
-        trainingDataField.pack(fill = "x", padx = 3, pady = 3) 
+        definitionText = "Definition: " + self.name.get()
+        
+        definitionLabel = ctk.CTkLabel(constraintDefinitionField, text = definitionText
+                                  ,bg_color = "transparent"
+                                  , font = (FONT, LABELSIZE_NORMAL), anchor = "w")  
+        definitionLabel.pack(side = "left")
+        
+        inequlityTypes = [">", "<"]
+        comboBox = ctk.CTkComboBox(constraintDefinitionField, values=inequlityTypes,  width= 20)
+        comboBox.pack(side = "left", padx = 5, pady = 3)
+        
+        self.constraintValueEntry = ctk.CTkEntry(constraintDefinitionField,
+                                   textvariable = self.constraintValue,
+                                   width = 50,
+                                   fg_color= WHITE)  
+        self.constraintValueEntry.pack(side = "left", padx = 3)
+        
+        
+        constraintDefinitionField.pack(fill = "x", padx = 3, pady = 3)
+        
+        
+        
+        mathExpressionField = ctk.CTkFrame(self.mainWindow.tab(self.tabName), 
+                                 corner_radius = 0,
+                                 bg_color = "transparent",
+                                 fg_color = "transparent",
+                                 border_width = 0)    
+        
+        self.checkbox1 = ctk.CTkCheckBox(mathExpressionField, 
+                                    text="Use mathematical expression", 
+                                    command=self.checkbox1_event,
+                                    variable=self.ifUseMathExpression, 
+                                    width = 100)
+        
+        self.checkbox1.pack(side = "left", padx=3, pady=3)
+        
+        self.expression = ctk.CTkEntry(mathExpressionField,
+                                   textvariable = self.mathematicalExpression,
+                                   width = 800,
+                                   fg_color= GRAY)  
+        self.expression.pack(side = "left", fill = "x", padx = 6, pady = 3)
+        self.expression.configure(state="disabled")
+        
+        mathExpressionField.pack(fill = "x", padx = 3, pady = 3)
+        
+        
+        
+        self.executableField = FileEntryField(self.mainWindow.tab(self.tabName),"Name of the executable file", self.executableName)   
+        self.executableField.pack(fill = "x", padx = 3, pady = 3)
+        
+        self.trainingDataField = FileEntryField(self.mainWindow.tab(self.tabName),"Training data", self.trainingDataFileName, [("CVS files", "*.csv")])
+        self.trainingDataField.pack(fill = "x", padx = 3, pady = 3) 
                         
-        outputfilenameField = FileEntryField(self.mainWindow.tab(self.tabName),"Output file", self.outputfilename)
-        outputfilenameField.pack(fill = "x", padx = 3, pady = 3) 
+        self.outputfilenameField = FileEntryField(self.mainWindow.tab(self.tabName),"Output file", self.outputfilename)
+        self.outputfilenameField.pack(fill = "x", padx = 3, pady = 3) 
         
         
          
-        designVectorFilenameField = FileEntryField(self.mainWindow.tab(self.tabName),"Design vector file", self.designVectorFilename)
-        designVectorFilenameField.pack(fill = "x", padx = 3, pady = 3)
+        self.designVectorFilenameField = FileEntryField(self.mainWindow.tab(self.tabName),"Design vector file", self.designVectorFilename)
+        self.designVectorFilenameField.pack(fill = "x", padx = 3, pady = 3)
             
-        surrogateModelEntry = SurrogateModelSelectionField(self.mainWindow.tab(self.tabName),self.surrogateModelName)
-        surrogateModelEntry.pack(fill = "x", padx = 3, pady = 3)
+        self.surrogateModelEntry = SurrogateModelSelectionField(self.mainWindow.tab(self.tabName),self.surrogateModelName)
+        self.surrogateModelEntry.pack(fill = "x", padx = 3, pady = 3)
         
+        
+        closeButton = ctk.CTkButton(self.mainWindow.tab(self.tabName), text="Close", width = 30, command = self.closeTab)
+        closeButton.pack(padx = 3, pady = 3)
         
 
     def editConstraint(self):
@@ -116,7 +183,8 @@ class SingleConstraintFrame(ctk.CTkFrame):
             self.mainWindow.set(self.initialTabName)
         except:
 #            if(self.tabName):
-            self.mainWindow.add(self.tabName)      
+            self.mainWindow.add(self.tabName)
+            self.initialTabName = self.tabName      
                 
             self.createWidgets()
             self.mainWindow.set(self.tabName)
@@ -131,16 +199,44 @@ class SingleConstraintFrame(ctk.CTkFrame):
         
           
     def updateExeName(self,*args):    
-        pass
+        self.settings.updateConstraintExeName(self.executableName.get(), self.ID)  
+        self.settings.printConstraints()  
     
     def updateTrainingDataFileName(self,*args):    
-        pass
+        self.settings.updateConstraintTrainingFileName(self.trainingDataFileName.get(), self.ID)  
+        self.settings.printConstraints() 
         
     def updateOutputFileName(self,*args):    
-        pass
+        self.settings.updateConstraintOutputFileName(self.outputfilename.get(), self.ID)  
+        self.settings.printConstraints()  
     
     def updateDesignVectorFileName(self,*args):    
-        pass
+        self.settings.updateConstraintDesignVectorFileName(self.designVectorFilename.get(), self.ID)  
+        self.settings.printConstraints()
     def updateSurrogateModel(self,*args):    
         pass
-         
+    def closeTab(self):
+        self.mainWindow.delete(self.initialTabName)
+    
+    def checkbox1_event(self):
+                
+        if(self.checkbox1.get()):
+            self.expression.configure(state="normal")
+            self.expression.configure(fg_color = WHITE)
+            
+            self.executableField.deactivateField()
+            self.trainingDataField.deactivateField()
+            self.outputfilenameField.deactivateField()
+            self.designVectorFilenameField.deactivateField()
+            self.surrogateModelEntry.deactivate()
+            
+        else:
+            self.expression.configure(state="disabled")
+            self.expression.configure(fg_color = GRAY) 
+            self.executableField.activateField()
+            self.trainingDataField.activateField()
+            self.outputfilenameField.activateField()
+            self.designVectorFilenameField.activateField()
+            self.surrogateModelEntry.activate()
+            
+            

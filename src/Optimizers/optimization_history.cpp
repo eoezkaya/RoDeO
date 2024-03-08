@@ -53,6 +53,12 @@ void OptimizationHistory::addConstraintName(string name){
 
 }
 
+void OptimizationHistory::reset(void){
+	constraintNames.clear();
+	data.reset();
+	dimension = 0;
+	filename.clear();
+}
 
 void OptimizationHistory::setDimension(unsigned int dim){
 
@@ -63,14 +69,22 @@ void OptimizationHistory::setDimension(unsigned int dim){
 void OptimizationHistory::setData(mat dataIn){
 
 	assert(dataIn.n_rows>0);
+
 	unsigned int numberOfEntries = dimension + 1 + constraintNames.size() + 2;
 	assert(dataIn.n_cols == numberOfEntries);
 	data = dataIn;
 
 }
 
+
+
 mat OptimizationHistory::getData(void) const{
 	return data;
+}
+
+double OptimizationHistory::getCrowdingFactor(void) const{
+
+	return crowdingFactor;
 }
 
 vec OptimizationHistory::getObjectiveFunctionValues(void) const{
@@ -228,5 +242,46 @@ void OptimizationHistory::print(void) const{
 		}
 	}
 
+	data.print("data = \n");
+
 }
+
+void OptimizationHistory::calculateCrowdingFactor(void){
+
+	assert(data.n_rows>0);
+	assert(dimension >0);
+	assert(numberOfDoESamples >0);
+
+	mat dataToProcess;
+
+	if(data.n_rows >= numberOfDoESamples){
+
+		dataToProcess = data.submat(data.n_rows-numberOfDoESamples,0,data.n_rows-1,dimension);
+	}
+	else{
+
+		dataToProcess = data.submat(0,0,data.n_rows-1,dimension-1);
+	}
+
+	double sum = 0.0;
+	unsigned int count = 0;
+	for(unsigned int i = 0; i<dataToProcess.n_rows; i++){
+
+		rowvec x1 = dataToProcess.row(i);
+
+		for(unsigned int j = 0; j<dataToProcess.n_rows; j++){
+			rowvec x2 = dataToProcess.row(j);
+			rowvec d = x1-x2;
+
+			double normDiff = norm(d,1);
+			sum+= normDiff;
+
+			count++;
+		}
+
+	}
+
+	crowdingFactor =  sum/count;
+}
+
 
