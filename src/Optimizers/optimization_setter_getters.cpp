@@ -114,3 +114,9 @@ void Optimizer::setDimension(unsigned int dim){
 	currentBestDesign.setDimension(dim);
 
 }
+
+
+void Optimizer::setHowOftenTrainModels(unsigned int value){
+	howOftenTrainModels = value;
+}
+

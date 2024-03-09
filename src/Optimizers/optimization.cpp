@@ -133,16 +133,6 @@ void Optimizer::addObjectFunction(ObjectiveFunction &objFunc){
 }
 
 
-void Optimizer::evaluateConstraints(Design &d){
-
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-		it->setEvaluationMode("primal");
-		it->evaluateDesign(d);
-	}
-}
-
-
 
 
 bool Optimizer::checkBoxConstraints(void) const{
@@ -157,49 +147,9 @@ bool Optimizer::checkBoxConstraints(void) const{
 
 
 
-bool Optimizer::checkConstraintFeasibility(rowvec constraintValues) const{
-
-	unsigned int i=0;
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-		bool ifFeasible = it->checkFeasibility(constraintValues(i));
-
-		if(ifFeasible == false) {
-			return false;
-		}
-		i++;
-	}
-
-	return true;
-}
 
 
-void Optimizer::calculateFeasibilityProbabilities(DesignForBayesianOptimization &designCalculated) const{
 
-	rowvec probabilities(numberOfConstraints, fill::zeros);
-
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-		string type  = it->getInequalityType();
-		double inequalityValue = it->getInequalityTargetValue();
-		int ID = it->getID();
-		double estimated = designCalculated.constraintValues(ID);
-		double sigma = designCalculated.constraintSigmas(ID);
-
-		if(type.compare(">") == 0){
-			/* p (constraint value > target) */
-			probabilities(ID) =  calculateProbalityGreaterThanAValue(inequalityValue, estimated, sigma);
-		}
-
-		if(type.compare("<") == 0){
-			probabilities(ID) =  calculateProbalityLessThanAValue(inequalityValue, estimated, sigma);
-		}
-
-	}
-
-	designCalculated.constraintFeasibilityProbabilities = probabilities;
-
-}
 
 
 
@@ -231,15 +181,7 @@ void Optimizer::print(void) const{
 
 }
 
-void Optimizer::printConstraints(void) const{
 
-	std::cout<< "List of constraints = \n";
-
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-		it->print();
-	}
-
-}
 
 
 void Optimizer::initializeSurrogates(void){
@@ -264,14 +206,7 @@ void Optimizer::initializeSurrogates(void){
 
 }
 
-void Optimizer::trainSurrogatesForConstraints() {
-	output.printMessage("Training surrogate model for the constraints...");
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end();
-			it++) {
-		it->trainSurrogate();
-	}
-	output.printMessage("Model training for constraints is done...");
-}
+
 
 void Optimizer::trainSurrogates(void){
 
@@ -313,17 +248,7 @@ bool Optimizer::doesObjectiveFunctionHaveGradients(void) const{
 }
 
 
-bool Optimizer::isConstrained(void) const{
 
-	if(numberOfConstraints > 0) return true;
-	else return false;
-}
-
-bool Optimizer::isNotConstrained(void) const{
-
-	if(numberOfConstraints == 0) return true;
-	else return false;
-}
 
 bool Optimizer::areDiscreteParametersUsed(void) const{
 
@@ -331,39 +256,7 @@ bool Optimizer::areDiscreteParametersUsed(void) const{
 	else return false;
 }
 
-void Optimizer::computeConstraintsandPenaltyTerm(Design &d) {
 
-	if(isConstrained()){
-
-		output.printMessage("Evaluating constraints...");
-
-		evaluateConstraints(d);
-
-		bool ifConstraintsSatisfied = checkConstraintFeasibility(d.constraintTrueValues);
-		if(!ifConstraintsSatisfied){
-
-			output.printMessage("The new sample does not satisfy all the constraints");
-			d.isDesignFeasible = false;
-
-		}
-		else{
-
-			output.printMessage("The new sample satisfies all the constraints");
-			d.isDesignFeasible = true;
-		}
-
-		output.printMessage("Evaluation of the constraints is ready...");
-	}
-
-}
-
-void Optimizer::addConstraintValuesToData(Design &d){
-
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-		it->addDesignToData(d);
-	}
-
-}
 
 void Optimizer::checkIfSettingsAreOK(void) const{
 
@@ -984,10 +877,6 @@ DesignForBayesianOptimization Optimizer::MaximizeAcqusitionFunctionGradientBased
 }
 
 
-void Optimizer::setHowOftenTrainModels(unsigned int value){
-	howOftenTrainModels = value;
-}
-
 
 void Optimizer::setOptimizationHistoryConstraintsData(mat& historyData) const {
 
@@ -1307,7 +1196,7 @@ void Optimizer::findTheMostPromisingDesignToBeSimulated() {
 }
 
 void Optimizer::initializeCurrentBestDesign(void) {
-	currentBestDesign.tag = "The most promising design";
+	currentBestDesign.tag = "Current Iterate";
 	currentBestDesign.setNumberOfConstraints(numberOfConstraints);
 	currentBestDesign.saveDesignVector(designVectorFileName);
 	currentBestDesign.isDesignFeasible = true;

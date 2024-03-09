@@ -1,4 +1,4 @@
-set(src_files linear_solver.cpp matrix_operations.cpp vector_operations.cpp)
+file(GLOB src_files *.cpp)
 add_library(linearAlgebra ${src_files})
 
 target_compile_options(linearAlgebra PUBLIC -Wall -Wextra -Wpedantic -O2)

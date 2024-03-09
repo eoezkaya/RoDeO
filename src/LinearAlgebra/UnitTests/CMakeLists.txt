@@ -1,5 +1,5 @@
 if(UNIT_TESTS)
-	set(src_files linear_solver_test.cpp matrix_operations_test.cpp vector_operations_test.cpp)
+	set(src_files linear_solver_test.cpp matrix_operations_test.cpp vector_operations_test.cpp matrix_class_test.cpp vector_class_test.cpp)
 	add_executable(runTestsLinearAlgebra runTests.cpp ${src_files})
 	find_package(Armadillo REQUIRED)
 	include_directories(${ARMADILLO_INCLUDE_DIRS})
