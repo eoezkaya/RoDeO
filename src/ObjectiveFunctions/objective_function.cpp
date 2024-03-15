@@ -144,7 +144,12 @@ void ObjectiveFunctionDefinition::print(void) const{
 	std::cout<< "Training data = " << nameHighFidelityTrainingData << "\n";
 	std::cout<< "Output data = " << outputFilename << "\n";
 	std::cout<< "Executable = " << executableName << "\n";
-	std::cout<< "Path = " << path << "\n";
+
+	if(isNotEmpty(executableNameGradient)){
+
+		std::cout<< "Executable for gradient = " << executableNameGradient << "\n";
+		std::cout<< "Output file name for gradient = " << outputGradientFilename << "\n";
+	}
 
 	printHighFidelityModel();
 
@@ -436,32 +441,7 @@ void ObjectiveFunction::trainSurrogate(void){
 
 
 
-void ObjectiveFunction::saveDoEData(std::vector<rowvec> data) const{
 
-	std::string fileName = surrogate->getNameOfInputFile();
-
-	std::ofstream myFile(fileName);
-
-	myFile.precision(10);
-
-	for(unsigned int i = 0; i < data.size(); ++i)
-	{
-		rowvec v=  data.at(i);
-
-
-		for(unsigned int j= 0; j<v.size(); j++){
-
-			myFile <<v(j)<<",";
-		}
-
-		myFile << "\n";
-	}
-
-
-	myFile.close();
-
-
-}
 
 void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimization &designCalculated) const{
 
@@ -542,21 +522,12 @@ void ObjectiveFunction::calculateSurrogateEstimateUsingDerivatives(DesignForBaye
 	designCalculated.objectiveFunctionValue = ftilde;
 }
 
-std::string ObjectiveFunction::getExecutionCommand(string path, string exename) const{
+std::string ObjectiveFunction::getExecutionCommand(string exename) const{
 
 	assert(isNotEmpty(exename));
-
 	std::string runCommand;
 
-
-	if(isNotEmpty(path)) {
-		runCommand = path +"/" + exename;
-	}
-	else{
-		runCommand = "./" + exename;
-	}
-
-
+	runCommand = "./" + exename;
 	return runCommand;
 }
 
@@ -630,6 +601,76 @@ void ObjectiveFunction::addDesignToData(Design &d){
 
 }
 
+
+void ObjectiveFunction::addDesignToData(Design &d, string how){
+
+	assert((isNotEmpty(definition.nameHighFidelityTrainingData)));
+	assert(ifInitialized);
+	assert(isNotEmpty(how));
+
+
+	if(definition.ifMultiLevel == false){
+
+		rowvec newsample;
+
+		if(how.compare("primal") == 0 ){
+			newsample = d.constructSampleObjectiveFunction();
+		}
+		if(how.compare("tangent") == 0 ){
+			newsample = d.constructSampleObjectiveFunctionWithTangent();
+		}
+		if(how.compare("adjoint") == 0 ){
+			newsample = d.constructSampleObjectiveFunctionWithGradient();
+		}
+		if(how.compare("adjointWithZeroGradient") == 0 ){
+			newsample = d.constructSampleObjectiveFunctionWithZeroGradient();
+		}
+
+
+		assert(newsample.size()>0);
+		surrogate->addNewSampleToData(newsample);
+
+	}
+	else{
+
+		rowvec newsampleHiFi;
+		rowvec newsampleLowFi;
+
+		if(how.compare("primalBoth") == 0 ){
+
+			newsampleHiFi = d.constructSampleObjectiveFunction();
+			newsampleLowFi = d.constructSampleObjectiveFunctionLowFi();
+
+			assert(newsampleLowFi.size() >0);
+			assert(newsampleHiFi.size()  >0);
+
+			surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
+			surrogate->addNewSampleToData(newsampleHiFi);
+
+		}
+
+		if(how.compare("primalHiFiAdjointLowFi") == 0 ){
+
+			newsampleHiFi  = d.constructSampleObjectiveFunction();
+			newsampleLowFi = d.constructSampleObjectiveFunctionWithGradientLowFi();
+
+			assert(newsampleLowFi.size() >0);
+			assert(newsampleHiFi.size()  >0);
+
+			surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
+			surrogate->addNewSampleToData(newsampleHiFi);
+
+		}
+
+
+
+
+	}
+
+}
+
+
+
 void ObjectiveFunction::addLowFidelityDesignToData(Design &d){
 
 	assert((isNotEmpty(definition.nameLowFidelityTrainingData)));
@@ -689,97 +730,97 @@ rowvec ObjectiveFunction::readOutput(string filename, unsigned int howMany) cons
 	return result;
 }
 
-void ObjectiveFunction::readOnlyFunctionalValue(Design &d) const {
-	unsigned int howManyEntriesToRead = 1;
-	rowvec functionalValue(howManyEntriesToRead);
-
-
-	if(isHiFiEvaluation()){
-		functionalValue = readOutput(definition.outputFilename,howManyEntriesToRead);
-		d.trueValue = functionalValue(0);
-	}
-
-	if(isLowFiEvaluation()){
-
-		functionalValue = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
-		d.trueValueLowFidelity = functionalValue(0);
-	}
-
-
-}
-
-
-
-void ObjectiveFunction::readFunctionalValueAndTangent(Design &d) const {
-	unsigned int howManyEntriesToRead = 2;
-	rowvec resultBuffer(howManyEntriesToRead);
-
-
-	if(isHiFiEvaluation()){
-		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
-		d.trueValue = resultBuffer(0);
-		d.tangentValue = resultBuffer(1);
-	}
-
-	if(isLowFiEvaluation()){
-		resultBuffer = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
-		d.trueValueLowFidelity = resultBuffer(0);
-		d.tangentValueLowFidelity = resultBuffer(1);
-	}
-
-}
-
-void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
-
-	assert(dim >0);
-
-	unsigned int howManyEntriesToRead = 1 + dim;
-	rowvec resultBuffer(howManyEntriesToRead);
-
-	rowvec gradient(dim, fill::zeros);
-	unsigned int offset = 1;
-
-	if(isHiFiEvaluation()){
-
-		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
-		for (unsigned int i = 0; i < dim; i++) {
-			gradient(i) = resultBuffer(i + offset);
-		}
-		d.trueValue = resultBuffer(0);
-		d.gradient = gradient;
-
-	}
-	if(isLowFiEvaluation()){
-		resultBuffer = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
-		for (unsigned int i = 0; i < dim; i++) {
-			gradient(i) = resultBuffer(i + offset);
-		}
-		d.trueValueLowFidelity = resultBuffer(0);
-		d.gradientLowFidelity = gradient;
-
-	}
-
-}
-
-void ObjectiveFunction::readOutputDesign(Design &d) const{
-
-	if(evaluationMode.compare("primal") == 0 || evaluationMode.compare("primalLowFi") == 0){
-
-		readOnlyFunctionalValue(d);
-	}
-
-	if(evaluationMode.compare("tangent") == 0 || evaluationMode.compare("tangentLowFi") == 0 ){
-
-		readFunctionalValueAndTangent(d);
-	}
-
-	if(evaluationMode.compare("adjoint") == 0 || evaluationMode.compare("adjointLowFi") == 0){
-
-		readFunctionalValueAndAdjoint(d);
-	}
-
-
-}
+//void ObjectiveFunction::readOnlyFunctionalValue(Design &d) const {
+//	unsigned int howManyEntriesToRead = 1;
+//	rowvec functionalValue(howManyEntriesToRead);
+//
+//
+//	if(isHiFiEvaluation()){
+//		functionalValue = readOutput(definition.outputFilename,howManyEntriesToRead);
+//		d.trueValue = functionalValue(0);
+//	}
+//
+//	if(isLowFiEvaluation()){
+//
+//		functionalValue = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
+//		d.trueValueLowFidelity = functionalValue(0);
+//	}
+//
+//
+//}
+//
+//
+//
+//void ObjectiveFunction::readFunctionalValueAndTangent(Design &d) const {
+//	unsigned int howManyEntriesToRead = 2;
+//	rowvec resultBuffer(howManyEntriesToRead);
+//
+//
+//	if(isHiFiEvaluation()){
+//		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
+//		d.trueValue = resultBuffer(0);
+//		d.tangentValue = resultBuffer(1);
+//	}
+//
+//	if(isLowFiEvaluation()){
+//		resultBuffer = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
+//		d.trueValueLowFidelity = resultBuffer(0);
+//		d.tangentValueLowFidelity = resultBuffer(1);
+//	}
+//
+//}
+//
+//void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
+//
+//	assert(dim >0);
+//
+//	unsigned int howManyEntriesToRead = 1 + dim;
+//	rowvec resultBuffer(howManyEntriesToRead);
+//
+//	rowvec gradient(dim, fill::zeros);
+//	unsigned int offset = 1;
+//
+//	if(isHiFiEvaluation()){
+//
+//		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
+//		for (unsigned int i = 0; i < dim; i++) {
+//			gradient(i) = resultBuffer(i + offset);
+//		}
+//		d.trueValue = resultBuffer(0);
+//		d.gradient = gradient;
+//
+//	}
+//	if(isLowFiEvaluation()){
+//		resultBuffer = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
+//		for (unsigned int i = 0; i < dim; i++) {
+//			gradient(i) = resultBuffer(i + offset);
+//		}
+//		d.trueValueLowFidelity = resultBuffer(0);
+//		d.gradientLowFidelity = gradient;
+//
+//	}
+//
+//}
+//
+//void ObjectiveFunction::readOutputDesign(Design &d) const{
+//
+//	if(evaluationMode.compare("primal") == 0 || evaluationMode.compare("primalLowFi") == 0){
+//
+//		readOnlyFunctionalValue(d);
+//	}
+//
+//	if(evaluationMode.compare("tangent") == 0 || evaluationMode.compare("tangentLowFi") == 0 ){
+//
+//		readFunctionalValueAndTangent(d);
+//	}
+//
+//	if(evaluationMode.compare("adjoint") == 0 || evaluationMode.compare("adjointLowFi") == 0){
+//
+//		readFunctionalValueAndAdjoint(d);
+//	}
+//
+//
+//}
 
 void ObjectiveFunction::writeDesignVariablesToFile(Design &d) const{
 
@@ -814,11 +855,34 @@ void ObjectiveFunction::evaluateDesign(Design &d){
 
 	assert(d.designParameters.size() == dim);
 
+	setEvaluationMode("primal");
 	writeDesignVariablesToFile(d);
 	evaluateObjectiveFunction();
-	readOutputDesign(d);
+
+	rowvec result = readOutput(definition.outputFilename, 1);
+
+	d.trueValue = result(0);
 
 }
+
+
+void ObjectiveFunction::evaluateDesignGradient(Design &d){
+
+	assert(dim>0);
+	assert(d.designParameters.size() == dim);
+
+	setEvaluationMode("adjoint");
+
+	writeDesignVariablesToFile(d);
+	evaluateGradient();
+
+	rowvec result = readOutput(definition.outputGradientFilename, dim);
+	d.gradient = result;
+
+}
+
+
+
 
 
 bool ObjectiveFunction::isHiFiEvaluation(void) const{
@@ -838,6 +902,54 @@ bool ObjectiveFunction::isLowFiEvaluation(void) const{
 }
 
 
+
+void ObjectiveFunction::evaluateGradient(void) const{
+
+
+
+	std::string runCommand;
+	runCommand.clear();
+
+	if(isHiFiEvaluation()){
+
+		assert(isNotEmpty(definition.executableNameGradient));
+		runCommand = getExecutionCommand(definition.executableNameGradient);
+
+
+	}
+	if(isLowFiEvaluation()){
+
+		assert(isNotEmpty(definition.executableNameLowFiGradient));
+		runCommand = getExecutionCommand(definition.executableNameLowFi);
+
+	}
+
+	if(isNotEmpty(runCommand)){
+
+		output.printMessage("Calling executable for the objective function:", definition.name);
+
+		int systemReturn = system(runCommand.c_str()) ;
+
+		if(systemReturn == -1){
+
+			string msg = "A process for the objective function/constraint execution could not be created, or its status could not be retrieved";
+
+			abortWithErrorMessage(msg);
+
+		}
+
+		else{
+
+
+			printWaitStatusIfSystemCallFails(systemReturn);
+		}
+
+	}
+
+}
+
+
+
 void ObjectiveFunction::evaluateObjectiveFunction(void){
 
 	assert(isNotEmpty(definition.designVectorFilename));
@@ -848,19 +960,15 @@ void ObjectiveFunction::evaluateObjectiveFunction(void){
 	if(isHiFiEvaluation()){
 
 		assert(isNotEmpty(definition.executableName));
+		runCommand = getExecutionCommand(definition.executableName);
 
-		if(!isEqual(definition.executableName, "NONE")){
-			runCommand = getExecutionCommand(definition.path, definition.executableName);
-		}
 
 	}
 	if(isLowFiEvaluation()){
 
 		assert(isNotEmpty(definition.executableNameLowFi));
+		runCommand = getExecutionCommand(definition.executableNameLowFi);
 
-		if(!isEqual(definition.executableName, "NONE")){
-			runCommand = getExecutionCommand(definition.pathLowFi, definition.executableNameLowFi);
-		}
 	}
 
 	if(isNotEmpty(runCommand)){
@@ -907,6 +1015,10 @@ void ObjectiveFunction::printWaitStatusIfSystemCallFails(int status) const{
 
 double ObjectiveFunction::interpolate(rowvec x) const{
 	return surrogate->interpolate(x);
+}
+
+double ObjectiveFunction::interpolateUsingDerivatives(rowvec x) const{
+	return surrogate->interpolateUsingDerivatives(x);
 }
 
 pair<double, double> ObjectiveFunction::interpolateWithVariance(rowvec x) const{

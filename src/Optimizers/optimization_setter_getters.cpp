@@ -120,3 +120,10 @@ void Optimizer::setHowOftenTrainModels(unsigned int value){
 	howOftenTrainModels = value;
 }
 
+void Optimizer::setImprovementPercentThresholdForGradientStep(double value){
+	assert(value>=0);
+	assert(value<=100);
+	improvementPercentThresholdForGradientStep = value;
+}
+
+

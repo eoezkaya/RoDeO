@@ -79,8 +79,11 @@ void Optimizer::initializeOptimizerSettings(void) {
 	maximumIterationGradientStep = 5;
 	numberOfThreads  = 1;
 	sigmaFactor = 1.0;
+	sigmaFactorMax = 10.0;
+	sigmaFactorMin = 0.9;
+
 	iterGradientEILoop = 100;
-	improvementPercentThresholdForGradientStep = 1.0;
+	improvementPercentThresholdForGradientStep = 5;
 }
 
 
@@ -417,8 +420,23 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 		DesignForBayesianOptimization &designToBeTried) {
 
 	assert(dimension>0);
+	assert(lowerBounds.size()>0);
+	assert(upperBounds.size()>0);
+	assert(upperBounds.size() == lowerBounds.size());
+	assert(upperBounds.size() == dimension);
 
 	rowvec gradient = globalOptimalDesign.gradient;
+
+	for(unsigned int i=0; i<dimension; i++){
+
+		double scalingFactor = (upperBounds(i) - lowerBounds(i))*dimension;
+		assert(scalingFactor > 0.0);
+		gradient.col(i) = scalingFactor * gradient.col(i);
+
+	}
+
+
+
 	rowvec x0 = globalOptimalDesign.designParametersNormalized;
 	assert(gradient.size() == dimension);
 	assert(x0.size() == dimension);
@@ -428,14 +446,11 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 
 
 	double maxStepSize = determineMaxStepSizeForGradientStep(x0, gradient);
-	double minStepSize = (1.0/dimension)/10000;
+
 
 	maxStepSize = maxStepSize * trustRegionFactorGradientStep;
+	double minStepSize = maxStepSize*0.01;
 
-	if(maxStepSize < 10.0*minStepSize){
-
-		maxStepSize = 10.0* minStepSize;
-	}
 
 
 	output.printMessage("Maximum step size",maxStepSize);
@@ -459,11 +474,11 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 		designToBeTried.dv = x;
 		objFun.calculateSurrogateEstimateUsingDerivatives(designToBeTried);
 		double surrogateEstimate = designToBeTried.objectiveFunctionValue;
-		//						printScalar(surrogateEstimate);
+		//		printScalar(surrogateEstimate);
 		if (surrogateEstimate < bestObjectiveFunctionValue) {
 			bestObjectiveFunctionValue = surrogateEstimate;
 			bestDesignNormalized = x;
-			//			printScalar(bestObjectiveFunctionValue);
+//			printScalar(bestObjectiveFunctionValue);
 		}
 		stepSize += deltaStepSize;
 	}
@@ -502,6 +517,12 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
 	if(WillGradientStepBePerformed){
 
+		assert(dimension>0);
+		assert(lowerBounds.size()>0);
+		assert(upperBounds.size()>0);
+		assert(upperBounds.size() == lowerBounds.size());
+		assert(upperBounds.size() == dimension);
+
 		DesignForBayesianOptimization designToBeTried(dimension,numberOfConstraints);
 
 
@@ -509,9 +530,22 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
 		if(isConstrained()){
 
-			assert(numberOfConstraints>0);
 			globalOptimalDesign.print();
 
+			rowvec gradient = globalOptimalDesign.gradient;
+			assert(gradient.size() > 0.0);
+
+			//			gradient.print("gradient");
+
+			for(unsigned int i=0; i<dimension; i++){
+
+				double scalingFactor = (upperBounds(i) - lowerBounds(i))*dimension;
+				assert(scalingFactor > 0.0);
+				gradient.col(i) = scalingFactor * gradient.col(i);
+
+			}
+
+			//			gradient.print("gradient");
 
 			printScalar(trustRegionFactorGradientStep);
 			vec lb = lowerBoundsForAcqusitionFunctionMaximizationGradientStep;
@@ -537,52 +571,69 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
 
 				/* generate a design around the global optimal design */
+
 				designToBeTried.generateRandomDesignVector(lb,ub);
-				//				designToBeTried.dv.print("dv random");
+				rowvec d = designToBeTried.dv -  globalOptimalDesign.designParametersNormalized;
 
-				objFun.calculateSurrogateEstimate(designToBeTried);
+				//				d.print("d");
 
-				double improvement = 0.0;
-				if(designToBeTried.objectiveFunctionValue < globalOptimalDesign.trueValue){
+				/* x_k+1 = x_k + d  =>  d = x_k+1 - x_k */
 
-					improvement = globalOptimalDesign.trueValue - designToBeTried.objectiveFunctionValue;
-				}
-
-				estimateConstraints(designToBeTried);
-				calculateFeasibilityProbabilities(designToBeTried);
-
-				rowvec p = designToBeTried.constraintFeasibilityProbabilities;
-
-				for(unsigned int i=0; i<numberOfConstraints; i++){
-
-					improvement *= p(i);
-
-				}
-
-				//				designToBeTried.print();
-				//				printScalar(improvement);
+				double gradDotDv = dot(d, gradient);
 
 
+				if(gradDotDv < 0){
+
+					//					designToBeTried.dv.print("dv random");
+
+					objFun.calculateSurrogateEstimateUsingDerivatives(designToBeTried);
+
+					/* improvement is either zero or a positive value */
+					double improvement = 0.0;
+					if(designToBeTried.objectiveFunctionValue < globalOptimalDesign.trueValue){
+
+						improvement = globalOptimalDesign.trueValue - designToBeTried.objectiveFunctionValue;
+					}
+
+					estimateConstraints(designToBeTried);
+					calculateFeasibilityProbabilities(designToBeTried);
+
+					rowvec p = designToBeTried.constraintFeasibilityProbabilities;
+
+					for(unsigned int i=0; i<numberOfConstraints; i++){
+
+						improvement *= p(i);
+
+					}
+
+					//				designToBeTried.print();
+					//				printScalar(improvement);
 
 
-				if(improvement > maxImprovement){
+
+
+					if(improvement > maxImprovement){
 #ifdef OPENMP_SUPPORT
 #pragma omp critical
 #endif
-					{
-						//						printScalar(maxImprovement);
-						maxImprovement = improvement;
-						designWithMaxImprovement = designToBeTried;
-						ifADesignWithPositiveImprovementIsFound = true;
+						{
 
-					}
+							maxImprovement = improvement;
+							designWithMaxImprovement = designToBeTried;
+							ifADesignWithPositiveImprovementIsFound = true;
+							printScalar(maxImprovement);
+							p.print("feasibility probabilities");
+
+						}
 #if 0
-					printf("A design with a better improvement value has been found\n");
-					designToBeTried.print();
+						printf("A design with a better improvement value has been found\n");
+						designToBeTried.print();
 #endif
+					}
+
 				}
 
-			}
+			} /*end of for loop */
 
 			printScalar(maxImprovement);
 			if(ifADesignWithPositiveImprovementIsFound){
@@ -602,6 +653,7 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 			findPromisingDesignUnconstrainedGradientStep(designToBeTried);
 		}
 
+		/* we reduce the local search window size and line search iteration number */
 		theMostPromisingDesigns.push_back(designToBeTried);
 		iterationNumberGradientStep++;
 		trustRegionFactorGradientStep = trustRegionFactorGradientStep * 0.5;
@@ -630,6 +682,13 @@ void Optimizer::findTheMostPromisingDesignEGO(void){
 	output.printMessage("Searching the best potential design...");
 
 	double bestFeasibleObjectiveFunctionValue = globalOptimalDesign.trueValue;
+
+
+	if(globalOptimalDesign.isDesignFeasible == false){
+
+		bestFeasibleObjectiveFunctionValue = LARGE;
+	}
+
 	output.printMessage("Best feasible objective value = ", bestFeasibleObjectiveFunctionValue);
 
 	objFun.setFeasibleMinimum(bestFeasibleObjectiveFunctionValue);
@@ -1036,9 +1095,11 @@ void Optimizer::setOptimizationHistoryData(void){
 
 	history.setData(optimizationHistoryData);
 
-	initialImprovementValue = history.calculateInitialImprovementValue();
+	bestFeasibleInitialValue = history.calculateInitialImprovementValue();
 
-	output.printMessage("Initial improvement value:", initialImprovementValue );
+	output.printMessage("Best feasible initial value:", bestFeasibleInitialValue);
+
+
 
 	history.saveOptimizationHistoryFile();
 	history.numberOfDoESamples = N;
@@ -1048,112 +1109,13 @@ void Optimizer::setOptimizationHistoryData(void){
 }
 
 
-
-
-
-void Optimizer::evaluateObjectiveFunctionMultiFidelityWithBothPrimal(Design &currentBestDesign) {
-	objFun.setEvaluationMode("primal");
-	objFun.evaluateDesign(currentBestDesign);
-	objFun.setEvaluationMode("primalLowFi");
-	objFun.evaluateDesign(currentBestDesign);
-	objFun.setDataAddMode("primalBoth");
-
-}
-
-void Optimizer::evaluateObjectiveFunctionMultiFidelityWithLowFiAdjoint(Design &currentBestDesign) {
-
-	objFun.setEvaluationMode("primal");
-	objFun.evaluateDesign(currentBestDesign);
-	objFun.setEvaluationMode("adjointLowFi");
-	objFun.evaluateDesign(currentBestDesign);
-	objFun.setDataAddMode("primalHiFiAdjointLowFi");
-
-}
-
-void Optimizer::evaluateObjectiveFunctionMultiFidelity(Design &currentBestDesign) {
-
-	SURROGATE_MODEL typeHiFi = objFun.getSurrogateModelType();
-	SURROGATE_MODEL typeLowFi = objFun.getSurrogateModelTypeLowFi();
-
-	if (typeHiFi == ORDINARY_KRIGING && typeLowFi == ORDINARY_KRIGING) {
-
-		evaluateObjectiveFunctionMultiFidelityWithBothPrimal(currentBestDesign);
-	}
-	if (typeHiFi == ORDINARY_KRIGING && typeLowFi == GRADIENT_ENHANCED) {
-		evaluateObjectiveFunctionMultiFidelityWithLowFiAdjoint(currentBestDesign);
-	}
-}
-
-void Optimizer::evaluateObjectiveFunctionWithTangents(Design &currentBestDesign) {
-
-	currentBestDesign.generateRandomDifferentiationDirection();
-	objFun.setEvaluationMode("tangent");
-	objFun.setDataAddMode("tangent");
-}
-
-void Optimizer::evaluateObjectFunctionWithAdjoints() {
-	objFun.setEvaluationMode("adjoint");
-	objFun.setDataAddMode("adjoint");
-}
-
-void Optimizer::evaluateObjectFunctionWithPrimal() {
-	objFun.setEvaluationMode("primal");
-	objFun.setDataAddMode("primal");
-}
-
-void Optimizer::evaluateObjectiveFunctionSingleFidelity(Design &currentBestDesign) {
-
-	SURROGATE_MODEL type = objFun.getSurrogateModelType();
-
-	if (type == TANGENT_ENHANCED) {
-		evaluateObjectiveFunctionWithTangents(currentBestDesign);
-	} else if (type == GRADIENT_ENHANCED) {
-		evaluateObjectFunctionWithAdjoints();
-	} else {
-		evaluateObjectFunctionWithPrimal();
-	}
-
-	objFun.evaluateDesign(currentBestDesign);
-
-}
-
-void Optimizer::evaluateObjectiveFunction(Design &currentBestDesign) {
-	/* now make a simulation for the most promising design */
-
-
-	if(objFun.isMultiFidelityActive()){
-
-		evaluateObjectiveFunctionMultiFidelity(currentBestDesign);
-	}
-
-	else{
-
-		evaluateObjectiveFunctionSingleFidelity(currentBestDesign);
-	}
-
-}
-
-void Optimizer::setDataAddModeForGradientBasedStep(
-		const Design &currentBestDesign) {
-	if (currentBestDesign.improvementValue
-			<= globalOptimalDesign.improvementValue) {
-		output.printMessage(
-				"Addding the new sample without gradient since no descent has been achieved");
-		objFun.setDataAddMode("adjointWithZeroGradient");
-	} else {
-		output.printMessage(
-				"Addding the new sample with gradient since descent has been achieved");
-		WillGradientStepBePerformed = true;
-		trustRegionFactorGradientStep = 1.0;
-		iterationNumberGradientStep = 0;
-	}
-}
-
 void Optimizer::findTheMostPromisingDesignToBeSimulated() {
 
 	DesignForBayesianOptimization optimizedDesignGradientBased;
 
 	theMostPromisingDesigns.clear();
+
+
 
 	if (doesObjectiveFunctionHaveGradients() && WillGradientStepBePerformed) {
 		output.printMessage("A Gradient Step will be performed...");
@@ -1178,10 +1140,23 @@ void Optimizer::findTheMostPromisingDesignToBeSimulated() {
 
 		std::cout<<"The most promising design (not normalized):\n";
 		best_dv.print();
-		double estimatedBestdv = objFun.interpolate(best_dvNorm);
-		std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
-		std::cout<<"Variance = "<<optimizedDesignGradientBased.sigma<<"\n";
-		cout<<"Acquisition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
+		double estimatedBestdv = 0.0;
+
+		if (doesObjectiveFunctionHaveGradients() && WillGradientStepBePerformed) {
+			estimatedBestdv = objFun.interpolateUsingDerivatives(best_dvNorm);
+			std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
+
+		}
+		else{
+
+			estimatedBestdv = objFun.interpolate(best_dvNorm);
+			std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
+			std::cout<<"Variance = "<<optimizedDesignGradientBased.sigma<<"\n";
+			cout<<"Acquisition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
+		}
+
+
+
 
 	}
 
@@ -1216,7 +1191,12 @@ void Optimizer::decideIfAGradientStepShouldBeTakenForTheFirstIteration() {
 		globalOptimalDesign.setGradientGlobalOptimumFromTrainingData(objFun.getFileNameTrainingData());
 
 		if (globalOptimalDesign.checkIfGlobalOptimaHasGradientVector()) {
-			WillGradientStepBePerformed = true;
+
+			if(globalOptimalDesign.isDesignFeasible){
+
+				WillGradientStepBePerformed = true;
+			}
+
 		}
 	}
 }
@@ -1240,7 +1220,7 @@ void Optimizer::performEfficientGlobalOptimization(void){
 
 
 	if(doesObjectiveFunctionHaveGradients()){
-		performEfficientGlobalOptimizationOnlyWithGradients();
+		performEfficientGlobalOptimizationWithGradients();
 	}
 
 	else{
@@ -1287,7 +1267,10 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithFunctionalValues(void)
 #endif
 
 		/* now make a simulation for the most promising design */
-		evaluateObjectiveFunction(currentBestDesign);
+
+		objFun.evaluateDesign(currentBestDesign);
+		statistics.numberOfObjectiveFunctionEvaluations++;
+
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 
 		calculateImprovementValue(currentBestDesign);
@@ -1297,7 +1280,7 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithFunctionalValues(void)
 
 		output.printDesign(currentBestDesign);
 
-		objFun.addDesignToData(currentBestDesign);
+		objFun.addDesignToData(currentBestDesign, "primal");
 		addConstraintValuesToData(currentBestDesign);
 
 
@@ -1341,6 +1324,7 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithFunctionalValues(void)
 
 			output.printMessage("number of simulations > maximum number of simulations! Optimization is terminating...");
 			output.printDesign(globalOptimalDesign);
+			output.printMessage("Number of function evaluations", statistics.numberOfObjectiveFunctionEvaluations);
 			break;
 		}
 
@@ -1349,7 +1333,7 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithFunctionalValues(void)
 
 }
 
-void Optimizer::performEfficientGlobalOptimizationOnlyWithGradients(void){
+void Optimizer::performEfficientGlobalOptimizationWithGradients(void){
 
 
 
@@ -1358,7 +1342,7 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithGradients(void){
 		outerIterationNumber++;
 
 		output.printIteration(outerIterationNumber);
-
+		currentBestDesign.reset();
 
 
 		if(outerIterationNumber == 1){
@@ -1372,14 +1356,16 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithGradients(void){
 
 		findTheMostPromisingDesignToBeSimulated();
 
-		DesignForBayesianOptimization optimizedDesignGradientBased = MaximizeAcqusitionFunctionGradientBased(theMostPromisingDesigns.at(0));
 
 #if 0
 		optimizedDesignGradientBased.print();
 #endif
 
 		/* now make a simulation for the most promising design */
-		evaluateObjectiveFunction(currentBestDesign);
+
+		objFun.evaluateDesign(currentBestDesign);
+		statistics.numberOfObjectiveFunctionEvaluations++;
+
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 
 		calculateImprovementValue(currentBestDesign);
@@ -1391,14 +1377,6 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithGradients(void){
 		abortIfCurrentDesignHasANaN();
 
 		output.printDesign(currentBestDesign);
-
-		if (doesObjectiveFunctionHaveGradients()) {
-			setDataAddModeForGradientBasedStep(currentBestDesign);
-		}
-
-
-		objFun.addDesignToData(currentBestDesign);
-		addConstraintValuesToData(currentBestDesign);
 
 
 		if(currentBestDesign.improvementValue > globalOptimalDesign.improvementValue){
@@ -1425,10 +1403,30 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithGradients(void){
 				trustRegionFactorGradientStep = 1.0;
 				iterationNumberGradientStep = 0;
 			}
+			else{
+
+				output.printMessage("Evaluating gradient vector for this design...");
+				objFun.evaluateDesignGradient(currentBestDesign);
+				statistics.numberOfObjectiveGradientEvaluations++;
+				output.printDesign(currentBestDesign);
+				WillGradientStepBePerformed = true;
+				trustRegionFactorGradientStep = 1.0;
+				iterationNumberGradientStep = 0;
+
+			}
 
 		}
 
 
+		if (doesObjectiveFunctionHaveGradients()) {
+
+			objFun.setDataAddMode("adjoint");
+		}
+
+		objFun.addDesignToData(currentBestDesign);
+
+
+		addConstraintValuesToData(currentBestDesign);
 
 		history.updateOptimizationHistory(currentBestDesign);
 		findTheGlobalOptimalDesign();
@@ -1438,10 +1436,14 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithGradients(void){
 
 			output.printMessage("number of simulations > maximum number of simulations! Optimization is terminating...");
 			output.printDesign(globalOptimalDesign);
-			if(doesObjectiveFunctionHaveGradients()){
-				output.printMessage("number of local search steps: ", numberOfLocalSearchSteps);
-				output.printMessage("number of global search steps: ", numberOfGlobalSearchSteps);
-			}
+
+			//			output.printMessage("number of local search steps: ", numberOfLocalSearchSteps);
+			//			output.printMessage("number of global search steps: ", numberOfGlobalSearchSteps);
+
+
+			output.printMessage("Number of function evaluations", statistics.numberOfObjectiveFunctionEvaluations);
+			output.printMessage("Number of gradient evaluations", statistics.numberOfObjectiveGradientEvaluations);
+
 			break;
 		}
 
@@ -1509,19 +1511,21 @@ void Optimizer::calculateImprovementValue(Design &d){
 
 	if(d.isDesignFeasible){
 
-		if(fabs(initialImprovementValue) < 10E-08){
-			/* This means there is no feasible sample in the DoE data */
-			d.improvementValue = d.trueValue;
-		}
-		else{
+		/* this means all samples initially are infeasible and we have found the first feasible sample */
+		if(bestFeasibleInitialValue == -LARGE){
 
-			if(d.trueValue < initialImprovementValue){
-				d.improvementValue = initialImprovementValue - d.trueValue;
-			}
+			bestFeasibleInitialValue = d.trueValue;
+			/* the first sample will have a very small improvement value, yet better than previous samples */
+			d.improvementValue = EPSILON;
 		}
 
+		/* improvement is positive if only we find a better design, which is also feasibe */
+		if(d.trueValue < bestFeasibleInitialValue){
+			d.improvementValue = bestFeasibleInitialValue - d.trueValue;
+		}
 
 	}
+
 }
 
 

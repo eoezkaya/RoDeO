@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -51,11 +51,18 @@ public:
 	std::string designVectorFilename;
 
 	std::string executableName;
+	std::string executableNameGradient;
+	std::string executableNameDirectionalDerivative;
+
 	std::string path;
 	std::string outputFilename;
+	std::string outputGradientFilename;
 
 	/* These are required only for multi-level option */
 	std::string executableNameLowFi;
+	std::string executableNameLowFiGradient;
+	std::string executableNameLowFiDirectionalDerivative;
+
 	std::string pathLowFi;
 	std::string outputFilenameLowFi;
 
@@ -94,14 +101,16 @@ class ObjectiveFunction{
 	FRIEND_TEST(ObjectiveFunctionTest, initializeSurrogateGradientEnhanced);
 	FRIEND_TEST(ObjectiveFunctionTest, initializeSurrogateTangentEnhanced);
 
+	FRIEND_TEST(ObjectiveFunctionTest, evaluateGradient);
+
 
 #endif
 
 
 private:
-	void readOnlyFunctionalValue(Design &d) const;
-	void readFunctionalValueAndTangent(Design &d) const;
-	void readFunctionalValueAndAdjoint(Design &d) const;
+//	void readOnlyFunctionalValue(Design &d) const;
+//	void readFunctionalValueAndTangent(Design &d) const;
+//	void readFunctionalValueAndAdjoint(Design &d) const;
 	void bindWithOrdinaryKrigingModel();
 	void bindWithUniversalKrigingModel();
 	void bindWithGradientEnhancedModel();
@@ -113,6 +122,9 @@ private:
 	void bindSurrogateModelSingleFidelity();
 
 	void printWaitStatusIfSystemCallFails(int status) const;
+
+
+	void evaluateGradient(void) const;
 
 protected:
 
@@ -190,7 +202,7 @@ public:
 	void setFileNameReadInput(std::string fileName);
 	void setFileNameReadInputLowFidelity(std::string fileName);
 
-	void saveDoEData(std::vector<rowvec>) const;
+
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
 
@@ -211,6 +223,8 @@ public:
 
 
 	void evaluateDesign(Design &d);
+	void evaluateDesignGradient(Design &d);
+
 	void evaluateObjectiveFunction(void);
 
 	void writeDesignVariablesToFile(Design &d) const;
@@ -223,12 +237,15 @@ public:
 	void addDesignToData(Design &d);
 	void addLowFidelityDesignToData(Design &d);
 
+	void addDesignToData(Design &d, string how);
+
 	bool checkIfGradientAvailable(void) const;
 	double interpolate(rowvec x) const;
+	double interpolateUsingDerivatives(rowvec x) const;
 	pair<double, double> interpolateWithVariance(rowvec x) const;
 
 	void print(void) const;
-	std::string getExecutionCommand(string, string) const;
+	std::string getExecutionCommand(string) const;
 
 	void removeVeryCloseSamples(const Design& globalOptimalDesign);
 

@@ -50,7 +50,8 @@ void Optimizer::addConstraint(ConstraintFunction &constFunc){
 	constraintFunctions.push_back(constFunc);
 	numberOfConstraints++;
 	globalOptimalDesign.setNumberOfConstraints(numberOfConstraints);
-
+	statistics.numberOfConstraintEvaluations.push_back(0);
+	statistics.numberOfConstraintGradientEvaluations.push_back(0);
 }
 
 
@@ -69,6 +70,24 @@ void Optimizer::estimateConstraints(DesignForBayesianOptimization &design) const
 
 	}
 }
+
+void Optimizer::estimateConstraintsGradientStep(DesignForBayesianOptimization &design) const{
+
+	rowvec x = design.dv;
+	assert(design.constraintValues.size() == numberOfConstraints);
+
+	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
+
+		std::pair<double, double> result = it->interpolateWithVariance(x);
+
+		design.constraintValues(it->getID()) = it->interpolateUsingDerivatives(x);
+		design.constraintSigmas(it->getID()) = result.second;
+
+	}
+}
+
+
+
 
 bool Optimizer::checkConstraintFeasibility(rowvec constraintValues) const{
 
@@ -120,10 +139,13 @@ void Optimizer::evaluateConstraints(Design &d){
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
-		it->setEvaluationMode("primal");
 		it->evaluateDesign(d);
+		unsigned int ID = it->getID();
+		statistics.numberOfConstraintEvaluations[ID]++;
+
 	}
 }
+
 
 void Optimizer::trainSurrogatesForConstraints() {
 	output.printMessage("Training surrogate model for the constraints...");

@@ -154,45 +154,12 @@ bool ConstraintFunction::checkFeasibility(double valueIn) const{
 
 void ConstraintFunction::readOutputDesign(Design &d) const{
 
-	if(evaluationMode.compare("primal") == 0 ){
+	rowvec functionalValue(1);
+	functionalValue = readOutput(definition.outputFilename, 1);
 
-		rowvec functionalValue(1);
-		functionalValue = readOutput(definition.outputFilename, 1);
+	assert( int(d.constraintTrueValues.size()) > getID());
 
-		assert( int(d.constraintTrueValues.size()) > getID());
-
-
-		d.constraintTrueValues(getID()) = functionalValue(0);
-	}
-
-	if(evaluationMode.compare("tangent") == 0 ){
-
-		rowvec resultBuffer(2);
-
-		resultBuffer = readOutput(definition.outputFilename, 2);
-		d.trueValue = resultBuffer(0);
-		d.tangentValue = resultBuffer(1);
-	}
-
-	if(evaluationMode.compare("adjoint") == 0 ){
-
-		rowvec resultBuffer(1+dim);
-
-		resultBuffer = readOutput(definition.outputFilename, 1+dim);
-
-		int id = definitionConstraint.ID;
-		assert(id>=0);
-
-		d.constraintTrueValues(id) = resultBuffer(0);
-
-		rowvec gradient(dim,fill::zeros);
-
-		for(unsigned int i=0; i<dim; i++){
-
-			gradient(i) = resultBuffer(i+1);
-		}
-		d.constraintGradients.push_back(gradient);
-	}
+	d.constraintTrueValues(getID()) = functionalValue(0);
 
 }
 
@@ -200,9 +167,14 @@ void ConstraintFunction::evaluateDesign(Design &d){
 
 	assert(d.designParameters.size() == dim);
 
+	setEvaluationMode("primal");
 	writeDesignVariablesToFile(d);
 	evaluateObjectiveFunction();
-	readOutputDesign(d);
+	rowvec functionalValue(1);
+	functionalValue = readOutput(definition.outputFilename, 1);
+
+	assert( int(d.constraintTrueValues.size()) > getID());
+	d.constraintTrueValues(getID()) = functionalValue(0);
 
 }
 
@@ -214,17 +186,7 @@ void ConstraintFunction::addDesignToData(Design &d){
 	assert(definitionConstraint.ID >= 0);
 
 	rowvec newsample;
-
-
-	if(evaluationMode.compare("primal") == 0 ){
-		newsample = d.constructSampleConstraint(definitionConstraint.ID);
-	}
-	if(evaluationMode.compare("tangent") == 0 ){
-		newsample = d.constructSampleConstraintWithTangent(definitionConstraint.ID);
-	}
-	if(evaluationMode.compare("adjoint") == 0 ){
-		newsample = d.constructSampleConstraintWithGradient(definitionConstraint.ID);
-	}
+	newsample = d.constructSampleConstraint(definitionConstraint.ID);
 
 	assert(newsample.size()>0);
 	surrogate->addNewSampleToData(newsample);

@@ -1,19 +1,19 @@
 import os
 import numpy as np
 
-from eggholder_optimization import EggholderOptimization
+from damavandi_optimization import DamavandiOptimization
 
     
-function = EggholderOptimization()
+func = DamavandiOptimization()
 
 RODEO_HOME = "/home/eoezkaya/RoDeO"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
-configFilename = "eggholder.cfg"
+configFilename = "damavandi.cfg"
 
-NTrainingSamples = 50
+NTrainingSamples = 200
 
-ub = [512.0, 512.0]
-lb = [-512.0, -512.0]
+ub = [14.0, 14.0]
+lb = [0.0, 0.0]
 
 
 ObjFunSamples = np.random.rand(NTrainingSamples,3)
@@ -25,13 +25,13 @@ for i in range(NTrainingSamples):
     x[1] = x[1]*(ub[1]-lb[1])+lb[1]
     ObjFunSamples[i,0] = x[0]
     ObjFunSamples[i,1] = x[1]
-    ObjFunSamples[i,2] = function .evaluateFunction(x)
+    ObjFunSamples[i,2] = func.evaluateFunction(x)
    
 
 
 import pandas as pd 
 df = pd.DataFrame(ObjFunSamples)
-df.to_csv("eggholder.csv",header=False, index=False)
+df.to_csv("damavandi.csv",header=False, index=False)
 
 COMMAND = BIN_RODEO + " " +  configFilename
 os.system(COMMAND)

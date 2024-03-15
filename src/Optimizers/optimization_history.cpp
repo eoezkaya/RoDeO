@@ -224,7 +224,10 @@ double OptimizationHistory::calculateInitialImprovementValue(void) const{
 	if(ifFeasibleDesignFound){
 		return bestFeasibleObjectiveFunctionValue;
 	}
-	else return 0.0;
+	else {
+
+		return -LARGE;
+	}
 
 }
 

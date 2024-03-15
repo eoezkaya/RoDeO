@@ -6,7 +6,7 @@ from rosenbrock_optimization import RosenbrockOptimization
 
 rosenbrockOpt = RosenbrockOptimization()
 
-print("Evaluating the Rosenbrock function...\n")
+print("Evaluating the gradient of the Rosenbrock function...\n")
 
 dim = 2
 dv = np.zeros(dim)
@@ -19,12 +19,11 @@ f.close()
 
 print('design variables = ',dv)
             
-functionValue = rosenbrockOpt.evaluateFunction(dv)   
 gradient = rosenbrockOpt.evaluateGradient(dv)
 
-print('function value = ', functionValue)
+print('gradient = ', gradient)
 
-
-f = open("objectiveFunction.dat", "w")
-f.write(str(functionValue) + "\n")
+f = open("gradientVector.dat", "w")
+f.write(str(gradient[0]) + "\n")
+f.write(str(gradient[1]) + "\n")
 f.close()

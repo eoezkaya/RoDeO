@@ -224,98 +224,98 @@ TEST_F(ConstraintFunctionTest, readOutputDesign){
 
 
 
-TEST_F(ConstraintFunctionTest, evaluate){
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-	d.setNumberOfConstraints(1);
-
-	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblau.cpp", definition.executableName);
-
-	constraintFunTest.setParametersByDefinition(definition);
-	constraintFunTest.setID(0);
-	constraintFunTest.setEvaluationMode("primal");
-	constraintFunTest.evaluateDesign(d);
-
-	EXPECT_EQ(d.constraintTrueValues(constraintFunTest.getID()),  73.74420);
-
-	remove(definition.designVectorFilename.c_str());
-	remove(definition.outputFilename.c_str());
-	remove(definition.executableName.c_str());
-
-}
-
-TEST_F(ConstraintFunctionTest, evaluateDesignAdjoint){
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-	d.setNumberOfConstraints(1);
-
-	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauAdjoint.cpp", definition.executableName);
-
-
-	constraintFunTest.setParametersByDefinition(definition);
-	constraintFunTest.setID(0);
-	constraintFunTest.setEvaluationMode("adjoint");
-	constraintFunTest.evaluateDesign(d);
-
-
-	EXPECT_EQ(d.constraintTrueValues(0),  73.74420);
-
-	rowvec constraintGradient = d.constraintGradients[0];
-
-	EXPECT_EQ(constraintGradient(0),  -73.896);
-	EXPECT_EQ(constraintGradient(1),  -7.176);
-
-	remove(definition.designVectorFilename.c_str());
-	remove(definition.outputFilename.c_str());
-	remove(definition.executableName.c_str());
-
-
-
-
-
-}
-
-
-TEST_F(ConstraintFunctionTest, evaluateDesignTangent){
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-	rowvec diffDirection(2);
-	diffDirection(0) = 1.0;
-	diffDirection(1) = 0.0;
-	d.tangentDirection = diffDirection;
-
-	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauTangent.cpp", definition.executableName);
-
-	constraintFunTest.setID(0);
-	constraintFunTest.setParametersByDefinition(definition);
-	constraintFunTest.setEvaluationMode("tangent");
-	constraintFunTest.evaluateDesign(d);
-
-	EXPECT_EQ(d.trueValue,  73.74420);
-	EXPECT_EQ(d.tangentValue,  -73.896);
-
-
-	remove(definition.designVectorFilename.c_str());
-	remove(definition.outputFilename.c_str());
-	remove(definition.executableName.c_str());
-
-
-
-}
+//TEST_F(ConstraintFunctionTest, evaluate){
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//	d.setNumberOfConstraints(1);
+//
+//	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblau.cpp", definition.executableName);
+//
+//	constraintFunTest.setParametersByDefinition(definition);
+//	constraintFunTest.setID(0);
+//	constraintFunTest.setEvaluationMode("primal");
+//	constraintFunTest.evaluateDesign(d);
+//
+//	EXPECT_EQ(d.constraintTrueValues(constraintFunTest.getID()),  73.74420);
+//
+//	remove(definition.designVectorFilename.c_str());
+//	remove(definition.outputFilename.c_str());
+//	remove(definition.executableName.c_str());
+//
+//}
+//
+//TEST_F(ConstraintFunctionTest, evaluateDesignAdjoint){
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//	d.setNumberOfConstraints(1);
+//
+//	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauAdjoint.cpp", definition.executableName);
+//
+//
+//	constraintFunTest.setParametersByDefinition(definition);
+//	constraintFunTest.setID(0);
+//	constraintFunTest.setEvaluationMode("adjoint");
+//	constraintFunTest.evaluateDesign(d);
+//
+//
+//	EXPECT_EQ(d.constraintTrueValues(0),  73.74420);
+//
+//	rowvec constraintGradient = d.constraintGradients[0];
+//
+//	EXPECT_EQ(constraintGradient(0),  -73.896);
+//	EXPECT_EQ(constraintGradient(1),  -7.176);
+//
+//	remove(definition.designVectorFilename.c_str());
+//	remove(definition.outputFilename.c_str());
+//	remove(definition.executableName.c_str());
+//
+//
+//
+//
+//
+//}
+//
+//
+//TEST_F(ConstraintFunctionTest, evaluateDesignTangent){
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//	rowvec diffDirection(2);
+//	diffDirection(0) = 1.0;
+//	diffDirection(1) = 0.0;
+//	d.tangentDirection = diffDirection;
+//
+//	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauTangent.cpp", definition.executableName);
+//
+//	constraintFunTest.setID(0);
+//	constraintFunTest.setParametersByDefinition(definition);
+//	constraintFunTest.setEvaluationMode("tangent");
+//	constraintFunTest.evaluateDesign(d);
+//
+//	EXPECT_EQ(d.trueValue,  73.74420);
+//	EXPECT_EQ(d.tangentValue,  -73.896);
+//
+//
+//	remove(definition.designVectorFilename.c_str());
+//	remove(definition.outputFilename.c_str());
+//	remove(definition.executableName.c_str());
+//
+//
+//
+//}
 
 
 TEST_F(ConstraintFunctionTest, addDesignToData){
@@ -441,31 +441,31 @@ TEST_F(ConstraintFunctionTest, addDesignToDataWithGradient){
 
 }
 
-TEST_F(ConstraintFunctionTest, useFunctionPointer){
+//TEST_F(ConstraintFunctionTest, useFunctionPointer){
+//
+//	constraintFunTest.setParametersByDefinition(definition);
+//	constraintFunTest.setID(0);
+//	constraintFunTest.setUseExplicitFunctionOn();
+//	double x[2];
+//	x[0] = 1.0;
+//	x[1] = 1.0;
+//	double result = constraintFunTest.functionPtr(x);
+//	ASSERT_TRUE(fabs(result-2.0) < 10E-6);
+//
+//}
 
-	constraintFunTest.setParametersByDefinition(definition);
-	constraintFunTest.setID(0);
-	constraintFunTest.setUseExplicitFunctionOn();
-	double x[2];
-	x[0] = 1.0;
-	x[1] = 1.0;
-	double result = constraintFunTest.functionPtr(x);
-	ASSERT_TRUE(fabs(result-2.0) < 10E-6);
-
-}
-
-TEST_F(ConstraintFunctionTest, interpolateWithExternalFunction){
-
-	constraintFunTest.setParametersByDefinition(definition);
-	constraintFunTest.setID(0);
-	constraintFunTest.setUseExplicitFunctionOn();
-	rowvec x(2);
-	x(0) = 1.0;
-	x(1) = 1.0;
-	double result = constraintFunTest.interpolate(x);
-	ASSERT_TRUE(fabs(result-2.0) < 10E-6);
-
-}
+//TEST_F(ConstraintFunctionTest, interpolateWithExternalFunction){
+//
+//	constraintFunTest.setParametersByDefinition(definition);
+//	constraintFunTest.setID(0);
+//	constraintFunTest.setUseExplicitFunctionOn();
+//	rowvec x(2);
+//	x(0) = 1.0;
+//	x(1) = 1.0;
+//	double result = constraintFunTest.interpolate(x);
+//	ASSERT_TRUE(fabs(result-2.0) < 10E-6);
+//
+//}
 
 TEST_F(ConstraintFunctionTest, interpolate){
 

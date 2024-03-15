@@ -127,16 +127,21 @@ void GlobalOptimalDesign::setGlobalOptimalDesignFromHistoryFile(const mat& histo
 
 void GlobalOptimalDesign::setGradientGlobalOptimumFromTrainingData(const std::string &nameOfTrainingData){
 
-
 	assert(isNotEmpty(nameOfTrainingData));
 	assert(dimension>0);
 	assert(designParameters.size() > 0);
+
+
+	std::cout<<"setGradientGlobalOptimumFromTrainingData ...\n";
+	std::cout<<"nameOfTrainingData: "<<nameOfTrainingData<<"\n";
 
 	mat trainingDataToSearch;
 	trainingDataToSearch.load(nameOfTrainingData, csv_ascii);
 
 
 	mat trainingDataInput = trainingDataToSearch.submat(0,0,trainingDataToSearch.n_rows-1,dimension-1);
+
+	designParameters.print("designParameters");
 
 	int indexOfTheGlobalOptimalDesignInTrainingData = findIndexOfRow(designParameters, trainingDataInput,10E-06);
 
@@ -153,6 +158,9 @@ void GlobalOptimalDesign::setGradientGlobalOptimumFromTrainingData(const std::st
 
 	rowvec temp = trainingDataToSearch.row(indexOfTheGlobalOptimalDesignInTrainingData);
 	rowvec gradientVector = temp.tail(dimension);
+
+	gradientVector.print("gradientVector");
+
 	gradient = gradientVector;
 }
 

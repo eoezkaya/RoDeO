@@ -30,6 +30,7 @@
  */
 
 #include "./INCLUDE/matrix.hpp"
+//#include "./INCLUDE/vector.hpp"
 #include <iostream>
 #include <cstdlib> // For rand() function
 #include <ctime>   // For seeding srand()
@@ -48,20 +49,17 @@ void mat::allocateMemory() {
 }
 
 // Constructor
-mat::mat(int r, int c) : nrows(r), ncols(c) {
 
-	allocateMemory();
-
-	fill(0.0);
-
+mat::mat(int defaultRows, int defaultCols) : nrows(defaultRows), ncols(defaultCols), matrix(nullptr) {
+	if (nrows > 0 && ncols > 0) {
+		allocateMemory();
+		fill(0.0);
+	}
 }
 
 mat::mat(int r, int c, double val) : nrows(r), ncols(c) {
-
 	allocateMemory();
-
 	fill(val);
-
 }
 
 
@@ -82,11 +80,15 @@ mat::mat(const mat& other) : nrows(other.nrows), ncols(other.ncols) {
 
 // Destructor
 mat::~mat() {
-	// Deallocate memory for the matrix
-	for (int i = 0; i < nrows; ++i) {
-		delete[] matrix[i];
+
+	if(matrix!=nullptr){
+
+		for (int i = 0; i < nrows; ++i) {
+			delete[] matrix[i];
+		}
+		delete[] matrix;
+
 	}
-	delete[] matrix;
 }
 
 int mat::getNRows(void) const{
@@ -361,6 +363,20 @@ mat mat::concatenateColumnWise(const mat& other) const {
 	return result;
 }
 
-
+//vec mat::getRow(int n) const {
+//
+//	assert(n>0);
+//	assert(n<nrows);
+//
+//    // Create a new vector for the row
+//    rodeo::vec rowVector(ncols);
+//
+//    // Copy elements from the matrix row to the vector
+//    for (int i = 0; i < ncols; ++i) {
+//        rowVector(i) = matrix[n][i];
+//    }
+//
+//    return rowVector;
+//}
 
 

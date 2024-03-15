@@ -45,6 +45,19 @@
 #endif
 
 
+class OptimizationStatistics{
+
+public:
+	unsigned int numberOfObjectiveFunctionEvaluations = 0;
+	unsigned int numberOfObjectiveGradientEvaluations = 0;
+
+	std::vector<unsigned int> numberOfConstraintEvaluations;
+	std::vector<unsigned int> numberOfConstraintGradientEvaluations;
+
+};
+
+
+
 class Optimizer {
 
 #ifdef UNIT_TESTS
@@ -70,6 +83,7 @@ class Optimizer {
 
 private:
 
+	OptimizationStatistics statistics;
 
 	vec lowerBounds;
 	vec upperBounds;
@@ -81,7 +95,7 @@ private:
 	vec upperBoundsForAcqusitionFunctionMaximizationGradientStep;
 
 	double bestDeltaImprovementValueAchieved = 0.0;
-	double initialImprovementValue = 0.0;
+	double bestFeasibleInitialValue = 0.0;
 
 
 	std::string filenameCurrentIterateInfo = "currentIterate.dat";
@@ -157,14 +171,7 @@ private:
 
 	void modifySigmaFactor(void);
 
-	void evaluateObjectiveFunction(Design &currentBestDesign);
-	void evaluateObjectiveFunctionMultiFidelity(Design &currentBestDesign);
-	void evaluateObjectiveFunctionSingleFidelity(Design &currentBestDesign);
-	void evaluateObjectiveFunctionWithTangents(Design &currentBestDesign);
-	void evaluateObjectFunctionWithAdjoints();
-	void evaluateObjectFunctionWithPrimal();
-	void evaluateObjectiveFunctionMultiFidelityWithBothPrimal(Design &currentBestDesign);
-	void evaluateObjectiveFunctionMultiFidelityWithLowFiAdjoint(Design &currentBestDesign);
+
 
 	void evaluateConstraints(Design &);
 
@@ -188,6 +195,7 @@ private:
 
 
 	void estimateConstraints(DesignForBayesianOptimization &) const;
+	void estimateConstraintsGradientStep(DesignForBayesianOptimization &design) const;
 
 	double determineMaxStepSizeForGradientStep(rowvec x0, rowvec gradient) const;
 	bool checkIfDesignTouchesBounds(const rowvec &x0) const;
@@ -197,7 +205,7 @@ private:
 	void findTheMostPromisingDesignGradientStep(void);
 
 
-	void setDataAddModeForGradientBasedStep(const Design &currentBestDesign);
+
 	void findTheMostPromisingDesignToBeSimulated();
 	void initializeCurrentBestDesign(void);
 	void abortIfCurrentDesignHasANaN();
@@ -240,6 +248,7 @@ public:
 
 	void setDimension(unsigned int);
 	void setName(std::string);
+	void setImprovementPercentThresholdForGradientStep(double value);
 
 
 	void setParameterToDiscrete(unsigned int, double);
@@ -249,7 +258,7 @@ public:
 
 	void performEfficientGlobalOptimization(void);
 	void performEfficientGlobalOptimizationOnlyWithFunctionalValues(void);
-	void performEfficientGlobalOptimizationOnlyWithGradients(void);
+	void performEfficientGlobalOptimizationWithGradients(void);
 
 
 

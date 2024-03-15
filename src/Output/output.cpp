@@ -31,6 +31,7 @@
 
 #include "./INCLUDE/output.hpp"
 #include "../Optimizers/INCLUDE/design.hpp"
+
 #include <iostream>
 
 using std::cout;
@@ -179,4 +180,5 @@ void OutputDevice::printBoxConstraints(const vec &lb, const vec &ub) const{
 		}
 	}
 }
+
 

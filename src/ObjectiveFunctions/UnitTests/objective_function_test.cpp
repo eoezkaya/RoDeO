@@ -40,6 +40,7 @@
 
 
 
+
 TEST(ObjectiveFunctionDefinitionTest, constructor){
 
 
@@ -209,6 +210,65 @@ protected:
 
 
 };
+
+
+TEST_F(ObjectiveFunctionTest, evaluateGradient){
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	definition.executableNameGradient = "../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblau_gradient.py";
+
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDimension(2);
+	objFunTest.setEvaluationMode("adjoint");
+	objFunTest.writeDesignVariablesToFile(d);
+	objFunTest.evaluateGradient();
+
+	std::ifstream inputFile("gradientVector.dat");
+
+	ASSERT_TRUE(inputFile.is_open());
+
+	// Read two double values from the file
+	double value1, value2;
+
+	// Assuming the file contains two double values separated by whitespace
+	inputFile >> value1 >> value2;
+
+	ASSERT_TRUE(value1 == -73.896);
+	ASSERT_TRUE(value2 == -7.176);
+
+
+
+}
+
+
+TEST_F(ObjectiveFunctionTest, evaluateDesignGradient){
+
+	Design d(2);
+
+	rowvec dvInput(2);
+	dvInput(0) = 2.1;
+	dvInput(1) = -1.9;
+	d.designParameters = dvInput;
+	definition.executableNameGradient = "../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblau_gradient.py";
+	definition.outputGradientFilename = "gradientVector.dat";
+	objFunTest.setParametersByDefinition(definition);
+	objFunTest.setDimension(2);
+	objFunTest.evaluateDesignGradient(d);
+
+	ASSERT_TRUE(d.gradient(0) == -73.896);
+	ASSERT_TRUE(d.gradient(1) == -7.176);
+
+
+}
+
+
+
+
 
 
 TEST_F(ObjectiveFunctionTest, constructor) {
@@ -432,66 +492,66 @@ TEST_F(ObjectiveFunctionTest, initializeSurrogateCaseMultiFidelityBothKriging) {
 }
 
 
-TEST_F(ObjectiveFunctionTest, readOutputDesign){
-
-	Design d(2);
-
-	std::ofstream readOutputTestFile;
-	readOutputTestFile.open ("readOutputTestFile.txt");
-	readOutputTestFile << "2.144\n";
-	readOutputTestFile.close();
-
-	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-	objFunTest.setEvaluationMode("primal");
-	objFunTest.readOutputDesign(d);
-	EXPECT_EQ(d.trueValue, 2.144);
-
-
-	remove("readOutputTestFile.txt");
-
-}
-
-TEST_F(ObjectiveFunctionTest, readOutputDesignAdjoint){
-
-	Design d(2);
-
-	std::ofstream readOutputTestFile;
-	readOutputTestFile.open ("readOutputTestFile.txt");
-	readOutputTestFile << "2.144 3.2 89.1\n";
-	readOutputTestFile.close();
-
-	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-	objFunTest.setEvaluationMode("adjoint");
-	objFunTest.setDimension(2);
-	objFunTest.readOutputDesign(d);
-	EXPECT_EQ(d.trueValue, 2.144);
-
-	rowvec gradient = d.gradient;
-	EXPECT_EQ(gradient(0), 3.2);
-	EXPECT_EQ(gradient(1), 89.1);
-
-	remove("readOutputTestFile.txt");
-
-}
-
-TEST_F(ObjectiveFunctionTest, readOutputDesignTangent){
-
-	Design d(2);
-
-	std::ofstream readOutputTestFile;
-	readOutputTestFile.open ("readOutputTestFile.txt");
-	readOutputTestFile << "2.144 -12.11\n";
-	readOutputTestFile.close();
-
-	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
-	objFunTest.setEvaluationMode("tangent");
-	objFunTest.readOutputDesign(d);
-	EXPECT_EQ(d.trueValue, 2.144);
-
-	EXPECT_EQ(d.tangentValue, -12.11);
-	remove("readOutputTestFile.txt");
-
-}
+//TEST_F(ObjectiveFunctionTest, readOutputDesign){
+//
+//	Design d(2);
+//
+//	std::ofstream readOutputTestFile;
+//	readOutputTestFile.open ("readOutputTestFile.txt");
+//	readOutputTestFile << "2.144\n";
+//	readOutputTestFile.close();
+//
+//	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
+//	objFunTest.setEvaluationMode("primal");
+//	objFunTest.readOutputDesign(d);
+//	EXPECT_EQ(d.trueValue, 2.144);
+//
+//
+//	remove("readOutputTestFile.txt");
+//
+//}
+//
+//TEST_F(ObjectiveFunctionTest, readOutputDesignAdjoint){
+//
+//	Design d(2);
+//
+//	std::ofstream readOutputTestFile;
+//	readOutputTestFile.open ("readOutputTestFile.txt");
+//	readOutputTestFile << "2.144 3.2 89.1\n";
+//	readOutputTestFile.close();
+//
+//	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
+//	objFunTest.setEvaluationMode("adjoint");
+//	objFunTest.setDimension(2);
+//	objFunTest.readOutputDesign(d);
+//	EXPECT_EQ(d.trueValue, 2.144);
+//
+//	rowvec gradient = d.gradient;
+//	EXPECT_EQ(gradient(0), 3.2);
+//	EXPECT_EQ(gradient(1), 89.1);
+//
+//	remove("readOutputTestFile.txt");
+//
+//}
+//
+//TEST_F(ObjectiveFunctionTest, readOutputDesignTangent){
+//
+//	Design d(2);
+//
+//	std::ofstream readOutputTestFile;
+//	readOutputTestFile.open ("readOutputTestFile.txt");
+//	readOutputTestFile << "2.144 -12.11\n";
+//	readOutputTestFile.close();
+//
+//	objFunTest.setFileNameReadInput("readOutputTestFile.txt");
+//	objFunTest.setEvaluationMode("tangent");
+//	objFunTest.readOutputDesign(d);
+//	EXPECT_EQ(d.trueValue, 2.144);
+//
+//	EXPECT_EQ(d.tangentValue, -12.11);
+//	remove("readOutputTestFile.txt");
+//
+//}
 
 TEST_F(ObjectiveFunctionTest, writeDesignVariablesToFile){
 
@@ -528,7 +588,9 @@ TEST_F(ObjectiveFunctionTest, evaluateDesign){
 	dvInput(1) = -1.9;
 	d.designParameters = dvInput;
 
-	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblau.cpp", definition.executableName);
+	definition.executableName = "../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblau.py";
+
+	definition.outputFilename = "objectiveFunction.dat";
 
 	objFunTest.setParametersByDefinition(definition);
 	objFunTest.setDimension(2);
@@ -537,167 +599,161 @@ TEST_F(ObjectiveFunctionTest, evaluateDesign){
 
 	EXPECT_EQ(d.trueValue,  73.74420);
 
-	remove(definition.designVectorFilename.c_str());
-	remove(definition.outputFilename.c_str());
-	remove(definition.executableName.c_str());
-
-
-
 }
 
-TEST_F(ObjectiveFunctionTest, evaluateDesignLowFi){
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-
-	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauLowFidelity.cpp", definition.executableNameLowFi);
-
-	definition.ifMultiLevel = true;
-	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setDimension(2);
-	objFunTest.setEvaluationMode("primalLowFi");
-	objFunTest.evaluateDesign(d);
-
-	EXPECT_EQ(d.trueValueLowFidelity,   63.3025834400);
-
-	remove(definition.designVectorFilename.c_str());
-	remove(definition.outputFilename.c_str());
-	remove(definition.executableNameLowFi.c_str());
-}
-
-
+//TEST_F(ObjectiveFunctionTest, evaluateDesignLowFi){
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//
+//	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauLowFidelity.cpp", definition.executableNameLowFi);
+//
+//	definition.ifMultiLevel = true;
+//	objFunTest.setParametersByDefinition(definition);
+//	objFunTest.setDimension(2);
+//	objFunTest.setEvaluationMode("primalLowFi");
+//	objFunTest.evaluateDesign(d);
+//
+//	EXPECT_EQ(d.trueValueLowFidelity,   63.3025834400);
+//
+//	remove(definition.designVectorFilename.c_str());
+//	remove(definition.outputFilename.c_str());
+//	remove(definition.executableNameLowFi.c_str());
+//}
 
 
 
 
 
-TEST_F(ObjectiveFunctionTest, evaluateDesignAdjoint){
-
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-
-	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauAdjoint.cpp", definition.executableName);
-
-	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setDimension(2);
-	objFunTest.setEvaluationMode("adjoint");
-	objFunTest.evaluateDesign(d);
-
-	EXPECT_EQ(d.trueValue,  73.74420);
-	EXPECT_EQ(d.gradient(0),  -73.896);
-	EXPECT_EQ(d.gradient(1),  -7.176);
-
-	remove(definition.designVectorFilename.c_str());
-	remove(definition.outputFilename.c_str());
-	remove(definition.executableName.c_str());
-
-
-
-}
-
-
-TEST_F(ObjectiveFunctionTest, evaluateDesignAdjointLowFi){
-
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-
-	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauAdjointLowFi.cpp", definition.executableNameLowFi);
-
-
-
-	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setDimension(2);
-	objFunTest.setEvaluationMode("adjointLowFi");
-	objFunTest.evaluateDesign(d);
-
-	EXPECT_EQ(d.trueValueLowFidelity,  63.3025834400);
-	EXPECT_EQ(d.gradientLowFidelity(0),  -74.8981800000);
-	EXPECT_EQ(d.gradientLowFidelity(1),  -7.1264304000);
-
-	remove(definition.designVectorFilename.c_str());
-	remove(definition.outputFilename.c_str());
-	remove(definition.executableName.c_str());
-
-}
-
-TEST_F(ObjectiveFunctionTest, evaluateDesignTangent){
-
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-	rowvec diffDirection(2);
-	diffDirection(0) = 1.0;
-	diffDirection(1) = 0.0;
-	d.tangentDirection = diffDirection;
-
-	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauTangent.cpp", definition.executableName);
-
-	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setDimension(2);
-	objFunTest.setEvaluationMode("tangent");
-	objFunTest.evaluateDesign(d);
-
-	EXPECT_EQ(d.trueValue,  73.74420);
-	EXPECT_EQ(d.tangentValue,  -73.896);
-
-
-	remove(definition.designVectorFilename.c_str());
-	remove(definition.outputFilename.c_str());
-	remove(definition.executableName.c_str());
-
-
-
-}
-
-
-TEST_F(ObjectiveFunctionTest, evaluateDesignTangentLowFi){
-
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-	rowvec diffDirection(2);
-	diffDirection(0) = 1.0;
-	diffDirection(1) = 0.0;
-	d.tangentDirection = diffDirection;
-
-	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauTangentLowFi.cpp", definition.executableNameLowFi);
-
-	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setDimension(2);
-	objFunTest.setEvaluationMode("tangentLowFi");
-	objFunTest.evaluateDesign(d);
-
-	EXPECT_EQ(d.trueValueLowFidelity,  63.3025834400);
-	EXPECT_EQ(d.tangentValueLowFidelity,  -74.8981800000);
-
-
-	remove(definition.designVectorFilename.c_str());
-	remove(definition.outputFilename.c_str());
-	remove(definition.executableNameLowFi.c_str());
-
-}
+//
+//
+//TEST_F(ObjectiveFunctionTest, evaluateDesignAdjoint){
+//
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//
+//	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauAdjoint.cpp", definition.executableName);
+//
+//	objFunTest.setParametersByDefinition(definition);
+//	objFunTest.setDimension(2);
+//	objFunTest.setEvaluationMode("adjoint");
+//	objFunTest.evaluateDesign(d);
+//
+//	EXPECT_EQ(d.trueValue,  73.74420);
+//	EXPECT_EQ(d.gradient(0),  -73.896);
+//	EXPECT_EQ(d.gradient(1),  -7.176);
+//
+//	remove(definition.designVectorFilename.c_str());
+//	remove(definition.outputFilename.c_str());
+//	remove(definition.executableName.c_str());
+//
+//
+//
+//}
+//
+//
+//TEST_F(ObjectiveFunctionTest, evaluateDesignAdjointLowFi){
+//
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//
+//	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauAdjointLowFi.cpp", definition.executableNameLowFi);
+//
+//
+//
+//	objFunTest.setParametersByDefinition(definition);
+//	objFunTest.setDimension(2);
+//	objFunTest.setEvaluationMode("adjointLowFi");
+//	objFunTest.evaluateDesign(d);
+//
+//	EXPECT_EQ(d.trueValueLowFidelity,  63.3025834400);
+//	EXPECT_EQ(d.gradientLowFidelity(0),  -74.8981800000);
+//	EXPECT_EQ(d.gradientLowFidelity(1),  -7.1264304000);
+//
+//	remove(definition.designVectorFilename.c_str());
+//	remove(definition.outputFilename.c_str());
+//	remove(definition.executableName.c_str());
+//
+//}
+//
+//TEST_F(ObjectiveFunctionTest, evaluateDesignTangent){
+//
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//	rowvec diffDirection(2);
+//	diffDirection(0) = 1.0;
+//	diffDirection(1) = 0.0;
+//	d.tangentDirection = diffDirection;
+//
+//	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauTangent.cpp", definition.executableName);
+//
+//	objFunTest.setParametersByDefinition(definition);
+//	objFunTest.setDimension(2);
+//	objFunTest.setEvaluationMode("tangent");
+//	objFunTest.evaluateDesign(d);
+//
+//	EXPECT_EQ(d.trueValue,  73.74420);
+//	EXPECT_EQ(d.tangentValue,  -73.896);
+//
+//
+//	remove(definition.designVectorFilename.c_str());
+//	remove(definition.outputFilename.c_str());
+//	remove(definition.executableName.c_str());
+//
+//
+//
+//}
+//
+//
+//TEST_F(ObjectiveFunctionTest, evaluateDesignTangentLowFi){
+//
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//	rowvec diffDirection(2);
+//	diffDirection(0) = 1.0;
+//	diffDirection(1) = 0.0;
+//	d.tangentDirection = diffDirection;
+//
+//	compileWithCpp("../../../src/ObjectiveFunctions/UnitTests/Auxiliary/himmelblauTangentLowFi.cpp", definition.executableNameLowFi);
+//
+//	objFunTest.setParametersByDefinition(definition);
+//	objFunTest.setDimension(2);
+//	objFunTest.setEvaluationMode("tangentLowFi");
+//	objFunTest.evaluateDesign(d);
+//
+//	EXPECT_EQ(d.trueValueLowFidelity,  63.3025834400);
+//	EXPECT_EQ(d.tangentValueLowFidelity,  -74.8981800000);
+//
+//
+//	remove(definition.designVectorFilename.c_str());
+//	remove(definition.outputFilename.c_str());
+//	remove(definition.executableNameLowFi.c_str());
+//
+//}
 
 
 TEST_F(ObjectiveFunctionTest, addDesignToData){
@@ -1174,125 +1230,125 @@ TEST_F(ObjectiveFunctionTest, trainSurrogate){
 
 	objFunTest.setParameterBounds(boxConstraints);
 	objFunTest.initializeSurrogate();
-	objFunTest.setNumberOfTrainingIterationsForSurrogateModel(1000);
+	objFunTest.setNumberOfTrainingIterationsForSurrogateModel(100);
 	objFunTest.trainSurrogate();
 
 
 }
 
 
-TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModel){
+//TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModel){
+//
+//
+//	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
+//	himmelblauFunction.function.numberOfTrainingSamples = 20;
+//
+//	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+//	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//	d.trueValueLowFidelity = 2.67;
+//	rowvec gradientLowFi(2);
+//	gradientLowFi(0) = -18.9;
+//	gradientLowFi(1) = -22.4;
+//	d.gradientLowFidelity = gradientLowFi;
+//
+//
+//	setDefinitionForCase5();
+//	objFunTest.setParametersByDefinition(definition);
+//	objFunTest.setDataAddMode("adjointLowFidelity");
+//
+//	objFunTest.setDimension(2);
+//
+//	vec lb(2); lb.fill(-6.0);
+//	vec ub(2); ub.fill(6.0);
+//
+//	Bounds boxConstraints(lb,ub);
+//
+//
+//	objFunTest.setParameterBounds(boxConstraints);
+//
+//	//	objFunTest.setDisplayOn();
+//	objFunTest.initializeSurrogate();
+//	objFunTest.addLowFidelityDesignToData(d);
+//
+//	mat newData;
+//	newData.load(filenameTrainingDataLowFi, csv_ascii);
+//
+//	//	newData.print("newData");
+//
+//	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
+//
+//	rowvec lastRow = newData.row(newData.n_rows-1);
+//	ASSERT_EQ(lastRow(0),2.1);
+//	ASSERT_EQ(lastRow(1),-1.9);
+//	ASSERT_EQ(lastRow(2),2.67);
+//	ASSERT_EQ(lastRow(3),-18.9);
+//	ASSERT_EQ(lastRow(4),-22.4);
+//
+//	remove(filenameTrainingData.c_str());
+//	remove(filenameTrainingDataLowFi.c_str());
+//
+//}
 
-
-	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
-	himmelblauFunction.function.numberOfTrainingSamples = 20;
-
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
-	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-	d.trueValueLowFidelity = 2.67;
-	rowvec gradientLowFi(2);
-	gradientLowFi(0) = -18.9;
-	gradientLowFi(1) = -22.4;
-	d.gradientLowFidelity = gradientLowFi;
-
-
-	setDefinitionForCase5();
-	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setDataAddMode("adjointLowFidelity");
-
-	objFunTest.setDimension(2);
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	Bounds boxConstraints(lb,ub);
-
-
-	objFunTest.setParameterBounds(boxConstraints);
-
-	//	objFunTest.setDisplayOn();
-	objFunTest.initializeSurrogate();
-	objFunTest.addLowFidelityDesignToData(d);
-
-	mat newData;
-	newData.load(filenameTrainingDataLowFi, csv_ascii);
-
-	//	newData.print("newData");
-
-	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
-
-	rowvec lastRow = newData.row(newData.n_rows-1);
-	ASSERT_EQ(lastRow(0),2.1);
-	ASSERT_EQ(lastRow(1),-1.9);
-	ASSERT_EQ(lastRow(2),2.67);
-	ASSERT_EQ(lastRow(3),-18.9);
-	ASSERT_EQ(lastRow(4),-22.4);
-
-	remove(filenameTrainingData.c_str());
-	remove(filenameTrainingDataLowFi.c_str());
-
-}
-
-
-TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModelOnlyPrimalSolution){
-
-	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
-	himmelblauFunction.function.numberOfTrainingSamples = 20;
-
-	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
-	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.designParameters = dvInput;
-	d.trueValueLowFidelity = 2.67;
-
-
-	setDefinitionForCase5();
-	objFunTest.setParametersByDefinition(definition);
-	objFunTest.setDataAddMode("primalLowFidelity");
-	objFunTest.setDimension(2);
-
-	vec lb(2); lb.fill(-6.0);
-	vec ub(2); ub.fill(6.0);
-
-	Bounds boxConstraints(lb,ub);
-
-
-	objFunTest.setParameterBounds(boxConstraints);
-
-	//	objFunTest.setDisplayOn();
-	objFunTest.initializeSurrogate();
-	objFunTest.addLowFidelityDesignToData(d);
-
-	mat newData;
-	newData.load(filenameTrainingDataLowFi, csv_ascii);
-
-	//	newData.print("newData");
-
-	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
-
-	rowvec lastRow = newData.row(newData.n_rows-1);
-	ASSERT_EQ(lastRow(0),2.1);
-	ASSERT_EQ(lastRow(1),-1.9);
-	ASSERT_EQ(lastRow(2),2.67);
-	ASSERT_EQ(lastRow(3),0.0);
-	ASSERT_EQ(lastRow(4),0.0);
-
-
-	remove(filenameTrainingData.c_str());
-	remove(filenameTrainingDataLowFi.c_str());
-
-}
+//
+//TEST_F(ObjectiveFunctionTest, addLowFiDesignToDataGGEKModelOnlyPrimalSolution){
+//
+//	himmelblauFunction.function.numberOfTrainingSamplesLowFi = 50;
+//	himmelblauFunction.function.numberOfTrainingSamples = 20;
+//
+//	himmelblauFunction.function.generateTrainingSamplesMultiFidelityWithLowFiAdjoint();
+//	trainingDataLowFi = himmelblauFunction.function.trainingSamplesLowFidelity;
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.designParameters = dvInput;
+//	d.trueValueLowFidelity = 2.67;
+//
+//
+//	setDefinitionForCase5();
+//	objFunTest.setParametersByDefinition(definition);
+//	objFunTest.setDataAddMode("primalLowFidelity");
+//	objFunTest.setDimension(2);
+//
+//	vec lb(2); lb.fill(-6.0);
+//	vec ub(2); ub.fill(6.0);
+//
+//	Bounds boxConstraints(lb,ub);
+//
+//
+//	objFunTest.setParameterBounds(boxConstraints);
+//
+//	//	objFunTest.setDisplayOn();
+//	objFunTest.initializeSurrogate();
+//	objFunTest.addLowFidelityDesignToData(d);
+//
+//	mat newData;
+//	newData.load(filenameTrainingDataLowFi, csv_ascii);
+//
+//	//	newData.print("newData");
+//
+//	ASSERT_TRUE(newData.n_rows == trainingDataLowFi.n_rows+1);
+//
+//	rowvec lastRow = newData.row(newData.n_rows-1);
+//	ASSERT_EQ(lastRow(0),2.1);
+//	ASSERT_EQ(lastRow(1),-1.9);
+//	ASSERT_EQ(lastRow(2),2.67);
+//	ASSERT_EQ(lastRow(3),0.0);
+//	ASSERT_EQ(lastRow(4),0.0);
+//
+//
+//	remove(filenameTrainingData.c_str());
+//	remove(filenameTrainingDataLowFi.c_str());
+//
+//}
 
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 import numpy as np 
-
 from rosenbrock_optimization import RosenbrockOptimization
 
+    
 rosenbrockOpt = RosenbrockOptimization()
 
-print("Evaluating the Rosenbrock function...\n")
+print("Evaulating the Rosenbrock function...\n")
 
 dim = 2
 dv = np.zeros(dim)
@@ -19,8 +19,7 @@ f.close()
 
 print('design variables = ',dv)
             
-functionValue = rosenbrockOpt.evaluateFunction(dv)   
-gradient = rosenbrockOpt.evaluateGradient(dv)
+functionValue = rosenbrockOpt.evaluateFunction(dv) 
 
 print('function value = ', functionValue)
 

@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import numpy as np 
-
-def Eggholder(x):
-    return -(x[1]+47.0)*np.sin(np.sqrt(abs(x[1]+0.5*x[0]+47.0)))-x[0]*np.sin(np.sqrt(abs(x[0]-(x[1]+47.0) )))	
+from eggholder_optimization import EggholderOptimization
     
 
-print("Evaulating the Eggholder function...\n")
+print("Evaluating the Eggholder function...\n")
 
 dim = 2
 dv = np.zeros(dim)
@@ -19,7 +17,7 @@ f.close()
 
 print('design variables = ',dv)
             
-functionValue = Eggholder(dv)   
+functionValue = evaluateFunction(dv)   
 
 print('function value = ', functionValue)
 

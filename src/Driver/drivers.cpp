@@ -58,8 +58,13 @@ void RoDeODriver::addConfigKeysObjectiveFunction() {
 	configKeysObjectiveFunction.add(ConfigKey("WARM_START", "string"));
 
 	configKeysObjectiveFunction.add(ConfigKey("OUTPUT_FILE", "stringVector"));
+	configKeysObjectiveFunction.add(ConfigKey("OUTPUT_FILE_GRADIENT", "stringVector"));
+
 	configKeysObjectiveFunction.add(ConfigKey("PATH", "stringVector"));
 	configKeysObjectiveFunction.add(ConfigKey("EXECUTABLE", "stringVector"));
+	configKeysObjectiveFunction.add(ConfigKey("EXECUTABLE_GRADIENT", "stringVector"));
+	configKeysObjectiveFunction.add(ConfigKey("EXECUTABLE_DIRECTIONAL_DERIVATIVE", "stringVector"));
+
 	configKeysObjectiveFunction.add(ConfigKey("SURROGATE_MODEL", "stringVector"));
 	configKeysObjectiveFunction.add(ConfigKey("FILENAME_TRAINING_DATA", "stringVector"));
 
@@ -75,8 +80,11 @@ void RoDeODriver::addConfigKeysConstraintFunctions() {
 	configKeysConstraintFunction.add(ConfigKey("WARM_START", "string"));
 
 	configKeysConstraintFunction.add(ConfigKey("OUTPUT_FILE", "stringVector"));
+	configKeysConstraintFunction.add(ConfigKey("OUTPUT_FILE_GRADIENT", "stringVector"));
 	configKeysConstraintFunction.add(ConfigKey("PATH", "stringVector"));
 	configKeysConstraintFunction.add(ConfigKey("EXECUTABLE", "stringVector"));
+	configKeysConstraintFunction.add(ConfigKey("EXECUTABLE_GRADIENT", "stringVector"));
+	configKeysConstraintFunction.add(ConfigKey("EXECUTABLE_DIRECTIONAL_DERIVATIVE", "stringVector"));
 	configKeysConstraintFunction.add(ConfigKey("SURROGATE_MODEL", "stringVector"));
 	configKeysConstraintFunction.add(ConfigKey("FILENAME_TRAINING_DATA", "stringVector"));
 
@@ -563,10 +571,12 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	std::string definitionBuffer;
 	std::string designVectorFilename;
 	std::string executableName;
+	std::string executableNameGradient;
 	std::string filenameTrainingData;
 
 
 	std::string outputFilename;
+	std::string outputFilenameGradient;
 	std::string exePath;
 	std::string surrogateModel;
 
@@ -582,7 +592,9 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	definitionBuffer = configKeysConstraintFunction.getConfigKeyStringValue("DEFINITION");
 	designVectorFilename = configKeysConstraintFunction.getConfigKeyStringValue("DESIGN_VECTOR_FILE");
 	executableName = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",0);
+	executableNameGradient = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE_GRADIENT",0);
 	outputFilename = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",0);
+	outputFilenameGradient = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE_GRADIENT",0);
 	exePath = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("PATH",0);
 	filenameTrainingData = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
 	surrogateModel = configKeysConstraintFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
@@ -705,7 +717,9 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	std::string name;
 	std::string designVectorFilename;
 	std::string executableName;
+	std::string executableNameGradient;
 	std::string outputFilename;
+	std::string outputFilenameGradient;
 	std::string exePath;
 	std::string surrogateModel;
 
@@ -723,7 +737,9 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	designVectorFilename = configKeysObjectiveFunction.getConfigKeyStringValue("DESIGN_VECTOR_FILE");
 
 	executableName = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE",0);
+	executableNameGradient = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE_GRADIENT",0);
 	outputFilename = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE",0);
+	outputFilenameGradient = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("OUTPUT_FILE_GRADIENT",0);
 	exePath = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("PATH",0);
 	filenameTrainingData = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("FILENAME_TRAINING_DATA",0);
 	surrogateModel = configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("SURROGATE_MODEL",0);
@@ -732,8 +748,10 @@ void RoDeODriver::parseObjectiveFunctionDefinition(std::string inputString){
 	definitionObjectiveFunction.designVectorFilename =  designVectorFilename;
 
 	definitionObjectiveFunction.executableName = executableName;
+	definitionObjectiveFunction.executableNameGradient = executableNameGradient;
 	definitionObjectiveFunction.path = exePath;
 	definitionObjectiveFunction.outputFilename = outputFilename;
+	definitionObjectiveFunction.outputGradientFilename = outputFilenameGradient;
 	definitionObjectiveFunction.nameHighFidelityTrainingData = filenameTrainingData;
 	definitionObjectiveFunction.modelHiFi = getSurrogateModelID(surrogateModel);
 

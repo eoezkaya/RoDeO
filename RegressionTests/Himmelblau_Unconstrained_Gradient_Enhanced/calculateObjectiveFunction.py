@@ -20,13 +20,9 @@ f.close()
 print('design variables = ',dv)
             
 functionValue = himmelblauOpt.evaluateFunction(dv)   
-gradient      = himmelblauOpt.evaluateGradient(dv)
 
 print('function value = ', functionValue)
-print('gradient = ', gradient)
 
 f = open("objectiveFunction.dat", "w")
 f.write(str(functionValue) + "\n")
-f.write(str(gradient[0]) + "\n")
-f.write(str(gradient[1]) + "\n")
 f.close()
