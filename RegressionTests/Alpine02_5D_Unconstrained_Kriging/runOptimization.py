@@ -7,7 +7,7 @@ def Alpine02_5D(x):
     prod = 1.0
     for i in range(5):
         prod = prod * np.sqrt(x[i])*np.sin(x[i])
-    return -prod
+    return prod
 
 
 

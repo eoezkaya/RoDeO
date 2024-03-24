@@ -76,11 +76,12 @@ void Optimizer::initializeBoundsForAcquisitionFunctionMaximization() {
 void Optimizer::initializeOptimizerSettings(void) {
 
 	factorForGradientStepWindow = 0.01;
+	/* maximum number of line search iterations */
 	maximumIterationGradientStep = 5;
 	numberOfThreads  = 1;
 	sigmaFactor = 1.0;
-	sigmaFactorMax = 10.0;
-	sigmaFactorMin = 0.9;
+	sigmaFactorMax = 100.0;
+	sigmaFactorMin = 1.0;
 
 	iterGradientEILoop = 100;
 	improvementPercentThresholdForGradientStep = 5;
@@ -283,6 +284,8 @@ void Optimizer::findTheGlobalOptimalDesign(void){
 	globalOptimalDesign.setGlobalOptimalDesignFromHistoryFile(historyData);
 	globalOptimalDesign.saveToXMLFile();
 
+	objFun.setGlobalOptimalDesign(globalOptimalDesign);
+
 }
 
 
@@ -427,6 +430,7 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 
 	rowvec gradient = globalOptimalDesign.gradient;
 
+
 	for(unsigned int i=0; i<dimension; i++){
 
 		double scalingFactor = (upperBounds(i) - lowerBounds(i))*dimension;
@@ -446,7 +450,7 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 
 
 	double maxStepSize = determineMaxStepSizeForGradientStep(x0, gradient);
-
+	printScalar(trustRegionFactorGradientStep);
 
 	maxStepSize = maxStepSize * trustRegionFactorGradientStep;
 	double minStepSize = maxStepSize*0.01;
@@ -459,7 +463,7 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 	double deltaStepSize = (maxStepSize - minStepSize) / iterMaxAcquisitionFunction;
 	double stepSize = minStepSize;
 	/*
-	 printScalar(trustRegionFactorGradientStep);
+
 	 printScalar(maxStepSize);
 	 printScalar(stepSize);
 	 */
@@ -478,7 +482,7 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(
 		if (surrogateEstimate < bestObjectiveFunctionValue) {
 			bestObjectiveFunctionValue = surrogateEstimate;
 			bestDesignNormalized = x;
-//			printScalar(bestObjectiveFunctionValue);
+			//			printScalar(bestObjectiveFunctionValue);
 		}
 		stepSize += deltaStepSize;
 	}
@@ -493,9 +497,11 @@ void Optimizer::decideIfNextStepWouldBeAGradientStep() {
 	if (iterationNumberGradientStep == maximumIterationGradientStep) {
 		output.printMessage("Maximum number of gradient-based iterations...");
 		trustRegionFactorGradientStep = 1.0;
+		initialTrustRegionFactor = 1.0;
 		output.printMessage("Thrust region factor:", trustRegionFactorGradientStep);
 		iterationNumberGradientStep = 0;
 		WillGradientStepBePerformed = false;
+
 	}
 }
 
@@ -531,6 +537,7 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 		if(isConstrained()){
 
 			globalOptimalDesign.print();
+
 
 			rowvec gradient = globalOptimalDesign.gradient;
 			assert(gradient.size() > 0.0);
@@ -646,11 +653,15 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 
 			designToBeTried.print();
 
+
+
 		} /* end of ifConstrained */
 
 		else{
 
 			findPromisingDesignUnconstrainedGradientStep(designToBeTried);
+
+
 		}
 
 		/* we reduce the local search window size and line search iteration number */
@@ -1187,6 +1198,8 @@ void Optimizer::decideIfAGradientStepShouldBeTakenForTheFirstIteration() {
 
 	findTheGlobalOptimalDesign();
 
+
+
 	if (doesObjectiveFunctionHaveGradients()) {
 		globalOptimalDesign.setGradientGlobalOptimumFromTrainingData(objFun.getFileNameTrainingData());
 
@@ -1235,6 +1248,23 @@ void Optimizer::adjustSigmaFactor(void) {
 	double cFactor = history.getCrowdingFactor();
 	output.printMessage("cFactor", cFactor);
 	sigmaFactor = sigmaMultiplier*(crowdingCoefficient / cFactor);
+	output.printMessage("sigmaFactor (calculated)", sigmaFactor);
+
+
+	int randomNumber = generateRandomInt(0,100);
+	output.printMessage("randomNumber:", randomNumber);
+	if(randomNumber % 5 == 0){
+
+		double multiplier = generateRandomDouble(2.0,3.0);
+		output.printMessage("multiplier:", multiplier);
+		sigmaFactor = sigmaFactor*multiplier;
+		output.printMessage("In this iteration sigmaFactor is increased: ", sigmaFactor);
+
+
+	}
+
+
+
 	if (sigmaFactor < sigmaFactorMin)
 		sigmaFactor = sigmaFactorMin;
 
@@ -1336,7 +1366,6 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithFunctionalValues(void)
 void Optimizer::performEfficientGlobalOptimizationWithGradients(void){
 
 
-
 	while(1){
 
 		outerIterationNumber++;
@@ -1371,9 +1400,6 @@ void Optimizer::performEfficientGlobalOptimizationWithGradients(void){
 		calculateImprovementValue(currentBestDesign);
 		printScalar(currentBestDesign.improvementValue);
 
-
-
-
 		abortIfCurrentDesignHasANaN();
 
 		output.printDesign(currentBestDesign);
@@ -1397,21 +1423,67 @@ void Optimizer::performEfficientGlobalOptimizationWithGradients(void){
 			double percentImprovementRelativeToBest = (deltaImprovement/ bestDeltaImprovementValueAchieved)*100;
 			output.printMessage("Percent improvement relative to best improvement so far:",percentImprovementRelativeToBest);
 
+			if(percentImprovementRelativeToBest > 10){
+				sigmaMultiplier = 1.0;
+
+			}
+
+
+
+
 			if(percentImprovementRelativeToBest < improvementPercentThresholdForGradientStep){
 				output.printMessage("Improvement is too small, the next step will be an EGO step");
+
+
 				WillGradientStepBePerformed = false;
-				trustRegionFactorGradientStep = 1.0;
+				trustRegionFactorGradientStep = initialTrustRegionFactor;
 				iterationNumberGradientStep = 0;
+
+
+
 			}
 			else{
-
+				/* enough descent has been achieved */
 				output.printMessage("Evaluating gradient vector for this design...");
 				objFun.evaluateDesignGradient(currentBestDesign);
 				statistics.numberOfObjectiveGradientEvaluations++;
 				output.printDesign(currentBestDesign);
+
+
+
+				/* expand this parameters only if following occurs
+				 *
+				 * 1- Previous step was a gradient step
+				 * 2- It was the first iteration of the line search
+				 * 3- An improvement has been achieved
+				 *
+				 */
+				if(WillGradientStepBePerformed && iterationNumberGradientStep == 1){
+
+					initialTrustRegionFactor = initialTrustRegionFactor*1.3;
+				}
+
+
 				WillGradientStepBePerformed = true;
-				trustRegionFactorGradientStep = 1.0;
+				trustRegionFactorGradientStep =  initialTrustRegionFactor;
+				//		trustRegionFactorGradientStep = trustRegionFactorGradientStep*1.3;
+				//		output.printMessage("Expanding trustRegionFactorGradientStep, new value = ",trustRegionFactorGradientStep);
+
 				iterationNumberGradientStep = 0;
+
+
+
+
+			}
+
+
+
+		}
+		else{ /* No improvement is achieved */
+
+			if(WillGradientStepBePerformed){
+
+				initialTrustRegionFactor = 1.0;
 
 			}
 
@@ -1423,12 +1495,21 @@ void Optimizer::performEfficientGlobalOptimizationWithGradients(void){
 			objFun.setDataAddMode("adjoint");
 		}
 
+
 		objFun.addDesignToData(currentBestDesign);
-
-
 		addConstraintValuesToData(currentBestDesign);
 
+
 		history.updateOptimizationHistory(currentBestDesign);
+
+		if(ifVariableSigmaStrategy){
+
+			adjustSigmaFactor();
+			sigmaMultiplier = sigmaMultiplier*sigmaGrowthFactor;
+		}
+
+
+
 		findTheGlobalOptimalDesign();
 
 		/* terminate optimization */
@@ -1519,7 +1600,7 @@ void Optimizer::calculateImprovementValue(Design &d){
 			d.improvementValue = EPSILON;
 		}
 
-		/* improvement is positive if only we find a better design, which is also feasibe */
+		/* improvement is positive if only we find a better design, which is also feasible */
 		if(d.trueValue < bestFeasibleInitialValue){
 			d.improvementValue = bestFeasibleInitialValue - d.trueValue;
 		}

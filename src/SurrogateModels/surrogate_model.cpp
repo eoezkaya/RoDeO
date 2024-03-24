@@ -123,7 +123,12 @@ void SurrogateModel::setDisplayOff(void){
 
 }
 
+void SurrogateModel::setGlobalOptimalDesign(Design d){
 
+	assert(d.designParameters.size()>0);
+	globalOptimalDesign = d;
+
+}
 
 std::string SurrogateModel::getNameOfHyperParametersFile(void) const{
 
@@ -587,7 +592,62 @@ void SurrogateModel::generateSampleWeights(void){
 		printSampleWeights();
 	}
 
+
 }
+
+
+void SurrogateModel::generateSampleWeightsAccordingToGlobalOptimum(void){
+
+	assert(globalOptimalDesign.designParametersNormalized.size() > 0);
+	assert(ifNormalized);
+	output.printMessage("Generating sample weights based on the global optimum...");
+
+	mat input = data.getInputMatrix();
+
+	sampleWeights = zeros<vec>(numberOfSamples);
+
+	rowvec xGlobalOptimum = globalOptimalDesign.designParametersNormalized;
+
+//	xGlobalOptimum.print("xGlobalOptimum");
+
+	vec distances(numberOfSamples);
+
+	for(unsigned int i=0; i<numberOfSamples; i++){
+
+		rowvec diff = xGlobalOptimum - input.row(i);
+		distances(i) = norm(diff,1);
+
+	}
+
+	vec z(numberOfSamples,fill::zeros);
+	double mu = mean(distances);
+	double sigma = stddev(distances);
+	for(unsigned int i=0; i<numberOfSamples; i++){
+		z(i) = (distances(i) - mu)/sigma;
+	}
+
+	double b = 0.5;
+	double a = 0.5/min(z);
+
+	for(unsigned int i=0; i<numberOfSamples; i++){
+		sampleWeights(i) = a*z(i) + b;
+		if(sampleWeights(i)< 0.1) {
+			sampleWeights(i) = 0.1;
+		}
+	}
+
+//	for(unsigned int i=0; i<numberOfSamples; i++){
+//
+//		rowvec x = input.row(i);
+//		std::cout<<x(0)<<" "<<x(1)<<" "<<sampleWeights(i) <<"\n";
+//
+//
+//
+//	}
+//
+
+}
+
 
 void SurrogateModel::printSampleWeights(void) const{
 
@@ -608,3 +668,9 @@ void SurrogateModel::removeVeryCloseSamples(const Design& globalOptimalDesign){
 }
 
 
+void SurrogateModel::removeVeryCloseSamples(const Design& globalOptimalDesign , std::vector<rowvec> samples){
+
+	assert(ifDataIsRead);
+	data.removeVeryCloseSamples(globalOptimalDesign,samples);
+
+}

@@ -51,7 +51,7 @@ class SurrogateModelData{
 #ifdef UNIT_TESTS
 	friend class SurrogateModelDataTest;
 	FRIEND_TEST(SurrogateModelDataTest, removeVeryCloseSamples);
-
+	FRIEND_TEST(SurrogateModelDataTest, removeVeryCloseSamplesLineSearch);
 #endif
 
 
@@ -170,6 +170,7 @@ public:
 	void print(void) const;
 
 	void removeVeryCloseSamples(const Design&);
+	void removeVeryCloseSamples(const Design&,const std::vector<rowvec> history);
 
 
 

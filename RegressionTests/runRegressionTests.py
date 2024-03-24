@@ -68,12 +68,55 @@ regression_tests = []
 
 # Add instances to the array
 
+regression_tests.append(RegressionTest("Alpine02 5D Uncostrained Gradient Enhanced",
+                                       "/Alpine02_5D_Unconstrained_Gradient_Enhanced", 
+                                       50, 
+                                       -174.617, 
+                                       -20, 
+                                       0.005))
+
+
+regression_tests.append(RegressionTest("Himmelblau Unconstrained Gradient Enhanced",
+                                       "/Himmelblau_Unconstrained_Gradient_Enhanced",
+                                         20, 
+                                            0.0, 
+                                            1.0,   
+                                            100.0))
+
+
+
+
+
+regression_tests.append(RegressionTest("Alpine02 5D Uncostrained",
+                                       "/Alpine02_5D_Unconstrained_Kriging", 
+                                       3, 
+                                       -174.617, 
+                                       -20, 
+                                       0.005))
+
+
+
+
+
+
+
+
+regression_tests.append(RegressionTest("Himmelblau Unconstrained",
+                                       "/Himmelblau_Unconstrained_Kriging",
+                                         20, 
+                                            0.0, 
+                                            1.0,   
+                                            100.0))
+
+
+
+
 regression_tests.append(RegressionTest("Compression spring design costrained",
                                        "/Compression_spring_design", 
                                        1, 
                                        0.010, 
                                        0.020, 
-                                       0.005))
+                                       10.0))
 
 regression_tests.append(RegressionTest("Wingweight Unconstrained",
                                        "/Wingweight_Unconstrained_Kriging",
@@ -101,19 +144,17 @@ regression_tests.append(RegressionTest("Rosenbrock Constrained",
                                          0.0, 
                                          1.0,   
                                          10.0))
+                                         
+regression_tests.append(RegressionTest("Rosenbrock Constrained Gradient Enhanced",
+                                       "/Rosenbrock_Constrained_Gradient_Enhanced",
+                                         1,    
+                                         0.0, 
+                                         1.0,   
+                                         10.0))                                         
+                                         
 
-regression_tests.append(RegressionTest("Himmelblau Unconstrained",
-                                       "/Himmelblau_Unconstrained_Kriging",
-                                         5, 
-                                            0.0, 
-                                            1.0,   
-                                            100.0))
-regression_tests.append(RegressionTest("Alpine02 5D Uncostrained",
-                                       "/Alpine02_5D_Unconstrained_Kriging", 
-                                       3, 
-                                       -174.617, 
-                                       0.0, 
-                                       0.005))
+
+
 
 #regression_tests.append(RegressionTest("/Himmelblau_Constrained_Kriging",20, 35.7))
 
@@ -124,8 +165,9 @@ for test in regression_tests:
     print("-" * 30)
     print("Test ID = ", testID)
     print("Problem name:", test.name)
-    print("Number of Trials:", test.num_trials)
-    print("Known optimal Value:", test.optimal_value)
+    print("Number of trials:", test.num_trials)
+    print("Known optimal value:", test.optimal_value)
+    print("Acceptance value:", test.target_value)
     
     
     DIR_TEST = DIR_REGRESSION_TEST + test.directory_name

@@ -563,6 +563,44 @@ void SurrogateModelData::print(void) const{
 }
 
 
+void SurrogateModelData::removeVeryCloseSamples(const Design& globalOptimalDesign, const std::vector<rowvec> samples){
+
+	assert(!samples.empty());
+	double tolerance = toleranceFactorForSearchingGlobalDesign * (1.0/dimension);
+
+	int globalOptimalDesignIndex = findIndexOfRow(globalOptimalDesign.designParametersNormalized,X, tolerance);
+	std::vector<unsigned int> indices;
+
+	for (auto it = begin (samples); it != end (samples); ++it) {
+
+		int indx = findIndexOfRow(*it,X, tolerance);
+
+		if(indx == -1) {
+
+			std::cout<<"Could not find the point\n";
+			it->print();
+
+			std::cout<<"In the data\n";
+			X.print();
+		}
+
+		if(indx!=globalOptimalDesignIndex) indices.push_back(indx);
+
+
+	}
+
+	mat rawDataToBeReduced = rawData;
+
+	removeSomeRows(rawDataToBeReduced,  indices);
+	rawDataToBeReduced.save(filenameFromWhichTrainingDataIsRead, csv_ascii);
+
+	readData(filenameFromWhichTrainingDataIsRead);
+
+
+}
+
+
+
 void SurrogateModelData::removeVeryCloseSamples(const Design& globalOptimalDesign){
 
 	assert(ifDataIsRead);
@@ -601,7 +639,7 @@ void SurrogateModelData::removeVeryCloseSamples(const Design& globalOptimalDesig
 
 	mat rawDataToBeReduced = rawData;
 
-	printList(indicesOfSamplesToRemove,"indicesOfSamplesToRemove");
+	//	printList(indicesOfSamplesToRemove,"indicesOfSamplesToRemove");
 
 	removeSomeRows(rawDataToBeReduced, indicesOfSamplesToRemove);
 	rawDataToBeReduced.save(filenameFromWhichTrainingDataIsRead, csv_ascii);

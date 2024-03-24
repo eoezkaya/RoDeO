@@ -45,6 +45,8 @@ using std::string;
 
 class SurrogateModel{
 
+
+
 protected:
 
 	unsigned int dimension = 0;
@@ -82,6 +84,8 @@ protected:
 
 	vec sampleWeights;
 	double targetForSampleWeights = 0.0;
+
+	Design globalOptimalDesign;
 
 
 
@@ -132,6 +136,8 @@ public:
 	void setGradientsOn(void);
 	void setGradientsOff(void);
 	bool areGradientsOn(void) const;
+
+	void setGlobalOptimalDesign(Design d);
 
 	virtual void setDisplayOn(void);
 	virtual void setDisplayOff(void);
@@ -194,9 +200,11 @@ public:
 	void printGeneralizationError(void) const;
 
 	void generateSampleWeights(void);
+	void generateSampleWeightsAccordingToGlobalOptimum(void);
 	void printSampleWeights(void) const;
 
 	void removeVeryCloseSamples(const Design& globalOptimalDesign);
+	void removeVeryCloseSamples(const Design& globalOptimalDesign , std::vector<rowvec> samples);
 
 };
 

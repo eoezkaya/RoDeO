@@ -120,14 +120,14 @@ private:
 	unsigned int iterationNumberGradientStep = 0;
 	unsigned int maximumIterationGradientStep = 5;
 	double trustRegionFactorGradientStep = 1.0;
+	double initialTrustRegionFactor = 1.0;
+
 	bool WillGradientStepBePerformed = false;
 
 
 	GlobalOptimalDesign globalOptimalDesign;
 
 	Design currentBestDesign;
-
-
 
 
 	double factorForGradientStepWindow = 0.01;
@@ -139,10 +139,11 @@ private:
 	bool ifVariableSigmaStrategy = true;
 	double sigmaFactor = 1.0;
 	double sigmaFactorMax = 3.0;
-	double sigmaFactorMin = 0.9;
+	double sigmaFactorMin = 1.0;
 	double crowdingCoefficient = 0.0;
 	double sigmaMultiplier = 1.0;
 	double sigmaGrowthFactor = 1.01;
+
 
 	unsigned int numberOfDisceteVariables = 0;
 	std::vector<double> incrementsForDiscreteVariables;

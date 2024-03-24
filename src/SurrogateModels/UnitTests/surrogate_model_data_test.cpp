@@ -310,6 +310,50 @@ TEST_F(SurrogateModelDataTest, testnormalizeData) {
 	ASSERT_TRUE(testSurrogateModelData.ifDataIsNormalized);
 }
 
+TEST_F(SurrogateModelDataTest, removeVeryCloseSamplesLineSearch) {
+
+	unsigned int dim = 3;
+	unsigned int N = 40;
+	testSurrogateModelData.setDimension(dim);
+	mat testDataMatrix(N,dim+1,fill::randu);
+
+	testDataMatrix.save("trainingData.csv", csv_ascii);
+
+	testSurrogateModelData.readData("trainingData.csv");
+
+	ASSERT_TRUE(testSurrogateModelData.ifDataIsRead);
+
+	Bounds boxConstraints(dim);
+	boxConstraints.setBounds(0.0,1.0);
+	testSurrogateModelData.setBoxConstraints(boxConstraints);
+	testSurrogateModelData.normalize();
+	ASSERT_TRUE(testSurrogateModelData.ifDataIsNormalized);
+
+	mat trainingData = testSurrogateModelData.X;
+	rowvec dv = trainingData.row(11);
+
+	std::vector<rowvec> history;
+	history.push_back(trainingData.row(11));
+	history.push_back(trainingData.row(12));
+	history.push_back(trainingData.row(13));
+	history.push_back(trainingData.row(14));
+
+
+	Design globalOptimal;
+	globalOptimal.designParametersNormalized = dv;
+
+	testSurrogateModelData.removeVeryCloseSamples(globalOptimal,history);
+
+
+	trainingData = testSurrogateModelData.X;
+	ASSERT_TRUE(trainingData.n_rows == 37);
+
+}
+
+
+
+
+
 
 TEST_F(SurrogateModelDataTest, removeVeryCloseSamples) {
 
@@ -348,6 +392,7 @@ TEST_F(SurrogateModelDataTest, removeVeryCloseSamples) {
 	ASSERT_TRUE(trainingData.n_rows == 38);
 
 }
+
 
 
 

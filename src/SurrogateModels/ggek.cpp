@@ -223,6 +223,7 @@ void GeneralizedDerivativeEnhancedModel::initializeSurrogateModel(void){
 
 	output.printMessage("Initializing the generalized gradient enhanced Kriging model...");
 
+
 	resetDataObjects();
 
 	initializeCorrelationFunction();
@@ -232,9 +233,8 @@ void GeneralizedDerivativeEnhancedModel::initializeSurrogateModel(void){
 	auxiliaryModel.setDimension(dimension);
 	auxiliaryModel.initializeSurrogateModel();
 
+
 	updateAuxilliaryFields();
-
-
 	ifInitialized = true;
 
 
@@ -331,8 +331,8 @@ void GeneralizedDerivativeEnhancedModel::assembleLinearSystem(void){
 	assert(ifNormalized);
 
 	calculateIndicesOfSamplesWithActiveDerivatives();
-
 	generateWeightingMatrix();
+
 	calculatePhiMatrix();
 
 	calculateBeta0();
@@ -381,7 +381,6 @@ void GeneralizedDerivativeEnhancedModel::updateAuxilliaryFields(void){
 	auxiliaryModel.updateAuxilliaryFields();
 
 	assembleLinearSystem();
-
 	solveLinearSystem();
 }
 void GeneralizedDerivativeEnhancedModel::train(void){
@@ -676,8 +675,7 @@ double GeneralizedDerivativeEnhancedModel::interpolateUsingDerivatives(rowvec x 
 void GeneralizedDerivativeEnhancedModel::interpolateWithVariance(rowvec xp,double *fTilde,double *ssqr) const{
 
 	auxiliaryModel.interpolateWithVariance(xp, fTilde, ssqr);
-	*fTilde = interpolate(xp);
-
+	//	*fTilde = interpolate(xp);
 
 }
 
@@ -770,28 +768,41 @@ void GeneralizedDerivativeEnhancedModel::generateWeightingMatrix(void){
 	assert(dimension>0);
 
 
+
 	if(ifVaryingSampleWeights){
 
-		generateSampleWeights();
+		if(globalOptimalDesign.designParametersNormalized.size()>0){
 
 
-		unsigned int howManySamplesHaveDerivatives = indicesOfSamplesWithActiveDerivatives.size();
-
-		unsigned int sizeOfWeightMatrix = numberOfSamples +  howManySamplesHaveDerivatives;
-
-		weightMatrix = zeros<mat>(sizeOfWeightMatrix, sizeOfWeightMatrix);
+			generateSampleWeightsAccordingToGlobalOptimum();
 
 
-		/* weights for functional values */
-		for(unsigned int i=0; i<numberOfSamples; i++){
-			weightMatrix(i,i) = sampleWeights(i);
+			unsigned int howManySamplesHaveDerivatives = indicesOfSamplesWithActiveDerivatives.size();
+
+			unsigned int sizeOfWeightMatrix = numberOfSamples +  howManySamplesHaveDerivatives;
+
+			weightMatrix = zeros<mat>(sizeOfWeightMatrix, sizeOfWeightMatrix);
+
+
+			/* weights for functional values */
+			for(unsigned int i=0; i<numberOfSamples; i++){
+				weightMatrix(i,i) = sampleWeights(i);
+			}
+
+
+			for(unsigned int i=0; i<howManySamplesHaveDerivatives; i++){
+				unsigned int indx = indicesOfSamplesWithActiveDerivatives.at(i);
+				double weight = sampleWeights(indx);
+				weightMatrix(i+numberOfSamples,i+numberOfSamples) = weight* weightFactorForDerivatives;
+			}
+
 		}
+		else{
+			unsigned int howManySamplesHaveDerivatives = indicesOfSamplesWithActiveDerivatives.size();
+			unsigned int sizeOfWeightMatrix = numberOfSamples +  howManySamplesHaveDerivatives;
+			weightMatrix = zeros<mat>(sizeOfWeightMatrix, sizeOfWeightMatrix);
+			weightMatrix.eye();
 
-
-		for(unsigned int i=0; i<howManySamplesHaveDerivatives; i++){
-			unsigned int indx = indicesOfSamplesWithActiveDerivatives.at(i);
-			double weight = sampleWeights(indx);
-			weightMatrix(i+numberOfSamples,i+numberOfSamples) = weight* weightFactorForDerivatives;
 		}
 
 	}

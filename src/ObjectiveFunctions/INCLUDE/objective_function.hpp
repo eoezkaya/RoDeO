@@ -248,8 +248,11 @@ public:
 	std::string getExecutionCommand(string) const;
 
 	void removeVeryCloseSamples(const Design& globalOptimalDesign);
+	void removeVeryCloseSamples(const Design& globalOptimalDesign, std::vector<rowvec> samples);
 
 	void setSigmaFactor(double);
+
+	void setGlobalOptimalDesign(Design d);
 
 
 };

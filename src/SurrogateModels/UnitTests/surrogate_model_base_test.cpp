@@ -41,6 +41,10 @@
 
 class SurrogateModelBaseClassTestModel : public SurrogateModel{
 
+	friend class SurrogateModelBaseTest;
+	FRIEND_TEST(SurrogateModelBaseTest, generateSampleWeightsAccordingToGlobalOptimum);
+
+
 private:
 
 
@@ -59,11 +63,14 @@ public:
 	void readData(void){
 
 		data.readData(filenameDataInput);
+		numberOfSamples = data.getNumberOfSamples();
 		ifDataIsRead = true;
 
 	}
 	void normalizeData(void){
 
+		data.normalize();
+		ifNormalized = true;
 
 	}
 
@@ -300,3 +307,23 @@ TEST_F(SurrogateModelBaseTest, countHowManySamplesAreWithinBounds) {
 	ASSERT_TRUE(howMany < himmelblauFunction.function.numberOfTrainingSamples);
 
 }
+
+TEST_F(SurrogateModelBaseTest, generateSampleWeightsAccordingToGlobalOptimum) {
+
+	himmelblauFunction.function.generateTrainingSamples();
+	testModel.readData();
+	testModel.normalizeData();
+
+	Design globalOpt(2);
+	rowvec x(2); x(0) = 0.12; x(1) = 0.33;
+	globalOpt.designParametersNormalized = x;
+	testModel.setGlobalOptimalDesign(globalOpt);
+
+	testModel.generateSampleWeightsAccordingToGlobalOptimum();
+
+	ASSERT_TRUE(testModel.sampleWeights.size() > 0);
+
+
+}
+
+

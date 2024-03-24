@@ -1051,11 +1051,25 @@ void ObjectiveFunction::removeVeryCloseSamples(const Design& globalOptimalDesign
 
 }
 
+void ObjectiveFunction::removeVeryCloseSamples(const Design& globalOptimalDesign, std::vector<rowvec> samples){
+
+
+	surrogate->removeVeryCloseSamples(globalOptimalDesign,samples);
+	surrogate->updateModelWithNewData();
+
+}
+
 
 void ObjectiveFunction::setSigmaFactor(double factor){
 
 	assert(factor>0.0);
 	sigmaFactor = factor;
+
+}
+
+void ObjectiveFunction::setGlobalOptimalDesign(Design d){
+	assert(ifSurrogateModelIsDefined);
+	surrogate->setGlobalOptimalDesign(d);
 
 }
 

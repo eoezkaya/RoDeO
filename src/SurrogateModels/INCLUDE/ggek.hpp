@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -84,7 +84,7 @@ private:
 
 	bool ifDirectionalDerivativesAreUsed = false;
 
-	double weightFactorForDerivatives = 0.5;
+	double weightFactorForDerivatives = 1.0;
 
 	double sigmaThresholdValueForSVD = 10E-014;
 
@@ -125,6 +125,8 @@ private:
 	bool checkPhiMatrix(void);
 	bool checkResidual(void) const;
 
+
+
 public:
 
 	bool ifThetaFactorOptimizationIsDone = false;
@@ -147,6 +149,8 @@ public:
 	void setThetaFactor(double);
 	void setAdjustThetaFactorOff(void);
 	void setAdjustThetaFactorOn(void);
+
+
 
 	void readData(void);
 	void normalizeData(void);
