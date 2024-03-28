@@ -404,13 +404,10 @@ void RoDeODriver::checkConsistencyOfObjectiveFunctionDefinition(void) const{
 
 	string exeName = definitionObjectiveFunction.executableName;
 
-	if(isEmpty(exeName)){
-		abortWithErrorMessage("Objective function EXECUTABLE is undefined");
-	}
 
 	string name = definitionObjectiveFunction.name;
 
-	if(isEmpty(exeName)){
+	if(isEmpty(name)){
 		abortWithErrorMessage("Objective function NAME is undefined");
 	}
 
@@ -438,9 +435,7 @@ void RoDeODriver::checkConsistencyOfObjectiveFunctionDefinition(void) const{
 
 		string exeNameLowFi = definitionObjectiveFunction.executableNameLowFi;
 
-		if(isEmpty(exeNameLowFi)){
-			abortWithErrorMessage("Objective function EXECUTABLE for the low-fidelity model is undefined");
-		}
+
 		string filenameTrainingDataLowFi = definitionObjectiveFunction.nameLowFidelityTrainingData;
 
 		if(isEmpty(filenameTrainingDataLowFi)){
@@ -668,10 +663,7 @@ void RoDeODriver::parseObjectiveFunctionDefinitionMultiFidelity() {
 		definitionObjectiveFunction.ifMultiLevel = true;
 		string executableNameLowFi =
 				configKeysObjectiveFunction.getConfigKeyStringVectorValueAtIndex("EXECUTABLE", 1);
-		if (executableNameLowFi.empty()) {
-			string msg = "EXECUTABLE for the low fidelity model is not defined!";
-			abortWithErrorMessage(msg);
-		}
+
 		definitionObjectiveFunction.executableNameLowFi = executableNameLowFi;
 		string filenameTrainingDataLowFi;
 		filenameTrainingDataLowFi =

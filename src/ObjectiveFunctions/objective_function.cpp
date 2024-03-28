@@ -77,11 +77,7 @@ bool ObjectiveFunctionDefinition::checkIfDefinitionIsOk(void) const{
 		return false;
 
 	}
-	if(executableName.empty()){
 
-		std::cout<<"executableName is empty!";
-		return false;
-	}
 	if(outputFilename.empty()){
 
 		std::cout<<"outputFilename is empty!";
@@ -94,8 +90,7 @@ bool ObjectiveFunctionDefinition::checkIfDefinitionIsOk(void) const{
 
 	if(ifMultiLevel){
 
-		if(executableNameLowFi.empty() ||
-				nameLowFidelityTrainingData.empty() ||
+		if(nameLowFidelityTrainingData.empty() ||
 				outputFilenameLowFi.empty()){
 			return false;
 		}
@@ -959,15 +954,18 @@ void ObjectiveFunction::evaluateObjectiveFunction(void){
 
 	if(isHiFiEvaluation()){
 
-		assert(isNotEmpty(definition.executableName));
-		runCommand = getExecutionCommand(definition.executableName);
+
+		if(isNotEmpty(definition.executableName)){
+			runCommand = getExecutionCommand(definition.executableName);
+		}
 
 
 	}
 	if(isLowFiEvaluation()){
 
-		assert(isNotEmpty(definition.executableNameLowFi));
-		runCommand = getExecutionCommand(definition.executableNameLowFi);
+		if(isNotEmpty(definition.executableNameLowFi)){
+			runCommand = getExecutionCommand(definition.executableNameLowFi);
+		}
 
 	}
 

@@ -10,7 +10,7 @@ RODEO_HOME = "/home/eoezkaya/RoDeO"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
 configFilename = "damavandi.cfg"
 
-NTrainingSamples = 200
+NTrainingSamples = 50
 
 ub = [14.0, 14.0]
 lb = [0.0, 0.0]

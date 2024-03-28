@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 import numpy as np 
-from eggholder_optimization import EggholderOptimization
-    
-function = EggholderOptimization()
-print("Evaluating the Eggholder function...\n")
 
-dim = 2
+from paviani_optimization import PavianiOptimization
+func = PavianiOptimization()
+
+print("Evaulating the Paviani function ...\n")
+
+dim = 10
 dv = np.zeros(dim)
             
 f = open('dv.dat', "r")
@@ -17,7 +18,7 @@ f.close()
 
 print('design variables = ',dv)
             
-functionValue = function.evaluateFunction(dv)   
+functionValue = func.evaluateFunction(dv)
 
 print('function value = ', functionValue)
 
@@ -25,7 +26,3 @@ print('function value = ', functionValue)
 f = open("objectiveFunction.dat", "w")
 f.write(str(functionValue) + "\n")
 f.close()
-
-
-
-

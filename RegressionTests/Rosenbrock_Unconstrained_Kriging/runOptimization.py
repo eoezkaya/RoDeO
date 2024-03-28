@@ -10,7 +10,7 @@ RODEO_HOME = "/home/eoezkaya/RoDeO"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
 configFilename = "rosenbrock.cfg"
 
-NTrainingSamples = 50
+NTrainingSamples = 25
 
 ub = [2.0, 2.0]
 lb = [-2.0, -2.0]
