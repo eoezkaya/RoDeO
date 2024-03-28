@@ -1,0 +1,12 @@
+*.dat
+*.xml
+*.cmake
+*.png
+*.out
+Makefile
+optimizationHistory.csv
+globalOptimumDesign
+src/CMakeFiles/
+src/Optimizers/CMakeFiles/
+build/
+
