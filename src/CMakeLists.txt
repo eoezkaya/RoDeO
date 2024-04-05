@@ -1,8 +1,24 @@
 cmake_minimum_required(VERSION 3.24.2)
 
+execute_process(
+    COMMAND ${CMAKE_COMMAND} .
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../externalFunctions
+)
+
+
+execute_process(
+    COMMAND make
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../externalFunctions
+)
+
 option(UNIT_TESTS "UNITS_TESTS" OFF)
 option(ASSERTS "ASSERTS" OFF)
 
+# Add externalFunctions library
+add_subdirectory(../externalFunctions externalFunctions)
+
+# Link with externalFunctions library
+target_link_libraries(${PROJECT_NAME} externalFunctions)
 
 
 if(UNIT_TESTS)
@@ -82,11 +98,6 @@ endif()
 
 
 
-# Add externalFunctions library
-add_subdirectory(../externalFunctions externalFunctions)
-
-# Link with externalFunctions library
-target_link_libraries(${PROJECT_NAME} externalFunctions)
 
 
 
