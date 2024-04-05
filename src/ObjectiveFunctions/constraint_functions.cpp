@@ -179,12 +179,10 @@ void ConstraintFunction::evaluateDesign(Design &d){
 	if(ifFunctionExplictlyDefined){
 
 		rowvec x = d.designParameters;
-		x.print("x");
 		double functionValue = functionPtr(x.memptr());
 		printScalar(functionValue);
 		d.constraintTrueValues(getID()) = functionValue;
-		d.print();
-		PRINT_HERE
+
 	}
 	else{
 

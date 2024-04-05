@@ -1,4 +1,4 @@
 #include <math.h>
 double constraintFunction0(double* x){
-return pow(x[0],2) + sin(x[1]) - 2*x[3];
+return x[1] - pow(x[0],2);
 }

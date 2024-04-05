@@ -193,7 +193,9 @@ void Optimizer::computeConstraintsandPenaltyTerm(Design &d) {
 void Optimizer::addConstraintValuesToData(Design &d){
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-		it->addDesignToData(d);
+		if(!it->isUserDefinedFunction()){
+			it->addDesignToData(d);
+		}
 	}
 
 }

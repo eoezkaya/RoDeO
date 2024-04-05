@@ -18,7 +18,7 @@ lb = [-1.5, -0.5]
 
 ObjFunSamples = np.random.rand(NTrainingSamples,3)
 Constraint1Samples = np.random.rand(NTrainingSamples,3)
-Constraint2Samples = np.random.rand(NTrainingSamples,3)
+
 
 for i in range(NTrainingSamples):
 
@@ -34,18 +34,14 @@ for i in range(NTrainingSamples):
     Constraint1Samples[i,0] = x[0]
     Constraint1Samples[i,1] = x[1]
     Constraint1Samples[i,2] = rosenbrockOpt.evaluateConstraint1(x)
-    Constraint2Samples[i,0] = x[0]
-    Constraint2Samples[i,1] = x[1]
-    Constraint2Samples[i,2] = rosenbrockOpt.evaluateConstraint2(x)
-
+ 
 
 import pandas as pd 
 df = pd.DataFrame(ObjFunSamples)
 df.to_csv("Rosenbrock.csv",header=False, index=False)
 df = pd.DataFrame(Constraint1Samples)
 df.to_csv("constraint1.csv",header=False, index=False)
-df = pd.DataFrame(Constraint2Samples)
-df.to_csv("constraint2.csv",header=False, index=False)
+
 
 COMMAND = BIN_RODEO + " " +  configFilename
 os.system(COMMAND)

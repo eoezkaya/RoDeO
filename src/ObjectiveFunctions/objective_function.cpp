@@ -295,12 +295,12 @@ void ObjectiveFunction::bindSurrogateModel(void){
 void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition def){
 
 
-	bool ifDefinitionIsOk = def.checkIfDefinitionIsOk();
-
-	if(!ifDefinitionIsOk){
-		def.print();
-		abortWithErrorMessage("Something wrong with the objective function definition");
-	}
+//	bool ifDefinitionIsOk = def.checkIfDefinitionIsOk();
+//
+//	if(!ifDefinitionIsOk){
+//		def.print();
+//		abortWithErrorMessage("Something wrong with the objective function definition");
+//	}
 
 	definition = def;
 	ifDefinitionIsSet = true;

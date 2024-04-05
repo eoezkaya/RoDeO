@@ -200,7 +200,9 @@ void Optimizer::initializeSurrogates(void){
 
 		output.printMessage("Initializing surrogate models for the constraint...");
 
-		it->initializeSurrogate();
+		if(!it->isUserDefinedFunction()){
+			it->initializeSurrogate();
+		}
 
 	}
 
