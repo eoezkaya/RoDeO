@@ -38,6 +38,7 @@
 #include <cassert>
 
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../Auxiliary/INCLUDE/print.hpp"
 #include "../INCLUDE/Rodeo_macros.hpp"
 #include "../INCLUDE/Rodeo_globals.hpp"
 #include "../TestFunctions/INCLUDE/test_functions.hpp"
@@ -135,6 +136,15 @@ double ConstraintFunction::getInequalityTargetValue(void) const{
 }
 
 
+void ConstraintFunction::trainSurrogate(void){
+
+	if(!ifFunctionExplictlyDefined){
+		ObjectiveFunction::trainSurrogate();
+	}
+}
+
+
+
 bool ConstraintFunction::checkFeasibility(double valueIn) const{
 
 	bool result = false;
@@ -165,16 +175,34 @@ void ConstraintFunction::readOutputDesign(Design &d) const{
 
 void ConstraintFunction::evaluateDesign(Design &d){
 
-	assert(d.designParameters.size() == dim);
 
-	setEvaluationMode("primal");
-	writeDesignVariablesToFile(d);
-	evaluateObjectiveFunction();
-	rowvec functionalValue(1);
-	functionalValue = readOutput(definition.outputFilename, 1);
+	if(ifFunctionExplictlyDefined){
 
-	assert( int(d.constraintTrueValues.size()) > getID());
-	d.constraintTrueValues(getID()) = functionalValue(0);
+		rowvec x = d.designParameters;
+		x.print("x");
+		double functionValue = functionPtr(x.memptr());
+		printScalar(functionValue);
+		d.constraintTrueValues(getID()) = functionValue;
+		d.print();
+		PRINT_HERE
+	}
+	else{
+
+
+		assert(d.designParameters.size() == dim);
+
+		setEvaluationMode("primal");
+		writeDesignVariablesToFile(d);
+		evaluateObjectiveFunction();
+		rowvec functionalValue(1);
+		functionalValue = readOutput(definition.outputFilename, 1);
+
+		assert( int(d.constraintTrueValues.size()) > getID());
+		d.constraintTrueValues(getID()) = functionalValue(0);
+
+	}
+
+
 
 }
 
@@ -214,7 +242,7 @@ pair<double, double> ConstraintFunction::interpolateWithVariance(rowvec x) const
 	if(ifFunctionExplictlyDefined){
 
 		result.first = functionPtr(x.memptr());
-		result.second = 0.0;
+		result.second = EPSILON;
 	}
 	else{
 		double ftilde,sigmaSqr;
@@ -245,5 +273,15 @@ void ConstraintFunction::print(void) const{
 
 }
 
+bool ConstraintFunction::isUserDefinedFunction(void) const{
 
+	return ifFunctionExplictlyDefined;
+}
+
+
+double ConstraintFunction::callUserDefinedFunction(rowvec &x) const{
+
+	return functionPtr(x.memptr());
+
+}
 

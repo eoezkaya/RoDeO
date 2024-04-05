@@ -18,7 +18,7 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
                          label_fg_color = SCROLLABLE_FRAME_TITLE_COLOR)
         
         self.globalSettings = settings
-        self.objectiveFunction = ObjectiveFunction()
+        self.objectiveFunction = self.globalSettings.objective
         
                 
         self.name = ctk.StringVar()  
@@ -48,6 +48,11 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
         executableField = FileEntryField(self,"Name of the executable file", self.executableName)   
         self.executableName.trace('w',self.setExeName)
         
+        self.executableNameGradient = ctk.StringVar()
+        executableFieldGradient = FileEntryField(self,"Name of the executable file for gradient", self.executableNameGradient)   
+        self.executableNameGradient.trace('w',self.setExeNameGradient)
+        
+        
         
         self.trainingDataFileName = ctk.StringVar()
         trainingDataField = FileEntryField(self,"Training data", self.trainingDataFileName, [("CVS files", "*.csv")])
@@ -58,6 +63,10 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
         self.outputfilename = ctk.StringVar()
         outputfilenameField = FileEntryField(self,"Output file", self.outputfilename)
         self.outputfilename.trace('w',self.setOutputFileName)
+        
+        self.outputfilenameGradient = ctk.StringVar()
+        outputfilenameFieldGradient = FileEntryField(self,"Output file for gradient", self.outputfilenameGradient)
+        self.outputfilenameGradient.trace('w',self.setOutputFileNameGradient)
 
         
         self.designVectorFilename = ctk.StringVar()
@@ -77,8 +86,10 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
         
         nameFrame.pack(fill = "x", padx = 3, pady = 3)
         executableField.pack(fill = "x", padx = 3, pady = 3)
+        executableFieldGradient.pack(fill = "x", padx = 3, pady = 3)
         trainingDataField.pack(fill = "x", padx = 3, pady = 3) 
         outputfilenameField.pack(fill = "x", padx = 3, pady = 3) 
+        outputfilenameFieldGradient.pack(fill = "x", padx = 3, pady = 3) 
         designVectorFilenameField.pack(fill = "x", padx = 3, pady = 3)
         surrogateModelEntry.pack(fill = "x", padx = 3, pady = 3)
         numberOfTrainingIterationsField.pack(fill = "x", padx = 3, pady = 3)     
@@ -90,6 +101,10 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
     def setExeName(self, *args):
         self.objectiveFunction.executable_name = self.executableName.get()
         self.objectiveFunction.print()    
+        
+    def setExeNameGradient(self, *args):
+        self.objectiveFunction.executable_name_gradient = self.executableNameGradient.get()
+        self.objectiveFunction.print()        
         
     def setSurrogateModel(self, *args):
         print(self.surrogateModelName.get())
@@ -103,7 +118,10 @@ class ObjectiveFunctionFrame(ctk.CTkScrollableFrame):
         
     def setOutputFileName(self, *args):
         self.objectiveFunction.output_file_name = self.outputfilename.get()
-        self.objectiveFunction.print()       
+        self.objectiveFunction.print()     
+    def setOutputFileNameGradient(self, *args):
+        self.objectiveFunction.output_file_name_gradient = self.outputfilenameGradient.get()
+        self.objectiveFunction.print()           
              
     def setDesignVectorFileName(self, *args):
         self.objectiveFunction.input_file_name = self.designVectorFilename.get()

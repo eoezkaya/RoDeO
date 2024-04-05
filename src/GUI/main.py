@@ -15,10 +15,12 @@ from parametersFrame import ParametersFrame
 
 
 class MyTabView(ctk.CTkTabview):
-    def __init__(self, master, **kwargs):
+    def __init__(self, master, settings, **kwargs):
+        
+        self.settings = settings
         super().__init__(master, **kwargs)
 
-        self.settings = GUISettings()
+       
 
         # create tabs
         self.add("Optimization Study")
@@ -40,16 +42,17 @@ class MyTabView(ctk.CTkTabview):
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-
+        
+        self.settings = GUISettings()
         ctk.set_appearance_mode('light')
         self.title('rodeo')
         self.geometry('1200x900')
         self.resizable(False, False)
         
-        self.tab_view = MyTabView(master=self, fg_color = WHITE)
+        self.tab_view = MyTabView(self, self.settings, fg_color = WHITE)
         self.tab_view.pack(expand = True, fill = "both")
         
-        menubar = Menu(self)
+        menubar = Menu(self, self.settings)
         
         self.config(menu=menubar)
         

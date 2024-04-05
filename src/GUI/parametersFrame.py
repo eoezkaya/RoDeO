@@ -4,15 +4,7 @@ from font_and_color_settings import *
 from tkinter import ttk
 from integer_entry_field import IntegerEntryField
 from tkinter import messagebox
-
-class SingleParameter:
-    def __init__(self,name, lb, ub, increment = 0):
-        self.name = name
-        self.lb =lb
-        self.ub =ub
-        self.increment = increment
-    def print(self):
-        print(self.name, self.lb, self.ub, self.increment)    
+from parameters import SingleParameter
 
 class ParametersFrame(ctk.CTkScrollableFrame):    
     def __init__(self, parent, mainWindow, settings):
@@ -32,7 +24,7 @@ class ParametersFrame(ctk.CTkScrollableFrame):
         self.numberOfInsertedEntries = 0
         self.editMode = False
         
-        self.Parameters = []
+ #       self.Parameters = []
         
         self.dimension.trace('w',self.updateProblemDimension) 
         
@@ -48,13 +40,17 @@ class ParametersFrame(ctk.CTkScrollableFrame):
                                  variable=self.switch_var, onvalue="on", offvalue="off")
         switch.pack(side = "left")
         
-        self.table = ttk.Treeview(self, columns = ('name', 'lb', 'ub'), show = 'headings')
+        self.table = ttk.Treeview(self, columns = ('name', 'type', 'lb', 'ub', 'step'), show = 'headings')
         self.table.heading('name', text = 'Name')
         self.table.column('name', anchor = "center")
+        self.table.heading('type', text = 'Type')
+        self.table.column('type', anchor = "center")
         self.table.heading('lb', text = 'Lower bound')
         self.table.column('lb', anchor = "center")
         self.table.heading('ub', text = 'Upper bound')
         self.table.column('ub', anchor = "center")
+        self.table.heading('step', text = 'Step size')
+        self.table.column('step', anchor = "center")
         
         style = ttk.Style()
         style.configure("Treeview.Heading", font=(FONT, 14))
@@ -90,14 +86,16 @@ class ParametersFrame(ctk.CTkScrollableFrame):
     def insertNewEntriesInToTable(self, howmany):
         for i in range(howmany):
             name = "x"+str(self.numberOfInsertedEntries+1)
+            type = "continuous"
             lb = "0.0"
             ub = "1.0"
-            data = (name, lb, ub)
+            stepSize = "0.0"
+            data = (name, type, lb, ub,stepSize)
             self.table.insert(parent = '', index = tk.END, values = data)
             self.numberOfInsertedEntries = self.numberOfInsertedEntries+1 
             
-            self.Parameters.append(SingleParameter(name,float(lb), float(ub)))
-#        self.printParameters()    
+#            self.settings.parameters.append(SingleParameter(name,type, float(lb), float(ub), stepSize))
+        self.iterate_treeview()
             
     def remove_entries_from_end(self, howmany):
         items = self.table.get_children()
@@ -106,6 +104,14 @@ class ParametersFrame(ctk.CTkScrollableFrame):
                 last_item = items[-1]
                 self.table.delete(last_item)
                 items = self.table.get_children()        
+
+    def iterate_treeview(self):
+    # Iterate through all items in the treeview
+        for item_id in self.table.get_children():
+        # Access each column value of the item
+            values = self.table.item(item_id, 'values')
+            print(values)  # Do something with the values            
+
 
     def updateProblemDimension(self,*args):
         if(self.dimension.get()):
@@ -179,8 +185,7 @@ class ParametersFrame(ctk.CTkScrollableFrame):
         self.context_menu.post(event.x_root, event.y_root)     
 
     def printParameters(self):
-        
-        for parameter in self.Parameters:
-            parameter.print()    
+        print("Here")
+        self.settings.printParameters()
 
   

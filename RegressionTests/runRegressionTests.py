@@ -68,6 +68,14 @@ regression_tests = []
 
 # Add instances to the array
 
+regression_tests.append(RegressionTest("Rastrigin Unconstrained",
+                                       "/Rastrigin_15D_Unconstrained_Kriging",
+                                         20,    
+                                        0, 
+                                         100,   
+                                         10.0))
+
+
 regression_tests.append(RegressionTest("Paviani Unconstrained",
                                        "/Paviani_Unconstrained_Kriging",
                                          20,    

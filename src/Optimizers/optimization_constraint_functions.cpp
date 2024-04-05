@@ -32,6 +32,7 @@
 
 #include "./INCLUDE/optimization.hpp"
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 
 bool Optimizer::isConstrained(void) const{
 
@@ -63,7 +64,14 @@ void Optimizer::estimateConstraints(DesignForBayesianOptimization &design) const
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
-		std::pair<double, double> result = it->interpolateWithVariance(x);
+		std::pair<double, double> result;
+		if(it->isUserDefinedFunction()){
+			rowvec xNotNormalized = normalizeVectorBack(x, lowerBounds, upperBounds);
+			result = it->interpolateWithVariance(xNotNormalized);
+		}
+		else{
+			result = it->interpolateWithVariance(x);
+		}
 
 		design.constraintValues(it->getID()) = result.first;
 		design.constraintSigmas(it->getID()) = result.second;

@@ -55,6 +55,8 @@ public:
 	void setDefinition(std::string definition);
 	void print(void) const;
 
+
+
 };
 
 
@@ -87,6 +89,8 @@ public:
 	double interpolate(rowvec x) const;
 	pair<double, double> interpolateWithVariance(rowvec x) const;
 
+	bool isUserDefinedFunction(void) const;
+
 	void setConstraintDefinition(ConstraintDefinition);
 
 	void setInequalityType(std::string);
@@ -105,7 +109,11 @@ public:
 	void evaluateDesign(Design &d);
 	void addDesignToData(Design &d);
 
+	double callUserDefinedFunction(rowvec &x) const;
+
 	void print(void) const;
+
+	void trainSurrogate(void);
 
 	void setUseExplicitFunctionOn(void);
 

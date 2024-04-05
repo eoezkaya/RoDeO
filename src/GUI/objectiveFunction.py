@@ -6,22 +6,36 @@ class ObjectiveFunction:
         self.name = "Objective Function"
         self.number_of_training_iterations = 10000
         self.executable_name = None
+        self.executable_name_gradient = None
         self.input_file_name = None
         self.output_file_name = None
+        self.output_file_name_gradient = None
         self.training_data_name = None
         self.surrogate_model_type = "ORDINARY_KRIGING"
     def generate_xml_string(self):
         # Create the root element
         root = ET.Element("ObjectiveFunction")
+        self.print()
 
         # Create sub-elements for each field and add them to the root
-        ET.SubElement(root, "Name").text = self.name
-        ET.SubElement(root, "TrainingDataName").text = self.training_data_name
-        ET.SubElement(root, "SurrogateModelType").text = self.surrogate_model_type
-        ET.SubElement(root, "ExecutableName").text = self.executable_name
-        ET.SubElement(root, "InputFileName").text = self.input_file_name
-        ET.SubElement(root, "OutputFileName").text = self.output_file_name
-        ET.SubElement(root, "NumberOfTrainingIterations").text =  self.number_of_training_iterations
+        if(self.name != None):
+            ET.SubElement(root, "Name").text = str(self.name)
+        if(self.training_data_name != None):    
+            ET.SubElement(root, "TrainingDataName").text = str(self.training_data_name)
+        
+        ET.SubElement(root, "SurrogateModelType").text = str(self.surrogate_model_type)
+        
+        if(self.executable_name != None):
+            ET.SubElement(root, "ExecutableName").text = str(self.executable_name)
+        if(self.executable_name_gradient != None):        
+            ET.SubElement(root, "ExecutableNameGradient").text = str(self.executable_name_gradient)
+        if(self.input_file_name != None):            
+            ET.SubElement(root, "InputFileName").text = str(self.input_file_name)
+        if(self.output_file_name != None):            
+            ET.SubElement(root, "OutputFileName").text = str(self.output_file_name)
+        if(self.output_file_name_gradient != None):            
+            ET.SubElement(root, "OutputFileNameGradient").text = str(self.output_file_name_gradient)
+        ET.SubElement(root, "NumberOfTrainingIterations").text =  str(self.number_of_training_iterations)
 
         # Create an ElementTree object and convert it to a string
         xml_tree = ET.ElementTree(root)
@@ -33,6 +47,7 @@ class ObjectiveFunction:
         print("-"*30)
         print("Name: ",self.name)
         print("Executable :",self.executable_name)
+        print("Executable for gradient :",self.executable_name_gradient)
         print("Input file name:", self.input_file_name)
         print("Output file name:",self.output_file_name)
         print("Training data file name:",self.training_data_name)

@@ -52,6 +52,7 @@ add_subdirectory(Random)
 add_subdirectory(SurrogateModels)
 add_subdirectory(TestFunctions)
 
+
 target_link_libraries(${PROJECT_NAME}  auxiliary)
 target_link_libraries(${PROJECT_NAME}  bounds)
 target_link_libraries(${PROJECT_NAME}  correlationFunctions)
@@ -78,6 +79,16 @@ if(OpenMP_CXX_FOUND)
 	target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
 	add_definitions(-DOPENMP_SUPPORT)
 endif()
+
+
+
+# Add externalFunctions library
+add_subdirectory(../externalFunctions externalFunctions)
+
+# Link with externalFunctions library
+target_link_libraries(${PROJECT_NAME} externalFunctions)
+
+
 
 
 get_target_property(MAIN_CFLAGS ${PROJECT_NAME} COMPILE_OPTIONS)

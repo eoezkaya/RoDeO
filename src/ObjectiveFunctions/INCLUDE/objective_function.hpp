@@ -72,6 +72,8 @@ public:
 	bool ifMultiLevel = false;
 	bool ifDefined = false;
 
+	bool doesUseUDF = false;
+
 
 	SURROGATE_MODEL modelHiFi  = ORDINARY_KRIGING;
 	SURROGATE_MODEL modelLowFi = ORDINARY_KRIGING;

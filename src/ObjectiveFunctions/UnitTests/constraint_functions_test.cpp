@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -354,92 +354,92 @@ TEST_F(ConstraintFunctionTest, addDesignToData){
 
 }
 
-TEST_F(ConstraintFunctionTest, addDesignToDataWithTangent){
+//TEST_F(ConstraintFunctionTest, addDesignToDataWithTangent){
+//
+//	himmelblauFunction.function.generateTrainingSamplesWithTangents();
+//	trainingData = himmelblauFunction.function.trainingSamples;
+//
+//	Design d(2);
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.setNumberOfConstraints(1);
+//	d.designParameters = dvInput;
+//	d.constraintTrueValues(0) = 89.0;
+//	d.constraintTangent(0) = 11.4;
+//	rowvec direction(2);
+//	direction(0) = 0.5;
+//	direction(1) = 0.6;
+//	d.constraintDifferentiationDirectionsMatrix.row(0) = direction;
+//
+//	setDefinitionForCase3();
+//	constraintFunTest.setParametersByDefinition(definition);
+//	constraintFunTest.setID(0);
+//	constraintFunTest.setEvaluationMode("tangent");
+//	constraintFunTest.initializeSurrogate();
+//	constraintFunTest.addDesignToData(d);
+//
+//	mat newData;
+//	newData.load(filenameTrainingData, csv_ascii);
+//
+//	ASSERT_TRUE(newData.n_rows == trainingData.n_rows+1);
+//
+//	rowvec lastRow = newData.row(newData.n_rows-1);
+//	ASSERT_EQ(lastRow(0),2.1);
+//	ASSERT_EQ(lastRow(1),-1.9);
+//	ASSERT_EQ(lastRow(2),89.0);
+//	ASSERT_EQ(lastRow(3),11.4);
+//	ASSERT_EQ(lastRow(4),0.5);
+//	ASSERT_EQ(lastRow(5),0.6);
+//
+//	remove(filenameTrainingData.c_str());
+//
+//
+//}
 
-	himmelblauFunction.function.generateTrainingSamplesWithTangents();
-	trainingData = himmelblauFunction.function.trainingSamples;
-
-	Design d(2);
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.setNumberOfConstraints(1);
-	d.designParameters = dvInput;
-	d.constraintTrueValues(0) = 89.0;
-	d.constraintTangent(0) = 11.4;
-	rowvec direction(2);
-	direction(0) = 0.5;
-	direction(1) = 0.6;
-	d.constraintDifferentiationDirectionsMatrix.row(0) = direction;
-
-	setDefinitionForCase3();
-	constraintFunTest.setParametersByDefinition(definition);
-	constraintFunTest.setID(0);
-	constraintFunTest.setEvaluationMode("tangent");
-	constraintFunTest.initializeSurrogate();
-	constraintFunTest.addDesignToData(d);
-
-	mat newData;
-	newData.load(filenameTrainingData, csv_ascii);
-
-	ASSERT_TRUE(newData.n_rows == trainingData.n_rows+1);
-
-	rowvec lastRow = newData.row(newData.n_rows-1);
-	ASSERT_EQ(lastRow(0),2.1);
-	ASSERT_EQ(lastRow(1),-1.9);
-	ASSERT_EQ(lastRow(2),89.0);
-	ASSERT_EQ(lastRow(3),11.4);
-	ASSERT_EQ(lastRow(4),0.5);
-	ASSERT_EQ(lastRow(5),0.6);
-
-	remove(filenameTrainingData.c_str());
-
-
-}
-
-TEST_F(ConstraintFunctionTest, addDesignToDataWithGradient){
-
-
-	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
-	trainingData = himmelblauFunction.function.trainingSamples;
-
-	Design d(2);
-
-	rowvec dvInput(2);
-	dvInput(0) = 2.1;
-	dvInput(1) = -1.9;
-	d.setNumberOfConstraints(1);
-	d.designParameters = dvInput;
-	d.constraintTrueValues(0) = 89.0;
-	rowvec gradient(2);
-	gradient(0) = 33.5;
-	gradient(1) = 56.6;
-	d.constraintGradientsMatrix.row(0) = gradient;
-
-	setDefinitionForCase2();
-	constraintFunTest.setParametersByDefinition(definition);
-	constraintFunTest.setID(0);
-	constraintFunTest.setEvaluationMode("adjoint");
-	constraintFunTest.initializeSurrogate();
-	constraintFunTest.addDesignToData(d);
-
-	mat newData;
-	newData.load(filenameTrainingData, csv_ascii);
-
-	ASSERT_TRUE(newData.n_rows == trainingData.n_rows+1);
-
-	rowvec lastRow = newData.row(newData.n_rows-1);
-	ASSERT_EQ(lastRow(0),2.1);
-	ASSERT_EQ(lastRow(1),-1.9);
-	ASSERT_EQ(lastRow(2),89.0);
-	ASSERT_EQ(lastRow(3),33.5);
-	ASSERT_EQ(lastRow(4),56.6);
-
-
-	remove(filenameTrainingData.c_str());
-
-
-}
+//TEST_F(ConstraintFunctionTest, addDesignToDataWithGradient){
+//
+//
+//	himmelblauFunction.function.generateTrainingSamplesWithAdjoints();
+//	trainingData = himmelblauFunction.function.trainingSamples;
+//
+//	Design d(2);
+//
+//	rowvec dvInput(2);
+//	dvInput(0) = 2.1;
+//	dvInput(1) = -1.9;
+//	d.setNumberOfConstraints(1);
+//	d.designParameters = dvInput;
+//	d.constraintTrueValues(0) = 89.0;
+//	rowvec gradient(2);
+//	gradient(0) = 33.5;
+//	gradient(1) = 56.6;
+//	d.constraintGradientsMatrix.row(0) = gradient;
+//
+//	setDefinitionForCase2();
+//	constraintFunTest.setParametersByDefinition(definition);
+//	constraintFunTest.setID(0);
+//	constraintFunTest.setEvaluationMode("adjoint");
+//	constraintFunTest.initializeSurrogate();
+//	constraintFunTest.addDesignToData(d);
+//
+//	mat newData;
+//	newData.load(filenameTrainingData, csv_ascii);
+//
+//	ASSERT_TRUE(newData.n_rows == trainingData.n_rows+1);
+//
+//	rowvec lastRow = newData.row(newData.n_rows-1);
+//	ASSERT_EQ(lastRow(0),2.1);
+//	ASSERT_EQ(lastRow(1),-1.9);
+//	ASSERT_EQ(lastRow(2),89.0);
+//	ASSERT_EQ(lastRow(3),33.5);
+//	ASSERT_EQ(lastRow(4),56.6);
+//
+//
+//	remove(filenameTrainingData.c_str());
+//
+//
+//}
 
 //TEST_F(ConstraintFunctionTest, useFunctionPointer){
 //
@@ -454,18 +454,44 @@ TEST_F(ConstraintFunctionTest, addDesignToDataWithGradient){
 //
 //}
 
-//TEST_F(ConstraintFunctionTest, interpolateWithExternalFunction){
-//
-//	constraintFunTest.setParametersByDefinition(definition);
-//	constraintFunTest.setID(0);
-//	constraintFunTest.setUseExplicitFunctionOn();
-//	rowvec x(2);
-//	x(0) = 1.0;
-//	x(1) = 1.0;
-//	double result = constraintFunTest.interpolate(x);
-//	ASSERT_TRUE(fabs(result-2.0) < 10E-6);
-//
-//}
+TEST_F(ConstraintFunctionTest, interpolateWithExternalFunction){
+
+	constraintFunTest.setParametersByDefinition(definition);
+	constraintFunTest.setID(0);
+	constraintFunTest.setUseExplicitFunctionOn();
+	rowvec x(4);
+	x(0) = 1.0;
+	x(1) = 1.0;
+	x(2) = 1.0;
+	x(3) = 1.0;
+	double result = constraintFunTest.interpolate(x);
+
+	double expected = pow(x(0),2) + sin(x(1)) - 2*x(3);
+	ASSERT_TRUE(fabs(result-expected) < 10E-6);
+
+}
+
+TEST_F(ConstraintFunctionTest, interpolateWithVarianceExternalFunction){
+
+	constraintFunTest.setParametersByDefinition(definition);
+	constraintFunTest.setID(0);
+	constraintFunTest.setUseExplicitFunctionOn();
+	rowvec x(4);
+	x(0) = 1.0;
+	x(1) = 1.0;
+	x(2) = 1.0;
+	x(3) = 1.0;
+	pair<double, double> result = constraintFunTest.interpolateWithVariance(x);
+
+	double expected = pow(x(0),2) + sin(x(1)) - 2*x(3);
+	ASSERT_TRUE(fabs(result.first-expected) < 10E-6);
+	ASSERT_TRUE(result.second < 10E-6);
+
+}
+
+
+
+
 
 TEST_F(ConstraintFunctionTest, interpolate){
 

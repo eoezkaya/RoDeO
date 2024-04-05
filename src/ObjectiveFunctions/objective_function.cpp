@@ -423,8 +423,8 @@ void ObjectiveFunction::setFeasibleMinimum(double value){
 
 void ObjectiveFunction::trainSurrogate(void){
 
-	assert(ifInitialized);
 
+	assert(ifInitialized);
 
 
 	if(ifWarmStart){

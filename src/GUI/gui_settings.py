@@ -1,13 +1,16 @@
 
 from objectiveFunction import ObjectiveFunction
 from constraintFunction import ConstraintFunction
+from parameters import SingleParameter
+import xml.etree.ElementTree as ET
 
 class GUISettings():
     def __init__(self):
-        self.name = None
+        self.name = "OptimizationStudy"
         self.dimension = 0
         self.lowerBounds = []
         self.upperBounds = []
+        self.parameters = []
         self.objective = ObjectiveFunction()
         self.constraints = []
         self.numberOfConstraints = 0
@@ -21,10 +24,26 @@ class GUISettings():
         print("Lower bounds:", self.lowerBounds)
         print("Upper bounds:", self.upperBounds)
         
-        
+    def printParameters(self):
+        for parameter in self.parameters:
+            parameter.print()    
+            
     def printConstraints(self):
         for constraint in self.constraints:
             constraint.print()
+    
+    def generate_xml_string(self):
+        root = ET.Element("Settings")
+        
+        ET.SubElement(root, "Name").text = str(self.name)
+        
+        # Create an ElementTree object and convert it to a string
+        xml_tree = ET.ElementTree(root)
+        xml_string = ET.tostring(root).decode()
+
+        return xml_string
+    
+        
                
     def deleteConstraint(self, id):
         
@@ -76,4 +95,5 @@ class GUISettings():
             if(constraint.ID == ID):
                 constraint.output_file_name = filename
                 break  
-     
+            
+    

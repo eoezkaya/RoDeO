@@ -78,6 +78,7 @@ void RoDeODriver::addConfigKeysConstraintFunctions() {
 	configKeysConstraintFunction.add(ConfigKey("DESIGN_VECTOR_FILE", "string"));
 	configKeysConstraintFunction.add(ConfigKey("MULTILEVEL_MODEL", "string"));
 	configKeysConstraintFunction.add(ConfigKey("WARM_START", "string"));
+	configKeysConstraintFunction.add(ConfigKey("USER_DEFINED_FUNCTION", "string"));
 
 	configKeysConstraintFunction.add(ConfigKey("OUTPUT_FILE", "stringVector"));
 	configKeysConstraintFunction.add(ConfigKey("OUTPUT_FILE_GRADIENT", "stringVector"));
@@ -575,6 +576,9 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	std::string exePath;
 	std::string surrogateModel;
 
+	std::string doesUseUDF;
+
+
 
 	configKeysConstraintFunction.parseString(inputString);
 
@@ -605,6 +609,13 @@ void RoDeODriver::parseConstraintDefinition(std::string inputString){
 	constraintFunctionDefinition.path = exePath;
 	constraintFunctionDefinition.modelHiFi = getSurrogateModelID(surrogateModel);
 
+
+	doesUseUDF = configKeysConstraintFunction.getConfigKeyStringValue("USER_DEFINED_FUNCTION");
+
+	if(checkIfOn(doesUseUDF)){
+
+		constraintFunctionDefinition.doesUseUDF = true;
+	}
 
 
 	constraintFunctionDefinition.nameHighFidelityTrainingData = filenameTrainingData;
@@ -877,6 +888,11 @@ ConstraintFunction RoDeODriver::setConstraint(unsigned int index) const{
 
 	constraintFunc.setParametersByDefinition(definition);
 	constraintFunc.setConstraintDefinition(expression);
+
+	if(definition.doesUseUDF){
+
+		constraintFunc.setUseExplicitFunctionOn();
+	}
 
 	setConstraintBoxConstraints(constraintFunc);
 	unsigned int nIterForSurrogateTraining = 10000;

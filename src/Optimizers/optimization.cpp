@@ -960,29 +960,50 @@ void Optimizer::setOptimizationHistoryConstraintsData(mat& historyData) const {
 		int ID = it->getID();
 		assert(ID>=0 && ID < int(numberOfConstraints) );
 
-		mat dataRead = it->getTrainingData();
+		if(!it->isUserDefinedFunction()){
 
-		mat inputConstraint = dataRead.submat(0, 0, dataRead.n_rows - 1,dimension - 1);
+			mat dataRead = it->getTrainingData();
 
-		string type = it->getInequalityType();
+			mat inputConstraint = dataRead.submat(0, 0, dataRead.n_rows - 1,dimension - 1);
 
-		for (unsigned int i = 0; i < N; i++) {
-			assert(i<inputObjectiveFunction.size());
-			rowvec input = inputObjectiveFunction.row(i);
-			int indx = findIndexOfRow(input, inputConstraint, 10E-8);
-			if (indx >= 0) {
-				historyData(i, dimension + ID + 1) = dataRead(indx,
-						dimension);
-			} else {
+			string type = it->getInequalityType();
 
-				if (isEqual(type, ">")) {
-					historyData(i, dimension + ID + 1) = -LARGE;
-				}
-				if (isEqual(type, "<")) {
-					historyData(i, dimension + ID + 1) = LARGE;
+			for (unsigned int i = 0; i < N; i++) {
+				assert(i<inputObjectiveFunction.size());
+				rowvec input = inputObjectiveFunction.row(i);
+				int indx = findIndexOfRow(input, inputConstraint, 10E-8);
+				if (indx >= 0) {
+					historyData(i, dimension + ID + 1) = dataRead(indx,
+							dimension);
+				} else {
+
+					if (isEqual(type, ">")) {
+						historyData(i, dimension + ID + 1) = -LARGE;
+					}
+					if (isEqual(type, "<")) {
+						historyData(i, dimension + ID + 1) = LARGE;
+					}
 				}
 			}
+
+
+
 		}
+		else{
+
+
+			for (unsigned int i = 0; i < N; i++) {
+
+				rowvec x =  inputObjectiveFunction.row(i);
+				double constraintValue = it->callUserDefinedFunction(x);
+				historyData(i, dimension + ID + 1) = constraintValue;
+
+			}
+
+		}
+
+
+
 	}
 }
 
@@ -1163,6 +1184,8 @@ void Optimizer::findTheMostPromisingDesignToBeSimulated() {
 			estimatedBestdv = objFun.interpolate(best_dvNorm);
 			std::cout<<"Estimated objective function value = "<<estimatedBestdv<<"\n";
 			std::cout<<"Variance = "<<optimizedDesignGradientBased.sigma<<"\n";
+			optimizedDesignGradientBased.constraintValues.print("constraint values");
+			optimizedDesignGradientBased.constraintFeasibilityProbabilities.print("constraint feasibility probabilities");
 			cout<<"Acquisition function = " << optimizedDesignGradientBased.valueAcqusitionFunction << "\n";
 		}
 
@@ -1230,7 +1253,6 @@ void Optimizer::performEfficientGlobalOptimization(void){
 	initializeSurrogates();
 	initializeCurrentBestDesign();
 	initializeOptimizationHistory();
-
 
 	if(doesObjectiveFunctionHaveGradients()){
 		performEfficientGlobalOptimizationWithGradients();
