@@ -33,4 +33,5 @@ RegressionTests/*/*.csv
 Tests/*/*/*.csv
 RegressionTests/Depot
 build/
+externalFunctions/lib/
 externalFunctions/CMakeFiles/
