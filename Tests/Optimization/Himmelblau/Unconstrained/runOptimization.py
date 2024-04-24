@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pandas as pd 
 
-RODEO_HOME = "/home/eoezkaya/RoDeO"
+RODEO_HOME = f"/home/{os.environ['USER']}/RoDeO"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
 configFilename = "himmelblau.cfg"
 # compile the code that evaluates the objective function
