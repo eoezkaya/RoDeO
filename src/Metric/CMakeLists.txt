@@ -4,10 +4,10 @@ add_library(metric ${src_files})
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)	
 	add_definitions(-DOPENMP_SUPPORT)
-	target_compile_options(metric PUBLIC -Wall -Wextra -Wpedantic -O2 -fopenmp)
+	target_compile_options(metric PUBLIC -Wall -Wextra -Wpedantic -O2 -fopenmp -fPIC)
 	
 else()
-	target_compile_options(metric PUBLIC -Wall -Wextra -Wpedantic -O2)
+	target_compile_options(metric PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
 		
 endif()
 

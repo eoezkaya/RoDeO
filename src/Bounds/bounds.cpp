@@ -109,6 +109,24 @@ void Bounds::setBounds(double lowerBound, double upperBound) {
 
 }
 
+
+void Bounds::setBounds(double* lb, double* ub) {
+
+	assert(dimension > 0);
+	lowerBounds =zeros<vec>(dimension);
+	upperBounds =zeros<vec>(dimension);
+
+	for(unsigned int i=0; i<dimension; i++){
+
+		lowerBounds(i) = lb[i];
+		upperBounds(i) = ub[i];
+	}
+
+	assert(checkIfBoundsAreValid());
+	ifBoundsAreSet = true;
+
+}
+
 bool Bounds::areBoundsSet(void) const{
 	return ifBoundsAreSet;
 }

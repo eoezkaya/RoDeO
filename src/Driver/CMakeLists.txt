@@ -1,4 +1,4 @@
-set(src_files configkey.cpp drivers.cpp)
+file(GLOB src_files *.cpp)
 add_library(driver ${src_files})
 target_link_libraries(driver bounds)
 
@@ -8,6 +8,7 @@ if(ASSERTS)
 else()
     add_definitions(-DNDEBUG)
 endif(ASSERTS)
+
 
 target_compile_options(driver PUBLIC -Wall -Wextra -Wpedantic -O2 )
 

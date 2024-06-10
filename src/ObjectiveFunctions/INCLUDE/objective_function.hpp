@@ -44,6 +44,8 @@
 #include<gtest/gtest.h>
 #endif
 
+typedef double (*ObjectiveFunctionPtr)(const double *);
+
 class ObjectiveFunctionDefinition{
 
 public:
@@ -128,8 +130,11 @@ private:
 
 	void evaluateGradient(void) const;
 
+	double (*objectiveFunctionPtr)(const double*) = nullptr;
+
 protected:
 
+	bool doesObjectiveFunctionPtrExist = false;
 
 	std::string evaluationMode;
 	std::string addDataMode;
@@ -256,6 +261,8 @@ public:
 
 	void setGlobalOptimalDesign(Design d);
 
+
+	void setFunctionPtr(ObjectiveFunctionPtr func);
 
 };
 

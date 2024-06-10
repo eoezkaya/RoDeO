@@ -6,6 +6,7 @@ execute_process(
 )
 
 
+
 execute_process(
     COMMAND make
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../externalFunctions
@@ -67,6 +68,7 @@ add_subdirectory(Output)
 add_subdirectory(Random)
 add_subdirectory(SurrogateModels)
 add_subdirectory(TestFunctions)
+add_subdirectory(API)
 
 
 target_link_libraries(${PROJECT_NAME}  auxiliary)
@@ -110,4 +112,3 @@ message("-- Target compiler flags are: ${MAIN_CFLAGS}")
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 COMMAND echo built with the flags: ${MAIN_CFLAGS})
-

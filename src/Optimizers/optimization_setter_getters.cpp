@@ -126,4 +126,8 @@ void Optimizer::setImprovementPercentThresholdForGradientStep(double value){
 	improvementPercentThresholdForGradientStep = value;
 }
 
+void Optimizer::setAPIUseOn(void){
+	ifAPIisUsed = true;
+}
+
 

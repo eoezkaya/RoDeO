@@ -1,7 +1,7 @@
 file(GLOB src_files *.cpp)
 add_library(linearAlgebra ${src_files})
 
-target_compile_options(linearAlgebra PUBLIC -Wall -Wextra -Wpedantic -O2)
+target_compile_options(linearAlgebra PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
 
 if(ASSERTS)
   

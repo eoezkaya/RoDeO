@@ -40,7 +40,7 @@ int generateRandomInt(uvec indices);
 
 double generateRandomDouble(double a, double b);
 
-
+mat generateRandomMatrix(unsigned int Nrows, unsigned int Ncols, double *lb, double*ub);
 mat generateRandomMatrix(unsigned int Nrows, vec lb, vec ub);
 
 double generateRandomDoubleFromNormalDist(double xs, double xe, double sigma_factor);

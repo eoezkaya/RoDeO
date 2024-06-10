@@ -97,6 +97,7 @@ private:
 	double bestDeltaImprovementValueAchieved = 0.0;
 	double bestFeasibleInitialValue = 0.0;
 
+	bool ifAPIisUsed = false;
 
 	std::string filenameCurrentIterateInfo = "currentIterate.dat";
 
@@ -278,7 +279,7 @@ public:
 	void setDisplayOn(void);
 	void setDisplayOff(void);
 
-
+	void setAPIUseOn(void);
 
 	void setNumberOfThreads(unsigned int);
 

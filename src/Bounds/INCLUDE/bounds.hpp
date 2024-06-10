@@ -60,6 +60,7 @@ public:
 	void setDimension(unsigned int);
 	void setBounds(vec, vec);
 	void setBounds(double, double);
+	void setBounds(double* lb, double* ub);
 
 
 	bool checkIfBoundsAreValid(void) const;

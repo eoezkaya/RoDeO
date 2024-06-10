@@ -1,6 +1,6 @@
 add_library(bounds bounds.cpp)
 
-target_compile_options(bounds PUBLIC -Wall -Wextra -Wpedantic -O2)
+target_compile_options(bounds PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
 
 get_target_property(MAIN_CFLAGS bounds COMPILE_OPTIONS)
 

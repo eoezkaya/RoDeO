@@ -4,10 +4,10 @@ add_library(optimizers ${src_files})
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)	
 	add_definitions(-DOPENMP_SUPPORT)
-	target_compile_options(optimizers PUBLIC -Wall -Wextra -Wpedantic -O2 -fopenmp)
+	target_compile_options(optimizers PUBLIC -Wall -Wextra -Wpedantic -O2 -fopenmp -fPIC)
 	
 else()
-	target_compile_options(optimizers PUBLIC -Wall -Wextra -Wpedantic -O2)
+	target_compile_options(optimizers PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
 		
 endif()
 
@@ -19,6 +19,7 @@ endif(ASSERTS)
 
 target_link_libraries(optimizers linearAlgebra)
 target_link_libraries(optimizers   auxiliary)
+target_link_libraries(optimizers   output)
 
 get_target_property(MAIN_CFLAGS optimizers COMPILE_OPTIONS)
 

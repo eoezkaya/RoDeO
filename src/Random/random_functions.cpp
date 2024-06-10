@@ -66,6 +66,27 @@ double generateRandomDouble(double a, double b) {
 	return a + r;
 }
 
+
+mat generateRandomMatrix(unsigned int Nrows, unsigned int Ncols, double *lb, double*ub){
+
+	vec lowerBounds(Ncols);
+	vec upperBounds(Ncols);
+
+	for(unsigned int i=0; i<Ncols; i++){
+
+		if(lb[i] >= ub[i]){
+			throw std::invalid_argument("Lower bounds cannot be greater than upper bounds");
+		}
+
+		lowerBounds(i) = lb[i];
+		upperBounds(i) = ub[i];
+
+	}
+
+	return generateRandomMatrix(Nrows, lowerBounds, upperBounds);
+}
+
+
 mat generateRandomMatrix(unsigned int Nrows, vec lb, vec ub){
 
 	assert(lb.size() == ub.size());

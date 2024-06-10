@@ -1071,3 +1071,14 @@ void ObjectiveFunction::setGlobalOptimalDesign(Design d){
 
 }
 
+void ObjectiveFunction::setFunctionPtr(ObjectiveFunctionPtr func) {
+	if (func == nullptr) {
+		throw std::invalid_argument("Function pointer is null");
+	}
+
+	objectiveFunctionPtr = func;
+	doesObjectiveFunctionPtrExist = true;
+}
+
+
+
