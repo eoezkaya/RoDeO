@@ -1,34 +1,3 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- *  file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, TU Kaiserslautern)
- *
- *
- *
- */
-
 #include <stdio.h>
 #include <math.h>
 #include <string>
@@ -188,15 +157,31 @@ void ConstraintFunction::evaluateDesign(Design &d){
 
 
 		assert(d.designParameters.size() == dim);
-
 		setEvaluationMode("primal");
-		writeDesignVariablesToFile(d);
-		evaluateObjectiveFunction();
-		rowvec functionalValue(1);
-		functionalValue = readOutput(definition.outputFilename, 1);
 
-		assert( int(d.constraintTrueValues.size()) > getID());
-		d.constraintTrueValues(getID()) = functionalValue(0);
+		if(!doesObjectiveFunctionPtrExist){
+
+			writeDesignVariablesToFile(d);
+			evaluateObjectiveFunction();
+			rowvec functionalValue(1);
+			functionalValue = readOutput(definition.outputFilename, 1);
+
+			assert( int(d.constraintTrueValues.size()) > getID());
+			d.constraintTrueValues(getID()) = functionalValue(0);
+
+
+		}
+		else{
+
+			double constraintValue = evaluateObjectiveFunctionDirectly(d.designParameters);
+			assert( int(d.constraintTrueValues.size()) > getID());
+			d.constraintTrueValues(getID()) = constraintValue;
+
+
+		}
+
+
+
 
 	}
 
@@ -254,8 +239,9 @@ pair<double, double> ConstraintFunction::interpolateWithVariance(rowvec x) const
 
 void ConstraintFunction::setUseExplicitFunctionOn(void){
 
-
 	int ID = definitionConstraint.ID;
+	assert(ID >=0 && ID<20);
+
 	functionPtr = functionVector.at(ID);
 	ifFunctionExplictlyDefined = true;
 
@@ -265,11 +251,63 @@ void ConstraintFunction::setUseExplicitFunctionOn(void){
 
 
 void ConstraintFunction::print(void) const{
-	definitionConstraint.print();
-	definition.print();
 
+	std::cout<<"\n================= Constraint function definition =========================\n";
+
+	definitionConstraint.print();
+
+	if(!ifFunctionExplictlyDefined){
+		definition.print();
+	}
+	std::cout<< "Number of training iterations for model training = " << numberOfIterationsForSurrogateTraining << "\n";
+	std::cout<<"\n==========================================================================\n";
 
 }
+
+string ConstraintFunction::generateOutputString(void) const{
+
+
+	std::string outputMsg;
+	string tag = "Constraint function definition";
+	outputMsg = generateFormattedString(tag,'=', 100) + "\n";
+	outputMsg+= "Name : " + definition.name + "\n";
+
+	if(!definition.executableName.empty()){
+		outputMsg+= "Executable : " + definition.executableName + "\n";
+	}
+
+	if(doesObjectiveFunctionPtrExist){
+
+		outputMsg+= "API Call : YES\n";
+	}
+
+
+	outputMsg+= "Training data : " + definition.nameHighFidelityTrainingData + "\n";
+
+	if(!definition.outputFilename.empty()){
+
+		outputMsg+= "Output file : " + definition.outputFilename + "\n";
+	}
+	if(!definition.designVectorFilename.empty()){
+
+		outputMsg+= "Design parameters file : " + definition.designVectorFilename + "\n";
+	}
+
+	string modelName = definition.getNameOfSurrogateModel(definition.modelHiFi);
+	outputMsg+= "Surrogate model : " + modelName + "\n";
+
+	outputMsg+= "Number of iterations for model training : " +std::to_string(numberOfIterationsForSurrogateTraining) + "\n";
+
+
+	std::string border(100, '=');
+	outputMsg += border + "\n";
+
+
+	return outputMsg;
+
+}
+
+
 
 bool ConstraintFunction::isUserDefinedFunction(void) const{
 

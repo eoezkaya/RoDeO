@@ -44,7 +44,7 @@ int main(int argc, char* argv[]){
 
 
 
-	printRoDeOIntro();
+	printIntro();
 
 	/* initialize random seed*/
 	srand (time(NULL));

@@ -37,7 +37,7 @@
 using std::cout;
 
 
-void printRoDeOIntro(void) {
+void printIntro(void) {
 	printf("\n\n\n");
 	printf("	  ____       ____        ___   \n");
 	printf("	 |  _ \\ ___ |  _ \\  ___ / _ \\  \n");
@@ -49,6 +49,85 @@ void printRoDeOIntro(void) {
 	printf("\n\n\n");
 }
 
+
+std::string generateFormattedString(std::string msg, char c, int totalLength) {
+    if (totalLength < 0) {
+        throw std::invalid_argument("Number of characters must be non-negative.");
+    }
+
+    if(msg.length()%2 == 1){
+    	msg+=" ";
+    }
+
+    int numEquals = (totalLength - msg.length() - 2)/2;
+
+
+    std::string border(numEquals, c);
+
+
+
+    std::ostringstream oss;
+    oss << border << " " << msg << " " << border;
+
+    return oss.str();
+}
+
+
+std::string generateFormattedString(std::string& content) {
+    const int totalWidth = 120; // total width of the line
+    const std::string border(totalWidth, '*'); // create a border line with '#'
+
+    if (content.length() > totalWidth) {
+        throw std::invalid_argument("Content length exceeds the total width.");
+    }
+
+    std::ostringstream oss;
+    oss << border << "\n";
+
+    int padding = (totalWidth - content.length()) / 2;
+    int extraPadding = (totalWidth - content.length()) % 2; // handle odd lengths for perfect centering
+
+    oss << std::string(padding, ' ') << content << std::string(padding + extraPadding, ' ') << "\n";
+    oss << border;
+
+    return oss.str();
+}
+
+
+std::string getCurrentDateTime() {
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+    std::tm* now_tm = std::localtime(&now_time);
+
+    std::ostringstream oss;
+    oss << std::put_time(now_tm, "%Y-%m-%d %H:%M:%S");
+    return oss.str();
+}
+
+// Function to generate the formatted string
+std::string generateProcessStartMessage() {
+    std::string dateTime = getCurrentDateTime();
+    std::ostringstream oss;
+
+    std::string border(100, '=');
+    oss << border <<"\n"
+        << "Process start: \"" << dateTime << "\"\n"
+        << border <<"\n";
+
+    return oss.str();
+}
+
+std::string generateProcessEndMessage() {
+    std::string dateTime = getCurrentDateTime();
+    std::ostringstream oss;
+
+    std::string border(100, '=');
+    oss << border <<"\n"
+           << "Process end: \"" << dateTime << "\"\n"
+           << border <<"\n";
+
+    return oss.str();
+}
 
 
 OutputDevice::OutputDevice(){}
@@ -135,7 +214,7 @@ void OutputDevice::printList(std::vector<int> list, std::string msg) const{
 		printMessage(msg);
 
 		for (std::vector<int>::const_iterator i = list.begin(); i != list.end(); ++i)
-		std::cout << *i << ' ';
+			std::cout << *i << ' ';
 
 		std::cout <<'\n';
 
@@ -168,6 +247,19 @@ void OutputDevice::printIteration(unsigned int iteration) const{
 }
 
 
+void OutputDevice::openLogFile(void) {
+    std::string dateTime = getCurrentDateTime();
+	logFile = "LOG" + dateTime + ".dat";
+
+    std::ofstream outFile(logFile);
+    if (!outFile) {
+        throw std::ios_base::failure("Failed to open the file: " + logFile);
+    }
+
+}
+
+
+
 void OutputDevice::printBoxConstraints(const vec &lb, const vec &ub) const{
 
 	unsigned int dim = lb.size();
@@ -179,6 +271,29 @@ void OutputDevice::printBoxConstraints(const vec &lb, const vec &ub) const{
 			std::cout<<"Parameter("<<i<<") = "<<lb(i)<<"  "<<ub(i)<<"\n";
 		}
 	}
+}
+
+void OutputDevice::printToLogFile(const std::string& content) const {
+    assert(!content.empty());
+    assert(!logFile.empty());
+
+    if (ifWriteToLogFile) {
+        std::ofstream outFile(logFile, std::ios::app); // Open in append mode
+        if (!outFile) {
+            throw std::ios_base::failure("Failed to open the file: " + logFile);
+        }
+
+        outFile << content << "\n";
+
+        if (!outFile) {
+            throw std::ios_base::failure("Failed to write to the file: " + logFile);
+        }
+
+        outFile.close();
+        if (!outFile) {
+            throw std::ios_base::failure("Failed to close the file: " + logFile);
+        }
+    }
 }
 
 

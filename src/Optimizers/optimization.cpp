@@ -1209,9 +1209,14 @@ void Optimizer::findTheMostPromisingDesignToBeSimulated() {
 void Optimizer::initializeCurrentBestDesign(void) {
 	currentBestDesign.tag = "Current Iterate";
 	currentBestDesign.setNumberOfConstraints(numberOfConstraints);
-	currentBestDesign.saveDesignVector(designVectorFileName);
+
+	if(!ifAPIisUsed){
+		currentBestDesign.saveDesignVector(designVectorFileName);
+	}
 	currentBestDesign.isDesignFeasible = true;
 }
+
+
 
 void Optimizer::abortIfCurrentDesignHasANaN() {
 	if (currentBestDesign.checkIfHasNan()) {
@@ -1328,7 +1333,7 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithFunctionalValues(void)
 		computeConstraintsandPenaltyTerm(currentBestDesign);
 
 		calculateImprovementValue(currentBestDesign);
-		printScalar(currentBestDesign.improvementValue);
+//		printScalar(currentBestDesign.improvementValue);
 
 		abortIfCurrentDesignHasANaN();
 
@@ -1352,7 +1357,7 @@ void Optimizer::performEfficientGlobalOptimizationOnlyWithFunctionalValues(void)
 			output.printMessage("An IMPROVEMENT has been achieved!");
 
 			double percentImprovementRelativeToBest = (deltaImprovement/ bestDeltaImprovementValueAchieved)*100;
-			printScalar(percentImprovementRelativeToBest);
+//			printScalar(percentImprovementRelativeToBest);
 
 			if(percentImprovementRelativeToBest > 10){
 				sigmaMultiplier = 1.0;

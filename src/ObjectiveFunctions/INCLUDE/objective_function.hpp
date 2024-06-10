@@ -1,34 +1,3 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDEO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
 #ifndef OBJECTIVE_FUNCTION_HPP
 #define OBJECTIVE_FUNCTION_HPP
 
@@ -67,6 +36,7 @@ public:
 
 	std::string pathLowFi;
 	std::string outputFilenameLowFi;
+	std::string outputFilenameLowFiGradient;
 
 	std::string nameLowFidelityTrainingData;
 	std::string nameHighFidelityTrainingData;
@@ -77,6 +47,7 @@ public:
 	bool doesUseUDF = false;
 
 
+
 	SURROGATE_MODEL modelHiFi  = ORDINARY_KRIGING;
 	SURROGATE_MODEL modelLowFi = ORDINARY_KRIGING;
 
@@ -85,7 +56,6 @@ public:
 
 	void print(void) const;
 
-private:
 	void printHighFidelityModel() const;
 	void printLowFidelityModel() const;
 	string getNameOfSurrogateModel(SURROGATE_MODEL) const;
@@ -112,9 +82,7 @@ class ObjectiveFunction{
 
 
 private:
-//	void readOnlyFunctionalValue(Design &d) const;
-//	void readFunctionalValueAndTangent(Design &d) const;
-//	void readFunctionalValueAndAdjoint(Design &d) const;
+
 	void bindWithOrdinaryKrigingModel();
 	void bindWithUniversalKrigingModel();
 	void bindWithGradientEnhancedModel();
@@ -130,12 +98,13 @@ private:
 
 	void evaluateGradient(void) const;
 
+
 	double (*objectiveFunctionPtr)(const double*) = nullptr;
+
 
 protected:
 
 	bool doesObjectiveFunctionPtrExist = false;
-
 	std::string evaluationMode;
 	std::string addDataMode;
 
@@ -162,6 +131,9 @@ protected:
 	double sampleMinimum = 0.0;
 
 	double sigmaFactor = 1.0;
+
+
+
 
 
 
@@ -209,6 +181,8 @@ public:
 	void setFileNameReadInput(std::string fileName);
 	void setFileNameReadInputLowFidelity(std::string fileName);
 
+	void setFileNameTrainingData(std::string fileName);
+
 
 	void setExecutablePath(std::string);
 	void setExecutableName(std::string);
@@ -233,6 +207,7 @@ public:
 	void evaluateDesignGradient(Design &d);
 
 	void evaluateObjectiveFunction(void);
+	double evaluateObjectiveFunctionDirectly(const rowvec &x);
 
 	void writeDesignVariablesToFile(Design &d) const;
 
@@ -252,7 +227,9 @@ public:
 	pair<double, double> interpolateWithVariance(rowvec x) const;
 
 	void print(void) const;
-	std::string getExecutionCommand(string) const;
+	string generateOutputString(void) const;
+
+	std::string getExecutionCommand(const std::string& exename) const;
 
 	void removeVeryCloseSamples(const Design& globalOptimalDesign);
 	void removeVeryCloseSamples(const Design& globalOptimalDesign, std::vector<rowvec> samples);
@@ -261,8 +238,8 @@ public:
 
 	void setGlobalOptimalDesign(Design d);
 
-
 	void setFunctionPtr(ObjectiveFunctionPtr func);
+
 
 };
 

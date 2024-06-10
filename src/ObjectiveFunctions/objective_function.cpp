@@ -1,34 +1,3 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
 #include <stdio.h>
 #include <math.h>
 #include <string>
@@ -108,13 +77,13 @@ string ObjectiveFunctionDefinition::getNameOfSurrogateModel(SURROGATE_MODEL mode
 
 	string modelName;
 	if (modelType == ORDINARY_KRIGING)
-		modelName = "ORDINARY_KRIGING";
+		modelName = "Uses only functional values";
 
 	if (modelType == GRADIENT_ENHANCED)
-		modelName = "GRADIENT_ENHANCED";
+		modelName = "Uses gradients";
 
 	if (modelType == TANGENT_ENHANCED)
-		modelName = "TANGENT_ENHANCED";
+		modelName = "Uses directional derivatives";
 
 	return modelName;
 }
@@ -133,12 +102,24 @@ void ObjectiveFunctionDefinition::printLowFidelityModel() const {
 
 void ObjectiveFunctionDefinition::print(void) const{
 
-	std::cout<<"\n================ Objective/Constraint function definition ================\n";
+
 	std::cout<< "Name = "<<name<<"\n";
-	std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
-	std::cout<< "Training data = " << nameHighFidelityTrainingData << "\n";
-	std::cout<< "Output data = " << outputFilename << "\n";
-	std::cout<< "Executable = " << executableName << "\n";
+
+
+	if(!doesUseUDF){
+
+		std::cout<< "Design vector filename = "<<designVectorFilename<<"\n";
+		std::cout<< "Training data = " << nameHighFidelityTrainingData << "\n";
+		std::cout<< "Output filename = " << outputFilename << "\n";
+		std::cout<< "Executable = " << executableName << "\n";
+
+	}
+	else{
+
+		std::cout<< "UDF = YES\n";
+	}
+
+
 
 	if(isNotEmpty(executableNameGradient)){
 
@@ -165,15 +146,28 @@ void ObjectiveFunctionDefinition::print(void) const{
 
 		std::cout<< "Low fidelity model = " << "\n";
 		std::cout<< "\tTraining data = " << nameLowFidelityTrainingData << "\n";
-		std::cout<< "Output data = " << outputFilenameLowFi << "\n";
+		std::cout<< "\tOutput filename = " << outputFilenameLowFi << "\n";
+
+		if(!outputFilenameLowFiGradient.empty()){
+
+			std::cout<< "\tOutput filename for gradient = " << outputFilenameLowFiGradient << "\n";
+		}
+
 		std::cout<< "\tExecutable = " << executableNameLowFi << "\n";
-		std::cout<< "\tPath = " << path << "\n";
+
+		if(!executableNameLowFiGradient.empty()){
+
+			std::cout<< "\tExecutable for gradient = " << executableNameLowFiGradient << "\n";
+		}
 
 		printLowFidelityModel();
+
+
+
+
 	}
 
 
-	std::cout<< "================================================================\n\n";
 }
 
 
@@ -294,14 +288,6 @@ void ObjectiveFunction::bindSurrogateModel(void){
 
 void ObjectiveFunction::setParametersByDefinition(ObjectiveFunctionDefinition def){
 
-
-//	bool ifDefinitionIsOk = def.checkIfDefinitionIsOk();
-//
-//	if(!ifDefinitionIsOk){
-//		def.print();
-//		abortWithErrorMessage("Something wrong with the objective function definition");
-//	}
-
 	definition = def;
 	ifDefinitionIsSet = true;
 
@@ -335,6 +321,15 @@ void ObjectiveFunction::setFileNameDesignVector(std::string fileName){
 std::string ObjectiveFunction::getFileNameDesignVector(void) const{
 	return definition.designVectorFilename;
 }
+
+
+void ObjectiveFunction::setFileNameTrainingData(std::string fileName){
+
+	assert(!fileName.empty());
+	definition.nameHighFidelityTrainingData = fileName;
+}
+
+
 
 std::string ObjectiveFunction::getFileNameTrainingData(void) const{
 	return definition.nameHighFidelityTrainingData;
@@ -517,17 +512,24 @@ void ObjectiveFunction::calculateSurrogateEstimateUsingDerivatives(DesignForBaye
 	designCalculated.objectiveFunctionValue = ftilde;
 }
 
-std::string ObjectiveFunction::getExecutionCommand(string exename) const{
 
-	assert(isNotEmpty(exename));
-	std::string runCommand;
+std::string ObjectiveFunction::getExecutionCommand(const std::string& exename) const {
+	std::string command;
 
-	runCommand = "./" + exename;
-	return runCommand;
+	// Check if the input ends with ".py", indicating a Python script
+	if (exename.size() >= 3 && exename.substr(exename.size() - 3) == ".py") {
+		command = "python " + exename;  // Prepends 'python ' to the command
+	} else {
+		// Check if the exename already contains a path (i.e., contains '/')
+		if (exename.find('/') != std::string::npos) {
+			command = exename;  // Use the full path as the command
+		} else {
+			command = "./" + exename;  // Prepend './' for relative path executables
+		}
+	}
+
+	return command;
 }
-
-
-
 
 void ObjectiveFunction::addDesignToData(Design &d){
 
@@ -725,97 +727,6 @@ rowvec ObjectiveFunction::readOutput(string filename, unsigned int howMany) cons
 	return result;
 }
 
-//void ObjectiveFunction::readOnlyFunctionalValue(Design &d) const {
-//	unsigned int howManyEntriesToRead = 1;
-//	rowvec functionalValue(howManyEntriesToRead);
-//
-//
-//	if(isHiFiEvaluation()){
-//		functionalValue = readOutput(definition.outputFilename,howManyEntriesToRead);
-//		d.trueValue = functionalValue(0);
-//	}
-//
-//	if(isLowFiEvaluation()){
-//
-//		functionalValue = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
-//		d.trueValueLowFidelity = functionalValue(0);
-//	}
-//
-//
-//}
-//
-//
-//
-//void ObjectiveFunction::readFunctionalValueAndTangent(Design &d) const {
-//	unsigned int howManyEntriesToRead = 2;
-//	rowvec resultBuffer(howManyEntriesToRead);
-//
-//
-//	if(isHiFiEvaluation()){
-//		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
-//		d.trueValue = resultBuffer(0);
-//		d.tangentValue = resultBuffer(1);
-//	}
-//
-//	if(isLowFiEvaluation()){
-//		resultBuffer = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
-//		d.trueValueLowFidelity = resultBuffer(0);
-//		d.tangentValueLowFidelity = resultBuffer(1);
-//	}
-//
-//}
-//
-//void ObjectiveFunction::readFunctionalValueAndAdjoint(Design &d) const {
-//
-//	assert(dim >0);
-//
-//	unsigned int howManyEntriesToRead = 1 + dim;
-//	rowvec resultBuffer(howManyEntriesToRead);
-//
-//	rowvec gradient(dim, fill::zeros);
-//	unsigned int offset = 1;
-//
-//	if(isHiFiEvaluation()){
-//
-//		resultBuffer = readOutput(definition.outputFilename,howManyEntriesToRead);
-//		for (unsigned int i = 0; i < dim; i++) {
-//			gradient(i) = resultBuffer(i + offset);
-//		}
-//		d.trueValue = resultBuffer(0);
-//		d.gradient = gradient;
-//
-//	}
-//	if(isLowFiEvaluation()){
-//		resultBuffer = readOutput(definition.outputFilenameLowFi,howManyEntriesToRead);
-//		for (unsigned int i = 0; i < dim; i++) {
-//			gradient(i) = resultBuffer(i + offset);
-//		}
-//		d.trueValueLowFidelity = resultBuffer(0);
-//		d.gradientLowFidelity = gradient;
-//
-//	}
-//
-//}
-//
-//void ObjectiveFunction::readOutputDesign(Design &d) const{
-//
-//	if(evaluationMode.compare("primal") == 0 || evaluationMode.compare("primalLowFi") == 0){
-//
-//		readOnlyFunctionalValue(d);
-//	}
-//
-//	if(evaluationMode.compare("tangent") == 0 || evaluationMode.compare("tangentLowFi") == 0 ){
-//
-//		readFunctionalValueAndTangent(d);
-//	}
-//
-//	if(evaluationMode.compare("adjoint") == 0 || evaluationMode.compare("adjointLowFi") == 0){
-//
-//		readFunctionalValueAndAdjoint(d);
-//	}
-//
-//
-//}
 
 void ObjectiveFunction::writeDesignVariablesToFile(Design &d) const{
 
@@ -851,12 +762,21 @@ void ObjectiveFunction::evaluateDesign(Design &d){
 	assert(d.designParameters.size() == dim);
 
 	setEvaluationMode("primal");
-	writeDesignVariablesToFile(d);
-	evaluateObjectiveFunction();
+	if(!doesObjectiveFunctionPtrExist){
+		writeDesignVariablesToFile(d);
+		evaluateObjectiveFunction();
+		rowvec result = readOutput(definition.outputFilename, 1);
+		d.trueValue = result(0);
 
-	rowvec result = readOutput(definition.outputFilename, 1);
+	}
+	else{
+		double functionValue = evaluateObjectiveFunctionDirectly(d.designParameters);
+		d.trueValue = functionValue;
+	}
 
-	d.trueValue = result(0);
+
+
+
 
 }
 
@@ -940,6 +860,13 @@ void ObjectiveFunction::evaluateGradient(void) const{
 		}
 
 	}
+
+}
+
+double ObjectiveFunction::evaluateObjectiveFunctionDirectly(const rowvec &x){
+
+	assert(objectiveFunctionPtr!=nullptr);
+	return objectiveFunctionPtr(x.memptr());
 
 }
 
@@ -1033,7 +960,54 @@ pair<double, double> ObjectiveFunction::interpolateWithVariance(rowvec x) const{
 
 
 void ObjectiveFunction::print(void) const{
+	std::cout<<"\n================ Objective function definition =========================\n";
 	definition.print();
+	std::cout<< "Number of training iterations for model training = " << numberOfIterationsForSurrogateTraining << "\n";
+	std::cout<<"==========================================================================\n";
+}
+
+
+string ObjectiveFunction::generateOutputString(void) const{
+
+
+	std::string outputMsg;
+	string tag = "Objective function definition";
+	outputMsg = generateFormattedString(tag,'=', 100) + "\n";
+	outputMsg+= "Name : " + definition.name + "\n";
+
+	if(!definition.executableName.empty()){
+		outputMsg+= "Executable : " + definition.executableName + "\n";
+	}
+
+	if(doesObjectiveFunctionPtrExist){
+
+		outputMsg+= "API Call : YES\n";
+	}
+
+
+	outputMsg+= "Training data : " + definition.nameHighFidelityTrainingData + "\n";
+
+	if(!definition.outputFilename.empty()){
+
+		outputMsg+= "Output file : " + definition.outputFilename + "\n";
+	}
+	if(!definition.designVectorFilename.empty()){
+
+		outputMsg+= "Design parameters file : " + definition.designVectorFilename + "\n";
+	}
+
+	string modelName = definition.getNameOfSurrogateModel(definition.modelHiFi);
+	outputMsg+= "Surrogate model : " + modelName + "\n";
+
+	outputMsg+= "Number of iterations for model training : " +std::to_string(numberOfIterationsForSurrogateTraining) + "\n";
+
+
+	std::string border(100, '=');
+	outputMsg += border + "\n";
+
+
+	return outputMsg;
+
 }
 
 void ObjectiveFunction::printSurrogate(void) const{
