@@ -43,7 +43,21 @@
 
 using std::string;
 
+#if defined(_WIN32) || defined(_WIN64)
+#include <direct.h>
+#define CHANGE_DIR _chdir
+#else
+#include <unistd.h>
+#define CHANGE_DIR chdir
+#endif
 
+bool changeDirectory(const std::string& directory) {
+    if (CHANGE_DIR(directory.c_str()) != 0) {
+        std::cerr << "Error: Could not change directory to " << directory << std::endl;
+        return false;
+    }
+    return true;
+}
 
 void executePythonScript(std::string command){
 

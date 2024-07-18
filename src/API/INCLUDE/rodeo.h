@@ -34,6 +34,10 @@ private:
 	vector<objectiveFunctionPtrType> constraintFunctionPtr;
 
 	mat samplesInput;
+	string name;
+	string DoEType = "random";
+	string cwd;
+
 
 	void performDoE(void);
 	void performDoEForConstraints(void);
@@ -41,8 +45,6 @@ private:
 
 public:
 
-	string name;
-	string cwd;
 
 	unsigned int numberOfConstraints = 0;
 
@@ -56,6 +58,8 @@ public:
 	void run(void);
 	void setDimension(unsigned int dim);
 	void setName(const string nameInput);
+	void setCurrentWorkingDirectory(string dir);
+	void setDoEStrategy(const std::string& input);
 	void setBoxConstraints(double *lb, double *ub);
 	void setObjectiveFunction(ObjectiveFunctionPtr, std::string name, std::string filename);
 	void addConstraint(ObjectiveFunctionPtr, std::string, std::string);

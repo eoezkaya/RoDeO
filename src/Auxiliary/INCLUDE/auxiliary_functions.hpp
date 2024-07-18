@@ -71,7 +71,7 @@ void compileWithCpp(std::string, std::string);
 
 
 void changeDirectoryToUnitTests(void);
-
+bool changeDirectory(const std::string& directory);
 
 
 bool checkValue(double value, double expected, double tolerance);

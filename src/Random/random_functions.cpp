@@ -67,6 +67,59 @@ double generateRandomDouble(double a, double b) {
 }
 
 
+mat generateLatinHypercubeMatrix(int N, int dimensions) {
+    mat samples(N, dimensions);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    // Generate the Latin Hypercube samples
+    for (int d = 0; d < dimensions; ++d) {
+        std::vector<int> perm(N);
+        for (int i = 0; i < N; ++i) {
+            perm[i] = i;
+        }
+
+        // Shuffle the permutation
+        std::shuffle(perm.begin(), perm.end(), gen);
+
+        for (int i = 0; i < N; ++i) {
+            std::uniform_real_distribution<> dis(0.0, 1.0);
+            double sample = (perm[i] + dis(gen)) / N;
+            samples(i,d) = sample;
+        }
+    }
+
+    return samples;
+}
+
+mat generateLatinHypercubeMatrix(int N, int dimensions, const vec& lowerBounds, const vec& upperBounds) {
+	mat samples(N, dimensions);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    // Generate the Latin Hypercube samples
+    for (int d = 0; d < dimensions; ++d) {
+        std::vector<int> perm(N);
+        for (int i = 0; i < N; ++i) {
+            perm[i] = i;
+        }
+
+        // Shuffle the permutation
+        std::shuffle(perm.begin(), perm.end(), gen);
+
+        for (int i = 0; i < N; ++i) {
+            std::uniform_real_distribution<> dis(0.0, 1.0);
+            double sample = (perm[i] + dis(gen)) / N;
+            // Scale the sample to the specified bounds
+            samples(i,d) = lowerBounds(d) + sample * (upperBounds(d) - lowerBounds(d));
+        }
+    }
+
+    return samples;
+}
+
+
+
 mat generateRandomMatrix(unsigned int Nrows, unsigned int Ncols, double *lb, double*ub){
 
 	vec lowerBounds(Ncols);

@@ -43,6 +43,9 @@ double generateRandomDouble(double a, double b);
 mat generateRandomMatrix(unsigned int Nrows, unsigned int Ncols, double *lb, double*ub);
 mat generateRandomMatrix(unsigned int Nrows, vec lb, vec ub);
 
+mat generateLatinHypercubeMatrix(int N, int dimensions);
+mat generateLatinHypercubeMatrix(int N, int dimensions, const vec& lowerBounds, const vec& upperBounds);
+
 double generateRandomDoubleFromNormalDist(double xs, double xe, double sigma_factor);
 
 

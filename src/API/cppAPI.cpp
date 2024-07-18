@@ -1,8 +1,12 @@
 #include "./INCLUDE/rodeo.h"
 #include "../ObjectiveFunctions/INCLUDE/objective_function.hpp"
 #include "../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
+#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "../Auxiliary/INCLUDE/print.hpp"
 #include "../Bounds/INCLUDE/bounds.hpp"
 #include <cassert>
+#include <filesystem>
+
 RobustDesignOptimizer::RobustDesignOptimizer(){
 	optimizer.setAPIUseOn();
 	name = "OptimizationStudy";
@@ -26,6 +30,31 @@ void RobustDesignOptimizer::setName(const string nameInput){
 
 }
 
+
+void RobustDesignOptimizer::setCurrentWorkingDirectory(string directory){
+	if (directory.empty() || !std::filesystem::is_directory(directory)) {
+		throw std::invalid_argument("Current working directory is not valid");
+	}
+
+	cwd = directory;
+
+}
+
+
+void RobustDesignOptimizer::setDoEStrategy(const std::string& input) {
+	if (input.empty()) {
+		throw std::invalid_argument("DoE strategy cannot be empty");
+	}
+
+	std::string lowerInput = input;
+	std::transform(lowerInput.begin(), lowerInput.end(), lowerInput.begin(), ::tolower);
+
+	if (lowerInput != "lhs" && lowerInput != "random") {
+		throw std::invalid_argument("Invalid DoE strategy. Allowed values are 'LHS' or 'Random'");
+	}
+
+	DoEType = lowerInput;
+}
 
 
 void RobustDesignOptimizer::setBoxConstraints(double *lb, double *ub){
@@ -170,7 +199,7 @@ void RobustDesignOptimizer::addConstraint(ObjectiveFunctionPtr function, std::st
 
 	constraint.setDimension(dimension);
 
-//	constraint.print();
+	//	constraint.print();
 
 	optimizer.addConstraint(constraint);
 
@@ -220,9 +249,27 @@ void RobustDesignOptimizer::performDoEForConstraints(void){
 
 
 void RobustDesignOptimizer::performDoE(void) {
-	samplesInput = generateRandomMatrix(numberOfSamplesForDoE, dimension,
-			lowerBounds.data(), upperBounds.data());
-//	sampleInput.print("sampleInput");
+	if(DoEType == "random"){
+
+		samplesInput = generateRandomMatrix(numberOfSamplesForDoE, dimension,
+				lowerBounds.data(), upperBounds.data());
+
+
+	}
+
+
+	else if(DoEType == "lhs"){
+
+		samplesInput = generateLatinHypercubeMatrix(numberOfSamplesForDoE, dimension, lowerBounds, upperBounds);
+
+
+	}
+
+	else{
+
+		throw std::invalid_argument("Invalid DoE type.");
+	}
+	//	sampleInput.print("sampleInput");
 	vec functionValues(numberOfSamplesForDoE);
 	for (unsigned int i = 0; i < numberOfSamplesForDoE; i++) {
 		rowvec x = samplesInput.row(i);
@@ -263,6 +310,12 @@ void RobustDesignOptimizer::checkOptimizationSettings() {
 void RobustDesignOptimizer::run(void){
 
 	checkOptimizationSettings();
+
+	if(!changeDirectory(cwd)){
+
+		throw std::invalid_argument("Cannot change to current working directory");
+	}
+
 	if(startWithDoE){
 
 		if(numberOfSamplesForDoE == 0){
@@ -271,7 +324,8 @@ void RobustDesignOptimizer::run(void){
 		performDoE();
 	}
 
-//	std::cout<<"Running optimization...\n";
+
+	//	std::cout<<"Running optimization...\n";
 	optimizer.performEfficientGlobalOptimization();
 
 }
