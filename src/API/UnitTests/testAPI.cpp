@@ -58,7 +58,7 @@ int main(void){
 	testOptimizer.setDoEOn(50);
 	testOptimizer.setMaxNumberOfFunctionEvaluations(50);
 
-	std::cout<<"here\n";
+
 	testOptimizer.run();
 	std::cout<<"##################### ROSENBROCK CONSTRAINED OPTIMIZATION END #####################\n";
 	return 0;
