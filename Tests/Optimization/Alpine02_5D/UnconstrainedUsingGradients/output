@@ -1,0 +1,1322 @@
+
+
+
+	  ____       ____        ___   
+	 |  _ \ ___ |  _ \  ___ / _ \  
+	 | |_) / _ \| | | |/ _ \ | | | 
+	 |  _ < (_) | |_| |  __/ |_| | 
+	 |_| \_\___/|____/ \___|\___/  
+
+    RObust DEsign Optimization Package      
+
+
+
+################################## STARTING Optimization ##################################
+
+
+Optimizer Settings = 
+
+Problem name : ALPINE02_5D
+Dimension    : 5
+Maximum number of function evaluations: 200
+Maximum number of iterations for EI maximization: 100000
+
+================ Objective/Constraint function definition ================
+Name = Alpine02_5DObjectiveFunction
+Design vector filename = dv.dat
+Training data = alpine02_5D.csv
+Output data = objectiveFunction.dat
+Executable = calculateObjectiveFunction.py
+Path = 
+Surrogate model = GRADIENT_ENHANCED
+Multilevel = NO
+================================================================
+
+Optimization problem does not have any constraints
+Initializing surrogate model for the objective function...
+Initialization is done...
+
+***************** Global optimum design *****************
+Design parameters = 
+   7.4320   4.7326   8.0430   8.1999   5.7569
+Function value = -48.9206
+Feasibility = [32mYES[0m
+Improvement = 0
+*********************************************************
+
+
+################################# Iteration = 1 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+   7.4320   4.7326   8.0430   8.1999   5.7569
+Function value = -48.9206
+Feasibility = [32mYES[0m
+Improvement = 0
+*********************************************************
+
+Initializing surrogate model for the objective function...
+Initialization is done...
+Training surrogate model for the objective function...
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1481   0.0936   0.1605   0.1636   0.1143
+Maximum step size 0.000478539
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1602   0.0956   0.1574   0.1566   0.0760
+The most promising design (not normalized):
+   8.0302   4.8316   7.8934   7.8529   3.8628
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [8.03023 4.8316  7.89336 7.8529  3.86282]
+function value =  -62.1645276899467
+gradient vector =  [  7.20061528   1.01288275  -1.48856892  -4.02529991 -78.74895061]
+Estimated objective function value = -25.1644
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+   8.0302   4.8316   7.8934   7.8529   3.8628
+Function value = -62.1645
+gradient vector
+    7.2006    1.0129   -1.4886   -4.0253  -78.7490
+Feasibility = [32mYES[0m
+Improvement = 13.2439
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 2 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+   8.0302   4.8316   7.8934   7.8529   3.8628
+Function value = -62.1645
+gradient vector
+  -25.2571   -4.1794    6.3173   14.6512   79.9612
+Feasibility = [32mYES[0m
+Improvement = 13.2439
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1602   0.0956   0.1574   0.1566   0.0760
+Maximum step size 0.00197456
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1601   0.0956   0.1575   0.1567   0.0776
+The most promising design (not normalized):
+   8.0231   4.8306   7.8948   7.8569   3.9408
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [8.0231  4.8306  7.89483 7.85688 3.94078]
+function value =  -68.23461284704115
+gradient vector =  [  7.39863114   1.04111909  -1.53264969  -4.14457716 -75.03579164]
+Estimated objective function value = -61.9929
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+   8.0231   4.8306   7.8948   7.8569   3.9408
+Function value = -68.2346
+gradient vector
+    7.3986    1.0411   -1.5326   -4.1446  -75.0358
+Feasibility = [32mYES[0m
+Improvement = 19.314
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 3 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+   8.0231   4.8306   7.8948   7.8569   3.9408
+Function value = -68.2346
+gradient vector
+    7.2006    1.0129   -1.4886   -4.0253  -78.7490
+Feasibility = [32mYES[0m
+Improvement = 19.314
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1601   0.0956   0.1575   0.1567   0.0776
+Maximum step size 0.00192101
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1480   0.0939   0.1600   0.1635   0.2000
+The most promising design (not normalized):
+    7.4257    4.7465    8.0186    8.1916   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.42565  4.74653  8.01859  8.19156 10.     ]
+function value =  -70.04676193607662
+gradient vector =  [ -36.70011821   -4.98633551    7.26779258   20.31188672 -111.5390147 ]
+Estimated objective function value = -20.4835
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.4257    4.7465    8.0186    8.1916   10.0000
+Function value = -70.0468
+gradient vector
+  -3.6700e+01  -4.9863e+00   7.2678e+00   2.0312e+01  -1.1154e+02
+Feasibility = [32mYES[0m
+Improvement = 21.1261
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 4 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.4257    4.7465    8.0186    8.1916   10.0000
+Function value = -70.0468
+gradient vector
+    7.3986    1.0411   -1.5326   -4.1446  -75.0358
+Feasibility = [32mYES[0m
+Improvement = 21.1261
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1480   0.0939   0.1600   0.1635   0.2000
+Maximum step size 0.000401096
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1487   0.0940   0.1598   0.1631   0.2000
+The most promising design (not normalized):
+    7.4620    4.7515    8.0114    8.1715   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.46199  4.75147  8.0114   8.17145 10.     ]
+function value =  -71.81330943722853
+gradient vector =  [ -34.49848013   -4.74898926    6.91710308   19.20240726 -114.35197796]
+Estimated objective function value = -69.8682
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.4620    4.7515    8.0114    8.1715   10.0000
+Function value = -71.8133
+gradient vector
+  -3.4498e+01  -4.7490e+00   6.9171e+00   1.9202e+01  -1.1435e+02
+Feasibility = [32mYES[0m
+Improvement = 22.8927
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 5 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.4620    4.7515    8.0114    8.1715   10.0000
+Function value = -71.8133
+gradient vector
+  -3.6700e+01  -4.9863e+00   7.2678e+00   2.0312e+01  -1.1154e+02
+Feasibility = [32mYES[0m
+Improvement = 22.8927
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1487   0.0940   0.1598   0.1631   0.2000
+Maximum step size 0.000421142
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1633   0.0960   0.1569   0.1550   0.2000
+The most promising design (not normalized):
+    8.1812    4.8505    7.8672    7.7712   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 8.18115  4.85046  7.8672   7.77115 10.     ]
+function value =  -79.19807913659677
+gradient vector =  [  22.03670348    2.84100451   -3.98650335  -11.67079583 -126.11112162]
+Estimated objective function value = -61.9425
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    8.1812    4.8505    7.8672    7.7712   10.0000
+Function value = -79.1981
+gradient vector
+   2.2037e+01   2.8410e+00  -3.9865e+00  -1.1671e+01  -1.2611e+02
+Feasibility = [32mYES[0m
+Improvement = 30.2774
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 6 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    8.1812    4.8505    7.8672    7.7712   10.0000
+Function value = -79.1981
+gradient vector
+  -3.4498e+01  -4.7490e+00   6.9171e+00   1.9202e+01  -1.1435e+02
+Feasibility = [32mYES[0m
+Improvement = 30.2774
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1633   0.0960   0.1569   0.1550   0.2000
+Maximum step size 0.000703976
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1588   0.0954   0.1577   0.1573   0.2000
+The most promising design (not normalized):
+    7.9595    4.8219    7.9073    7.8885   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.95954  4.82189  7.90729  7.88852 10.     ]
+function value =  -83.03678372986278
+gradient vector =  [   3.58174958    0.51873187   -0.81989312   -2.39404375 -132.2236858 ]
+Estimated objective function value = -79.1147
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9595    4.8219    7.9073    7.8885   10.0000
+Function value = -83.0368
+gradient vector
+   3.5817e+00   5.1873e-01  -8.1989e-01  -2.3940e+00  -1.3222e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1161
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 7 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9595    4.8219    7.9073    7.8885   10.0000
+Function value = -83.0368
+gradient vector
+   2.2037e+01   2.8410e+00  -3.9865e+00  -1.1671e+01  -1.2611e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1161
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1588   0.0954   0.1577   0.1573   0.2000
+Maximum step size 0.00385556
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1460   0.0935   0.1607   0.1659   0.2000
+The most promising design (not normalized):
+    7.3246    4.7299    8.0526    8.3129   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.32459  4.72994  8.05264  8.31292 10.     ]
+function value =  -62.83730309269157
+gradient vector =  [ -41.05558279   -5.53953262    8.74834825   27.27012383 -100.05902743]
+Estimated objective function value = -65.5751
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.3246    4.7299    8.0526    8.3129   10.0000
+Function value = -62.8373
+gradient vector
+  -4.1056e+01  -5.5395e+00   8.7483e+00   2.7270e+01  -1.0006e+02
+Feasibility = [32mYES[0m
+Improvement = 13.9167
+*********************************************************
+
+Addding the new sample without gradient since no descent has been achieved
+
+################################# Iteration = 8 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9595    4.8219    7.9073    7.8885   10.0000
+Function value = -83.0368
+gradient vector
+   3.5817e+00   5.1873e-01  -8.1989e-01  -2.3940e+00  -1.3222e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1161
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  1
+Staring point for the gradient step x0 = 
+
+   0.1588   0.0954   0.1577   0.1573   0.2000
+Maximum step size 0.00192778
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1587   0.0954   0.1577   0.1574   0.2000
+The most promising design (not normalized):
+    7.9560    4.8214    7.9081    7.8909   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.95599  4.82138  7.9081   7.89089 10.     ]
+function value =  -83.05529638030684
+gradient vector =  [   3.28217479    0.47506873   -0.75206873   -2.19590384 -132.25316443]
+Estimated objective function value = -82.9811
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9560    4.8214    7.9081    7.8909   10.0000
+Function value = -83.0553
+gradient vector
+   3.2822e+00   4.7507e-01  -7.5207e-01  -2.1959e+00  -1.3225e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1347
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 9 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9560    4.8214    7.9081    7.8909   10.0000
+Function value = -83.0553
+gradient vector
+   3.5817e+00   5.1873e-01  -8.1989e-01  -2.3940e+00  -1.3222e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1347
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1587   0.0954   0.1577   0.1574   0.2000
+Maximum step size 0.00420992
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1494   0.0940   0.1599   0.1636   0.2000
+The most promising design (not normalized):
+    7.4941    4.7545    8.0140    8.1999   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.49405  4.75452  8.01395  8.19995 10.     ]
+function value =  -72.29401408882823
+gradient vector =  [ -32.0294541    -4.55503702    7.15391202   21.65135957 -115.11742838]
+Estimated objective function value = -71.0638
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.4941    4.7545    8.0140    8.1999   10.0000
+Function value = -72.294
+gradient vector
+  -3.2029e+01  -4.5550e+00   7.1539e+00   2.1651e+01  -1.1512e+02
+Feasibility = [32mYES[0m
+Improvement = 23.3734
+*********************************************************
+
+Addding the new sample without gradient since no descent has been achieved
+
+################################# Iteration = 10 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9560    4.8214    7.9081    7.8909   10.0000
+Function value = -83.0553
+gradient vector
+   3.2822e+00   4.7507e-01  -7.5207e-01  -2.1959e+00  -1.3225e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1347
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  1
+Staring point for the gradient step x0 = 
+
+   0.1587   0.0954   0.1577   0.1574   0.2000
+Maximum step size 0.00210496
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1586   0.0954   0.1578   0.1574   0.2000
+The most promising design (not normalized):
+    7.9527    4.8209    7.9088    7.8931   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.95274  4.82091  7.90885  7.89307 10.     ]
+function value =  -83.0708603955952
+gradient vector =  [   3.00793691    0.43480911   -0.68922307   -2.01350528 -132.2779478 ]
+Estimated objective function value = -83.0085
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9527    4.8209    7.9088    7.8931   10.0000
+Function value = -83.0709
+gradient vector
+   3.0079e+00   4.3481e-01  -6.8922e-01  -2.0135e+00  -1.3228e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1502
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 11 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9527    4.8209    7.9088    7.8931   10.0000
+Function value = -83.0709
+gradient vector
+   3.2822e+00   4.7507e-01  -7.5207e-01  -2.1959e+00  -1.3225e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1502
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1586   0.0954   0.1578   0.1574   0.2000
+Maximum step size 0.00459972
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1448   0.0934   0.1609   0.1667   0.2000
+The most promising design (not normalized):
+    7.2679    4.7219    8.0658    8.3515   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.26789  4.72191  8.06577  8.35151 10.     ]
+function value =  -59.200478589358475
+gradient vector =  [-43.3765202   -5.70503382   9.05899961  28.60733306 -94.26792716]
+Estimated objective function value = -61.0286
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.2679    4.7219    8.0658    8.3515   10.0000
+Function value = -59.2005
+gradient vector
+  -43.3765   -5.7050    9.0590   28.6073  -94.2679
+Feasibility = [32mYES[0m
+Improvement = 10.2798
+*********************************************************
+
+Addding the new sample without gradient since no descent has been achieved
+
+################################# Iteration = 12 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9527    4.8209    7.9088    7.8931   10.0000
+Function value = -83.0709
+gradient vector
+   3.0079e+00   4.3481e-01  -6.8922e-01  -2.0135e+00  -1.3228e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1502
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  1
+Staring point for the gradient step x0 = 
+
+   0.1586   0.0954   0.1578   0.1574   0.2000
+Maximum step size 0.00229986
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1560   0.0950   0.1584   0.1592   0.2000
+The most promising design (not normalized):
+    7.8239    4.8023    7.9384    7.9793   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.82389  4.80228  7.93837  7.97932 10.     ]
+function value =  -82.59947536562564
+gradient vector =  [  -7.76497236   -1.15501156    1.784483      5.23159346 -131.52733749]
+Estimated objective function value = -80.4453
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.8239    4.8023    7.9384    7.9793   10.0000
+Function value = -82.5995
+gradient vector
+  -7.7650e+00  -1.1550e+00   1.7845e+00   5.2316e+00  -1.3153e+02
+Feasibility = [32mYES[0m
+Improvement = 33.6788
+*********************************************************
+
+Addding the new sample without gradient since no descent has been achieved
+
+################################# Iteration = 13 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9527    4.8209    7.9088    7.8931   10.0000
+Function value = -83.0709
+gradient vector
+   3.0079e+00   4.3481e-01  -6.8922e-01  -2.0135e+00  -1.3228e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1502
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  2
+Staring point for the gradient step x0 = 
+
+   0.1586   0.0954   0.1578   0.1574   0.2000
+Maximum step size 0.00114993
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1586   0.0954   0.1578   0.1575   0.2000
+The most promising design (not normalized):
+    7.9498    4.8205    7.9095    7.8951   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.94977  4.82048  7.90953  7.89506 10.     ]
+function value =  -83.08389128577993
+gradient vector =  [   2.75734825    0.39796021   -0.63221001   -1.84689162 -132.29869755]
+Estimated objective function value = -83.0706
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9498    4.8205    7.9095    7.8951   10.0000
+Function value = -83.0839
+gradient vector
+   2.7573e+00   3.9796e-01  -6.3221e-01  -1.8469e+00  -1.3230e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1633
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 14 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9498    4.8205    7.9095    7.8951   10.0000
+Function value = -83.0839
+gradient vector
+   3.0079e+00   4.3481e-01  -6.8922e-01  -2.0135e+00  -1.3228e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1633
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1586   0.0954   0.1578   0.1575   0.2000
+Maximum step size 0.00502563
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1534   0.0946   0.1590   0.1610   0.2000
+The most promising design (not normalized):
+    7.6916    4.7832    7.9687    8.0680   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.69165  4.78323  7.96871  8.06795 10.     ]
+function value =  -79.95410615629632
+gradient vector =  [ -18.29176013   -2.68422756    4.19671104   12.41855256 -127.31498182]
+Estimated objective function value = -78.6762
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.6916    4.7832    7.9687    8.0680   10.0000
+Function value = -79.9541
+gradient vector
+  -1.8292e+01  -2.6842e+00   4.1967e+00   1.2419e+01  -1.2731e+02
+Feasibility = [32mYES[0m
+Improvement = 31.0335
+*********************************************************
+
+Addding the new sample without gradient since no descent has been achieved
+
+################################# Iteration = 15 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9498    4.8205    7.9095    7.8951   10.0000
+Function value = -83.0839
+gradient vector
+   2.7573e+00   3.9796e-01  -6.3221e-01  -1.8469e+00  -1.3230e+02
+Feasibility = [32mYES[0m
+Improvement = 34.1633
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  1
+Staring point for the gradient step x0 = 
+
+   0.1586   0.0954   0.1578   0.1575   0.2000
+Maximum step size 0.00251281
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1583   0.0953   0.1578   0.1577   0.2000
+The most promising design (not normalized):
+    7.9344    4.8183    7.9131    7.9054   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.9344   4.81826  7.91305  7.90535 10.     ]
+function value =  -83.13325237511786
+gradient vector =  [   1.46110414    0.20753931   -0.3366554    -0.98385681 -132.37729772]
+Estimated objective function value = -83.0617
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9344    4.8183    7.9131    7.9054   10.0000
+Function value = -83.1333
+gradient vector
+   1.4611e+00   2.0754e-01  -3.3666e-01  -9.8386e-01  -1.3238e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2126
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 16 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9344    4.8183    7.9131    7.9054   10.0000
+Function value = -83.1333
+gradient vector
+   2.7573e+00   3.9796e-01  -6.3221e-01  -1.8469e+00  -1.3230e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2126
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1583   0.0953   0.1578   0.1577   0.2000
+Maximum step size 0.00963673
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1582   0.0953   0.1578   0.1577   0.2000
+The most promising design (not normalized):
+    7.9330    4.8181    7.9134    7.9063   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.93295  4.81806  7.91339  7.90633 10.     ]
+function value =  -83.1363556112479
+gradient vector =  [   1.33888451    0.19037425   -0.30807648   -0.90154864 -132.38223916]
+Estimated objective function value = -83.1306
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9330    4.8181    7.9134    7.9063   10.0000
+Function value = -83.1364
+gradient vector
+   1.3389e+00   1.9037e-01  -3.0808e-01  -9.0155e-01  -1.3238e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2157
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 17 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9330    4.8181    7.9134    7.9063   10.0000
+Function value = -83.1364
+gradient vector
+   1.4611e+00   2.0754e-01  -3.3666e-01  -9.8386e-01  -1.3238e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2157
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1582   0.0953   0.1578   0.1577   0.2000
+Maximum step size 0.0105056
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1582   0.0953   0.1579   0.1577   0.2000
+The most promising design (not normalized):
+    7.9316    4.8179    7.9137    7.9072   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.93163  4.81787  7.91369  7.90722 10.     ]
+function value =  -83.13894188397515
+gradient vector =  [   1.22763495    0.17406614   -0.28285656   -0.82678463 -132.38635741]
+Estimated objective function value = -83.1338
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9316    4.8179    7.9137    7.9072   10.0000
+Function value = -83.1389
+gradient vector
+   1.2276e+00   1.7407e-01  -2.8286e-01  -8.2678e-01  -1.3239e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2183
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 18 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9316    4.8179    7.9137    7.9072   10.0000
+Function value = -83.1389
+gradient vector
+   1.3389e+00   1.9037e-01  -3.0808e-01  -9.0155e-01  -1.3238e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2183
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1582   0.0953   0.1579   0.1577   0.2000
+Maximum step size 0.0114899
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1582   0.0953   0.1579   0.1577   0.2000
+The most promising design (not normalized):
+    7.9304    4.8177    7.9140    7.9080   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.93041  4.8177   7.91397  7.90804 10.     ]
+function value =  -83.14113085503861
+gradient vector =  [   1.12482443    0.15947409   -0.25931506   -0.75788894 -132.38984302]
+Estimated objective function value = -83.1364
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9304    4.8177    7.9140    7.9080   10.0000
+Function value = -83.1411
+gradient vector
+   1.1248e+00   1.5947e-01  -2.5932e-01  -7.5789e-01  -1.3239e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2205
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 19 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9304    4.8177    7.9140    7.9080   10.0000
+Function value = -83.1411
+gradient vector
+   1.2276e+00   1.7407e-01  -2.8286e-01  -8.2678e-01  -1.3239e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2205
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1582   0.0953   0.1579   0.1577   0.2000
+Maximum step size 0.0125412
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1582   0.0953   0.1579   0.1578   0.2000
+The most promising design (not normalized):
+    7.9293    4.8175    7.9142    7.9088   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.9293   4.81754  7.91423  7.90879 10.     ]
+function value =  -83.14296127971123
+gradient vector =  [   1.03129336    0.14573974   -0.23745271   -0.69486476 -132.3927577 ]
+Estimated objective function value = -83.1387
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9293    4.8175    7.9142    7.9088   10.0000
+Function value = -83.143
+gradient vector
+   1.0313e+00   1.4574e-01  -2.3745e-01  -6.9486e-01  -1.3239e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2223
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 20 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9293    4.8175    7.9142    7.9088   10.0000
+Function value = -83.143
+gradient vector
+   1.1248e+00   1.5947e-01  -2.5932e-01  -7.5789e-01  -1.3239e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2223
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1582   0.0953   0.1579   0.1578   0.2000
+Maximum step size 0.0137231
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+The most promising design (not normalized):
+    7.9283    4.8174    7.9145    7.9095   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.92828  4.81739  7.91446  7.90948 10.     ]
+function value =  -83.14450210484556
+gradient vector =  [   0.94535419    0.13286335   -0.21811138   -0.63687451 -132.39521124]
+Estimated objective function value = -83.1407
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9283    4.8174    7.9145    7.9095   10.0000
+Function value = -83.1445
+gradient vector
+   9.4535e-01   1.3286e-01  -2.1811e-01  -6.3687e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2239
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 21 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9283    4.8174    7.9145    7.9095   10.0000
+Function value = -83.1445
+gradient vector
+   1.0313e+00   1.4574e-01  -2.3745e-01  -6.9486e-01  -1.3239e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2239
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+Maximum step size 0.0150531
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+The most promising design (not normalized):
+    7.9273    4.8173    7.9147    7.9101   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.92734  4.81726  7.91468  7.91011 10.     ]
+function value =  -83.14580056402848
+gradient vector =  [ 8.66162570e-01  1.21703681e-01 -1.99609387e-01 -5.83920470e-01
+ -1.32397279e+02]
+Estimated objective function value = -83.1423
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9273    4.8173    7.9147    7.9101   10.0000
+Function value = -83.1458
+gradient vector
+   8.6616e-01   1.2170e-01  -1.9961e-01  -5.8392e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2252
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 22 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9273    4.8173    7.9147    7.9101   10.0000
+Function value = -83.1458
+gradient vector
+   9.4535e-01   1.3286e-01  -2.1811e-01  -6.3687e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2252
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+Maximum step size 0.0164334
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+The most promising design (not normalized):
+    7.9265    4.8171    7.9149    7.9107   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.92649  4.81714  7.91488  7.91068 10.     ]
+function value =  -83.14687777532593
+gradient vector =  [ 7.94559297e-01  1.11402233e-01 -1.82788248e-01 -5.36004470e-01
+ -1.32398994e+02]
+Estimated objective function value = -83.1438
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9265    4.8171    7.9149    7.9107   10.0000
+Function value = -83.1469
+gradient vector
+   7.9456e-01   1.1140e-01  -1.8279e-01  -5.3600e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2262
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 23 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9265    4.8171    7.9149    7.9107   10.0000
+Function value = -83.1469
+gradient vector
+   8.6616e-01   1.2170e-01  -1.9961e-01  -5.8392e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2262
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+Maximum step size 0.017953
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+The most promising design (not normalized):
+    7.9257    4.8170    7.9151    7.9112   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.9257   4.81703  7.91506  7.91121 10.     ]
+function value =  -83.14779474097493
+gradient vector =  [ 7.28015731e-01  1.01959132e-01 -1.67648402e-01 -4.91446671e-01
+ -1.32400454e+02]
+Estimated objective function value = -83.145
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9257    4.8170    7.9151    7.9112   10.0000
+Function value = -83.1478
+gradient vector
+   7.2802e-01   1.0196e-01  -1.6765e-01  -4.9145e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2272
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 24 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9257    4.8170    7.9151    7.9112   10.0000
+Function value = -83.1478
+gradient vector
+   7.9456e-01   1.1140e-01  -1.8279e-01  -5.3600e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2272
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+Maximum step size 0.0196157
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+The most promising design (not normalized):
+    7.9250    4.8169    7.9152    7.9117   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.92498  4.81693  7.91522  7.9117  10.     ]
+function value =  -83.14856330973096
+gradient vector =  [ 6.67373053e-01  9.33744181e-02 -1.54190122e-01 -4.50248075e-01
+ -1.32401678e+02]
+Estimated objective function value = -83.146
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.9250    4.8169    7.9152    7.9117   10.0000
+Function value = -83.1486
+gradient vector
+   6.6737e-01   9.3374e-02  -1.5419e-01  -4.5025e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2279
+*********************************************************
+
+Addding the new sample with gradient since descent has been achieved
+
+################################# Iteration = 25 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9250    4.8169    7.9152    7.9117   10.0000
+Function value = -83.1486
+gradient vector
+   7.2802e-01   1.0196e-01  -1.6765e-01  -4.9145e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2279
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  0
+Staring point for the gradient step x0 = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+Maximum step size 0.0214191
+Minimum step size 2e-05
+Best design (inner iteration) = 
+
+   0.1570   0.0951   0.1581   0.1586   0.2000
+The most promising design (not normalized):
+    7.8706    4.8093    7.9278    7.9484   10.0000
+
+Evaluating the Alpine02 function (5 input variables) with gradients...
+
+design variables =  [ 7.87059  4.80932  7.92779  7.94839 10.     ]
+function value =  -83.01397809754539
+gradient vector =  [  -3.89482723   -0.55860546    0.90264581    2.63851989 -132.18737123]
+Estimated objective function value = -82.908
+Variance = 0
+Acquisition function = 0
+
+***************** The most promising design *****************
+Design parameters = 
+    7.8706    4.8093    7.9278    7.9484   10.0000
+Function value = -83.014
+gradient vector
+  -3.8948e+00  -5.5861e-01   9.0265e-01   2.6385e+00  -1.3219e+02
+Feasibility = [32mYES[0m
+Improvement = 34.0933
+*********************************************************
+
+Addding the new sample without gradient since no descent has been achieved
+
+################################# Iteration = 26 #################################
+
+***************** Global optimum design *****************
+Design parameters = 
+    7.9250    4.8169    7.9152    7.9117   10.0000
+Function value = -83.1486
+gradient vector
+   6.6737e-01   9.3374e-02  -1.5419e-01  -4.5025e-01  -1.3240e+02
+Feasibility = [32mYES[0m
+Improvement = 34.2279
+*********************************************************
+
+A Gradient Step will be performed...
+Line search iteration number =  1
+Staring point for the gradient step x0 = 
+
+   0.1581   0.0953   0.1579   0.1578   0.2000
+Number of samples used in the DoE = 
+ 100
+DoE samples = 
+ [[2.05217542 2.45549297 6.17792822 8.30949454 5.27393707]
+ [1.59239241 7.57943692 5.42102833 5.13905252 3.53265047]
+ [8.19800729 5.48998586 9.37931704 1.67167989 9.61028929]
+ [3.23001673 8.2983879  7.73182218 8.83899978 2.01227365]
+ [7.51306971 2.44065505 7.13268971 2.40308254 6.94462234]
+ [9.35827268 8.43083907 1.24113477 8.99673576 8.96721565]
+ [2.88805349 5.63904944 8.52416502 8.43520276 3.37034303]
+ [6.34403982 0.94113848 3.6943753  0.33683796 0.98370039]
+ [5.78118487 8.6450903  6.67992004 7.79698457 6.40217599]
+ [8.73529906 6.22752076 7.03862924 1.42153263 1.49693513]
+ [4.97156157 2.59303089 7.06866891 0.1670448  0.22331114]
+ [7.57691142 9.5085771  2.9539831  8.36164379 0.07925699]
+ [7.43195149 4.73260437 8.04299741 8.19994876 5.75690151]
+ [7.03827675 3.53859439 7.98446109 9.12165971 0.55699242]
+ [0.15707343 4.30861991 3.14389171 1.89182265 0.07957166]
+ [8.46256333 2.89087682 3.74809641 2.10120211 7.02979767]
+ [7.89618054 4.90387562 2.25014469 9.79551319 5.77986868]
+ [5.6384192  5.48754712 6.73894065 8.6998791  7.454902  ]
+ [7.6916498  4.53113223 8.01098164 2.08693176 6.93598769]
+ [0.52254048 1.81561065 8.89555669 5.3864038  8.49775204]
+ [7.85197491 5.79495252 1.71580888 1.88493407 6.92197237]
+ [8.70387928 3.48075721 1.79789051 7.00012579 2.35915678]
+ [9.73057181 1.70442248 4.08322514 3.26250498 9.88297405]
+ [8.06458906 8.84432929 1.30535297 2.44783162 2.88820545]
+ [9.1087445  6.10671959 7.09530301 4.83895105 1.55528203]
+ [0.22992441 7.36362915 5.7684617  2.93617848 7.16228087]
+ [8.05104126 8.6296268  6.84756061 9.55897359 7.63705587]
+ [5.75767895 8.53276663 0.05620971 9.08492452 6.27119538]
+ [9.13583528 1.36934743 9.89133903 7.0144652  8.14767814]
+ [5.84398879 0.14386985 0.92424088 1.53517351 2.28154541]
+ [4.95829434 4.67445773 6.00023276 5.14485259 0.82064703]
+ [1.86767726 5.93410384 3.71857164 9.90650625 6.86840836]
+ [5.48729386 5.49558924 4.16322076 7.79541108 6.14614007]
+ [4.01525424 3.65532099 4.59208118 4.18470594 3.22124221]
+ [8.43468169 5.56873841 9.62369575 6.35408164 1.3665501 ]
+ [8.60073002 0.4685724  8.57176041 6.78512084 0.58940192]
+ [8.00446955 6.76271528 3.80653058 9.46790649 6.41909871]
+ [4.95809736 2.34545032 3.13185092 6.87677229 7.33217953]
+ [7.32194168 4.6427184  5.0460751  3.82489905 8.34477207]
+ [9.70919805 0.16742953 7.56409099 3.15404393 3.13716319]
+ [0.75988425 2.66534872 1.04439007 3.46519188 5.6488367 ]
+ [0.97482403 1.04289959 1.8638786  1.34806685 9.53347291]
+ [1.53916197 9.27582621 3.2581669  0.92451214 3.02219136]
+ [7.23345331 1.87423426 1.65781119 8.77048445 9.05312459]
+ [8.78999335 8.64761795 8.99194078 6.75811529 9.57579342]
+ [2.46632127 0.61061142 9.15249948 0.40302431 6.09891645]
+ [8.74531569 1.60572772 7.77729142 9.82856955 2.12953267]
+ [1.38316493 2.10664131 4.8296088  0.98431835 3.8534124 ]
+ [1.47205121 8.70412327 5.67711003 1.07530224 8.2727215 ]
+ [1.57239987 3.51760422 0.12056021 9.87418921 6.24124141]
+ [6.36660902 6.81451802 4.95946856 5.24398728 4.49471489]
+ [0.05957103 3.44353993 2.18101221 3.83844561 1.59407225]
+ [8.73976279 9.12822717 5.70390463 4.79094341 6.94619256]
+ [4.78143528 6.03311582 1.80105355 0.42100968 3.100068  ]
+ [2.53178027 4.46561859 2.76747596 0.47504184 8.5614968 ]
+ [4.56415763 6.32168546 6.32198124 6.2275406  3.05464583]
+ [9.97021166 0.83093089 3.0963731  2.5659616  7.55375581]
+ [6.88946786 6.51019716 9.01411952 9.28666578 2.56693406]
+ [4.34103069 6.06385696 3.95865844 4.48004007 0.32847107]
+ [5.2454094  5.10355027 1.58276612 0.73229719 4.29735318]
+ [8.93829427 3.81314252 1.85360936 1.89287769 9.61956393]
+ [2.12941961 7.12322884 0.06263803 9.49000766 8.59534608]
+ [2.48804014 4.50290591 4.31348972 9.43541546 7.02698893]
+ [4.98962857 9.48974133 4.61018385 5.73324161 0.12117923]
+ [0.3829948  6.20712757 0.15753017 2.41972022 5.81058805]
+ [2.4921802  2.77898865 5.38602953 7.09504568 9.19786222]
+ [2.01109627 1.62469724 0.67335627 0.88437802 9.2560001 ]
+ [7.93198853 3.21466742 8.65674167 1.47883208 4.25268297]
+ [9.10310588 6.16472012 0.83364908 4.69890317 5.4030448 ]
+ [6.90025024 5.91470335 8.31509906 6.73123239 2.83230185]
+ [1.00366198 4.14786249 4.73912656 9.78876968 2.22195878]
+ [7.03808518 6.06560646 1.24621153 9.84121153 6.83995804]
+ [1.54507469 1.56126884 9.08521145 0.52299471 8.34093981]
+ [7.50690173 9.67142713 7.94689254 6.64811681 6.13278362]
+ [9.73557607 6.81227705 1.03446821 8.96745475 7.96786945]
+ [0.33160776 9.88192211 1.86419014 0.54166303 1.09451876]
+ [3.09293955 1.59718231 7.95501384 1.10438991 1.23958217]
+ [9.21434941 2.25270513 5.59469186 5.28879043 4.64725529]
+ [7.68787922 1.69185548 8.01159776 5.74456285 3.91439378]
+ [9.60939864 9.89925029 5.58601759 3.16416434 0.55270317]
+ [9.98866834 4.08796072 8.82472442 9.61600754 6.23345128]
+ [7.9783483  6.28376396 9.2986506  6.42938683 4.30809865]
+ [3.33300792 8.35545233 8.01858113 1.70928653 0.78552119]
+ [4.01384167 2.97615016 1.13603608 8.30801804 2.93823878]
+ [1.71864083 2.32878265 0.55458493 4.74106988 6.04918386]
+ [1.46535464 3.77576976 7.32009442 9.06938627 9.91706883]
+ [3.85704096 6.89237181 3.07211131 4.15951814 3.00220914]
+ [7.59647205 2.77036531 3.11856529 9.22891438 3.27391282]
+ [1.95819875 7.01563217 0.15435687 4.04339345 8.79065847]
+ [0.38080399 7.0160125  1.17704159 2.40180021 8.05259908]
+ [4.76296828 5.18915128 5.67087617 9.89816562 6.14151094]
+ [0.76327069 1.73870069 1.05055002 4.81300718 8.62811969]
+ [9.1481902  8.51480296 1.54063693 5.2782468  9.21403021]
+ [8.96471767 0.89698717 0.07777893 2.79183597 3.6080714 ]
+ [6.23745893 9.69135458 0.70305701 0.02911888 2.74080187]
+ [3.02986506 7.29375101 4.55290181 5.04740858 5.99543998]
+ [2.42140156 4.09991382 7.95242446 4.42333594 1.70112603]
+ [4.81690007 9.92107248 5.23525863 5.0709722  1.48195842]
+ [5.11338943 9.93325496 2.54171327 3.29684284 1.82361855]
+ [9.92548914 2.16404647 2.44275534 6.59763473 4.53469726]]
