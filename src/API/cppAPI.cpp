@@ -7,6 +7,7 @@
 #include <cassert>
 #include <filesystem>
 
+
 RobustDesignOptimizer::RobustDesignOptimizer(){
 	optimizer.setAPIUseOn();
 	name = "OptimizationStudy";
