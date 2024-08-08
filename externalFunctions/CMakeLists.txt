@@ -10,14 +10,19 @@ project(externalFunctions)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-file(GLOB SOURCE_FILES *.cpp)
+find_package(LAPACK REQUIRED)
+find_package(Armadillo REQUIRED)
 
+file(GLOB SOURCE_FILES *.cpp)
 
 # Include directory
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/INCLUDE)
 
 # Create the shared library
-add_library(externalFunctions SHARED ${SOURCE_FILES})
+add_library(externalFunctions STATIC ${SOURCE_FILES})
+
+# Link with LAPACK and Armadillo
+target_link_libraries(externalFunctions LAPACK::LAPACK ${ARMADILLO_LIBRARIES})
 
 # Set the output directory for the library
 set_target_properties(externalFunctions PROPERTIES
