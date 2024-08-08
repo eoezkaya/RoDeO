@@ -8,7 +8,7 @@ include_directories(${CMAKE_SOURCE_DIR}/INCLUDE)
 include_directories(${ARMADILLO_INCLUDE_DIRS})
 
 # Set the source files for the shared library
-file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/API/*.cpp)
+file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src/API/*.cpp)
 
 # Set the header files for installation
 #file(GLOB_RECURSE HEADERS ${CMAKE_SOURCE_DIR}/INCLUDE/*.h)
@@ -38,7 +38,7 @@ install(TARGETS cppAPI
 )
 
 # Fix the install DIRECTORY command by specifying the correct DESTINATION
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/API/INCLUDE/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/API/INCLUDE/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 # Export the targets for use in other projects
 #install(EXPORT cppAPI
