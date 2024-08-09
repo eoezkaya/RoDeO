@@ -1,6 +1,6 @@
 #include<string>
 #include<vector>
-#include "../../Optimizers/INCLUDE/optimization.hpp"
+#include "optimization.hpp"
 
 typedef double (*objectiveFunctionPtrType)(const double *);
 

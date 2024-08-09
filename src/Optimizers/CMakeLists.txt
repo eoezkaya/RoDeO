@@ -35,3 +35,11 @@ COMMAND echo built with the flags: ${MAIN_CFLAGS})
 if(UNIT_TESTS)
 	add_subdirectory(./UnitTests)
 endif(UNIT_TESTS)
+
+install(TARGETS optimizers
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+# Fix the install DIRECTORY command by specifying the correct DESTINATION
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/Optimizers/INCLUDE/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

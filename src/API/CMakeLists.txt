@@ -27,7 +27,7 @@ target_link_libraries(cppAPI PRIVATE surrogateModels)
 target_link_libraries(cppAPI PRIVATE output)
 target_link_libraries(cppAPI PRIVATE externalFunctions)
 
-include(GNUInstallDirs) 
+#include(GNUInstallDirs) 
 
 
 # Install the library and headers
@@ -48,7 +48,7 @@ install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/API/INCLUDE/ DESTINATION ${CMAKE_INSTA
 #)
 
 # Include the package configuration helpers
-include(CMakePackageConfigHelpers)
+#include(CMakePackageConfigHelpers)
 
 
 # Install the configuration files
