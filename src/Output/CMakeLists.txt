@@ -1,7 +1,7 @@
 set(src_files output.cpp)
 add_library(output ${src_files})
 target_compile_options(output PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
-
+target_link_libraries(output armadillo::armadillo)
 if(ASSERTS)
   
 else()
