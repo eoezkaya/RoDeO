@@ -67,6 +67,8 @@ add_subdirectory(src/SurrogateModels)
 add_subdirectory(src/TestFunctions)
 add_subdirectory(src/API)
 
+option(BUILD_EXECUTABLE "BUILD_EXECUTABLE" OFF)
+if(BUILD_EXECUTABLE)
 # Define the main executable target
 add_executable(rodeo src/Rodeo.cpp)
 
@@ -97,3 +99,4 @@ add_custom_command(TARGET rodeo POST_BUILD
 
 # Install the executable
 install(TARGETS rodeo DESTINATION bin)
+endif()
