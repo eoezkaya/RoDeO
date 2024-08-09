@@ -1,6 +1,6 @@
 set(src_files random_functions.cpp)
 add_library(random ${src_files})
-
+target_link_libraries(random armadillo::armadillo)
 
 target_compile_options(random PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
 

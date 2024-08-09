@@ -24,6 +24,7 @@ target_link_libraries(surrogateModels auxiliary)
 target_link_libraries(surrogateModels linearAlgebra)
 target_link_libraries(surrogateModels optimizers)
 target_link_libraries(surrogateModels metric)
+target_link_libraries(surrogateModels armadillo::armadillo)
 
 get_target_property(MAIN_CFLAGS surrogateModels COMPILE_OPTIONS)
 

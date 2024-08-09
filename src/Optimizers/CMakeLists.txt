@@ -22,6 +22,7 @@ target_link_libraries(optimizers   auxiliary)
 target_link_libraries(optimizers   output)
 target_link_libraries(optimizers   LAPACK::LAPACK)
 target_link_libraries(optimizers   LAPACK::BLAS)
+target_link_libraries(optimizers armadillo::armadillo)
 get_target_property(MAIN_CFLAGS optimizers COMPILE_OPTIONS)
 
 
