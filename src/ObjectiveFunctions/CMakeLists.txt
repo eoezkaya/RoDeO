@@ -1,6 +1,5 @@
 set(src_files objective_function.cpp constraint_functions.cpp)
 add_library(objectiveFunctions ${src_files})
-target_link_libraries(objectiveFunctions armadillo::armadillo)
 target_compile_options(objectiveFunctions PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
 
 if(ASSERTS)
@@ -23,7 +22,7 @@ add_subdirectory(./UnitTests)
 endif(UNIT_TESTS)
 
 # Link the executable with the externalFunctions library
-target_link_libraries(objectiveFunctions PRIVATE externalFunctions)
+target_link_libraries(objectiveFunctions PRIVATE externalFunctions armadillo::armadillo)
 
 
 
