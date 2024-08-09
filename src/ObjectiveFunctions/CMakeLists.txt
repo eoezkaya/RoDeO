@@ -22,19 +22,8 @@ if(UNIT_TESTS)
 add_subdirectory(./UnitTests)
 endif(UNIT_TESTS)
 
-
-find_library(EXTERNAL_FUNCTIONS_LIBRARY externalFunctions
-    PATHS ../../externalFunctions/lib
-    NO_DEFAULT_PATH
-)
-
-# Check if the library is found
-if(NOT EXTERNAL_FUNCTIONS_LIBRARY)
-    message(FATAL_ERROR "externalFunctions library not found.")
-endif()
-
 # Link the executable with the externalFunctions library
-target_link_libraries(objectiveFunctions PRIVATE ${EXTERNAL_FUNCTIONS_LIBRARY})
+target_link_libraries(objectiveFunctions PRIVATE externalFunctions)
 
 
 

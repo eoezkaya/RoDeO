@@ -20,7 +20,8 @@ endif(ASSERTS)
 target_link_libraries(optimizers linearAlgebra)
 target_link_libraries(optimizers   auxiliary)
 target_link_libraries(optimizers   output)
-
+target_link_libraries(optimizers   LAPACK::LAPACK)
+target_link_libraries(optimizers   LAPACK::BLAS)
 get_target_property(MAIN_CFLAGS optimizers COMPILE_OPTIONS)
 
 

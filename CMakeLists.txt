@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.24.2)
 project(rodeo VERSION 1.0)
 
+find_package(LAPACK REQUIRED)
+find_package(Armadillo REQUIRED)
 # Enable CPack
 include(CPack)
 
@@ -14,7 +16,7 @@ option(UNIT_TESTS "UNITS_TESTS" OFF)
 option(ASSERTS "ASSERTS" OFF)
 
 # Add externalFunctions library
-add_subdirectory(externalFunctions externalFunctions)
+add_subdirectory(externalFunctions)
 
 if(UNIT_TESTS)
     set(ASSERTS ON)

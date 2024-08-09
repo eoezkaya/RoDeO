@@ -10,9 +10,6 @@ project(externalFunctions)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(LAPACK REQUIRED)
-find_package(Armadillo REQUIRED)
-
 file(GLOB SOURCE_FILES *.cpp)
 
 # Include directory
