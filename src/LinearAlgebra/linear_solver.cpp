@@ -28,8 +28,8 @@
  *
  *
  */
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "./INCLUDE/linear_solver.hpp"
+#include "auxiliary_functions.hpp"
+#include "linear_solver.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 #include<cassert>

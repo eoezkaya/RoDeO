@@ -1,45 +1,42 @@
-file(GLOB src_files *.cpp)
-add_library(optimizers ${src_files})
+file(GLOB SOURCES *.cpp)
+file(GLOB HDRS INCLUDE/*.hpp ${CMAKE_SOURCE_DIR}/src/INCLUDE/*.hpp)
 
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)	
-	add_definitions(-DOPENMP_SUPPORT)
-	target_compile_options(optimizers PUBLIC -Wall -Wextra -Wpedantic -O2 -fopenmp -fPIC)
-	
-else()
-	target_compile_options(optimizers PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
-		
+add_library(optimizers SHARED ${SOURCES})
+target_include_directories(optimizers PUBLIC INCLUDE)
+target_include_directories(optimizers PUBLIC ${CMAKE_SOURCE_DIR}/src/INCLUDE)
+
+target_compile_options(optimizers PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
+
+if(NOT ASSERTS)
+    add_definitions(-DNDEBUG)
 endif()
 
-if(ASSERTS)
-  
-else()
-    add_definitions(-DNDEBUG)
-endif(ASSERTS)
-
-target_link_libraries(optimizers linearAlgebra)
-target_link_libraries(optimizers   auxiliary)
-target_link_libraries(optimizers   output)
-target_link_libraries(optimizers   LAPACK::LAPACK)
-target_link_libraries(optimizers   LAPACK::BLAS)
-target_link_libraries(optimizers armadillo::armadillo)
 get_target_property(MAIN_CFLAGS optimizers COMPILE_OPTIONS)
+
+target_link_libraries(optimizers random)
+target_link_libraries(optimizers auxiliary)
+target_link_libraries(optimizers design)
+target_link_libraries(optimizers linearAlgebra)
+target_link_libraries(optimizers output)
+target_link_libraries(optimizers correlationFunctions)
+target_link_libraries(optimizers externalFunctions)
+target_link_libraries(optimizers armadillo::armadillo)
 
 
 # also see: COMPILE_DEFINITIONS INCLUDE_DIRECTORIES
-message("-- Target compiler flags for optimizers are: ${MAIN_CFLAGS}")
+message("-- Target compiler flags for linearAlgebra are: ${MAIN_CFLAGS}")
 
 add_custom_command(TARGET optimizers POST_BUILD
 COMMAND echo built with the flags: ${MAIN_CFLAGS})
 
 if(UNIT_TESTS)
-	add_subdirectory(./UnitTests)
+add_subdirectory(./UnitTests)
 endif(UNIT_TESTS)
 
-install(TARGETS optimizers
+install(TARGETS optimizers 
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Fix the install DIRECTORY command by specifying the correct DESTINATION
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/src/Optimizers/INCLUDE/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES ${HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+

@@ -38,14 +38,14 @@
 #include <cassert>
 
 
-#include "../Optimizers/INCLUDE/optimization.hpp"
-#include "../ObjectiveFunctions/INCLUDE/objective_function.hpp"
-#include "../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
+#include "optimization.hpp"
+#include "objective_function.hpp"
+#include "constraint_functions.hpp"
 
 
-#include "./INCLUDE/drivers.hpp"
-#include "./INCLUDE/configkey.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "drivers.hpp"
+#include "configkey.hpp"
+#include "vector_operations.hpp"
 
 
 #include <armadillo>

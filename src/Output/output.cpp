@@ -29,8 +29,8 @@
  *
  */
 
-#include "./INCLUDE/output.hpp"
-#include "../Optimizers/INCLUDE/design.hpp"
+#include "output.hpp"
+#include "design.hpp"
 
 #include <iostream>
 

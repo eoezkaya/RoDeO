@@ -29,7 +29,7 @@
  *
  */
 
-#include "../INCLUDE/xml_functions.hpp"
+#include "xml_functions.hpp"
 
 #include<gtest/gtest.h>
 

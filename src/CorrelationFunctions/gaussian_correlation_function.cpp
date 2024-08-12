@@ -29,9 +29,9 @@
  *
  */
 
-#include "./INCLUDE/gaussian_correlation_function.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "gaussian_correlation_function.hpp"
+#include "vector_operations.hpp"
+#include "auxiliary_functions.hpp"
 
 
 #include <cassert>

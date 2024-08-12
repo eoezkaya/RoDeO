@@ -32,12 +32,12 @@
 
 
 
-#include "./INCLUDE/matrix_operations.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
-#include "./INCLUDE/vector_operations.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/print.hpp"
-#include "../Random/INCLUDE/random_functions.hpp"
+#include "matrix_operations.hpp"
+#include "Rodeo_macros.hpp"
+#include "vector_operations.hpp"
+#include "auxiliary_functions.hpp"
+#include "print.hpp"
+#include "random_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>

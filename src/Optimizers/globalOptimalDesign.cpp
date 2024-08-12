@@ -31,12 +31,12 @@
 
 
 #include <cassert>
-#include "./INCLUDE/globalOptimalDesign.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/xml_functions.hpp"
-#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
+#include "globalOptimalDesign.hpp"
+#include "auxiliary_functions.hpp"
+#include "xml_functions.hpp"
+#include "matrix_operations.hpp"
+#include "vector_operations.hpp"
+#include "Rodeo_macros.hpp"
 
 
 

@@ -35,9 +35,9 @@
 #include <cassert>
 #include <vector>
 
-#include "../../INCLUDE/Rodeo_globals.hpp"
-#include "../../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../../Auxiliary/INCLUDE/print.hpp"
+#include "Rodeo_globals.hpp"
+#include "auxiliary_functions.hpp"
+#include "print.hpp"
 
 
 using namespace arma;

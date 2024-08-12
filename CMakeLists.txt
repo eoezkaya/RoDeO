@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.24.2)
 project(rodeo VERSION 1.0)
 
+find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(Armadillo REQUIRED)
+
 # Enable CPack
 include(CPack)
 
@@ -50,21 +52,17 @@ set(MAIN_CFLAGS -Wall -Wextra -Wpedantic -O2)
 add_compile_options(${MAIN_CFLAGS})
 
 # Include the directories
-include_directories(${CMAKE_SOURCE_DIR}/src/INCLUDE)
+#include_directories(${CMAKE_SOURCE_DIR}/src/INCLUDE)
 
 # Add subdirectories located under src/
 add_subdirectory(src/Auxiliary)
-add_subdirectory(src/Bounds)
-add_subdirectory(src/CorrelationFunctions)
-add_subdirectory(src/Driver)
-add_subdirectory(src/LinearAlgebra)
-add_subdirectory(src/Metric)
-add_subdirectory(src/ObjectiveFunctions)
-add_subdirectory(src/Optimizers)
-add_subdirectory(src/Output)
 add_subdirectory(src/Random)
-add_subdirectory(src/SurrogateModels)
-add_subdirectory(src/TestFunctions)
+add_subdirectory(src/LinearAlgebra)
+add_subdirectory(src/CorrelationFunctions)
+add_subdirectory(src/Design)
+add_subdirectory(src/Output)
+add_subdirectory(src/Driver)
+add_subdirectory(src/Optimizers)
 add_subdirectory(src/API)
 
 option(BUILD_EXECUTABLE "BUILD_EXECUTABLE" OFF)

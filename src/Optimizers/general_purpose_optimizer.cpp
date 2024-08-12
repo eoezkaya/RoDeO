@@ -31,9 +31,9 @@
  */
 
 
-#include "./INCLUDE/general_purpose_optimizer.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "../Random/INCLUDE/random_functions.hpp"
+#include "general_purpose_optimizer.hpp"
+#include "vector_operations.hpp"
+#include "random_functions.hpp"
 
 
 #include <armadillo>

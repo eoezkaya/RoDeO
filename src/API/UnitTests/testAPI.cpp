@@ -1,4 +1,4 @@
-#include "../INCLUDE/rodeo.h"
+#include "rodeo.h"
 #include <iostream>
 #include <math.h>
 

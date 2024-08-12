@@ -29,9 +29,9 @@
  *
  */
 
-#include "./INCLUDE/auxiliary_functions.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
-#include "../INCLUDE/Rodeo_globals.hpp"
+#include "auxiliary_functions.hpp"
+#include "Rodeo_macros.hpp"
+#include "Rodeo_globals.hpp"
 #include <string>
 #include <math.h>
 #include <vector>

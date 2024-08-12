@@ -32,7 +32,7 @@
 #define GLOBALOPTIMALDESIGN_HPP
 
 #include "./design.hpp"
-#include "../../Bounds/INCLUDE/bounds.hpp"
+#include "bounds.hpp"
 #include <armadillo>
 
 #ifdef UNIT_TESTS

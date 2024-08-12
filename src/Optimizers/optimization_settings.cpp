@@ -31,7 +31,7 @@
 
 
 #include <cassert>
-#include "./INCLUDE/optimization_history.hpp"
+#include "optimization_history.hpp"
 
 
 

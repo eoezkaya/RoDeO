@@ -35,11 +35,11 @@
 
 #include<armadillo>
 #include<vector>
-#include "../../ObjectiveFunctions/INCLUDE/objective_function.hpp"
-#include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
-#include "../../Optimizers/INCLUDE/optimization.hpp"
-#include "../../SurrogateModels/INCLUDE/surrogate_model_tester.hpp"
-#include "./configkey.hpp"
+#include "objective_function.hpp"
+#include "constraint_functions.hpp"
+#include "optimization.hpp"
+#include "surrogate_model_tester.hpp"
+#include "configkey.hpp"
 using namespace arma;
 
 #ifdef UNIT_TESTS

@@ -30,7 +30,7 @@
  */
 
 
-#include "./INCLUDE/optimization.hpp"
+#include "optimization.hpp"
 
 void Optimizer::setName(std::string problemName){
 	name = problemName;

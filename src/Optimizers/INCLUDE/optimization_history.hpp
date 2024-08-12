@@ -32,7 +32,7 @@
 #define OPT_HISTORY_HPP
 
 #include <armadillo>
-#include "./design.hpp"
+#include "design.hpp"
 
 #ifdef UNIT_TESTS
 #include<gtest/gtest.h>

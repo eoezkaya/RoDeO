@@ -30,9 +30,9 @@
  */
 
 
-#include "./INCLUDE/optimization.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "optimization.hpp"
+#include "auxiliary_functions.hpp"
+#include "vector_operations.hpp"
 
 bool Optimizer::isConstrained(void) const{
 

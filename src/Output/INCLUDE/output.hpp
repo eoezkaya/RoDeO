@@ -2,8 +2,8 @@
 #define OUTPUT_HPP
 
 #include<string>
-#include "../../LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "../../Optimizers/INCLUDE/design.hpp"
+#include "matrix_operations.hpp"
+#include "design.hpp"
 
 using std::string;
 

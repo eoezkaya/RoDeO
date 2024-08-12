@@ -29,8 +29,7 @@
  *
  */
 
-#include "./INCLUDE/matrix.hpp"
-//#include "./INCLUDE/vector.hpp"
+#include "matrix.hpp"
 #include <iostream>
 #include <cstdlib> // For rand() function
 #include <ctime>   // For seeding srand()

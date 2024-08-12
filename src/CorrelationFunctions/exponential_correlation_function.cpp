@@ -32,9 +32,9 @@
 #include <cassert>
 
 
-#include "./INCLUDE/exponential_correlation_function.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "exponential_correlation_function.hpp"
+#include "vector_operations.hpp"
+#include "auxiliary_functions.hpp"
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>

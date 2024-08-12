@@ -31,7 +31,7 @@
 #ifndef MATRIX_OPERATIONS_HPP
 #define MATRIX_OPERATIONS_HPP
 
-#include "../../Bounds/INCLUDE/bounds.hpp"
+#include "bounds.hpp"
 
 #include <armadillo>
 #include <cassert>

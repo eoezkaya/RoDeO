@@ -37,14 +37,14 @@
 #include <cassert>
 
 
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/print.hpp"
-#include "../SurrogateModels/INCLUDE/kriging_training.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
-#include "../INCLUDE/Rodeo_globals.hpp"
-#include "../TestFunctions/INCLUDE/test_functions.hpp"
-#include "./INCLUDE/optimization.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "auxiliary_functions.hpp"
+#include "print.hpp"
+#include "kriging_training.hpp"
+#include "Rodeo_macros.hpp"
+#include "Rodeo_globals.hpp"
+#include "test_functions.hpp"
+#include "optimization.hpp"
+#include "vector_operations.hpp"
 
 
 #define ARMA_DONT_PRINT_ERRORS

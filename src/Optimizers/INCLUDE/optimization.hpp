@@ -33,12 +33,13 @@
 
 
 #include <armadillo>
-#include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
-#include "../../ObjectiveFunctions/INCLUDE/objective_function.hpp"
-#include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
-#include "../../Random/INCLUDE/random_functions.hpp"
-#include "../INCLUDE/globalOptimalDesign.hpp"
-#include "../INCLUDE/optimization_history.hpp"
+#include "kriging_training.hpp"
+#include "objective_function.hpp"
+#include "constraint_functions.hpp"
+#include "random_functions.hpp"
+#include "globalOptimalDesign.hpp"
+#include "optimization_history.hpp"
+#include "optimization_history.hpp"
 
 #ifdef UNIT_TESTS
 #include<gtest/gtest.h>

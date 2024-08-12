@@ -1,9 +1,9 @@
-#include "./INCLUDE/rodeo.h"
-#include "../ObjectiveFunctions/INCLUDE/objective_function.hpp"
-#include "../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/print.hpp"
-#include "../Bounds/INCLUDE/bounds.hpp"
+#include "rodeo.h"
+#include "objective_function.hpp"
+#include "constraint_functions.hpp"
+#include "auxiliary_functions.hpp"
+#include "print.hpp"
+#include "bounds.hpp"
 #include <cassert>
 #include <filesystem>
 

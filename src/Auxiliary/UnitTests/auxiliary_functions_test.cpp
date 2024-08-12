@@ -29,7 +29,7 @@
  *
  */
 
-#include "../INCLUDE/auxiliary_functions.hpp"
+#include "auxiliary_functions.hpp"
 
 #include<gtest/gtest.h>
 

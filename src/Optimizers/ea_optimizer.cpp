@@ -30,12 +30,12 @@
  */
 
 
-#include "./INCLUDE/ea_optimizer.hpp"
-#include "../Random/INCLUDE/random_functions.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/print.hpp"
-#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "ea_optimizer.hpp"
+#include "random_functions.hpp"
+#include "auxiliary_functions.hpp"
+#include "print.hpp"
+#include "matrix_operations.hpp"
+#include "vector_operations.hpp"
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
 #include<cassert>

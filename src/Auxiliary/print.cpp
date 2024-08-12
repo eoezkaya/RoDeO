@@ -29,7 +29,7 @@
  *
  */
 
-#include "./INCLUDE/print.hpp"
+#include "print.hpp"
 
 using namespace std;
 

@@ -34,8 +34,8 @@
 #define GP_OPTIMIZER_HPP
 
 #include <armadillo>
-#include "../../Bounds/INCLUDE/bounds.hpp"
-#include "../../Output/INCLUDE/output.hpp"
+#include "bounds.hpp"
+#include "output.hpp"
 
 using namespace arma;
 using namespace std;

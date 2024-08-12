@@ -12,18 +12,29 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 file(GLOB SOURCE_FILES *.cpp)
 
-# Include directory
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/INCLUDE)
+file(GLOB HDRS INCLUDE/*.hpp)
+
+
 
 # Create the shared library
-add_library(externalFunctions STATIC ${SOURCE_FILES})
+add_library(externalFunctions SHARED ${SOURCE_FILES})
+
+# Include directory
+target_include_directories(externalFunctions PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/INCLUDE)
 
 # Link with LAPACK and Armadillo
-target_link_libraries(externalFunctions LAPACK::LAPACK ${ARMADILLO_LIBRARIES})
+# target_link_libraries(externalFunctions LAPACK::LAPACK ${ARMADILLO_LIBRARIES})
 
 # Set the output directory for the library
 set_target_properties(externalFunctions PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib
 )
+
+install(TARGETS externalFunctions 
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+install(FILES ${HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 
