@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.24.2)
 project(rodeo VERSION 1.0)
 
-find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(Armadillo REQUIRED)
 
