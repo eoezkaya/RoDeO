@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 project(cppAPI VERSION 1.0)
 
 file(GLOB SOURCES *.cpp)
-file(GLOB HDRS INCLUDE/*.hpp ${CMAKE_SOURCE_DIR}/src/INCLUDE/*.hpp)
+file(GLOB HDRS INCLUDE/*.h ${CMAKE_SOURCE_DIR}/src/INCLUDE/*.h)
 
 add_library(cppAPI SHARED ${SOURCES})
 
