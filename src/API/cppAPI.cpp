@@ -1,11 +1,11 @@
-#include "./INCLUDE/rodeo.h"
+#include "./rodeo.h"
 #include "../ObjectiveFunctions/INCLUDE/objective_function.hpp"
 #include "../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 #include "../Auxiliary/INCLUDE/print.hpp"
 #include "../Bounds/INCLUDE/bounds.hpp"
 #include <cassert>
-#include <filesystem>
+//#include <filesystem> commented by Atinder
 
 RobustDesignOptimizer::RobustDesignOptimizer(){
 	optimizer.setAPIUseOn();
@@ -32,9 +32,9 @@ void RobustDesignOptimizer::setName(const string nameInput){
 
 
 void RobustDesignOptimizer::setCurrentWorkingDirectory(string directory){
-	if (directory.empty() || !std::filesystem::is_directory(directory)) {
+	/*if (directory.empty() || !std::filesystem::is_directory(directory)) {
 		throw std::invalid_argument("Current working directory is not valid");
-	}
+	}*/ // commented by Atinder
 
 	cwd = directory;
 
