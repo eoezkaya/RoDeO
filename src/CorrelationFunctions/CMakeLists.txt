@@ -1,6 +1,7 @@
 set(src_files correlation_functions.cpp exponential_correlation_function.cpp gaussian_correlation_function.cpp)
 add_library(correlationFunctions ${src_files})
 target_compile_options(correlationFunctions PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
+target_link_libraries(correlationFunctions PUBLIC armadillo)
 
 get_target_property(MAIN_CFLAGS correlationFunctions COMPILE_OPTIONS)
 

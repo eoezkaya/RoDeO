@@ -15,6 +15,7 @@ execute_process(
 option(UNIT_TESTS "UNITS_TESTS" OFF)
 option(ASSERTS "ASSERTS" OFF)
 
+
 # Add externalFunctions library
 add_subdirectory(../externalFunctions externalFunctions)
 
@@ -69,6 +70,8 @@ add_subdirectory(Random)
 add_subdirectory(SurrogateModels)
 add_subdirectory(TestFunctions)
 add_subdirectory(API)
+set(CPACK_INSTALL_CMAKE_PROJECTS "API;cppAPI;ALL;/")
+include(CPack)
 
 
 target_link_libraries(${PROJECT_NAME}  auxiliary)
@@ -84,11 +87,9 @@ target_link_libraries(${PROJECT_NAME}  random)
 target_link_libraries(${PROJECT_NAME}  surrogateModels)
 target_link_libraries(${PROJECT_NAME}  testFunctions)
 
-
-
-
 find_package(Armadillo REQUIRED)
 include_directories(${ARMADILLO_INCLUDE_DIRS})
+
 
 target_link_libraries(${PROJECT_NAME} ${ARMADILLO_LIBRARIES})
 

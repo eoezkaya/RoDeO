@@ -1,6 +1,7 @@
 set(src_files metric.cpp)
 add_library(metric ${src_files})
 
+target_link_libraries(metric PUBLIC armadillo)
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)	
 	add_definitions(-DOPENMP_SUPPORT)

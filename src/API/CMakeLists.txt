@@ -18,13 +18,11 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set_target_properties(cppAPI PROPERTIES VERSION ${PROJECT_VERSION})
 
 
-target_link_libraries(cppAPI optimizers)
-target_link_libraries(cppAPI objectiveFunctions)
-target_link_libraries(cppAPI surrogateModels)
-target_link_libraries(cppAPI output)
+target_link_libraries(cppAPI PRIVATE optimizers)
+target_link_libraries(cppAPI PRIVATE objectiveFunctions)
+target_link_libraries(cppAPI PRIVATE surrogateModels)
+target_link_libraries(cppAPI PRIVATE output)
 
-install(TARGETS cppAPI
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/API/INCLUDE/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/INCLUDE/ DESTINATION include)
+install( TARGETS "cppAPI" EXPORT "cppAPITargets")
+install(EXPORT "cppAPITargets" DESTINATION "cmake")

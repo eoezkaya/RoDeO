@@ -1,4 +1,4 @@
-#include "../INCLUDE/rodeoapi.h"
+#include "../rodeo.h"
 #include <iostream>
 #include <math.h>
 
@@ -40,7 +40,7 @@ int main(void){
 
 	std::cout<<"##################### ROSENBROCK CONSTRAINED OPTIMIZATION BEGIN #####################\n";
 
-	RobustDesignOptimizerAPI testOptimizer;
+	RobustDesignOptimizer testOptimizer;
 
 	double lowerBounds[2] = {-1.5,-0.5};
 	double upperBounds[2] = { 1.5, 2.5};
