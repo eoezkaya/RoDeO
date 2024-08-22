@@ -50,6 +50,10 @@ endif(ASSERTS)
 
 
 project(rodeo VERSION 1.0)
+
+find_package(Armadillo REQUIRED)
+include_directories(${ARMADILLO_INCLUDE_DIRS})
+
 add_executable(${PROJECT_NAME}  Rodeo.cpp)
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
@@ -87,8 +91,7 @@ target_link_libraries(${PROJECT_NAME}  testFunctions)
 
 
 
-find_package(Armadillo REQUIRED)
-include_directories(${ARMADILLO_INCLUDE_DIRS})
+
 
 target_link_libraries(${PROJECT_NAME} ${ARMADILLO_LIBRARIES})
 
