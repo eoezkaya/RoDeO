@@ -73,6 +73,8 @@ add_subdirectory(Random)
 add_subdirectory(SurrogateModels)
 add_subdirectory(TestFunctions)
 add_subdirectory(API)
+set(CPACK_INSTALL_CMAKE_PROJECTS "API;cppAPI;ALL;/")
+include(CPack)
 
 
 target_link_libraries(${PROJECT_NAME}  auxiliary)
