@@ -25,5 +25,5 @@ target_link_libraries(cppAPI PRIVATE surrogateModels)
 target_link_libraries(cppAPI PRIVATE output)
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/INCLUDE/ DESTINATION include)
-install( TARGETS "cppAPI" EXPORT "cppAPITargets")
-install(EXPORT "cppAPITargets" DESTINATION "cmake")
+install(TARGETS "cppAPI" EXPORT "rodeoTargets")
+install(EXPORT "rodeoTargets" DESTINATION "cmake")
