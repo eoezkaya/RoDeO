@@ -39,6 +39,7 @@
 #include <string>
 #include <fstream>
 #include <cassert>
+#include <stdio.h>
 
 
 using std::string;
@@ -46,6 +47,7 @@ using std::string;
 #if defined(_WIN32) || defined(_WIN64)
 #include <direct.h>
 #define CHANGE_DIR _chdir
+#define popen _popen
 #else
 #include <unistd.h>
 #define CHANGE_DIR chdir

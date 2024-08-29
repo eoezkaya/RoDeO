@@ -1,16 +1,7 @@
 set(src_files ggek.cpp kriging_training.cpp linear_regression.cpp multi_level_model.cpp surrogate_model.cpp surrogate_model_data.cpp surrogate_model_tester.cpp)
 add_library(surrogateModels ${src_files})
 
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)	
-	add_definitions(-DOPENMP_SUPPORT)
-	target_compile_options(surrogateModels PUBLIC -Wall -Wextra -Wpedantic -O2 -fopenmp -fPIC)
-	
-else()
-	target_compile_options(surrogateModels PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
-		
-endif()
-
+target_compile_options(surrogateModels PRIVATE ${OpenMP_CXX_FLAGS})
 
 if(ASSERTS)
   

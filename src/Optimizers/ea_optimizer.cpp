@@ -749,7 +749,7 @@ void EAOptimizer::initializePopulation(void){
 #ifdef OPENMP_SUPPORT
 #pragma omp for nowait
 #endif
-		for (unsigned int i = 0; i < sizeOfInitialPopulation; ++i)
+		for (int i = 0; i < sizeOfInitialPopulation; ++i)
 		{
 
 			if(i%100 == 0) {

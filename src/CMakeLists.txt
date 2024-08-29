@@ -1,19 +1,26 @@
 cmake_minimum_required(VERSION 3.24.2)
 
-execute_process(
-    COMMAND ${CMAKE_COMMAND} .
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../externalFunctions
-)
+project(rodeo LANGUAGES CXX VERSION 1.0)
 
-
-
-execute_process(
-    COMMAND make
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../externalFunctions
-)
+find_package(Armadillo REQUIRED 12.6.4)
+include_directories(${ARMADILLO_INCLUDE_DIRS})
 
 option(UNIT_TESTS "UNITS_TESTS" OFF)
 option(ASSERTS "ASSERTS" OFF)
+add_executable(${PROJECT_NAME}  Rodeo.cpp)
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)	
+	add_definitions(-DOPENMP_SUPPORT)
+	link_libraries(OpenMP::OpenMP_CXX)
+endif()
+
+if(WIN32)
+	set(CMAKE_CXX_FLAGS "-Wall -O2")
+else()
+	set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic -O2 -fPIC")
+endif()
+
+
 
 # Add externalFunctions library
 add_subdirectory(../externalFunctions externalFunctions)
@@ -48,17 +55,7 @@ else()
     add_definitions(-DNDEBUG)
 endif(ASSERTS)
 
-
-project(rodeo VERSION 1.0)
-
-find_package(Armadillo REQUIRED)
-include_directories(${ARMADILLO_INCLUDE_DIRS})
-
-add_executable(${PROJECT_NAME}  Rodeo.cpp)
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
-
-target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wpedantic -O2)
-
 
 add_subdirectory(Auxiliary)
 add_subdirectory(Bounds)
@@ -76,7 +73,6 @@ add_subdirectory(API)
 set(CPACK_INSTALL_CMAKE_PROJECTS "API;cppAPI;ALL;/")
 include(CPack)
 
-
 target_link_libraries(${PROJECT_NAME}  auxiliary)
 target_link_libraries(${PROJECT_NAME}  bounds)
 target_link_libraries(${PROJECT_NAME}  correlationFunctions)
@@ -89,25 +85,9 @@ target_link_libraries(${PROJECT_NAME}  output)
 target_link_libraries(${PROJECT_NAME}  random)
 target_link_libraries(${PROJECT_NAME}  surrogateModels)
 target_link_libraries(${PROJECT_NAME}  testFunctions)
-
-
-
-
-
+target_link_libraries(${PROJECT_NAME}  externalFunctions)
 
 target_link_libraries(${PROJECT_NAME} ${ARMADILLO_LIBRARIES})
-
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)	
-	target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
-	add_definitions(-DOPENMP_SUPPORT)
-endif()
-
-
-
-
-
-
 
 get_target_property(MAIN_CFLAGS ${PROJECT_NAME} COMPILE_OPTIONS)
 

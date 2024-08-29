@@ -33,8 +33,8 @@
 #include <string>
 #include <stdlib.h>
 #include <iostream>
-#include <unistd.h>
 #include <cassert>
+#include <omp.h>
 
 
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
@@ -576,7 +576,7 @@ void Optimizer::findTheMostPromisingDesignGradientStep(void){
 #ifdef OPENMP_SUPPORT
 #pragma omp parallel for
 #endif
-			for(unsigned int i = 0; i <iterMaxAcquisitionFunction; i++ ){
+			for(int i = 0; i <iterMaxAcquisitionFunction; i++ ){
 
 
 				/* generate a design around the global optimal design */
@@ -723,7 +723,7 @@ void Optimizer::findTheMostPromisingDesignEGO(void){
 #ifdef OPENMP_SUPPORT
 #pragma omp parallel for
 #endif
-	for(unsigned int i = 0; i <iterMaxAcquisitionFunction; i++ ){
+	for(int i = 0; i <iterMaxAcquisitionFunction; i++ ){
 
 
 		DesignForBayesianOptimization designToBeTried(dimension,numberOfConstraints);
@@ -757,7 +757,7 @@ void Optimizer::findTheMostPromisingDesignEGO(void){
 #ifdef OPENMP_SUPPORT
 #pragma omp parallel for
 #endif
-		for(unsigned int i = 0; i < iterMaxAcquisitionFunction; i++ ){
+		for(int i = 0; i < iterMaxAcquisitionFunction; i++ ){
 
 
 			DesignForBayesianOptimization designToBeTried(dimension,numberOfConstraints);

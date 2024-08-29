@@ -45,6 +45,7 @@
 
 #define ARMA_DONT_PRINT_ERRORS
 #include <armadillo>
+#include <omp.h>
 
 using namespace arma;
 
@@ -630,7 +631,7 @@ void KrigingModel::train(void){
 #ifdef OPENMP_SUPPORT
 #pragma omp parallel for
 #endif
-		for(unsigned int thread = 0; thread< numberOfThreads; thread++){
+		for(int thread = 0; thread< numberOfThreads; thread++){
 
 			KrigingHyperParameterOptimizer parameterOptimizer;
 

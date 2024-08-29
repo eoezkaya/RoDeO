@@ -3,7 +3,6 @@
 #include <string>
 #include <stdlib.h>
 #include <iostream>
-#include <unistd.h>
 #include <cassert>
 
 
@@ -922,9 +921,9 @@ void ObjectiveFunction::evaluateObjectiveFunction(void){
 
 void ObjectiveFunction::printWaitStatusIfSystemCallFails(int status) const{
 
-	if (WIFEXITED(status)) {
+	// if (WIFEXITED(status)) {
 
-		int statusCode = WEXITSTATUS(status);
+		int statusCode = status;//WEXITSTATUS(status);
 		if (statusCode == 0) {
 
 			output.printMessage("Objective function/constraint execution is done!");
@@ -933,7 +932,7 @@ void ObjectiveFunction::printWaitStatusIfSystemCallFails(int status) const{
 			abortWithErrorMessage(msg);
 
 		}
-	}
+	// }
 }
 
 

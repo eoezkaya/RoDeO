@@ -38,6 +38,7 @@
 
 #include <armadillo>
 #include<cassert>
+#include <omp.h>
 
 using namespace arma;
 using namespace std;

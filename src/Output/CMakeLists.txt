@@ -1,6 +1,5 @@
 set(src_files output.cpp)
 add_library(output ${src_files})
-target_compile_options(output PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
 
 if(ASSERTS)
   

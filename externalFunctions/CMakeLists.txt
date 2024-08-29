@@ -17,7 +17,7 @@ file(GLOB SOURCE_FILES *.cpp)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/INCLUDE)
 
 # Create the shared library
-add_library(externalFunctions SHARED ${SOURCE_FILES})
+add_library(externalFunctions STATIC ${SOURCE_FILES})
 
 # Set the output directory for the library
 set_target_properties(externalFunctions PROPERTIES

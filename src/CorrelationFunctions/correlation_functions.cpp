@@ -35,7 +35,6 @@
 #include <string>
 #include <stdlib.h>
 #include <iostream>
-#include <unistd.h>
 #include <cassert>
 
 #include "./INCLUDE/correlation_functions.hpp"

@@ -3,7 +3,6 @@
 #include <string>
 #include <stdlib.h>
 #include <iostream>
-#include <unistd.h>
 #include <cassert>
 
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"

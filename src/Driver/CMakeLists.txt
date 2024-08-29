@@ -10,7 +10,6 @@ else()
 endif(ASSERTS)
 
 
-target_compile_options(driver PUBLIC -Wall -Wextra -Wpedantic -O2 )
 
 get_target_property(MAIN_CFLAGS driver COMPILE_OPTIONS)
 

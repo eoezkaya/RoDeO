@@ -184,6 +184,7 @@ double LinearModel::interpolate(rowvec x ) const{
 double LinearModel::interpolateUsingDerivatives(rowvec x ) const{
 
 	abortWithErrorMessage("Linear model cannot interpolate using derivatives!");
+	return 0;
 }
 
 

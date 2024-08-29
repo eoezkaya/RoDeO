@@ -32,6 +32,7 @@
 #include "./INCLUDE/metric.hpp"
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 #include "../Bounds/INCLUDE/bounds.hpp"
+#include <omp.h>
 
 
 
@@ -316,7 +317,7 @@ void WeightedL1Norm::findOptimalWeights(void){
 #ifdef OPENMP_SUPPORT
 #pragma omp parallel for
 #endif
-		for(unsigned int iThread = 0; iThread<numberOfThreads; iThread++){
+		for(int iThread = 0; iThread<numberOfThreads; iThread++){
 
 
 			WeightedL1NormOptimizer optimizerForWeights;
