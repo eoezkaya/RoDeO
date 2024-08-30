@@ -15,6 +15,7 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 if(WIN32)
+	set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 	set(CMAKE_CXX_FLAGS "-Wall -O2")
 else()
 	set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic -O2 -fPIC")

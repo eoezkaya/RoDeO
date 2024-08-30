@@ -23,4 +23,3 @@ add_library(externalFunctions STATIC ${SOURCE_FILES})
 set_target_properties(externalFunctions PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib
 )
-install(TARGETS "externalFunctions" EXPORT "rodeoTargets")
