@@ -283,7 +283,7 @@ void RobustDesignOptimizer::performDoE(void) {
 		}
 		trainingData(i, dimension) = functionValues(i);
 	}
-	saveMatToCVSFile(trainingData, objectiveFunctionTrainingFilename);
+	appendMatrixToCSVData(trainingData, objectiveFunctionTrainingFilename);
 	//	trainingData.print("training data =");
 
 	if(numberOfConstraints > 0){
