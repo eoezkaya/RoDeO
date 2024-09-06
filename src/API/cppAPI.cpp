@@ -241,7 +241,7 @@ void RobustDesignOptimizer::performDoEForConstraints(void){
 			trainingDataForConstraint(i, dimension) = constraintValues(i);
 		}
 
-		saveMatToCVSFile(trainingDataForConstraint,constraintsTrainingDataFilename[iConstraint]);
+		appendMatrixToCSVData(trainingDataForConstraint,constraintsTrainingDataFilename[iConstraint]);
 
 	}
 
