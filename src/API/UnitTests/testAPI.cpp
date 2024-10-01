@@ -3,19 +3,6 @@
 #include <math.h>
 
 
-double Himmelblau(const double *x){
-
-	double c1 = 1.0;
-	double c2 = 1.0;
-	double c3 = 11.0;
-	double c4 = 1.0;
-	double c5 = 1.0;
-	double c6 = 7.0;
-	return pow( (c1*x[0]*x[0]+c2*x[1]- c3 ), 2.0 ) + pow( (c4 * x[0]+ c5 * x[1]*x[1]- c6), 2.0 );
-
-
-}
-
 double Rosenbrock(const double *x){
 
 	return (1.0-x[0])* (1.0-x[0]) + 100.0 *(x[1]-x[0]*x[0])*(x[1]-x[0]*x[0]);
@@ -51,7 +38,7 @@ int main(void){
 	testOptimizer.setDimension(2);
 	testOptimizer.setObjectiveFunction(Rosenbrock, "Rosenbrock", "rosenbrock.csv");
 	testOptimizer.addConstraint(Constraint1,"Constraint1 > 0", "constraint1.csv");
-	testOptimizer.addConstraint(Constraint1,"Constraint2 > 0", "constraint2.csv");
+	testOptimizer.addConstraint(Constraint2,"Constraint2 > 0", "constraint2.csv");
 
 
 	testOptimizer.setBoxConstraints(lowerBounds,upperBounds);
