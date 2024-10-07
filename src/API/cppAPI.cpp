@@ -3,6 +3,7 @@
 #include "../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
 #include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 #include "../Auxiliary/INCLUDE/print.hpp"
+#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "../Bounds/INCLUDE/bounds.hpp"
 #include <cassert>
 //#include <filesystem> commented by Atinder
@@ -218,77 +219,70 @@ void RobustDesignOptimizer::setMaxNumberOfFunctionEvaluations(unsigned int nSamp
 	optimizer.setMaximumNumberOfIterations(numberOfFunctionEvaluations);
 }
 
-void RobustDesignOptimizer::performDoEForConstraints(void){
+void RobustDesignOptimizer::performDoEForConstraints(void) {
+    // Loop over all constraints
+    for (unsigned int iConstraint = 0; iConstraint < numberOfConstraints; iConstraint++) {
 
-	for(unsigned int iConstraint=0; iConstraint<numberOfConstraints; iConstraint++){
+        vec constraintValues(numberOfSamplesForDoE);
 
-		vec constraintValues(numberOfSamplesForDoE);
-		for (unsigned int i = 0; i < numberOfSamplesForDoE; i++) {
-			rowvec x = samplesInput.row(i);
-			//			x.print();
-			double f = constraintFunctionPtr[iConstraint](x.memptr());
-			//			std::cout<<"f = " <<f <<"\n";
-			constraintValues(i) = f;
-		}
+        // Loop over all samples
+        for (unsigned int i = 0; i < numberOfSamplesForDoE; i++) {
+            rowvec x = samplesInput.row(i);
 
-		mat trainingDataForConstraint(numberOfSamplesForDoE, dimension + 1);
-		for (unsigned int i = 0; i < numberOfSamplesForDoE; i++) {
-			for (unsigned int j = 0; j < dimension; j++) {
-				trainingDataForConstraint(i, j) = samplesInput(i, j);
-			}
+            try {
+                // Try to evaluate the constraint function
+                double f = constraintFunctionPtr[iConstraint](x.memptr());
 
+                // Add the constraint result to the sample and append to CSV
+                addOneElement(x, f);
+                appendRowVectorToCSVData(x, constraintsTrainingDataFilename[iConstraint]);
 
-			trainingDataForConstraint(i, dimension) = constraintValues(i);
-		}
+            } catch (const std::exception& e) {
 
-		appendMatrixToCSVData(trainingDataForConstraint,constraintsTrainingDataFilename[iConstraint]);
-
-	}
-
+                throw std::runtime_error("Error evaluating constraint function.");
+            }
+        }
+    }
 }
 
 
 void RobustDesignOptimizer::performDoE(void) {
-	if(DoEType == "random"){
 
-		samplesInput = generateRandomMatrix(numberOfSamplesForDoE, dimension,
-				lowerBounds.data(), upperBounds.data());
+    // Perform DoE based on the type
+    if (DoEType == "random") {
+        samplesInput = generateRandomMatrix(numberOfSamplesForDoE, dimension,
+                                            lowerBounds.data(), upperBounds.data());
+    } else if (DoEType == "lhs") {
+        samplesInput = generateLatinHypercubeMatrix(numberOfSamplesForDoE, dimension, lowerBounds, upperBounds);
+    } else {
+        throw std::invalid_argument("Invalid DoE type.");
+    }
 
+    // Vector to store function values
+    vec functionValues(numberOfSamplesForDoE);
 
-	}
+    // Loop over all samples
+    for (unsigned int i = 0; i < numberOfSamplesForDoE; i++) {
+        rowvec x = samplesInput.row(i);
 
+        try {
+            // Try to evaluate the objective function
+            double f = objectiveFunctionPtr(x.memptr());
 
-	else if(DoEType == "lhs"){
+            // Add the result to the sample and append to CSV
+            addOneElement(x, f);
+            appendRowVectorToCSVData(x, objectiveFunctionTrainingFilename);
 
-		samplesInput = generateLatinHypercubeMatrix(numberOfSamplesForDoE, dimension, lowerBounds, upperBounds);
+        } catch (const std::exception& e) {
 
+            throw std::runtime_error("Error evaluating objective function.");
+        }
+    }
 
-	}
-
-	else{
-
-		throw std::invalid_argument("Invalid DoE type.");
-	}
-	//	sampleInput.print("sampleInput");
-	vec functionValues(numberOfSamplesForDoE);
-	for (unsigned int i = 0; i < numberOfSamplesForDoE; i++) {
-		rowvec x = samplesInput.row(i);
-		double f = objectiveFunctionPtr(x.memptr());
-		functionValues(i) = f;
-	}
-	mat trainingData(numberOfSamplesForDoE, dimension + 1);
-	for (unsigned int i = 0; i < numberOfSamplesForDoE; i++) {
-		for (unsigned int j = 0; j < dimension; j++) {
-			trainingData(i, j) = samplesInput(i, j);
-		}
-		trainingData(i, dimension) = functionValues(i);
-	}
-	appendMatrixToCSVData(trainingData, objectiveFunctionTrainingFilename);
-	//	trainingData.print("training data =");
-
-	if(numberOfConstraints > 0){
-		performDoEForConstraints();
-	}
+    // Handle constraints if they exist
+    if (numberOfConstraints > 0) {
+        performDoEForConstraints();
+    }
 }
 
 void RobustDesignOptimizer::checkOptimizationSettings() {
