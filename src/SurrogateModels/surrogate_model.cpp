@@ -1,58 +1,21 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDEO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
 #include<stdio.h>
 #include<iostream>
 #include<fstream>
 #include<string>
 #include <cassert>
-
+#include<cmath>
 #include "./INCLUDE/surrogate_model.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
-#include "../INCLUDE/Rodeo_globals.hpp"
+#include "./INCLUDE/model_logger.hpp"
 
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 
-#define ARMA_DONT_PRINT_ERRORS
-#include <armadillo>
-
-using namespace arma;
-
+namespace Rodop{
 
 
 SurrogateModel::SurrogateModel(){}
 
 void SurrogateModel::setName(std::string nameInput){
 
-	assert(isNotEmpty(nameInput));
+	assert(!nameInput.empty());
 
 	name = nameInput;
 
@@ -109,26 +72,12 @@ void SurrogateModel::setReadWarmStartFileFlag(bool flag){
 
 }
 
-void SurrogateModel::setDisplayOn(void){
 
-	data.setDisplayOn();
-	output.ifScreenDisplay = true;
-
+void SurrogateModel::setRatioValidationSamples(double val){
+	data.setValidationRatio(val);
+	ifHasValidationSamples = true;
 }
 
-void SurrogateModel::setDisplayOff(void){
-
-	data.setDisplayOff();
-	output.ifScreenDisplay = false;
-
-}
-
-void SurrogateModel::setGlobalOptimalDesign(Design d){
-
-	assert(d.designParameters.size()>0);
-	globalOptimalDesign = d;
-
-}
 
 std::string SurrogateModel::getNameOfHyperParametersFile(void) const{
 
@@ -160,6 +109,10 @@ mat SurrogateModel::getX(void) const{
 	return data.getInputMatrix();
 }
 
+SurrogateModelData SurrogateModel::getData() const{
+	return data;
+}
+
 vec SurrogateModel::gety(void) const{
 
 	return data.getOutputVector();
@@ -173,7 +126,7 @@ void SurrogateModel::printData(void) const{
 
 void SurrogateModel::readDataTest(void){
 
-	assert(isNotEmpty(filenameDataInputTest));
+	assert(!filenameDataInputTest.empty());
 
 	data.readDataTest(filenameDataInputTest);
 
@@ -193,11 +146,10 @@ unsigned int SurrogateModel::countHowManySamplesAreWithinBounds(vec lb, vec ub){
 	unsigned int counter = 0;
 	for(unsigned int i=0; i<N; i++){
 
-		rowvec sample     = trainingData.row(i);
-		rowvec dv         = sample.head(dim);
-		vec x = trans(dv);
+		vec sample     = trainingData.getRow(i);
+		vec dv         = sample.head(dim);
 
-		if(isBetween(x,lb,ub)){
+		if( dv.is_between(lb,ub) ){
 			counter++;
 		}
 
@@ -205,135 +157,6 @@ unsigned int SurrogateModel::countHowManySamplesAreWithinBounds(vec lb, vec ub){
 
 	return counter;
 }
-
-
-void SurrogateModel::reduceTrainingData(vec lb, vec ub) const{
-
-	assert(ifDataIsRead);
-
-	mat trainingData;
-	trainingData = data.getRawData();
-
-#if 0
-	trainingData.print();
-#endif
-	unsigned int dim = data.getDimension();
-	unsigned int N   = data.getNumberOfSamples();
-
-	vector<int> samplesThatCanBeRemoved;
-
-	for(unsigned int i=0; i<N; i++){
-
-		rowvec sample     = trainingData.row(i);
-		rowvec dv         = sample.head(dim);
-		vec x = trans(dv);
-
-		if(!isBetween(x,lb,ub)){
-			samplesThatCanBeRemoved.push_back(i);
-		}
-
-	}
-
-	unsigned int howManySamplesToBeRemoved = samplesThatCanBeRemoved.size();
-
-	if(howManySamplesToBeRemoved>0){
-
-
-		uvec indicesToRemove(howManySamplesToBeRemoved);
-
-		for(unsigned int i=0; i<howManySamplesToBeRemoved; i++){
-			indicesToRemove(i) = samplesThatCanBeRemoved.at(i);
-		}
-
-
-		trainingData.shed_rows(indicesToRemove);
-		trainingData.save(filenameDataInput, csv_ascii);
-
-	}
-
-
-}
-
-
-
-//void SurrogateModel::reduceTrainingData(unsigned howManySamples, double targetValue) const{
-//
-//	assert(ifDataIsRead);
-//	Bounds boxConstraints = data.getBoxConstraints();
-//	assert(boxConstraints.areBoundsSet());
-//
-//	unsigned int dim = data.getDimension();
-//	unsigned int N   = data.getNumberOfSamples();
-//
-//	mat trainingData;
-//	trainingData = data.getRawData();
-//
-//	vec lb = boxConstraints.getLowerBounds();
-//	vec ub = boxConstraints.getUpperBounds();
-//
-//	vector<pair<unsigned int, double >> samplesThatCanBeRemoved;
-//
-//	for(unsigned int i=0; i<N; i++){
-//
-//		rowvec sample     = trainingData.row(i);
-//		rowvec dv         = sample.head(dim);
-//		double value      = sample(dim);
-//		vec x = trans(dv);
-//
-//		if(!isBetween(x,lb,ub)){
-//
-//			pair<unsigned int, double> sampleToRemove;
-//
-//			sampleToRemove.first = i;
-//			sampleToRemove.second = fabs(value - targetValue);
-//
-//			samplesThatCanBeRemoved.push_back(sampleToRemove);
-//		}
-//	}
-//
-//	unsigned int Nreduced = samplesThatCanBeRemoved.size();
-//
-//	if(Nreduced == 0){
-//		howManySamples = 0;
-//
-//	}
-//
-//	for(unsigned int i=0; i<Nreduced; i++){
-//
-//		for(unsigned int j=i; j<Nreduced; j++){
-//
-//			pair<unsigned int, double> sample1;
-//			pair<unsigned int, double> sample2;
-//
-//			sample1 = samplesThatCanBeRemoved.at(i);
-//			sample2 = samplesThatCanBeRemoved.at(j);
-//
-//			double value1 = sample1.second;
-//			double value2 = sample2.second;
-//
-//			if(value2 > value1){
-//
-//				pair<unsigned int, double> temp;
-//				temp = samplesThatCanBeRemoved.at(i);
-//				samplesThatCanBeRemoved.at(i) = samplesThatCanBeRemoved.at(j);
-//				samplesThatCanBeRemoved.at(j) = temp;
-//			}
-//		}
-//	}
-//
-//	uvec indicesToRemove(howManySamples);
-//
-//	for(unsigned int i=0; i<howManySamples; i++){
-//		indicesToRemove(i) = samplesThatCanBeRemoved.at(i).first;
-//	}
-//
-//	unsigned int Nleft = N - howManySamples;
-//	mat writeBuffer(Nleft,trainingData.n_cols);
-//
-//	trainingData.shed_rows(indicesToRemove);
-//	trainingData.save(filenameDataInput, csv_ascii);
-//
-//}
 
 
 void SurrogateModel::normalizeDataTest(void){
@@ -350,15 +173,13 @@ void SurrogateModel::updateAuxilliaryFields(void){
 
 vec SurrogateModel::interpolateVector(mat X) const{
 
-	assert(X.max() <= 1.0/data.getDimension());
-	assert(X.min() >= 0.0);
 
-	unsigned int N = X.n_rows;
+	unsigned int N = X.getNRows();
 	vec results(N);
 
 	for(unsigned int i=0; i<N; i++){
 
-		rowvec xp = X.row(i);
+		vec xp = X.getRow(i);
 		results(i) = interpolate(xp);
 
 	}
@@ -367,17 +188,46 @@ vec SurrogateModel::interpolateVector(mat X) const{
 }
 
 
-double SurrogateModel::calculateInSampleError(void) const{
+double SurrogateModel::calculateInSampleError(string mode) const{
 
-	assert(ifInitialized);
+	if(!ifInitialized){
+
+		ModelLogger::getInstance().log(ERROR, "Surrogate model: Model must be initialized first.");
+		throw std::runtime_error("Surrogate model: Model must be initialized first.");
+	}
+
+	ModelLogger::getInstance().log(INFO, "Surrogate model: Calculating in sample error using " + std::to_string(data.getNumberOfSamples()) + " samples");
+
+	vec fTildeValues(data.getNumberOfSamples());
+	mat rawData = data.getRawData();
+	vec fExact = rawData.getCol(dimension);
+
+	mat X = data.getInputMatrix();
+	double squaredError = 0.0;
+	for(unsigned int i=0; i<data.getNumberOfSamples(); i++){
+		vec x = X.getRow(i);
+		ModelLogger::getInstance().log(INFO, "x = " +  x.toString());
+
+		if(mode == "function_values"){
+			fTildeValues(i) = interpolate(x);
+		}
+		else if(mode == "with_derivatives"){
+
+			fTildeValues(i) = interpolateUsingDerivatives(x);
+		}
+		else{
+			string msg = "SurrogateModel::calculateInSampleError: invalid mode";
+			ModelLogger::getInstance().log(ERROR, msg);
+			throw std::runtime_error(msg);
+
+		}
 
 
-	vec fTildeValues = interpolateVector(data.getInputMatrix());
-	vec fExact = data.getOutputVector();
-	vec diff = fTildeValues - fExact;
+		std::string msg = "value: " + std::to_string(fExact(i)) + " estimate:" + std::to_string(fTildeValues(i));
+		ModelLogger::getInstance().log(INFO,msg);
+		squaredError += (fTildeValues(i) - fExact(i))*(fTildeValues(i) - fExact(i));
 
-	double L2normDiff = norm(diff,2);
-	double squaredError = L2normDiff*L2normDiff;
+	}
 
 	return squaredError/data.getNumberOfSamples();
 
@@ -387,58 +237,81 @@ double SurrogateModel::calculateInSampleError(void) const{
 
 double SurrogateModel::calculateOutSampleError(void){
 
-	assert(ifHasTestData);
-	assert(data.ifTestDataHasFunctionValues);
+	if(!ifHasTestData){
+		ModelLogger::getInstance().log(ERROR, "Surrogate model: Test data does not exist.");
+		throw std::runtime_error("Surrogate model: Test data does not exist.");
+	}
+	if(!data.ifTestDataHasFunctionValues){
+		ModelLogger::getInstance().log(ERROR, "Surrogate model: Test data does have functional values.");
+		throw std::runtime_error("Surrogate model: Test data does have functional values.");
+	}
 
 	tryOnTestData();
 
-	vec squaredErrors = testResults.col(data.getDimension()+2);
+	vec squaredErrors = testResults.getCol(data.getDimension()+2);
 
-	return mean(squaredErrors);
+	return squaredErrors.mean();
 
 }
 
-void SurrogateModel::saveTestResults(void) const{
-
-	assert(isNotEmpty(filenameTestResults));
-	field<std::string> header(testResults.n_cols);
+void SurrogateModel::writeFileHeaderForTestResults() {
 
 	unsigned int dim = data.getDimension();
+	for (unsigned int i = 0; i < dim; i++) {
+		string variableName = "x" + std::to_string(i + 1);
+		testResultsFileHeader.push_back(variableName);
+	}
+	testResultsFileHeader.push_back("Estimated value");
+	if (data.ifTestDataHasFunctionValues) {
+		testResultsFileHeader.push_back("True value");
+		testResultsFileHeader.push_back("Squared Error");
+	}
+}
 
-	for(unsigned int i=0; i<dim; i++){
-		header(i) ="x"+std::to_string(i+1);
+void SurrogateModel::saveTestResults(void){
+
+	if(filenameTestResults.empty()){
+		ModelLogger::getInstance().log(ERROR, "Surrogate model: Filename for test results is empty.");
+		throw std::runtime_error("Surrogate model: Filename for test results is empty.");
 	}
 
-	header(dim)   = "Estimated value";
-
-	if(data.ifTestDataHasFunctionValues){
-
-		header(dim+1) = "True value";
-		header(dim+2) = "Squared Error";
-	}
-
-
-
-	testResults.save( csv_name(filenameTestResults, header) );
-
-	output.printMessage("Writing results to the file = ", filenameTestResults);
+	writeFileHeaderForTestResults();
+	testResults.saveAsCSV(filenameTestResults,6, testResultsFileHeader);
+	ModelLogger::getInstance().log(INFO, "Surrogate model: Writing results to the file = " +  filenameTestResults);
 
 }
+
+
+void SurrogateModel::saveTestResultsWithVariance(void){
+
+	if(filenameTestResults.empty()){
+		ModelLogger::getInstance().log(ERROR, "Surrogate model: Filename for test results is empty.");
+		throw std::runtime_error("Surrogate model: Filename for test results is empty.");
+	}
+
+	writeFileHeaderForTestResults();
+
+	testResultsFileHeader.push_back("Variance");
+
+	testResults.saveAsCSV(filenameTestResults,6, testResultsFileHeader);
+
+}
+
 
 void SurrogateModel::printSurrogateModel(void) const{
 	data.print();
 }
-rowvec SurrogateModel::getRowX(unsigned int index) const{
+vec SurrogateModel::getRowX(unsigned int index) const{
 	return data.getRowX(index);
 }
 
-rowvec SurrogateModel::getRowXRaw(unsigned int index) const{
+vec SurrogateModel::getRowXRaw(unsigned int index) const{
 	return data.getRowXRaw(index);
 }
 
 void SurrogateModel::setNameOfInputFileTest(string filename){
 
-	assert(isNotEmpty(filename));
+	assert(!filename.empty());
 	filenameDataInputTest = filename;
 
 	ifHasTestData = true;
@@ -446,16 +319,52 @@ void SurrogateModel::setNameOfInputFileTest(string filename){
 
 void SurrogateModel::setNameOfOutputFileTest(string filename){
 
-	assert(isNotEmpty(filename));
+	assert(!filename.empty());
 	filenameTestResults = filename;
 }
 
-void SurrogateModel::tryOnTestData(void){
+double SurrogateModel::calculateValidationError(void) {
+	unsigned int N = data.getNumberOfSamplesValidation();
 
-	assert(ifNormalizedTestData);
+	if (N > 0) {
+		if (!ifNormalized) {
+			throw std::runtime_error("Validation data must be normalized first. Please call the normalization method before calculating the validation error.");
+		}
+
+		mat XValidation = data.getInputMatrixValidation();
+		vec yValidation = data.getOutputVectorValidation();  // Corrected method to get the output vector
+
+		double error = 0.0;
+		for (unsigned int i = 0; i < N; i++) {
+			vec x = XValidation.getRow(i);
+			double ftilde = interpolate(x);
+
+			//            x.print("x");
+			//            std::cout<< "ftilde = " << ftilde << "\n";
+			//            std::cout<< "f      = " << yValidation(i) << "\n";
+			//            std::cout<< "\n\n";
+
+			//            error += (ftilde - yValidation(i)) * (ftilde - yValidation(i));
+			error += fabs(ftilde - yValidation(i));
+		}
+
+		error /= static_cast<double>(N); // Calculate mean squared error (MSE)
+		//       ModelLogger::getInstance().log(INFO, "Validation error (MSE) = " + std::to_string(error));
+
+		return error;
+	} else {
+		ModelLogger::getInstance().log(WARNING, "calculateValidationError did nothing, because there is no validation data.");
+		return std::numeric_limits<double>::max();  // Return the largest possible double value
+	}
+}
 
 
-	output.printMessage("Trying surrogate model on test data...");
+
+void SurrogateModel::tryOnTestData(string mode){
+
+	if(!ifNormalizedTestData){
+		throw std::runtime_error("Test data must be normalized first. Please call the normalization method before calculating the test error.");
+	}
 
 	unsigned int dim = data.getDimension();
 	unsigned int numberOfEntries;
@@ -463,14 +372,17 @@ void SurrogateModel::tryOnTestData(void){
 	if(data.ifTestDataHasFunctionValues){
 
 		numberOfEntries = dim + 3;
+		if(mode == "with_variances") numberOfEntries = dim + 4;
+
 	}
 	else{
 
 		numberOfEntries = dim + 1;
+		if(mode == "with_variances") numberOfEntries = dim + 2;
 	}
 
 	unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
-	vec squaredError(numberOfTestSamples, fill::zeros);
+	vec squaredError(numberOfTestSamples);
 
 
 	mat results(numberOfTestSamples,numberOfEntries);
@@ -483,194 +395,87 @@ void SurrogateModel::tryOnTestData(void){
 	mat XTest = data.getInputMatrixTest();
 
 
+	ModelLogger::getInstance().log(INFO, "Surrogate model: Calculating test error using " + std::to_string(numberOfTestSamples) + " samples");
+
+
 	for(unsigned int i=0; i<numberOfTestSamples; i++){
 
-		rowvec xp          = data.getRowXTest(i);
-		rowvec dataRow     = data.getRowXRawTest(i);
+		vec xp          = data.getRowXTest(i);
+		vec dataRow     = data.getRowXRawTest(i);
+		vec x = dataRow.head(dimension);
 
-		output.printMessage("\n");
-		rowvec x = dataRow.head(dimension);
-		output.printMessage("x = ",x);
+		double fTilde = 0.0;
+		double variance = 0.0;
+		if(mode == "function_values"){
 
+			fTilde = interpolate(xp);
+		}
+		else if(mode == "with_derivatives"){
 
-		double fTilde = interpolate(xp);
+			fTilde = interpolateUsingDerivatives(xp);
+		}
+		else if(mode == "with_variances"){
 
+			interpolateWithVariance(xp, &fTilde, &variance);
+		}
+		else{
+			string errMsg = "SurrogateModel::tryOnTestData: invalid mode.";
+			ModelLogger::getInstance().log(ERROR,errMsg);
+			throw std::runtime_error(errMsg);
 
-		rowvec sample = x;
-		addOneElement<rowvec>(sample,fTilde);
+		}
+
+		vec sample = x;
+		sample.push_back(fTilde);
 
 		if(data.ifTestDataHasFunctionValues){
-
-			addOneElement<rowvec>(sample,fExact(i));
+			sample.push_back(fExact(i));
 			double error = pow((fExact(i) - fTilde),2.0);
 			squaredError(i) = error;
-			addOneElement<rowvec>(sample,error);
+			sample.push_back(error);
+			ModelLogger::getInstance().log(INFO,"x = " + x.toString());
+			std::string msg = "value: " + std::to_string(fExact(i)) + " estimate:" + std::to_string(fTilde) + " error = " + std::to_string(error);
+			ModelLogger::getInstance().log(INFO,msg);
+//			x.print("x");
+//			std::cout<<msg<<"\n\n";
 
-			output.printMessage("f(x) = ",fExact(i), "estimate = ", fTilde);
-			output.printMessage("Squared error = ", error);
-			output.printMessage("\n");
+
 		}
 		else{
 
-			output.printMessage("fTilde = ",fTilde);
+			ModelLogger::getInstance().log(INFO,"x = " + x.toString());
+			std::string msg = "estimate:" + std::to_string(fTilde);
+		}
+		if(mode == "with_variances"){
+			ModelLogger::getInstance().log(INFO,"variance = " + std::to_string(variance));
+			ModelLogger::getInstance().log(INFO,"standard deviation = " + std::to_string(sqrt(variance)));
+
+			sample.push_back(variance);
 		}
 
-		results.row(i) = sample;
+		results.setRow(sample,i);
 	}
 
 	if(data.ifTestDataHasFunctionValues){
 
-		generalizationError = mean(squaredError);
-		standardDeviationOfGeneralizationError = stddev(squaredError);
+		generalizationError = squaredError.mean();
+		standardDeviationOfGeneralizationError = squaredError.standardDeviation();
 	}
 
 
 	testResults = results;
+
+	ModelLogger::getInstance().log(INFO,"Test error (MSE): " + std::to_string(generalizationError));
+
 }
+
 
 void SurrogateModel::printGeneralizationError(void) const{
-
-	if(generalizationError>0.0){
-
-		unsigned int numberOfTestSamples = data.getNumberOfSamplesTest();
-		string msg = "Generalization error (MSE) = " + convertToString(generalizationError,15) + " ";
-		msg += "RMSE = " + convertToString(sqrt(generalizationError),15) + " ";
-		msg += "(Evaluated at " + std::to_string(numberOfTestSamples) + " samples)";
-		output.printMessage(msg);
-		msg = "standard deviation of the MSE = " + std::to_string(standardDeviationOfGeneralizationError);
-		output.printMessage(msg);
-
-	}
-
-
-}
-
-/* This function generates weights for each sample according to a target value */
-void SurrogateModel::generateSampleWeights(void){
-
-	output.printMessage("Generating sample weights...");
-
-	assert(ifDataIsRead);
-	assert(numberOfSamples>0);
-
-	sampleWeights = zeros<vec>(numberOfSamples);
-
-	vec y = data.getOutputVector();
-	double targetValue = min(y);
-
-	if(ifTargetForSampleWeightsIsSet){
-		targetValue = targetForSampleWeights;
-
-		output.printMessage("Target value for the sample weights = ", targetValue);
-
-	}
-
-	vec yWeightCriteria(numberOfSamples, fill::zeros);
-
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		yWeightCriteria(i) = fabs( y(i) - targetValue );
-	}
-
-	vec z(numberOfSamples,fill::zeros);
-	double mu = mean(yWeightCriteria);
-	double sigma = stddev(yWeightCriteria);
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		z(i) = (yWeightCriteria(i) - mu)/sigma;
-	}
-
-	double b = 0.5;
-	double a = 0.5/min(z);
-
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		sampleWeights(i) = a*z(i) + b;
-		if(sampleWeights(i)< 0.1) {
-			sampleWeights(i) = 0.1;
-		}
-	}
-
-	if(output.ifScreenDisplay){
-		printSampleWeights();
-	}
-
+	std::cout << std::fixed << std::setprecision(8);
+	std::cout<<"Generalization error (MSE) : " << generalizationError << "\n";
 
 }
 
 
-void SurrogateModel::generateSampleWeightsAccordingToGlobalOptimum(void){
 
-	assert(globalOptimalDesign.designParametersNormalized.size() > 0);
-	assert(ifNormalized);
-	output.printMessage("Generating sample weights based on the global optimum...");
-
-	mat input = data.getInputMatrix();
-
-	sampleWeights = zeros<vec>(numberOfSamples);
-
-	rowvec xGlobalOptimum = globalOptimalDesign.designParametersNormalized;
-
-//	xGlobalOptimum.print("xGlobalOptimum");
-
-	vec distances(numberOfSamples);
-
-	for(unsigned int i=0; i<numberOfSamples; i++){
-
-		rowvec diff = xGlobalOptimum - input.row(i);
-		distances(i) = norm(diff,1);
-
-	}
-
-	vec z(numberOfSamples,fill::zeros);
-	double mu = mean(distances);
-	double sigma = stddev(distances);
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		z(i) = (distances(i) - mu)/sigma;
-	}
-
-	double b = 0.5;
-	double a = 0.5/min(z);
-
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		sampleWeights(i) = a*z(i) + b;
-		if(sampleWeights(i)< 0.1) {
-			sampleWeights(i) = 0.1;
-		}
-	}
-
-//	for(unsigned int i=0; i<numberOfSamples; i++){
-//
-//		rowvec x = input.row(i);
-//		std::cout<<x(0)<<" "<<x(1)<<" "<<sampleWeights(i) <<"\n";
-//
-//
-//
-//	}
-//
-
-}
-
-
-void SurrogateModel::printSampleWeights(void) const{
-
-	assert(numberOfSamples>0);
-	assert(sampleWeights.size() == numberOfSamples);
-
-	vec y = data.getOutputVector();
-	for(unsigned int i=0; i<numberOfSamples; i++){
-		std::cout<<"y("<<i<<") = "<<y(i)<<", w = " << sampleWeights(i) << "\n";
-	}
-}
-
-void SurrogateModel::removeVeryCloseSamples(const Design& globalOptimalDesign){
-
-	assert(ifDataIsRead);
-	data.removeVeryCloseSamples(globalOptimalDesign);
-
-}
-
-
-void SurrogateModel::removeVeryCloseSamples(const Design& globalOptimalDesign , std::vector<rowvec> samples){
-
-	assert(ifDataIsRead);
-	data.removeVeryCloseSamples(globalOptimalDesign,samples);
-
-}
+} /*Namespace Rodop */

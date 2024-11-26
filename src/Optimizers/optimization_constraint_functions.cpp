@@ -1,38 +1,10 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
-
 #include "./INCLUDE/optimization.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "../LinearAlgebra/INCLUDE/vector.hpp"
+#include<cassert>
+
+
+namespace Rodop{
+
 
 bool Optimizer::isConstrained(void) const{
 
@@ -59,14 +31,15 @@ void Optimizer::addConstraint(ConstraintFunction &constFunc){
 
 void Optimizer::estimateConstraints(DesignForBayesianOptimization &design) const{
 
-	rowvec x = design.dv;
-	assert(design.constraintValues.size() == numberOfConstraints);
+	vec x = design.dv;
+	assert(design.constraintValues.getSize() == numberOfConstraints);
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
 		std::pair<double, double> result;
 		if(it->isUserDefinedFunction()){
-			rowvec xNotNormalized = normalizeVectorBack(x, lowerBounds, upperBounds);
+
+			vec xNotNormalized = x.denormalizeVector(lowerBounds, upperBounds);
 			result = it->interpolateWithVariance(xNotNormalized);
 		}
 		else{
@@ -81,8 +54,8 @@ void Optimizer::estimateConstraints(DesignForBayesianOptimization &design) const
 
 void Optimizer::estimateConstraintsGradientStep(DesignForBayesianOptimization &design) const{
 
-	rowvec x = design.dv;
-	assert(design.constraintValues.size() == numberOfConstraints);
+	vec x = design.dv;
+	assert(design.constraintValues.getSize() == numberOfConstraints);
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
@@ -94,30 +67,34 @@ void Optimizer::estimateConstraintsGradientStep(DesignForBayesianOptimization &d
 	}
 }
 
+bool Optimizer::checkConstraintFeasibility(const vec& constraintValues) const {
+    if (constraintValues.getSize() < constraintFunctions.size()) {
+        throw std::invalid_argument("Insufficient constraint values for feasibility check.");
+    }
 
+    unsigned int i = 0;
+    for (const auto& constraintFunction : constraintFunctions) {
+        if (!constraintFunction.checkFeasibility(constraintValues(i))) {
+        	printInfoToLog("Constraint " + std::to_string(i) + " is not satisfied");
+        	printInfoToLog("Constraint value = ", constraintValues(i));
 
+            return false;  // Return immediately if any constraint is infeasible
+        }
+        else{
+        	printInfoToLog("Constraint " + std::to_string(i) + " is satisfied");
+        	printInfoToLog("Constraint value = ", constraintValues(i));
 
-bool Optimizer::checkConstraintFeasibility(rowvec constraintValues) const{
+        }
+        i++;
+    }
 
-	unsigned int i=0;
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-		bool ifFeasible = it->checkFeasibility(constraintValues(i));
-
-		if(ifFeasible == false) {
-			return false;
-		}
-		i++;
-	}
-
-	return true;
+    return true;  // All constraints are feasible
 }
-
 
 
 void Optimizer::calculateFeasibilityProbabilities(DesignForBayesianOptimization &designCalculated) const{
 
-	rowvec probabilities(numberOfConstraints, fill::zeros);
+	vec probabilities(numberOfConstraints);
 
 	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
 
@@ -129,11 +106,11 @@ void Optimizer::calculateFeasibilityProbabilities(DesignForBayesianOptimization 
 
 		if(type.compare(">") == 0){
 			/* p (constraint value > target) */
-			probabilities(ID) =  calculateProbalityGreaterThanAValue(inequalityValue, estimated, sigma);
+			probabilities(ID) =  calculateProbabilityGreaterThanAValue(inequalityValue, estimated, sigma);
 		}
 
 		if(type.compare("<") == 0){
-			probabilities(ID) =  calculateProbalityLessThanAValue(inequalityValue, estimated, sigma);
+			probabilities(ID) =  calculateProbabilityLessThanAValue(inequalityValue, estimated, sigma);
 		}
 
 	}
@@ -156,36 +133,44 @@ void Optimizer::evaluateConstraints(Design &d){
 
 
 void Optimizer::trainSurrogatesForConstraints() {
-	output.printMessage("Training surrogate model for the constraints...");
-	for (auto it = constraintFunctions.begin(); it != constraintFunctions.end();
-			it++) {
-		it->trainSurrogate();
-	}
-	output.printMessage("Model training for constraints is done...");
+    printInfoToLog("Training surrogate models for the constraints...");
+
+    int index = 0;
+    for (auto& constraint : constraintFunctions) {
+        printInfoToLog("Training surrogate model for constraint #" + std::to_string(index) + "...");
+
+        // Train the surrogate model
+        try {
+            constraint.trainSurrogate();
+            printInfoToLog("Training for constraint #" + std::to_string(index) + " completed successfully.");
+        } catch (const std::exception& e) {
+            printInfoToLog("Error training surrogate model for constraint #" + std::to_string(index) + ": " + e.what());
+        }
+
+        ++index;
+    }
+
+    printInfoToLog("Model training for all constraints is done.");
 }
 
 void Optimizer::computeConstraintsandPenaltyTerm(Design &d) {
 
 	if(isConstrained()){
-
-		output.printMessage("Evaluating constraints...");
+		printInfoToLog("Evaluating constraints...");
 
 		evaluateConstraints(d);
 
 		bool ifConstraintsSatisfied = checkConstraintFeasibility(d.constraintTrueValues);
 		if(!ifConstraintsSatisfied){
-
-			output.printMessage("The new sample does not satisfy all the constraints");
+			printInfoToLog("The new sample does not satisfy all the constraints");
 			d.isDesignFeasible = false;
 
 		}
 		else{
-
-			output.printMessage("The new sample satisfies all the constraints");
+			printInfoToLog("The new sample satisfies all the constraints");
 			d.isDesignFeasible = true;
 		}
-
-		output.printMessage("Evaluation of the constraints is ready...");
+		printInfoToLog("Evaluation of the constraints is ready...");
 	}
 
 }
@@ -209,4 +194,7 @@ void Optimizer::printConstraints(void) const{
 	}
 
 }
+
+
+} /* Namespace Rodop */
 

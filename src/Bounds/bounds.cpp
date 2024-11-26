@@ -1,64 +1,53 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
-#include<cassert>
+#include <stdexcept>
 #include "./INCLUDE/bounds.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Random/INCLUDE/random_functions.hpp"
-#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
 
-Bounds::Bounds(){
 
-}
+
+namespace Rodop {
+
+Bounds::Bounds(){}
 
 Bounds::Bounds(unsigned int dim){
-
 	dimension = dim;
-
 }
+
+Bounds::Bounds(std::vector<double> lb, std::vector<double> ub) {
+	if (lb.size() != ub.size()) {
+		throw std::invalid_argument("Lower and upper bounds must have the same size.");
+	}
+
+	unsigned int size = lb.size();
+	lowerBounds.resize(size);
+	upperBounds.resize(size);
+
+	for (unsigned int i = 0; i < size; ++i) {
+		lowerBounds(i) = lb[i];
+		upperBounds(i) = ub[i];
+	}
+
+	dimension = size;
+
+	if (!checkBounds()) {
+		throw std::invalid_argument("Invalid bounds: each lower bound must be less than the corresponding upper bound.");
+	}
+
+	ifBoundsAreSet = true;
+}
+
 
 Bounds::Bounds(vec lb, vec ub){
 
-	assert( lb.size() == ub.size() );
-
 	lowerBounds = lb;
 	upperBounds = ub;
-	dimension = lb.size();
+	dimension = lb.getSize();
 
-	assert(checkIfBoundsAreValid());
-
+	if(!checkBounds()){
+		throw std::runtime_error("checkBounds failed.");
+	}
 	ifBoundsAreSet = true;
 
-
 }
+
 
 void Bounds::reset(void){
 
@@ -76,60 +65,71 @@ void Bounds::setDimension(unsigned int value){
 	dimension = value;
 }
 
-
-void Bounds::setBounds(vec lowerBoundsInput, vec upperBoundsInput) {
-
-	assert(lowerBoundsInput.size()>0);
-	assert(upperBoundsInput.size()>0);
-	assert(lowerBoundsInput.size() == upperBoundsInput.size());
-
-	lowerBounds = lowerBoundsInput;
-	upperBounds = upperBoundsInput;
-
-	dimension = lowerBounds.size();
-	assert(checkIfBoundsAreValid());
-	ifBoundsAreSet = true;
-
-}
-
 void Bounds::setBounds(double lowerBound, double upperBound) {
 
-	assert(lowerBound < upperBound);
-	assert(dimension > 0);
+	if (lowerBound >= upperBound) {
+		throw std::invalid_argument("Upper bound must be greater than lower bound.");
+	}
+	if (dimension<=0) {
+		throw std::invalid_argument("Dimension is not set.");
+	}
 
-	lowerBounds =zeros<vec>(dimension);
+	lowerBounds.resize(dimension);
 	lowerBounds.fill(lowerBound);
 
-	upperBounds =zeros<vec>(dimension);
+	upperBounds.resize(dimension);
 	upperBounds.fill(upperBound);
-
-	assert(checkIfBoundsAreValid());
 
 	ifBoundsAreSet = true;
 
 }
 
+void Bounds::setBounds(std::vector<double> lb, std::vector<double> ub){
 
-void Bounds::setBounds(double* lb, double* ub) {
+	unsigned int size = lb.size();
+	lowerBounds.resize(size);
+	upperBounds.resize(size);
 
-	assert(dimension > 0);
-	lowerBounds =zeros<vec>(dimension);
-	upperBounds =zeros<vec>(dimension);
-
-	for(unsigned int i=0; i<dimension; i++){
-
+	for (unsigned int i = 0; i < size; ++i) {
 		lowerBounds(i) = lb[i];
 		upperBounds(i) = ub[i];
 	}
 
-	assert(checkIfBoundsAreValid());
-	ifBoundsAreSet = true;
+	dimension = size;
 
+	if (!checkBounds()) {
+		throw std::invalid_argument("Invalid bounds: each lower bound must be less than the corresponding upper bound.");
+	}
+
+	ifBoundsAreSet = true;
 }
+
+
+void Bounds::setBounds(vec lowerBoundsInput, vec upperBoundsInput) {
+	if (lowerBoundsInput.getSize() <= 0 || upperBoundsInput.getSize() <= 0) {
+		throw std::invalid_argument("Bounds size must be greater than 0.");
+	}
+	if (lowerBoundsInput.getSize() != upperBoundsInput.getSize()) {
+		throw std::invalid_argument("Lower bounds and upper bounds must have the same size.");
+	}
+
+	lowerBounds = lowerBoundsInput;
+	upperBounds = upperBoundsInput;
+
+	dimension = lowerBounds.getSize();
+	if (!checkBounds()) {
+		throw std::invalid_argument("Invalid bounds: lower bound must be less than upper bound for all dimensions.");
+	}
+	ifBoundsAreSet = true;
+}
+
+
 
 bool Bounds::areBoundsSet(void) const{
 	return ifBoundsAreSet;
 }
+
+
 vec Bounds::getLowerBounds(void) const{
 	return lowerBounds;
 }
@@ -138,9 +138,28 @@ vec Bounds::getUpperBounds(void) const{
 	return upperBounds;
 }
 
+
 bool Bounds::checkIfBoundsAreValid(void) const{
 
-	assert(dimension>0);
+	if (dimension == 0) {
+		throw std::invalid_argument("Dimension must be greater than 0.");
+	}
+
+	for(unsigned int i=0; i<dimension; i++){
+		if(lowerBounds(i) >= upperBounds(i) ) {
+			lowerBounds.print("lowerBounds");
+			upperBounds.print("upperBounds");
+			return false;
+		}
+	}
+	return true;
+}
+
+bool Bounds::checkBounds(void) const{
+
+	if (dimension <= 0) {
+		throw std::invalid_argument("Dimension must be greater than 0.");
+	}
 
 	for(unsigned int i=0; i<dimension; i++){
 		if(lowerBounds(i) >= upperBounds(i) ) {
@@ -150,19 +169,20 @@ bool Bounds::checkIfBoundsAreValid(void) const{
 	return true;
 }
 
-bool Bounds::isPointWithinBounds(const vec &inputVector) const{
+bool Bounds::isPointWithinBounds(const vec &inputVector) const {
+	if (inputVector.getSize() != dimension) {
+		throw std::invalid_argument("Input vector size must match the dimension of the bounds.");
+	}
 
-	assert(inputVector.size() == dimension);
-
-	for(unsigned int i=0; i<dimension; i++){
-
-		if(inputVector(i) < lowerBounds(i)) return false;
-		if(inputVector(i) > upperBounds(i)) return false;
+	for (unsigned int i = 0; i < dimension; ++i) {
+		if (inputVector(i) < lowerBounds(i) || inputVector(i) > upperBounds(i)) {
+			return false;
+		}
 	}
 
 	return true;
-
 }
+
 
 void Bounds::print(void) const{
 
@@ -171,12 +191,35 @@ void Bounds::print(void) const{
 
 }
 
+vec Bounds::generateVectorWithinBounds() const {
+	if (!areBoundsSet()) {
+		throw std::logic_error("Bounds must be set before generating a vector within bounds.");
+	}
 
-vec Bounds::generateVectorWithinBounds(void) const{
-
-	assert(areBoundsSet());
-	vec randomVector = generateRandomVector<vec>(lowerBounds, upperBounds);
+	vec randomVector(dimension);
+	randomVector.fillRandom(lowerBounds, upperBounds);
 
 	return randomVector;
+}
+
+
+std::vector<double> Bounds::generateStdVectorWithinBounds() const {
+	if (!areBoundsSet()) {
+		throw std::logic_error("Bounds must be set before generating a vector within bounds.");
+	}
+
+	vec randomVector(dimension);
+	randomVector.fillRandom(lowerBounds, upperBounds);
+
+	vector<double> result;
+	for(unsigned int i=0; i<dimension; i++){
+		result.push_back(randomVector(i));
+	}
+
+
+	return result;
+}
 
 }
+
+

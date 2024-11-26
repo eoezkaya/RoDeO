@@ -2,13 +2,13 @@
 #define CONSTRAINT_FUNCTIONS_HPP
 
 
-#include <armadillo>
-#include <cassert>
-
 #include "./objective_function.hpp"
 #include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
-#include "../../Optimizers/INCLUDE/design.hpp"
+#include "../../Design/INCLUDE/design.hpp"
 #include "../../../externalFunctions/INCLUDE/externalFunctions.hpp"
+
+
+namespace Rodop{
 
 typedef double (*FunctionPtr)(double*);
 
@@ -21,10 +21,11 @@ public:
 	int ID = -1;
 	double value = 0.0;
 
-
-	void setDefinition(std::string definition);
+	void setDefinition(const std::string& definition);
 	void print(void) const;
 
+	std::string toString() const;
+	std::string removeSpacesFromString(std::string inputString) const;
 
 
 };
@@ -57,14 +58,14 @@ public:
 
 	ConstraintFunction();
 
-	double interpolate(rowvec x) const;
-	pair<double, double> interpolateWithVariance(rowvec x) const;
+	double interpolate(Rodop::vec x) const;
+	pair<double, double> interpolateWithVariance(Rodop::vec x) const;
 
 	bool isUserDefinedFunction(void) const;
 
 	void setConstraintDefinition(ConstraintDefinition);
 
-	void setInequalityType(std::string);
+	void setInequalityType(const std::string &type);
 	std::string getInequalityType(void) const;
 
 	void setInequalityTargetValue(double);
@@ -78,19 +79,30 @@ public:
 	void readOutputDesign(Design &d) const;
 
 	void evaluateDesign(Design &d);
+	void evaluateExplicitFunction(Design &d);
+	void validateDesignParameters(const Design &d) const;
+	void evaluateObjectiveUsingExternalExecutable(Design &d);
+	void evaluateObjectiveDirectly(Design &d);
+	void validateConstraintID(const Design &d) const;
+
+
+
 	void addDesignToData(Design &d);
 
-	double callUserDefinedFunction(rowvec &x) const;
+	double callUserDefinedFunction(Rodop::vec &x) const;
 
 	void print(void) const;
+	std::string toString() const;
 	string generateOutputString(void) const;
 
 	void trainSurrogate(void);
 
 	void setUseExplicitFunctionOn(void);
 
+
+
 };
 
-
+} /*Namespace Rodop */
 
 #endif

@@ -1,191 +1,236 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
 
 #include <cassert>
+#include <fstream>
+
 #include "./INCLUDE/globalOptimalDesign.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/xml_functions.hpp"
-#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
+#include "./INCLUDE/optimization_logger.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix.hpp"
+#include "../LinearAlgebra/INCLUDE/vector.hpp"
 
+namespace Rodop{
 
+void GlobalOptimalDesign::setBoxConstraints(const Bounds& input) {
+    // Ensure that the input bounds are valid and match the problem dimension
+    if (!input.areBoundsSet()) {
+        throw std::invalid_argument("Box constraints are not properly set.");
+    }
 
+    if (dimension != input.getDimension()) {
+        throw std::invalid_argument("Mismatch between box constraint dimension and design dimension.");
+    }
 
-#include <armadillo>
-using namespace arma;
+    // Set the box constraints
+    boxConstraints = input;
 
+    // Optional: Log the successful setting of box constraints
+    OptimizationLogger::getInstance().log(INFO, "Box constraints successfully set.");
+}
 
-void GlobalOptimalDesign::setBoxConstraints(Bounds input){
-	assert(input.areBoundsSet());
-	assert(dimension == input.getDimension());
+void GlobalOptimalDesign::validateInputs(const mat& historyFile) const {
+	if (historyFile.getNRows() == 0) {
+		throw std::invalid_argument("The history file is empty.");
+	}
 
-	boxConstraints = input;
+	if (!boxConstraints.areBoundsSet()) {
+		throw std::logic_error("Box constraints are not set.");
+	}
 
+	if (dimension <= 0) {
+		throw std::logic_error("Dimension must be greater than 0.");
+	}
 }
 
 
+unsigned int GlobalOptimalDesign::findBestDesignIndex(const mat& historyFile, bool& isFeasibleDesignFound) const {
+	unsigned int numSamples = historyFile.getNRows();
+	unsigned int lastColIndex = historyFile.getNCols() - 1;
 
-void GlobalOptimalDesign::setGlobalOptimalDesignFromHistoryFile(const mat& historyFile){
+	double bestObjectiveValue = std::numeric_limits<double>::max();
+	unsigned int bestDesignIndex = 0;
+	isFeasibleDesignFound = false;
 
-	assert(historyFile.n_rows>0);
-	assert(boxConstraints.areBoundsSet());
-	assert(dimension>0);
+	// Iterate through each sample in the history file
+	for (unsigned int i = 0; i < numSamples; i++) {
+		double feasibility = historyFile(i, lastColIndex);
+		double objectiveValue = historyFile(i, dimension);
 
-	unsigned int howManyEntriesInHistoryFile = historyFile.n_cols;
-	unsigned int howManySamplesInHistoryFile = historyFile.n_rows;
-
-	unsigned int indexLastCol = historyFile.n_cols -1;
-
-	bool isFeasibleDesignFound = false;
-	double bestObjectiveFunctionValue = LARGE;
-	unsigned int bestDesignIndex;
-
-	for(unsigned int i=0; i<howManySamplesInHistoryFile; i++){
-
-		double feasibility = historyFile(i,indexLastCol);
-		double objectiveFunctionValue = historyFile(i,dimension);
-
-		if(feasibility>0.0 && objectiveFunctionValue < bestObjectiveFunctionValue){
+		// Check if the design is feasible and better than the current best
+		if (feasibility > 0.0 && objectiveValue < bestObjectiveValue) {
 			isFeasibleDesignFound = true;
-			bestObjectiveFunctionValue = objectiveFunctionValue;
+			bestObjectiveValue = objectiveValue;
 			bestDesignIndex = i;
 		}
-
 	}
 
-	rowvec bestSample;
-	if(isFeasibleDesignFound){
+	// If no feasible design is found, choose the best objective function value
+	if (!isFeasibleDesignFound) {
+		vec objectiveValues = historyFile.getCol(dimension);
 
-		bestSample = historyFile.row(bestDesignIndex);
-
-		isDesignFeasible = true;
-		ID = bestDesignIndex;
+		bestDesignIndex = objectiveValues.findMinIndex();
 	}
 
-	else{
+	return bestDesignIndex;
+}
 
-		vec objectiveFunctionValues = historyFile.col(dimension);
 
-		uword indexMin = index_min(objectiveFunctionValues);
-		bestSample = historyFile.row(indexMin);
-
-		isDesignFeasible = false;
-		ID = indexMin;
-	}
-
-	rowvec dv = bestSample.head(dimension);
+void GlobalOptimalDesign::extractDesignData(const vec& bestSample) {
+	vec dv = bestSample.head(dimension);
 
 	tag = "Global optimum design";
-	designParameters  = dv;
+	designParameters = dv;
 	trueValue = bestSample(dimension);
-	improvementValue = bestSample(historyFile.n_cols-2);
+	improvementValue = bestSample(bestSample.getSize() - 2);
 
-	rowvec constraintValues(numberOfConstraints);
-	for(unsigned int i=0; i<numberOfConstraints; i++){
-
-		constraintValues(i) = bestSample(i+dimension+1);
+	vec constraintValues(numberOfConstraints);
+	for (unsigned int i = 0; i < numberOfConstraints; i++) {
+		constraintValues(i) = bestSample(i + dimension + 1);
 	}
 
 	constraintTrueValues = constraintValues;
 
 	vec lb = boxConstraints.getLowerBounds();
 	vec ub = boxConstraints.getUpperBounds();
-	rowvec dvNormalized = normalizeVector(dv,lb,ub);
-	designParametersNormalized = dvNormalized;
+	designParametersNormalized = dv.normalizeVector(lb,ub);
 
 }
 
-void GlobalOptimalDesign::setGradientGlobalOptimumFromTrainingData(const std::string &nameOfTrainingData){
+void GlobalOptimalDesign::setGlobalOptimalDesignFromHistoryFile(const mat& historyFile) {
+	validateInputs(historyFile);
 
-	assert(isNotEmpty(nameOfTrainingData));
-	assert(dimension>0);
-	assert(designParameters.size() > 0);
+	bool isFeasibleDesignFound = false;
+	unsigned int bestDesignIndex = findBestDesignIndex(historyFile, isFeasibleDesignFound);
+
+	vec bestSample = historyFile.getRow(bestDesignIndex);
+	isDesignFeasible = isFeasibleDesignFound;
+	ID = bestDesignIndex;
+
+	extractDesignData(bestSample);
+}
 
 
-	std::cout<<"setGradientGlobalOptimumFromTrainingData ...\n";
-	std::cout<<"nameOfTrainingData: "<<nameOfTrainingData<<"\n";
+void GlobalOptimalDesign::setGradientGlobalOptimumFromTrainingData(const std::string &nameOfTrainingData) {
+    // Ensure that the provided training data name is not empty
+    if (nameOfTrainingData.empty()) {
+        throw std::invalid_argument("The name of the training data cannot be empty.");
+    }
 
-	mat trainingDataToSearch;
-	trainingDataToSearch.load(nameOfTrainingData, csv_ascii);
+    // Ensure that the dimension and design parameters are valid
+    if (dimension <= 0) {
+        throw std::logic_error("Dimension must be greater than 0.");
+    }
+
+    if (designParameters.getSize() == 0) {
+        throw std::logic_error("Design parameters cannot be empty.");
+    }
+
+    mat trainingDataToSearch;
+    trainingDataToSearch.readFromCSV(nameOfTrainingData);
 
 
-	mat trainingDataInput = trainingDataToSearch.submat(0,0,trainingDataToSearch.n_rows-1,dimension-1);
+    // Check if the training data has enough rows and columns
+    if (trainingDataToSearch.getNRows() == 0 || trainingDataToSearch.getNCols() < dimension) {
+        throw std::runtime_error("Training data is empty or does not match the expected dimension.");
+    }
 
-	designParameters.print("designParameters");
+    // Extract the input part of the training data (only the design parameter columns)
+    mat trainingDataInput = trainingDataToSearch.submat(0, trainingDataToSearch.getNRows() - 1, 0, dimension - 1);
 
-	int indexOfTheGlobalOptimalDesignInTrainingData = findIndexOfRow(designParameters, trainingDataInput,10E-06);
+ //   trainingDataInput.print("trainingDataInput");
 
-	if(indexOfTheGlobalOptimalDesignInTrainingData  == -1){
+    // Find the index of the global optimal design in the training data
+    constexpr double tolerance = 1e-5; // Define tolerance as a constant
+    int indexOfTheGlobalOptimalDesignInTrainingData = trainingDataInput.findRowIndex(designParameters, tolerance);
 
-		cout<<"ERROR: Could not found the row in the training data!\n";
-		designParameters.print("x");
-		trainingDataInput.print("trainingDataInput");
-		abort();
+    // Check if the row was found
+    if (indexOfTheGlobalOptimalDesignInTrainingData == -1) {
+        std::ostringstream oss;
+        oss << "Could not find the design parameters in the training data.\n";
+        oss << "design Parameters = " << designParameters.toString();
+        trainingDataInput.print("training data input");
+        throw std::runtime_error(oss.str());
+    }
+
+    // Extract the gradient vector from the corresponding row
+    vec bestRow = trainingDataToSearch.getRow(indexOfTheGlobalOptimalDesignInTrainingData);
+    if (bestRow.getSize() < dimension * 2) {
+        throw std::runtime_error("Training data row does not have enough data to extract the gradient.");
+    }
+
+    vec gradientVector = bestRow.tail(dimension);  // Extract the gradient from the tail of the row
+
+    // Set the gradient vector
+    gradient = gradientVector;
+}
+
+
+void GlobalOptimalDesign::saveToXMLFile(void) const {
+    if (xmlFileName.empty()) {
+        throw std::runtime_error("XML file name is empty. Cannot save XML.");
+    }
+
+    std::ofstream file(xmlFileName);
+    if (!file.is_open()) {
+        throw std::runtime_error("Failed to open the file: " + xmlFileName);
+    }
+
+    std::string text = generateXmlString();
+    file << text;
+    file.close();
+}
+
+
+string GlobalOptimalDesign::generateXml(const std::string& elementName, const int& value) const{
+	std::ostringstream xml;
+	xml << std::fixed << "<" << elementName << ">" << value << "</" << elementName << ">";
+	return xml.str();
+}
+
+string GlobalOptimalDesign::generateXml(const std::string& elementName, const double& value) const{
+	std::ostringstream xml;
+	xml << std::fixed << "<" << elementName << ">" << value << "</" << elementName << ">";
+	return xml.str();
+}
+string GlobalOptimalDesign::generateXml(const std::string& elementName, const string& value) const{
+	std::ostringstream xml;
+	xml << std::fixed << "<" << elementName << ">" << value << "</" << elementName << ">";
+	return xml.str();
+}
+
+std::string GlobalOptimalDesign::generateXmlVector(const std::string& name, const vec& data) const {
+
+	assert(data.getSize() > 0);
+	std::ostringstream xml;
+
+	xml << "<" << name << ">\n";
+	for (unsigned int i=0; i<data.getSize(); i++) {
+		xml << std::fixed << "\t<item>" << data(i) << "</item>\n";
 	}
 
-	assert(indexOfTheGlobalOptimalDesignInTrainingData  != -1);
-	assert(indexOfTheGlobalOptimalDesignInTrainingData < int(trainingDataToSearch.size()));
+	xml << "</" << name << ">";
 
-	rowvec temp = trainingDataToSearch.row(indexOfTheGlobalOptimalDesignInTrainingData);
-	rowvec gradientVector = temp.tail(dimension);
-
-	gradientVector.print("gradientVector");
-
-	gradient = gradientVector;
+	return xml.str();
 }
 
-void GlobalOptimalDesign::saveToXMLFile(void) const{
 
+string GlobalOptimalDesign::generateXmlString() const {
+	// Initialize the XML string with the root element
+	string result = "<GlobalOptimalDesign>\n";
 
-	assert(isNotEmpty(xmlFileName));
-	std::ofstream file(xmlFileName);
-
-	std::string text = generateXmlString();
-	file << text;
-	file.close();
-}
-
-std::string GlobalOptimalDesign::generateXmlString(void) const{
-
-	std::string result;
-	result = "<GlobalOptimalDesign>\n";
+	// Add design ID
 	result += generateXml("DesignID", ID) + "\n";
+
+	// Add objective function value
 	result += generateXml("ObjectiveFunction", trueValue) + "\n";
+
+	// Add design parameters
 	result += generateXmlVector("DesignParameters", designParameters) + "\n";
-	if(constraintTrueValues.size() > 0){
+
+	// Add constraint values if they exist
+	if (!constraintTrueValues.isEmpty()) {
 		result += generateXmlVector("ConstraintValues", constraintTrueValues) + "\n";
 	}
 
+	// Add feasibility status
 	if(isDesignFeasible){
 		string yes = "YES";
 		result += generateXml("Feasibility", yes) + "\n";
@@ -195,7 +240,7 @@ std::string GlobalOptimalDesign::generateXmlString(void) const{
 		result += generateXml("Feasibility", no) + "\n";
 	}
 
-
+	// Close the root element
 	result += "</GlobalOptimalDesign>\n";
 
 	return result;
@@ -204,11 +249,10 @@ std::string GlobalOptimalDesign::generateXmlString(void) const{
 
 bool GlobalOptimalDesign::checkIfGlobalOptimaHasGradientVector(void) const{
 
-	if(gradient.empty()) {
+	if(gradient.isEmpty()) {
 		return false;
 	}
 	else{
-
 		if(gradient.is_zero()){
 			return false;
 		}
@@ -217,3 +261,5 @@ bool GlobalOptimalDesign::checkIfGlobalOptimaHasGradientVector(void) const{
 		}
 	}
 }
+
+} /* Namespace Rodop */

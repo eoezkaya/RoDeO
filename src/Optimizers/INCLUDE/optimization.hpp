@@ -28,22 +28,19 @@
  *
  *
  */
+
 #ifndef OPTIMIZATION_HPP
 #define OPTIMIZATION_HPP
 
-
-#include <armadillo>
 #include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
 #include "../../ObjectiveFunctions/INCLUDE/objective_function.hpp"
 #include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
-#include "../../Random/INCLUDE/random_functions.hpp"
 #include "../INCLUDE/globalOptimalDesign.hpp"
 #include "../INCLUDE/optimization_history.hpp"
+#include "../INCLUDE/optimization_logger.hpp"
 
-#ifdef UNIT_TESTS
-#include<gtest/gtest.h>
-#endif
 
+namespace Rodop{
 
 class OptimizationStatistics{
 
@@ -54,32 +51,81 @@ public:
 	std::vector<unsigned int> numberOfConstraintEvaluations;
 	std::vector<unsigned int> numberOfConstraintGradientEvaluations;
 
+	std::time_t startTime;
+	std::time_t endTime;
+	std::time_t startTimeIteration;
+	std::time_t endTimeIteration;
+
+
+
+	void getTime(std::time_t &time){
+		auto now = std::chrono::system_clock::now();
+		time = std::chrono::system_clock::to_time_t(now);
+	}
+
+
+	void getStartTime(void){
+		getTime(startTime);
+	}
+
+	void getEndTime(void){
+
+		getTime(endTime);
+	}
+
+	void getStartTimeIteration(void){
+		getTime(startTimeIteration);
+	}
+
+	void getEndTimeIteration(void){
+
+		getTime(endTimeIteration);
+	}
+
+
+	double elapsedSeconds = 0;
+	double elapsedSecondsForSingleIteration = 0;
+
+	void evaluateElapsedSecondsForOptimizationStudy(void){
+		elapsedSeconds = std::difftime(endTime, startTime);
+
+	}
+	void evaluateElapsedSecondsForOptimizationIterationy(void){
+		elapsedSecondsForSingleIteration = std::difftime(endTimeIteration, startTimeIteration);
+
+	}
+
+
+	std::string generateElapsedTime(double howManySeconds, string text) {
+		int hours = static_cast<int>(howManySeconds) / 3600;
+		int minutes = (static_cast<int>(howManySeconds) % 3600) / 60;
+		double seconds = howManySeconds - (hours * 3600) - (minutes * 60);
+
+		std::ostringstream oss;
+		oss << text << ": " << hours << " hours, "
+				<< minutes << " minutes, "
+				<< seconds << " seconds";
+
+		return oss.str();
+	}
+
+
+	std::string generateElapsedTimeStringForOptimizationIteration(void) {
+
+		return generateElapsedTime(elapsedSecondsForSingleIteration, "Iteration run time");
+	}
+
+
+	std::string generateElapsedTimeStringForOptimization(void) {
+
+		return generateElapsedTime(elapsedSeconds, "Optimization run time");
+	}
+
 };
 
 
 
 class Optimizer {
-
-#ifdef UNIT_TESTS
-	friend class OptimizationTest;
-	FRIEND_TEST(OptimizationTest, constructor);
-	FRIEND_TEST(OptimizationTest, setOptimizationProblem);
-	FRIEND_TEST(OptimizationTest, setOptimizationHistory);
-	FRIEND_TEST(OptimizationTest, setOptimizationHistoryData);
-	FRIEND_TEST(OptimizationTest, updateOptimizationHistory);
-	FRIEND_TEST(OptimizationTest, estimateConstraints);
-	FRIEND_TEST(OptimizationTest, calculateFeasibilityProbabilities);
-	FRIEND_TEST(OptimizationTest, findTheMostPromisingDesignGradientStep);
-	FRIEND_TEST(OptimizationTest, setGradientGlobalOptimum);
-	FRIEND_TEST(OptimizationTest, changeSettingsForAGradientBasedStep);
-	FRIEND_TEST(OptimizationTest, determineMaxStepSizeForGradientStep);
-	FRIEND_TEST(OptimizationTest, checkIfDesignTouchesBounds);
-	FRIEND_TEST(OptimizationTest, checkIfDesignIsWithinBounds);
-	FRIEND_TEST(OptimizationTest, doesObjectiveFunctionHaveGradients);
-	FRIEND_TEST(OptimizationTest, trimVectorSoThatItStaysWithinTheBounds);
-	FRIEND_TEST(OptimizationTest, initializeOptimizationHistory);
-
-#endif
 
 private:
 
@@ -91,15 +137,17 @@ private:
 	vec lowerBoundsForAcqusitionFunctionMaximization;
 	vec upperBoundsForAcqusitionFunctionMaximization;
 
-	vec lowerBoundsForAcqusitionFunctionMaximizationGradientStep;
-	vec upperBoundsForAcqusitionFunctionMaximizationGradientStep;
+	vec lowerBoundsForAcquisitionFunctionMaximizationGradientStep;
+	vec upperBoundsForAcquisitionFunctionMaximizationGradientStep;
 
 	double bestDeltaImprovementValueAchieved = 0.0;
 	double bestFeasibleInitialValue = 0.0;
 
-	bool ifAPIisUsed = false;
 
-	std::string filenameCurrentIterateInfo = "currentIterate.dat";
+	bool ifAPIisUsed = false;
+	bool ifTangentsAreUsed = false;
+	bool WillGradientStepBePerformed = false;
+	bool ifVariableSigmaStrategy = true;
 
 
 	std::string designVectorFileName;
@@ -123,7 +171,14 @@ private:
 	double trustRegionFactorGradientStep = 1.0;
 	double initialTrustRegionFactor = 1.0;
 
-	bool WillGradientStepBePerformed = false;
+
+	unsigned int trSuccessCounter = 0.0;
+	unsigned int trFailureCounter = 0.0;
+	unsigned int trFailureTolerance = 15;
+	unsigned int trSuccessTolerance = 3;
+	double trLength = 0.8;
+	double trLengthMin;
+	double trLengthMax;
 
 
 	GlobalOptimalDesign globalOptimalDesign;
@@ -131,13 +186,14 @@ private:
 	Design currentBestDesign;
 
 
-	double factorForGradientStepWindow = 0.01;
+	double factorForGradientStepWindow = 0.1;
 
 
 	unsigned int iterMaxAcquisitionFunction;
+	unsigned int iterMaxAcquisitionFunctionUnconstrainedGradientStep = 1000;
 	unsigned int outerIterationNumber = 0;
 
-	bool ifVariableSigmaStrategy = true;
+
 	double sigmaFactor = 1.0;
 	double sigmaFactorMax = 3.0;
 	double sigmaFactorMin = 1.0;
@@ -145,8 +201,8 @@ private:
 	double sigmaMultiplier = 1.0;
 	double sigmaGrowthFactor = 1.01;
 
-
-	unsigned int numberOfDisceteVariables = 0;
+	/* for integer design variables */
+	unsigned int numberOfDiscreteVariables = 0;
 	std::vector<double> incrementsForDiscreteVariables;
 	std::vector<int> indicesForDiscreteVariables;
 
@@ -178,12 +234,15 @@ private:
 	void evaluateConstraints(Design &);
 
 	bool areDiscreteParametersUsed(void) const;
-	void roundDiscreteParameters(rowvec &);
+	void roundDiscreteParameters(vec& designVector) const;
+	vec generateDiscreteValues(unsigned int index, double dx) const;
+	int findClosestDiscreteValue(double value, const vec& discreteValues) const;
 
 
 	bool isConstrained(void) const;
 	bool isNotConstrained(void) const;
 	bool doesObjectiveFunctionHaveGradients(void) const;
+	bool doesObjectiveFunctionHaveTangents(void) const;
 
 
 	void modifyBoundsForInnerIterations(void);
@@ -199,9 +258,9 @@ private:
 	void estimateConstraints(DesignForBayesianOptimization &) const;
 	void estimateConstraintsGradientStep(DesignForBayesianOptimization &design) const;
 
-	double determineMaxStepSizeForGradientStep(rowvec x0, rowvec gradient) const;
-	bool checkIfDesignTouchesBounds(const rowvec &x0) const;
-	bool checkIfDesignIsWithinBounds(const rowvec &x0) const;
+//	double determineMaxStepSizeForGradientStep(vec x0, vec gradient) const;
+
+	bool checkIfDesignIsWithinBounds(const vec &x0) const;
 
 	void changeSettingsForAGradientBasedStep(void);
 	void findTheMostPromisingDesignGradientStep(void);
@@ -213,12 +272,22 @@ private:
 	void abortIfCurrentDesignHasANaN();
 	void findPromisingDesignUnconstrainedGradientStep(
 			DesignForBayesianOptimization &designToBeTried);
-	bool checkIfBoxConstraintsAreSatisfied(const rowvec &dv) const;
+	bool checkIfBoxConstraintsAreSatisfied(const vec &dv) const;
 	void decideIfAGradientStepShouldBeTakenForTheFirstIteration();
-	void trimVectorSoThatItStaysWithinTheBounds(rowvec &x);
-	void trimVectorSoThatItStaysWithinTheBounds(vec &x);
+	void trimVectorSoThatItStaysWithinTheBounds(vec &x) const;
 	void decideIfNextStepWouldBeAGradientStep();
 	void adjustSigmaFactor(void);
+	void printCurrentDesignToLogFile(void);
+	void printGlobalOptimalDesignToLogFile(void);
+	void searchAroundGlobalOptima(DesignForBayesianOptimization &designWithMaxAcqusition);
+	void searchCompleteDesignSpace(DesignForBayesianOptimization &designWithMaxAcqusition);
+	void scaleGradientVector(vec &gradient);
+	void validateDimension() const;
+	void validateBounds() const;
+	void validateSizeIsEqualDimension(const vec &v) const;
+	void findPromisingDesignConstrainedGradientStep(
+			DesignForBayesianOptimization &designToBeTried);
+	void validateFactorGradientStepWindow();
 
 public:
 
@@ -239,13 +308,8 @@ public:
 	bool ifSurrogatesAreInitialized = false;
 
 
-
-
-
-	OutputDevice output;
-
 	Optimizer();
-	Optimizer(std::string ,int);
+	Optimizer(const std::string&, unsigned int);
 
 
 	void setDimension(unsigned int);
@@ -256,12 +320,17 @@ public:
 	void setParameterToDiscrete(unsigned int, double);
 	bool checkSettings(void) const;
 	void print(void) const;
+	void printSettingsToLogFile(void) const;
+	void printIterationNumber(void) const;
+
 	void printConstraints(void) const;
+
+	void printHistory(void) const;
+	mat getHistory(void) const;
+
 
 	void performEfficientGlobalOptimization(void);
 	void performEfficientGlobalOptimizationOnlyWithFunctionalValues(void);
-	void performEfficientGlobalOptimizationWithGradients(void);
-
 
 
 	void initializeSurrogates(void);
@@ -272,7 +341,8 @@ public:
 
 	void setMaximumNumberOfInnerIterations(unsigned int);
 
-	void setBoxConstraints(Bounds boxConstraints);
+
+	void setBoxConstraints(const Bounds& boxConstraints);
 
 	void setFileNameDesignVector(std::string filename);
 
@@ -280,6 +350,9 @@ public:
 	void setDisplayOff(void);
 
 	void setAPIUseOn(void);
+	void setUseTangentsOn(void);
+	void setParameterNames(std::vector<std::string> names);
+
 
 	void setNumberOfThreads(unsigned int);
 
@@ -293,7 +366,7 @@ public:
 
 	void checkIfSettingsAreOK(void) const;
 	bool checkBoxConstraints(void) const;
-	bool checkConstraintFeasibility(rowvec) const;
+	bool checkConstraintFeasibility(const vec& constraintValues) const;
 
 	void addObjectFunction(ObjectiveFunction &);
 
@@ -306,15 +379,47 @@ public:
 
 	void calculateFeasibilityProbabilities(DesignForBayesianOptimization &) const;
 
+	double normalCdf(double value, double mu, double sigma) const;
 
-	rowvec calculateGradientOfAcqusitionFunction(DesignForBayesianOptimization &) const;
-	DesignForBayesianOptimization MaximizeAcqusitionFunctionGradientBased(DesignForBayesianOptimization ) const;
+	double calculateProbabilityLessThanAValue(double value, double mu, double sigma) const;
+	double calculateProbabilityGreaterThanAValue(double value, double mu, double sigma) const;
+
+
+	double calculateProbalityLessThanAValue(double value, double mu, double sigma) const;
+	double calculateProbalityGreaterThanAValue(double value, double mu, double sigma) const;
+
+
+	void defineTrustRegion(void);
+
+	vec calculateGradientOfAcquisitionFunction(DesignForBayesianOptimization &) const;
+	DesignForBayesianOptimization maximizeAcqusitionFunctionGradientBased(DesignForBayesianOptimization ) const;
 	void findTheMostPromisingDesignEGO(void);
 	DesignForBayesianOptimization getDesignWithMaxExpectedImprovement(void) const;
+
+	void printInfoToLog(const string &msg) const{
+		OptimizationLogger::getInstance().log(INFO,msg);
+	}
+
+	void printInfoToLog(const string &msg, double val) const{
+			OptimizationLogger::getInstance().log(INFO,msg + std::to_string(val));
+	}
+	void printInfoToLog(const string &msg, unsigned int val) const{
+				OptimizationLogger::getInstance().log(INFO,msg + std::to_string(val));
+	}
+
+	void printErrorToLog(const string &msg) const{
+		OptimizationLogger::getInstance().log(ERROR,msg);
+	}
+
+
+
+
+
+
 
 
 };
 
-
+} /* Namespace Rodop */
 
 #endif

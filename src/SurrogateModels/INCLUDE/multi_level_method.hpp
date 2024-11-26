@@ -28,30 +28,22 @@
  *
  *
  */
-
 #ifndef MULTI_LEVEL_MODEL
 #define MULTI_LEVEL_MODEL
 
 #include<string>
 #include "surrogate_model.hpp"
 #include "kriging_training.hpp"
-#include "ggek.hpp"
 
-#ifdef UNIT_TESTS
-#include<gtest/gtest.h>
-#endif
 
 using std::string;
 
+
+namespace Rodop{
+
 class MultiLevelModel : public SurrogateModel{
 
-#ifdef UNIT_TESTS
-	friend class MultiLevelModelTest;
-	FRIEND_TEST(MultiLevelModelTest, setDimension);
-	FRIEND_TEST(MultiLevelModelTest, normalizeData);
-	FRIEND_TEST(MultiLevelModelTest, testInterpolateWithVariance);
 
-#endif
 
 
 private:
@@ -64,7 +56,6 @@ private:
 	SurrogateModel *errorModel;
 
 	KrigingModel surrogateModelKrigingLowFi;
-	GeneralizedDerivativeEnhancedModel surrogateModelGGEKLowFi;
 
 	KrigingModel surrogateModelKrigingError;
 
@@ -145,10 +136,6 @@ public:
 	void setDisplayOn(void);
 	void setDisplayOff(void);
 
-	void setGamma(double);
-	double getGamma(void) const;
-	void setNumberOfMaximumIterationsForGammaTraining(unsigned int value);
-
 	unsigned int getNumberOfLowFiSamples(void) const;
 	unsigned int getNumberOfHiFiSamples(void) const;
 
@@ -163,15 +150,15 @@ public:
 	double getAlpha(void) const;
 
 
-	double interpolate(rowvec x) const ;
-	double interpolateUsingDerivatives(rowvec x) const;
-	double interpolateLowFi(rowvec x) const;
-	double interpolateError(rowvec x) const;
+	double interpolate(vec x) const ;
+	double interpolateUsingDerivatives(vec x) const;
+	double interpolateLowFi(vec x) const;
+	double interpolateError(vec x) const;
 
-	void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const;
+	void interpolateWithVariance(vec xp,double *f_tilde,double *ssqr) const;
 
-	void addNewSampleToData(rowvec newsample);
-	void addNewLowFidelitySampleToData(rowvec newsample);
+	void addNewSampleToData(vec newsample);
+	void addNewLowFidelitySampleToData(vec newsample);
 
 	void updateModelWithNewData(void);
 
@@ -193,6 +180,8 @@ public:
 
 };
 
+
+} /* Namespace Rodop */
 
 
 #endif

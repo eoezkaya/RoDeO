@@ -1,16 +1,18 @@
-set(src_files ggek.cpp kriging_training.cpp linear_regression.cpp multi_level_model.cpp surrogate_model.cpp surrogate_model_data.cpp surrogate_model_tester.cpp)
+set(src_files 
+	kriging_training.cpp 
+	linear_regression.cpp 
+	multi_level_model.cpp 
+	surrogate_model.cpp 
+	surrogate_model_data.cpp 
+	surrogate_model_tester.cpp
+)
+
+# Create a library target named "surrogateModels"
 add_library(surrogateModels ${src_files})
 
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)	
-	add_definitions(-DOPENMP_SUPPORT)
-	target_compile_options(surrogateModels PUBLIC -Wall -Wextra -Wpedantic -O2 -fopenmp -fPIC)
-	
-else()
-	target_compile_options(surrogateModels PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
-		
-endif()
 
+target_compile_options(surrogateModels PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
+		
 
 if(ASSERTS)
   
@@ -20,10 +22,16 @@ endif(ASSERTS)
 
 
 target_link_libraries(surrogateModels correlationFunctions)
-target_link_libraries(surrogateModels auxiliary)
+target_link_libraries(surrogateModels internalOptimizers)
 target_link_libraries(surrogateModels linearAlgebra)
-target_link_libraries(surrogateModels optimizers)
-target_link_libraries(surrogateModels metric)
+
+# Find and link OpenMP if available
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(surrogateModels OpenMP::OpenMP_CXX)
+    target_compile_definitions(surrogateModels PUBLIC OPENMP_SUPPORT)
+endif()
+
 
 get_target_property(MAIN_CFLAGS surrogateModels COMPILE_OPTIONS)
 

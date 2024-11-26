@@ -1,36 +1,12 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
-
 #include "./INCLUDE/optimization.hpp"
+#ifdef OPENMP_SUPPORT
+#include <omp.h>
+#endif
+
+
+#include <cassert>
+
+namespace Rodop{
 
 void Optimizer::setName(std::string problemName){
 	name = problemName;
@@ -55,34 +31,42 @@ void Optimizer::setMaximumNumberOfIterationsLowFidelity(unsigned int maxIteratio
 void Optimizer::setMaximumNumberOfInnerIterations(unsigned int maxIterations){
 
 	iterMaxAcquisitionFunction = maxIterations;
+	printInfoToLog("NUmber of inner iterations is set to = " + std::to_string(iterMaxAcquisitionFunction));
 
 }
 
 
 void Optimizer::setFileNameDesignVector(std::string filename){
 
-	assert(!filename.empty());
+	if (filename.empty() || filename.find_first_not_of(' ') == std::string::npos) {
+		throw std::invalid_argument("Filename cannot be empty or just whitespace.");
+	}
 	designVectorFileName = filename;
 
 }
 
 
-void Optimizer::setBoxConstraints(Bounds boxConstraints){
-
+void Optimizer::setBoxConstraints(const Bounds& boxConstraints) {
 	lowerBounds = boxConstraints.getLowerBounds();
 	upperBounds = boxConstraints.getUpperBounds();
 
+	if (lowerBounds.getSize() != upperBounds.getSize()) {
+		throw std::invalid_argument("Lower and upper bounds must have the same size.");
+	}
 
-	assert(ifObjectFunctionIsSpecied);
+	for (unsigned int i = 0; i < lowerBounds.getSize() ; ++i) {
+		if (lowerBounds(i) > upperBounds(i)) {
+			throw std::invalid_argument("Each lower bound must be less than or equal to the corresponding upper bound.");
+		}
+	}
+
+	assert(ifObjectFunctionIsSpecied && "Objective function must be specified before setting box constraints.");
 	objFun.setParameterBounds(boxConstraints);
 
-	if(isConstrained()){
-
-		for (auto it = constraintFunctions.begin(); it != constraintFunctions.end(); it++){
-
-			it->setParameterBounds(boxConstraints);
+	if (isConstrained()) {
+		for (auto& constraintFunction : constraintFunctions) {
+			constraintFunction.setParameterBounds(boxConstraints);
 		}
-
 	}
 
 	globalOptimalDesign.setBoxConstraints(boxConstraints);
@@ -90,28 +74,36 @@ void Optimizer::setBoxConstraints(Bounds boxConstraints){
 }
 
 
-void Optimizer::setDisplayOn(void){
-	output.ifScreenDisplay = true;
-}
-void Optimizer::setDisplayOff(void){
-	output.ifScreenDisplay = false;
+void Optimizer::setUseTangentsOn(void){
+	ifTangentsAreUsed = true;
 }
 
+#ifdef OPENMP_SUPPORT
+void Optimizer::setNumberOfThreads(unsigned int n) {
 
-void Optimizer::setNumberOfThreads(unsigned int n){
+	if (n == 0) {
+		printErrorToLog("Invalid number of threads: 0");
+		throw std::invalid_argument("Number of threads must be greater than 0.");
+	}
+
 	numberOfThreads = n;
+	printInfoToLog("Number of threads set to: " + std::to_string(n));
+
 }
+
+#endif
 
 void Optimizer::setDimension(unsigned int dim){
 
 	dimension = dim;
-	lowerBounds.zeros(dimension);
-	upperBounds.zeros(dimension);
+	lowerBounds.resize(dimension);
+	upperBounds.resize(dimension);
 	initializeBoundsForAcquisitionFunctionMaximization();
 	iterMaxAcquisitionFunction = dimension*10000;
 
 	globalOptimalDesign.setDimension(dim);
 	currentBestDesign.setDimension(dim);
+	history.setDimension(dim);
 
 }
 
@@ -130,4 +122,8 @@ void Optimizer::setAPIUseOn(void){
 	ifAPIisUsed = true;
 }
 
+void Optimizer::setParameterNames(std::vector<std::string> names) {
+	history.setParameterNames(names);
+}
 
+} /* Namespace Rodop */

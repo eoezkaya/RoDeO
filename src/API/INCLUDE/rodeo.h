@@ -2,6 +2,10 @@
 #include<vector>
 #include "../../Optimizers/INCLUDE/optimization.hpp"
 
+
+namespace Rodop{
+
+
 typedef double (*objectiveFunctionPtrType)(const double *);
 
 struct ParsedConstraintExpression {
@@ -9,6 +13,8 @@ struct ParsedConstraintExpression {
     string inequality;
     double value;
 };
+
+ParsedConstraintExpression parseExpression(const std::string& input);
 
 class RobustDesignOptimizer{
 
@@ -34,16 +40,19 @@ private:
 	vector<objectiveFunctionPtrType> constraintFunctionPtr;
 
 	mat samplesInput;
-	string name;
-	string DoEType = "random";
+
 	string cwd;
+	string DoEType = "random";
+	string name;
 
 
 	void performDoE(void);
 	void performDoEForConstraints(void);
 	void checkOptimizationSettings();
+	void generateDoESamplesInput();
 
 public:
+
 
 
 	unsigned int numberOfConstraints = 0;
@@ -57,9 +66,9 @@ public:
 
 	void run(void);
 	void setDimension(unsigned int dim);
-	void setName(const string nameInput);
 	void setCurrentWorkingDirectory(string dir);
 	void setDoEStrategy(const std::string& input);
+	void setName(const std::string& nameInput);
 	void setBoxConstraints(double *lb, double *ub);
 	void setObjectiveFunction(ObjectiveFunctionPtr, std::string name, std::string filename);
 	void addConstraint(ObjectiveFunctionPtr, std::string, std::string);
@@ -70,3 +79,7 @@ public:
 
 
 };
+
+
+} /* Namespace Rodop */
+

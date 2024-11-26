@@ -1,41 +1,12 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDEO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
-
 #include "./INCLUDE/surrogate_model_data.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/print.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
+#include "./INCLUDE/model_logger.hpp"
+#include <vector>
+#include <random>
+#include <algorithm>
+#include <cassert>
 
 
+namespace Rodop{
 
 SurrogateModelData::SurrogateModelData(){}
 
@@ -60,29 +31,24 @@ void SurrogateModelData::reset(void){
 }
 
 unsigned int SurrogateModelData::getNumberOfSamples(void) const{
-
-
 	return numberOfSamples;
+}
+unsigned int SurrogateModelData::getNumberOfSamplesValidation(void) const{
+	return numberOfValidationSamples;
 }
 
 unsigned int SurrogateModelData::getNumberOfSamplesTest(void) const{
-
-
 	return numberOfTestSamples;
 }
 
 
 unsigned int SurrogateModelData::getDimension(void) const{
-
-
 	return dimension;
 }
 
 
 void SurrogateModelData::setDimension(unsigned int value){
-
 	dimension = value;
-
 }
 
 
@@ -94,13 +60,6 @@ mat SurrogateModelData::getRawData(void) const{
 	return rawData;
 }
 
-
-void SurrogateModelData::setDisplayOn(void){
-	output.ifScreenDisplay = true;
-}
-void SurrogateModelData::setDisplayOff(void){
-	output.ifScreenDisplay = false;
-}
 
 void SurrogateModelData::setGradientsOn(void){
 	ifDataHasGradients = true;
@@ -119,36 +78,79 @@ void SurrogateModelData::setDirectionalDerivativesOff(void){
 }
 
 
+std::vector<int> SurrogateModelData::generateRandomIndicesForValidationData(int N, double ratio) const {
+	// Calculate k based on the ratio
+	int k = static_cast<int>(ratio * N);
+
+	// Ensure k is within the valid range
+	if (k > N) k = N;
+	if (k < 0) k = 0;
+
+	// Create a vector to store the indices
+	std::vector<int> indices(N);
+	std::vector<int> selectedIndices;
+
+	// Initialize the vector with sequential indices from 0 to N-1
+	for (int i = 0; i < N; ++i) {
+		indices[i] = i;
+	}
+
+	// Use random device and Mersenne Twister for randomness
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	// Shuffle the indices
+	std::shuffle(indices.begin(), indices.end(), gen);
+
+	// Select the first k indices from the shuffled vector
+	selectedIndices.insert(selectedIndices.end(), indices.begin(), indices.begin() + k);
+
+	return selectedIndices;
+}
+
+
+
+
 void SurrogateModelData::readData(string inputFilename){
 
-	assert(isNotEmpty(inputFilename));
+	assert(!inputFilename.empty());
 	assert(!(ifDataHasDirectionalDerivatives == true && ifDataHasGradients == true));
 
-	output.printMessage("Loading data from the file: " + inputFilename);
+	printMessage("Loading data from the file: " + inputFilename + "\n");
 
-	bool status = rawData.load(inputFilename.c_str(), csv_ascii);
+	rawData.readFromCSV(inputFilename);
+	rawDataWork = rawData;
 
-	if(status == true)
-	{
-		output.printMessage("Data input is done...");
-
-	}
-	else
-	{
-		output.printErrorMessageAndAbort("Problem with data the input (cvs ascii format), cannot read: " + inputFilename);
-
+	if(ifDisplay){
+		rawData.print("rawData");
 	}
 
-	numberOfSamples = rawData.n_rows;
-	output.printMessage("Number of samples = ", numberOfSamples);
-	//	output.printMessage("Raw data = ", rawData);
+	ModelLogger::getInstance().log(INFO, "Ratio for validation samples: " + std::to_string(ratioValidationData) );
+
+	if(ratioValidationData>0){
+		numberOfSamples = rawData.getNRows();
+		indicesForValidationData = generateRandomIndicesForValidationData(numberOfSamples, ratioValidationData);
+
+		for (int idx : indicesForValidationData) {
+			vec validationSample = rawData.getRow(idx);
+			rawDataValidation.addRow(validationSample,-1);
+		}
+
+		numberOfValidationSamples = indicesForValidationData.size();
+		rawDataWork.deleteRows(indicesForValidationData);
+	}
+
+	numberOfSamples = rawDataWork.getNRows();
+	ModelLogger::getInstance().log(INFO, "Number of training samples: " + std::to_string(numberOfSamples) );
+	ModelLogger::getInstance().log(INFO, "Number of validation samples: " + std::to_string(numberOfValidationSamples) );
+
 
 	if(ifDataHasGradients){
-		output.printMessage("Data has gradients...");
+		printMessage("Data has gradients... \n");
 	}
 
 	if(ifDataHasDirectionalDerivatives){
-		output.printMessage("Data has tangents...");
+		printMessage("Data has tangents... \n");
 	}
 
 	assignDimensionFromData();
@@ -167,101 +169,178 @@ void SurrogateModelData::readData(string inputFilename){
 
 }
 
-void SurrogateModelData::readDataTest(string inputFilename){
 
-	assert(isNotEmpty(inputFilename));
-	assert(dimension>0);
+void SurrogateModelData::revertBackToFullData() {
 
-	output.printMessage("Loading test data from the file: " + inputFilename);
+	ModelLogger::getInstance().log(INFO, "SurrogateModelData: Reverting back to use full data...");
 
-	bool status = XrawTest.load(inputFilename.c_str(), csv_ascii);
-	if(status == true)
-	{
-		output.printMessage("Data input is done...");
+	numberOfValidationSamples = 0;
+	rawDataWork = rawData;
+	numberOfSamples = rawData.getNRows();
+
+	ModelLogger::getInstance().log(INFO, "Number of training samples: " + std::to_string(numberOfSamples) );
+	ModelLogger::getInstance().log(INFO, "Number of validation samples: " + std::to_string(numberOfValidationSamples) );
+
+	yValidation.reset();
+	XValidation.reset();
+	XrawValidation.reset();
+
+
+	assignSampleInputMatrix();
+	assignSampleOutputVector();
+
+	assignGradientMatrix();
+
+	assignDirectionalDerivativesVector();
+	assignDifferentiationDirectionMatrix();
+
+	normalize();
+
+}
+
+
+void SurrogateModelData::readDataTest(string inputFilename) {
+
+	// Check if the input filename is not empty
+	if (inputFilename.empty()) {
+		throw std::invalid_argument("Input filename is empty.");
 	}
-	else
-	{
-		output.printErrorMessageAndAbort("Problem with data the input (cvs ascii format), cannot read: " + inputFilename);
+
+	// Check if the dimension is greater than zero
+	if (dimension == 0) {
+		throw std::runtime_error("Invalid dimension: Dimension must be greater than zero.");
 	}
 
-	numberOfTestSamples = XrawTest.n_rows;
-	output.printMessage("Number of test samples = ", numberOfTestSamples);
+	printMessage("Loading test data from the file: " + inputFilename + "\n");
 
-	if(XrawTest.n_cols == dimension +1){
+	// Read data from the CSV file
+	XrawTest.readFromCSV(inputFilename);
 
-		yTest = XrawTest.col(dimension);
-		XTest = XrawTest.submat(0,0,numberOfTestSamples-1, dimension-1);
+	// Get the number of test samples and print it
+	numberOfTestSamples = XrawTest.getNRows();
+	//   output.printMessage("Number of test samples = ", numberOfTestSamples);
 
+	// Check the number of columns in the test data
+	if (XrawTest.getNCols() == dimension + 1) {
+		// Data contains function values
+		yTest = XrawTest.getCol(dimension);  // Extract the last column for function values
+		XTest = XrawTest.submat(0,numberOfTestSamples - 1,  0, dimension - 1);  // Extract input data
 		ifTestDataHasFunctionValues = true;
-	}
-
-	if(XrawTest.n_cols == dimension){
+	} else if (XrawTest.getNCols() == dimension) {
+		// Data contains only input values
 		XTest = XrawTest;
+	} else {
+		// Invalid number of columns
+		throw std::runtime_error("Problem with test data (CSV format): incorrect number of columns in file: " + inputFilename);
 	}
-	if(XrawTest.n_cols < dimension || XrawTest.n_cols> dimension+1){
 
-		output.printErrorMessageAndAbort("Problem with data the test data (cvs ascii format), too many or too few columns in file: " + inputFilename);
-	}
-
-
+	// Mark test data as read
 	ifTestDataIsRead = true;
 }
 
 
 
-void SurrogateModelData::assignDimensionFromData(void){
+void SurrogateModelData::assignDimensionFromData(void) {
 
+	if(rawDataWork.isEmpty()){
+		throw std::runtime_error("Error: RawDataWork is empty (assign dimension from data).");
+	}
 	unsigned int dimensionOfTrainingData;
 
-	if(ifDataHasGradients){
-		dimensionOfTrainingData = (rawData.n_cols-1)/2;
-	}
-	else if(ifDataHasDirectionalDerivatives){
-		dimensionOfTrainingData =  (rawData.n_cols-2)/2;
-	}
-	else{
-		dimensionOfTrainingData =  rawData.n_cols-1;
-	}
-
-	if(dimension > 0 && dimensionOfTrainingData!= dimension){
-		output.printErrorMessageAndAbort("Dimension of the training data does not match with the specified dimension!");
+	// Determine the dimension based on the type of data
+	if (ifDataHasGradients) {
+		dimensionOfTrainingData = (rawDataWork.getNCols() - 1) / 2;
+	} else if (ifDataHasDirectionalDerivatives) {
+		dimensionOfTrainingData = (rawDataWork.getNCols() - 2) / 2;
+	} else {
+		dimensionOfTrainingData = rawDataWork.getNCols() - 1;
 	}
 
+	// Check if the dimension is already set and if it matches the derived dimension
+	if (dimension > 0 && dimensionOfTrainingData != dimension) {
+		std::cerr << "dimension = " <<dimension<<"\n";
+		std::cerr << "dimension of the training data = " << dimensionOfTrainingData << "\n";
+		throw std::runtime_error("Error: Dimension of the training data does not match the specified dimension (assign dimension from data).");
+	}
+
+	// Assign the calculated dimension to the member variable
 	dimension = dimensionOfTrainingData;
-	output.printMessage("Dimension of the problem is identified as ", dimension);
 
+	// Print a message indicating the identified dimension
+	printMessage("Dimension of the problem is identified as " + std::to_string(dimension));
+}
+
+void SurrogateModelData::checkDimensionAndNumberOfSamples() {
+	if (dimension == 0) {
+		throw std::runtime_error("Dimension must be greater than 0.");
+	}
+	if (numberOfSamples == 0) {
+		throw std::runtime_error("Number of samples must be greater than 0.");
+	}
 }
 
 void SurrogateModelData::assignSampleInputMatrix(void){
 
-	assert(dimension>0);
-	assert(numberOfSamples>0);
+	ModelLogger::getInstance().log(INFO,"SurrogateModelData: assign sample input matrix...");
+	checkDimensionAndNumberOfSamples();
 
-	X = rawData.submat(0,0,numberOfSamples-1, dimension-1);
+	X = rawDataWork.submat(0,numberOfSamples-1,0, dimension-1);
+
+	if(numberOfValidationSamples>0){
+		ModelLogger::getInstance().log(INFO,"SurrogateModelData: assign sample input matrix for validation samples...");
+
+		XValidation = rawDataValidation.submat(0, numberOfValidationSamples-1, 0, dimension-1);
+
+
+		if (XValidation.getNRows() != numberOfValidationSamples) {
+			throw std::runtime_error("The number of rows in sample input matrix does not match number of validation samples.");
+		}
+		if (XValidation.getNCols() != dimension) {
+			throw std::runtime_error("The number of columns in sample input matrix does not match dimension.");
+		}
+		XrawValidation = XValidation;
+	}
+
+	/* we save the raw data */
 	Xraw = X;
+
+
+	// Ensure the integrity of the sample input matrix
+	if (X.getNRows() != numberOfSamples) {
+		throw std::runtime_error("The number of rows in sample input matrix does not match numberOfSamples.");
+	}
+	if (X.getNCols() != dimension) {
+		throw std::runtime_error("The number of columns in sample input matrix does not match dimension.");
+	}
 
 }
 
 void SurrogateModelData::assignSampleOutputVector(void){
+	ModelLogger::getInstance().log(INFO,"SurrogateModelData: assign sample output vector...");
+	checkDimensionAndNumberOfSamples();
+	y = rawDataWork.getCol(dimension);
 
-	assert(dimension>0);
-	assert(numberOfSamples>0);
+	if(numberOfValidationSamples>0){
+		ModelLogger::getInstance().log(INFO,"SurrogateModelData: assign sample output vector for validation samples...");
+		yValidation = rawDataValidation.getCol(dimension);
+	}
 
-	y = rawData.col(dimension);
 
 }
 
 void SurrogateModelData::assignGradientMatrix(void){
 
-	assert(dimension>0);
-	assert(numberOfSamples>0);
+	checkDimensionAndNumberOfSamples();
 
 
 	if(ifDataHasGradients){
 
-		assert(rawData.n_cols > dimension+1);
+		if(rawDataWork.getNCols() <= dimension+1){
+			throw std::runtime_error("The number of columns does not match when data has gradients.");
 
-		gradient = rawData.submat(0, dimension+1, numberOfSamples - 1, 2*dimension);
+		}
+
+		gradient = rawDataWork.submat(0, numberOfSamples - 1, dimension+1, 2*dimension);
 
 	}
 
@@ -274,18 +353,17 @@ void SurrogateModelData::assignDirectionalDerivativesVector(void){
 	assert(dimension>0);
 
 	if(ifDataHasDirectionalDerivatives){
-		directionalDerivatives = rawData.col(dimension+1);
+		directionalDerivatives = rawDataWork.getCol(dimension+1);
 	}
 }
 
 
 void SurrogateModelData::assignDifferentiationDirectionMatrix(void){
 
-	assert(dimension>0);
-	assert(numberOfSamples>0);
+	checkDimensionAndNumberOfSamples();
 
 	if(ifDataHasDirectionalDerivatives){
-		differentiationDirections = rawData.submat(0, dimension+2,numberOfSamples-1,  2*dimension+1);
+		differentiationDirections = rawDataWork.submat(0, numberOfSamples-1, dimension+2, 2*dimension+1);
 	}
 }
 
@@ -308,28 +386,35 @@ void SurrogateModelData::normalize(void){
 
 void SurrogateModelData::normalizeSampleInputMatrix(void){
 
-	assert(X.n_rows ==  numberOfSamples);
-	assert(X.n_cols ==  dimension);
-	assert(boxConstraints.getDimension() == dimension);
-	assert(boxConstraints.areBoundsSet());
+	ModelLogger::getInstance().log(INFO,"SurrogateModelData: normalize sample input matrix...");
+	if (X.getNRows() != numberOfSamples) {
+		throw std::runtime_error("Mismatch between the number of rows in X and the number of samples.");
+	}
+	if (X.getNCols() != dimension) {
+		throw std::runtime_error("Mismatch between the number of columns in X and the expected dimension.");
+	}
+	if (boxConstraints.getDimension() != dimension) {
+		throw std::runtime_error("Box constraints' dimension does not match the input matrix dimension.");
+	}
+	if (!boxConstraints.areBoundsSet()) {
+		throw std::runtime_error("Box constraints are not set.");
+	}
 
-	output.printMessage("Normalizing and scaling the sample input matrix...");
 
-	mat XNormalized = X;
 	vec xmin = boxConstraints.getLowerBounds();
 	vec xmax = boxConstraints.getUpperBounds();
 	vec deltax = xmax - xmin;
 
-	for(unsigned int i=0; i<numberOfSamples;i++){
-		for(unsigned int j=0; j<dimension;j++){
-
-			XNormalized(i,j) = (X(i,j) - xmin(j))/deltax(j);
-		}
+	if (deltax.has_zeros()) {
+		throw std::runtime_error("Zero range found in box constraints, leading to potential division by zero.");
 	}
 
-	X = (1.0/dimension)*XNormalized;
+	X = X.normalizeMatrix(xmin,xmax);
 
-
+	if(numberOfValidationSamples>0){
+		ModelLogger::getInstance().log(INFO,"SurrogateModelData: normalize sample input matrix for validation samples...");
+		XValidation = XValidation.normalizeMatrix(xmin,xmax);
+	}
 
 	ifDataIsNormalized = true;
 }
@@ -337,25 +422,18 @@ void SurrogateModelData::normalizeSampleInputMatrix(void){
 
 void SurrogateModelData::normalizeSampleInputMatrixTest(void){
 
-	assert(boxConstraints.areBoundsSet());
+	if (!boxConstraints.areBoundsSet()) {
+		throw std::runtime_error("Box constraints are not set.");
+	}
 
-
-	output.printMessage("Normalizing and scaling the sample input matrix for test...");
-
-	mat XNormalized = XTest;
 	vec xmin = boxConstraints.getLowerBounds();
 	vec xmax = boxConstraints.getUpperBounds();
 	vec deltax = xmax - xmin;
-
-
-	for(unsigned int i=0; i<numberOfTestSamples;i++){
-		for(unsigned int j=0; j<dimension;j++){
-			XNormalized(i,j) = (XTest(i,j) - xmin(j))/deltax(j);
-		}
+	if (deltax.has_zeros()) {
+		throw std::runtime_error("Zero range found in box constraints, leading to potential division by zero.");
 	}
 
-	XTest = (1.0/dimension)*XNormalized;
-
+	XTest = XTest.normalizeMatrix(xmin,xmax);
 
 }
 
@@ -368,9 +446,10 @@ void SurrogateModelData::normalizeDerivativesMatrix(void){
 
 		vec lb = boxConstraints.getLowerBounds();
 		vec ub = boxConstraints.getUpperBounds();
+		/* This factor is assumed to be same for all variables */
 		double scalingFactor = (ub(0) - lb(0))*dimension;
 		assert(scalingFactor > 0.0);
-		directionalDerivatives = scalingFactor * directionalDerivatives;
+		directionalDerivatives =  directionalDerivatives*scalingFactor;
 
 	}
 
@@ -382,7 +461,7 @@ void SurrogateModelData::normalizeGradientMatrix(void){
 	assert(ifDataIsRead);
 	assert(boxConstraints.areBoundsSet());
 	assert(dimension>0);
-	assert(gradient.n_cols == dimension);
+	assert(gradient.getNCols() == dimension);
 
 
 	gradientRaw = gradient;
@@ -393,22 +472,23 @@ void SurrogateModelData::normalizeGradientMatrix(void){
 		vec ub = boxConstraints.getUpperBounds();
 		double scalingFactor = (ub(i) - lb(i))*dimension;
 		assert(scalingFactor > 0.0);
-		gradient.col(i) = scalingFactor * gradient.col(i);
+		vec scaledGradient = gradient.getCol(i)*scalingFactor;
+		gradient.setCol(scaledGradient,i);
 
 	}
 
 
 }
 
-rowvec SurrogateModelData::getRowGradient(unsigned int index) const{
+vec SurrogateModelData::getRowGradient(unsigned int index) const{
 
-	return gradient.row(index);
+	return gradient.getRow(index);
 
 }
 
-rowvec SurrogateModelData::getRowGradientRaw(unsigned int index) const{
+vec SurrogateModelData::getRowGradientRaw(unsigned int index) const{
 
-	return gradientRaw.row(index);
+	return gradientRaw.getRow(index);
 
 }
 
@@ -420,52 +500,52 @@ vec SurrogateModelData::getDirectionalDerivativesVector(void) const{
 }
 
 
-rowvec SurrogateModelData::getRowDifferentiationDirection(unsigned int index) const{
+vec SurrogateModelData::getRowDifferentiationDirection(unsigned int index) const{
 
-	return differentiationDirections.row(index);
-
-}
-
-
-rowvec SurrogateModelData::getRowRawData(unsigned int index) const{
-
-	return rawData.row(index);
+	return differentiationDirections.getRow(index);
 
 }
 
 
+vec SurrogateModelData::getRowRawData(unsigned int index) const{
 
-rowvec SurrogateModelData::getRowX(unsigned int index) const{
-
-	assert(index < X.n_rows);
-
-	return X.row(index);
-
-}
-
-rowvec SurrogateModelData::getRowXTest(unsigned int index) const{
-
-	assert(index < XTest.n_rows);
-
-	return XTest.row(index);
+	return rawData.getRow(index);
 
 }
 
 
 
+vec SurrogateModelData::getRowX(unsigned int index) const{
 
-rowvec SurrogateModelData::getRowXRaw(unsigned int index) const{
+	assert(index < X.getNRows());
 
-	assert(index < Xraw.n_rows);
+	return X.getRow(index);
 
-	return Xraw.row(index);
 }
 
-rowvec SurrogateModelData::getRowXRawTest(unsigned int index) const{
+vec SurrogateModelData::getRowXTest(unsigned int index) const{
 
-	assert(index < XrawTest.n_rows);
+	assert(index < XTest.getNRows());
 
-	return XrawTest.row(index);
+	return XTest.getRow(index);
+
+}
+
+
+
+
+vec SurrogateModelData::getRowXRaw(unsigned int index) const{
+
+	assert(index < Xraw.getNRows());
+
+	return Xraw.getRow(index);
+}
+
+vec SurrogateModelData::getRowXRawTest(unsigned int index) const{
+
+	assert(index < XrawTest.getNRows());
+
+	return XrawTest.getRow(index);
 }
 
 
@@ -475,17 +555,33 @@ vec SurrogateModelData::getOutputVector(void) const{
 
 }
 
+vec SurrogateModelData::getOutputVectorValidation(void) const{
+
+	return yValidation;
+
+}
+
+
 vec SurrogateModelData::getOutputVectorTest(void) const{
 
 	assert(ifTestDataIsRead);
-	return XrawTest.col(dimension);
+	return XrawTest.getCol(dimension);
+
+}
+
+
+void SurrogateModelData::setValidationRatio(double val){
+	if(val<0.0 || val>1.0){
+		throw std::invalid_argument("SurrogateModelData: Ratio of validation samples must be between 0 and 1.");
+	}
+	ratioValidationData = val;
 
 }
 
 
 void SurrogateModelData::setOutputVector(vec yIn){
 
-	assert(yIn.size() == numberOfSamples);
+	assert(yIn.getSize() == numberOfSamples);
 	y = yIn;
 
 
@@ -500,12 +596,19 @@ mat SurrogateModelData::getInputMatrixTest(void) const{
 	return XTest;
 }
 
+mat SurrogateModelData::getInputMatrixValidation(void) const{
+	return XValidation;
+}
+
+
+
+
 double SurrogateModelData::getMinimumOutputVector(void) const{
-	return min(y);
+	return y.findMin();
 }
 
 double SurrogateModelData::getMaximumOutputVector(void) const{
-	return max(y);
+	return y.findMax();
 }
 
 mat SurrogateModelData::getGradientMatrix(void) const{
@@ -533,11 +636,33 @@ bool SurrogateModelData::isDataNormalized(void) const{
 }
 
 
+void SurrogateModelData::printHere(const std::string& file , int line) {
+	std::cout << file << " " << line << "\n";
+}
+
+
+void SurrogateModelData::printValidationSampleIndices(void) const{
+
+	std::cout<<"Indices of validation samples = \n";
+	for (int val : indicesForValidationData) {
+		std::cout << val << " ";
+	}
+	std::cout << std::endl;
+
+}
+
 void SurrogateModelData::print(void) const{
 
 	rawData.print("raw data");
 	X.print("X");
-	trans(y).print("sample output vector");
+	y.print("sample output vector");
+
+
+	if(numberOfValidationSamples>0){
+		printValidationSampleIndices();
+		XValidation.print("X validation");
+		yValidation.print("Output vector for validation samples");
+	}
 
 
 	if(ifDataHasGradients){
@@ -548,7 +673,7 @@ void SurrogateModelData::print(void) const{
 
 	if(ifDataHasDirectionalDerivatives){
 
-		trans(directionalDerivatives).print("directional derivatives");
+		directionalDerivatives.print("directional derivatives");
 		differentiationDirections.print("differentiation directions");
 
 	}
@@ -562,93 +687,12 @@ void SurrogateModelData::print(void) const{
 
 }
 
-
-void SurrogateModelData::removeVeryCloseSamples(const Design& globalOptimalDesign, const std::vector<rowvec> samples){
-
-	assert(!samples.empty());
-	double tolerance = toleranceFactorForSearchingGlobalDesign * (1.0/dimension);
-
-	int globalOptimalDesignIndex = findIndexOfRow(globalOptimalDesign.designParametersNormalized,X, tolerance);
-	std::vector<unsigned int> indices;
-
-	for (auto it = begin (samples); it != end (samples); ++it) {
-
-		int indx = findIndexOfRow(*it,X, tolerance);
-
-		if(indx == -1) {
-
-			std::cout<<"Could not find the point\n";
-			it->print();
-
-			std::cout<<"In the data\n";
-			X.print();
-		}
-
-		if(indx!=globalOptimalDesignIndex) indices.push_back(indx);
-
-
-	}
-
-	mat rawDataToBeReduced = rawData;
-
-	removeSomeRows(rawDataToBeReduced,  indices);
-	rawDataToBeReduced.save(filenameFromWhichTrainingDataIsRead, csv_ascii);
-
-	readData(filenameFromWhichTrainingDataIsRead);
-
-
+void SurrogateModelData::printMessage(string msg){
+	if(ifDisplay) std::cout<<msg<<"\n";
 }
 
 
 
-void SurrogateModelData::removeVeryCloseSamples(const Design& globalOptimalDesign){
-
-	assert(ifDataIsRead);
-	assert(globalOptimalDesign.designParametersNormalized.size() > 0);
-	assert(X.n_rows > 0);
-
-	std::vector<unsigned int> indicesOfSamplesToRemove;
-
-	double tolerance = toleranceFactorForSearchingGlobalDesign * (1.0/dimension);
-	int globalOptimalDesignIndex = findIndexOfRow(globalOptimalDesign.designParametersNormalized,X, tolerance);
-
-	assert(globalOptimalDesignIndex != -1);
-
-	tolerance = toleranceFactorForTraininingDataReduction*(1.0/dimension);
-
-	for(int i=0; i<int(X.n_rows-1); i++){
-
-		rowvec sampleToCheck = X.row(i);
-		mat otherSamples = X.submat(i+1,0,X.n_rows -1, X.n_cols -1);
-
-		if(checkifTooCLose(sampleToCheck,otherSamples , tolerance )){
-
-			if(i != globalOptimalDesignIndex){
-
-				indicesOfSamplesToRemove.push_back(i);
-			}
-			else{
-
-				int indx = returnIndexOfTheRowClosestTo(sampleToCheck, otherSamples, tolerance);
-				indicesOfSamplesToRemove.push_back(indx);
-
-			}
-
-		}
-	}
-
-	mat rawDataToBeReduced = rawData;
-
-	//	printList(indicesOfSamplesToRemove,"indicesOfSamplesToRemove");
-
-	removeSomeRows(rawDataToBeReduced, indicesOfSamplesToRemove);
-	rawDataToBeReduced.save(filenameFromWhichTrainingDataIsRead, csv_ascii);
-
-	readData(filenameFromWhichTrainingDataIsRead);
-
-}
-
-
-
+} /*Namespace Rodop */
 
 

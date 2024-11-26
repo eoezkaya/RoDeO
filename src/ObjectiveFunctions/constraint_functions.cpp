@@ -5,53 +5,67 @@
 #include <iostream>
 #include <unistd.h>
 #include <cassert>
+#include <algorithm>  // For std::remove_if
 
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/print.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
-#include "../INCLUDE/Rodeo_globals.hpp"
-#include "../TestFunctions/INCLUDE/test_functions.hpp"
-#include "../Optimizers/INCLUDE/optimization.hpp"
+
 #include "../Bounds/INCLUDE/bounds.hpp"
-
-
-
 #include "./INCLUDE/constraint_functions.hpp"
-#define ARMA_DONT_PRINT_ERRORS
-#include <armadillo>
-
-using namespace arma;
+#include "./INCLUDE/objective_function_logger.hpp"
 
 
-void ConstraintDefinition::setDefinition(std::string definition){
+namespace Rodop{
 
-	assert(!definition.empty());
-	size_t found  = definition.find(">");
-	size_t found2 = definition.find("<");
-	size_t place;
-	std::string nameBuf,typeBuf, valueBuf;
+std::string ConstraintDefinition::removeSpacesFromString(std::string inputString) const{
 
-	if (found!= std::string::npos){
-		place = found;
-	}
-	else if (found2 != std::string::npos){
-		place = found2;
-	}
-	else{
-		std::cout<<"ERROR: Something is wrong with the constraint definition!\n";
-		abort();
-	}
-	nameBuf.assign(definition,0,place);
-	nameBuf = removeSpacesFromString(nameBuf);
-
-	typeBuf.assign(definition,place,1);
-	valueBuf.assign(definition,place+1,definition.length() - nameBuf.length() - typeBuf.length());
-	valueBuf = removeSpacesFromString(valueBuf);
-
-	constraintName = nameBuf;
-	inequalityType = typeBuf;
-	value = stod(valueBuf);
+	inputString.erase(std::remove_if(inputString.begin(), inputString.end(), ::isspace), inputString.end());
+	return inputString;
 }
+
+
+
+
+void ConstraintDefinition::setDefinition(const std::string& definition) {
+    // Check if the input definition is empty
+    if (definition.empty()) {
+        throw std::invalid_argument("Constraint definition is empty.");
+    }
+
+    // Find the positions of '>' or '<' in the definition string
+    size_t found = definition.find(">");
+    size_t found2 = definition.find("<");
+    size_t place;
+    std::string nameBuf, typeBuf, valueBuf;
+
+    // Determine the inequality operator and position
+    if (found != std::string::npos) {
+        place = found;
+    } else if (found2 != std::string::npos) {
+        place = found2;
+    } else {
+        throw std::invalid_argument("Invalid constraint definition format. Must contain '>' or '<'.");
+    }
+
+    // Extract the name, inequality type, and value from the definition string
+    nameBuf.assign(definition, 0, place);
+    nameBuf = removeSpacesFromString(nameBuf); // Remove spaces from the name
+
+    typeBuf.assign(definition, place, 1); // The inequality symbol (either '>' or '<')
+
+    valueBuf.assign(definition, place + 1, definition.length() - nameBuf.length() - typeBuf.length());
+    valueBuf = removeSpacesFromString(valueBuf); // Remove spaces from the value
+
+    // Check if valueBuf can be converted to a valid double
+    try {
+        value = std::stod(valueBuf);
+    } catch (const std::invalid_argument& e) {
+        throw std::invalid_argument("Invalid numerical value in constraint definition.");
+    }
+
+    // Set class members
+    constraintName = nameBuf;
+    inequalityType = typeBuf;
+}
+
 
 void ConstraintDefinition::print(void) const{
 
@@ -65,6 +79,13 @@ void ConstraintDefinition::print(void) const{
 }
 
 
+std::string ConstraintDefinition::toString() const {
+    std::ostringstream oss;
+    oss << "Constraint ID = " << ID << "\n";
+    oss << "Constraint definition = " << constraintName << " " << inequalityType << " " << value << "\n";
+    return oss.str();
+}
+
 
 ConstraintFunction::ConstraintFunction(){}
 
@@ -75,9 +96,6 @@ void ConstraintFunction::setConstraintDefinition(ConstraintDefinition definition
 
 }
 
-
-
-
 void ConstraintFunction::setID(int givenID){
 	definitionConstraint.ID = givenID;
 }
@@ -86,12 +104,13 @@ int ConstraintFunction::getID(void) const{
 	return definitionConstraint.ID;
 }
 
-void ConstraintFunction::setInequalityType(std::string type){
-
-	assert(type.compare(">") == 0  || type.compare("<") == 0);
-	definitionConstraint.inequalityType = type;
-
+void ConstraintFunction::setInequalityType(const std::string &type) {
+    if (type != ">" && type != "<") {
+        throw std::invalid_argument("Invalid inequality type. Expected '>' or '<'.");
+    }
+    definitionConstraint.inequalityType = type;
 }
+
 std::string ConstraintFunction::getInequalityType(void) const{
 	return definitionConstraint.inequalityType;
 }
@@ -133,82 +152,115 @@ bool ConstraintFunction::checkFeasibility(double valueIn) const{
 
 void ConstraintFunction::readOutputDesign(Design &d) const{
 
-	rowvec functionalValue(1);
+	vec functionalValue(1);
 	functionalValue = readOutput(definition.outputFilename, 1);
 
-	assert( int(d.constraintTrueValues.size()) > getID());
+	assert( int(d.constraintTrueValues.getSize()) > getID());
 
 	d.constraintTrueValues(getID()) = functionalValue(0);
 
 }
 
-void ConstraintFunction::evaluateDesign(Design &d){
+void ConstraintFunction::evaluateDesign(Design &d) {
+    try {
+        ObjectiveFunctionLogger::getInstance().log(INFO,"Evaluating the constraint with ID = " + std::to_string(definitionConstraint.ID));
+        // Explicit function evaluation
+        if (ifFunctionExplictlyDefined) {
+            evaluateExplicitFunction(d);
+        }
+        // External objective function evaluation
+        else {
+            validateDesignParameters(d);
+            setEvaluationMode("primal");
+
+            if (!doesObjectiveFunctionPtrExist) {
+                evaluateObjectiveUsingExternalExecutable(d);
+            } else {
+                evaluateObjectiveDirectly(d);
+            }
+        }
+    } catch (const std::exception &e) {
+        throw std::runtime_error("Error in evaluating the constraint function");
+    }
+}
+
+void ConstraintFunction::evaluateExplicitFunction(Design &d) {
+    vec x = d.designParameters;
+
+    // Check if the function pointer is valid
+    if (functionPtr == nullptr) {
+        throw std::invalid_argument("Function pointer for the constraint is null.");
+    }
+
+    // Evaluate the constraint function
+    double functionValue = functionPtr(x.getPointer());
+
+    // Ensure the index is valid before assigning the value
+    validateConstraintID(d);
+    d.constraintTrueValues(getID()) = functionValue;
+}
+
+void ConstraintFunction::validateDesignParameters(const Design &d) const {
+    if (d.designParameters.getSize() != dim) {
+        throw std::invalid_argument("Design parameter size does not match expected dimension.");
+    }
+}
+
+void ConstraintFunction::evaluateObjectiveUsingExternalExecutable(Design &d) {
+    writeDesignVariablesToFile(d);
+
+    // Execute the objective function
+    evaluateObjectiveFunction();
+    ObjectiveFunctionLogger::getInstance().log(INFO,"constraint evaluation is done.");
 
 
-	if(ifFunctionExplictlyDefined){
+    // Read the output and assign the value
+    vec functionalValue = readOutput(definition.outputFilename, 1);
 
-		rowvec x = d.designParameters;
-		double functionValue = functionPtr(x.memptr());
-		printScalar(functionValue);
-		d.constraintTrueValues(getID()) = functionValue;
+    // Ensure the constraint ID is valid
+    validateConstraintID(d);
 
-	}
-	else{
+    d.constraintTrueValues(getID()) = functionalValue(0);
+    ObjectiveFunctionLogger::getInstance().log(INFO,"constraint value = " + std::to_string(functionalValue(0)));
 
+}
 
-		assert(d.designParameters.size() == dim);
-		setEvaluationMode("primal");
+void ConstraintFunction::evaluateObjectiveDirectly(Design &d) {
+    // Directly evaluate the objective function using the design parameters
+    double constraintValue = evaluateObjectiveFunctionDirectly(d.designParameters);
 
-		if(!doesObjectiveFunctionPtrExist){
+    // Ensure the constraint ID is valid
+    validateConstraintID(d);
 
-			writeDesignVariablesToFile(d);
-			evaluateObjectiveFunction();
-			rowvec functionalValue(1);
-			functionalValue = readOutput(definition.outputFilename, 1);
+    d.constraintTrueValues(getID()) = constraintValue;
+}
 
-			assert( int(d.constraintTrueValues.size()) > getID());
-			d.constraintTrueValues(getID()) = functionalValue(0);
-
-
-		}
-		else{
-
-			double constraintValue = evaluateObjectiveFunctionDirectly(d.designParameters);
-			assert( int(d.constraintTrueValues.size()) > getID());
-			d.constraintTrueValues(getID()) = constraintValue;
-
-
-		}
-
-
-
-
-	}
-
-
-
+void ConstraintFunction::validateConstraintID(const Design &d) const {
+    if (getID() >= static_cast<int>(d.constraintTrueValues.getSize())) {
+        throw std::out_of_range("Constraint ID is out of range for constraintTrueValues.");
+    }
 }
 
 void ConstraintFunction::addDesignToData(Design &d){
 
-	assert((isNotEmpty(definition.nameHighFidelityTrainingData)));
+	assert(!definition.nameHighFidelityTrainingData.empty());
 	assert(ifInitialized);
 
 	assert(definitionConstraint.ID >= 0);
 
-	rowvec newsample;
+	vec newsample;
 	newsample = d.constructSampleConstraint(definitionConstraint.ID);
 
-	assert(newsample.size()>0);
+	assert(newsample.getSize()>0);
 	surrogate->addNewSampleToData(newsample);
 
 
 }
 
-double ConstraintFunction::interpolate(rowvec x) const{
+double ConstraintFunction::interpolate(vec x) const{
 	if(ifFunctionExplictlyDefined){
 
-		return functionPtr(x.memptr());
+		return functionPtr(x.getPointer());
 	}
 	else{
 		return surrogate->interpolate(x);
@@ -217,14 +269,14 @@ double ConstraintFunction::interpolate(rowvec x) const{
 }
 
 
-pair<double, double> ConstraintFunction::interpolateWithVariance(rowvec x) const{
+pair<double, double> ConstraintFunction::interpolateWithVariance(vec x) const{
 
 
 	pair<double, double> result;
 
 	if(ifFunctionExplictlyDefined){
 
-		result.first = functionPtr(x.memptr());
+		result.first = functionPtr(x.getPointer());
 		result.second = EPSILON;
 	}
 	else{
@@ -263,6 +315,22 @@ void ConstraintFunction::print(void) const{
 	std::cout<<"\n==========================================================================\n";
 
 }
+
+std::string ConstraintFunction::toString() const {
+    std::ostringstream oss;
+    oss << "\n================= Constraint function definition =========================\n";
+    oss << definitionConstraint.toString();  // Assuming ConstraintDefinition has a toString method
+
+    if (!ifFunctionExplictlyDefined) {
+        oss << definition.toString();  // Assuming ObjectiveFunctionDefinition has a toString method
+    }
+
+    oss << "Number of training iterations for model training = " << numberOfIterationsForSurrogateTraining << "\n";
+    oss << "==========================================================================\n";
+    return oss.str();
+}
+
+
 
 string ConstraintFunction::generateOutputString(void) const{
 
@@ -315,9 +383,12 @@ bool ConstraintFunction::isUserDefinedFunction(void) const{
 }
 
 
-double ConstraintFunction::callUserDefinedFunction(rowvec &x) const{
+double ConstraintFunction::callUserDefinedFunction(vec &x) const{
 
-	return functionPtr(x.memptr());
+	return functionPtr(x.getPointer());
 
 }
+
+}
+
 

@@ -1,57 +1,31 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
-
 #include <cassert>
+#include <algorithm>
+#include <set>
 #include "./INCLUDE/optimization_history.hpp"
-#include "./INCLUDE/design.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/xml_functions.hpp"
-#include "../LinearAlgebra/INCLUDE/matrix_operations.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
+#include "./INCLUDE/optimization_logger.hpp"
+#include "../Design/INCLUDE/design.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix.hpp"
+#include "../LinearAlgebra/INCLUDE/vector.hpp"
 
 
+namespace Rodop{
 
 
-#include <armadillo>
-using namespace arma;
+void OptimizationHistory::addConstraintName(const std::string& name) {
+	// Ensure the constraint name is not empty
+	if (name.empty()) {
+		throw std::invalid_argument("Constraint name cannot be empty.");
+	}
 
+	// Optional: Check for duplicate constraint names
+	if (std::find(constraintNames.begin(), constraintNames.end(), name) != constraintNames.end()) {
+		throw std::invalid_argument("Constraint name already exists: " + name);
+	}
 
-void OptimizationHistory::addConstraintName(string name){
-
-	assert(isNotEmpty(name));
+	// Add the constraint name to the list
 	constraintNames.push_back(name);
-
 }
+
 
 void OptimizationHistory::reset(void){
 	constraintNames.clear();
@@ -61,21 +35,63 @@ void OptimizationHistory::reset(void){
 }
 
 void OptimizationHistory::setDimension(unsigned int dim){
-
-	assert(dim>0);
 	dimension = dim;
 }
 
 void OptimizationHistory::setData(mat dataIn){
 
-	assert(dataIn.n_rows>0);
+	if(dimension == 0){
+		throw std::runtime_error("OptimizationHistory::setData: dimension cannot be zero.");
+	}
 
-	unsigned int numberOfEntries = dimension + 1 + constraintNames.size() + 2;
-	assert(dataIn.n_cols == numberOfEntries);
+	if (dataIn.isEmpty()) {
+		throw std::invalid_argument("OptimizationHistory::setData: Empty data.");
+	}
+
+	unsigned int numberOfEntries = dimension + 1 + static_cast<unsigned int>(constraintNames.size()) + 2;
+
+	if (dataIn.getNCols() != numberOfEntries) {
+		std::cout<<"number of entries = " << numberOfEntries <<"\n";
+		std::cout<<"number of columns of the data matrix = " << dataIn.getNCols() <<"\n";
+		throw std::runtime_error("OptimizationHistory::setData: number of columns do not match.");
+	}
+
 	data = dataIn;
 
 }
 
+void OptimizationHistory::setParameterNames(vector<string> names) {
+
+	if(dimension == 0){
+		throw std::runtime_error("OptimizationHistory::setParameterNames: Dimension must be set first.");
+	}
+	if (names.empty()) {
+		throw std::invalid_argument("The parameter names vector is empty.");
+	}
+
+	if(names.size() != dimension){
+		std::cout<<"Name vector size = " << names.size() << "\n";
+		std::cout<<"Dimension = " << dimension << "\n";
+		throw std::invalid_argument("The parameter names vector size does not match with dimension.");
+	}
+
+	std::set<std::string> nameSet;
+	for (const auto& name : names) {
+		if (!nameSet.insert(name).second) {
+			throw std::invalid_argument("The parameter names vector contains duplicate names.");
+		}
+	}
+	parameterNames = names;
+
+	OptimizationLogger::getInstance().log(INFO,"OptimizationHistory: setParameterNames");
+	OptimizationLogger::getInstance().log(INFO,"OptimizationHistory: number of parameters = " + std::to_string(names.size()));
+	for (const auto& name : names) {
+		OptimizationLogger::getInstance().log(INFO,"OptimizationHistory: set parameter name = " + name);
+
+	}
+
+
+}
 
 
 mat OptimizationHistory::getData(void) const{
@@ -89,202 +105,216 @@ double OptimizationHistory::getCrowdingFactor(void) const{
 
 vec OptimizationHistory::getObjectiveFunctionValues(void) const{
 	assert(dimension>0);
-	return data.col(dimension);
+	return data.getCol(dimension);
 }
 
 vec OptimizationHistory::getFeasibilityValues(void) const{
-	assert(data.n_cols>0);
-	return data.col(data.n_cols-1);
+	assert(data.getNCols() >0);
+	return data.getCol(data.getNCols()-1);
 
 }
 
 void OptimizationHistory::setObjectiveFunctionName(string name){
 
-	assert(isNotEmpty(name));
+	assert(!name.empty());
 	objectiveFunctionName = name;
 
 }
 
-field<std::string> OptimizationHistory::setHeader(void) const{
 
-	field<std::string> fileHeader(dimension + 1 + constraintNames.size() + 2);
-	bool ifVariableNamesAreSet = false;
 
-	if(variableNames.size()>0){
 
-		assert(variableNames.size() == dimension);
-		ifVariableNamesAreSet = true;
-	}
+vector<string> OptimizationHistory::setHeader() const {
+	vector<string> fileHeader;
 
-	unsigned int count = 0;
-
-	if(ifVariableNamesAreSet){
-
-		for (auto it = variableNames.begin();it != variableNames.end(); it++) {
-
-			fileHeader(count) = *it;
-			count++;
-
+	// Ensure parameter names size matches dimension if names are provided
+	if (!parameterNames.empty() && parameterNames.size() != dimension) {
+		std::cout<<"Dimension = " << dimension << "\n";
+		for (const auto& name : parameterNames) {
+			std::cout<< name << "\n";
 		}
 
+		throw std::invalid_argument("The parameter names vector size is different than problem dimension.");
 	}
 
-	else{
+	// Reserve space for file header to avoid multiple allocations
+	fileHeader.reserve(dimension + constraintNames.size() + 3);  // parameters + objective + constraints + improvement + feasibility
 
-		for(unsigned int i=0; i<dimension; i++){
-			string variable = "x" + std::to_string(i+1);
-			fileHeader(count) = variable;
-			count++;
-
+	// Set parameter names or default variable names
+	if (!parameterNames.empty()) {
+		fileHeader.insert(fileHeader.end(), parameterNames.begin(), parameterNames.end());
+	} else {
+		for (unsigned int i = 0; i < dimension; ++i) {
+			fileHeader.push_back("x" + std::to_string(i + 1));
 		}
 	}
 
-	assert(isNotEmpty(objectiveFunctionName));
-	fileHeader(count) = objectiveFunctionName;
-	count++;
+	// Set objective field
+	fileHeader.push_back("Objective");
 
+	// Set constraint names
+	fileHeader.insert(fileHeader.end(), constraintNames.begin(), constraintNames.end());
 
-	for (auto it = constraintNames.begin();it !=constraintNames.end(); it++) {
+	// Set remaining fields
+	fileHeader.push_back("Improvement");
+	fileHeader.push_back("Feasibility");
 
-		fileHeader(count) = *it;
-		count++;
-
+#if 0
+	for (const auto& name : fileHeader) {
+		OptimizationLogger::getInstance().log(INFO, "OptimizationHistory: file header entity = " + name);
 	}
-	fileHeader(count) = "Improvement";
-	count++;
-	fileHeader(count) = "Feasibility";
-	count++;
-
+#endif
 	return fileHeader;
-
 }
 
-void OptimizationHistory::saveOptimizationHistoryFile(void){
 
-	assert(!data.empty());
-	field<std::string> fileHeader = setHeader();
-	assert(fileHeader.n_elem == data.n_cols);
+void OptimizationHistory::saveOptimizationHistoryFile() {
 
-	data.save( csv_name(filename, fileHeader) );
+	// Check if the data is empty, and throw an exception if it is
+	if (data.isEmpty()) {
+		throw std::runtime_error("Cannot save optimization history: Data is empty.");
+	}
 
+	// Get the file header
+	vector<std::string> fileHeader = setHeader();
+
+	// Save the data to a CSV file with precision 6 and the generated header
+	data.saveAsCSV(filename, 6, fileHeader);
+
+	// Log the save operation
+	OptimizationLogger::getInstance().log(INFO, "Optimization history saved to file: " + filename);
 }
+
 
 void OptimizationHistory::updateOptimizationHistory(Design d) {
 
-	unsigned int numberOfEntries = dimension + 1 + constraintNames.size() + 2;
-	assert(d.designParameters.size() == dimension);
+	// Ensure the design parameters match the problem's dimension
+	if (d.designParameters.getSize() != dimension) {
+		throw std::invalid_argument("Design parameter size does not match problem dimension.");
+	}
 
-	rowvec newRow(numberOfEntries);
+	// Calculate the number of entries for the new row
+	unsigned int numberOfEntries = dimension + 1 + static_cast<unsigned int>(constraintNames.size()) + 2;
 
-	for(unsigned int i=0; i<dimension; i++) {
+	// Initialize the new row with the correct number of entries
+	vec newRow(numberOfEntries);
+
+	// Fill the row with design parameters
+	for (unsigned int i = 0; i < dimension; ++i) {
 		newRow(i) = d.designParameters(i);
 	}
 
+	// Fill the objective value
 	newRow(dimension) = d.trueValue;
 
-	for(unsigned int i=0; i<constraintNames.size(); i++){
-		newRow(i+dimension+1) = 	d.constraintTrueValues(i);
+	// Fill the constraint values
+	for (unsigned int i = 0; i < static_cast<unsigned int>(constraintNames.size()); ++i) {
+		newRow(i + dimension + 1) = d.constraintTrueValues(i);
 	}
 
-	newRow(dimension + constraintNames.size()+1)   = d.improvementValue;
+	// Fill the improvement value
+	newRow(dimension + static_cast<unsigned int>(constraintNames.size()) + 1) = d.improvementValue;
 
-	if(d.isDesignFeasible){
-		newRow(dimension + constraintNames.size()+2) = 1.0;
-	}
-	else{
-		newRow(dimension + constraintNames.size()+2) = 0.0;
-	}
+	// Fill the feasibility status (1.0 for feasible, 0.0 for infeasible)
+	newRow(dimension + static_cast<unsigned int>(constraintNames.size()) + 2) = d.isDesignFeasible ? 1.0 : 0.0;
 
-	data.insert_rows( data.n_rows, newRow );
+	// Add the new row to the data
+	data.addRow(newRow, -1);
+
+	// Save the updated optimization history to a file
 	saveOptimizationHistoryFile();
 
+	// Log the update
+	OptimizationLogger::getInstance().log(INFO, "Optimization history updated with new design.");
 }
 
 
-double OptimizationHistory::calculateInitialImprovementValue(void) const{
 
-	unsigned int N = data.n_rows;
-	assert(N>0);
+double OptimizationHistory::calculateInitialImprovementValue() const {
+	unsigned int N = data.getNRows();
+
+	if (N == 0) {
+		throw std::runtime_error("No data available to calculate initial improvement value.");
+	}
 
 	vec objectiveFunctionValues = getObjectiveFunctionValues();
 	vec feasibilityValues = getFeasibilityValues();
 
 	bool ifFeasibleDesignFound = false;
-	double bestFeasibleObjectiveFunctionValue = LARGE;
+	double bestFeasibleObjectiveFunctionValue = std::numeric_limits<double>::max();  // Using max value as initial
 
-	for(unsigned int i=0; i<N; i++){
-
-		if(feasibilityValues(i) > 0.0 && objectiveFunctionValues(i) < bestFeasibleObjectiveFunctionValue){
+	// Loop through all rows to find the best feasible objective function value
+	for (unsigned int i = 0; i < N; ++i) {
+		if (feasibilityValues(i) > 0.0 && objectiveFunctionValues(i) < bestFeasibleObjectiveFunctionValue) {
 			ifFeasibleDesignFound = true;
 			bestFeasibleObjectiveFunctionValue = objectiveFunctionValues(i);
-
 		}
 	}
 
-	if(ifFeasibleDesignFound){
+	// Return the best feasible value if found, otherwise a large negative value
+	if (ifFeasibleDesignFound) {
 		return bestFeasibleObjectiveFunctionValue;
+	} else {
+		return -std::numeric_limits<double>::max();  // Returning a large negative value if no feasible design found
 	}
-	else {
-
-		return -LARGE;
-	}
-
 }
 
+void OptimizationHistory::print() const {
 
-void OptimizationHistory::print(void) const{
+	std::cout << "Dimension: " << dimension << "\n";
+	std::cout << "Objective function name: " << objectiveFunctionName << "\n";
 
-	std::cout<<"dimension: "<<dimension<<"\n";
-	std::cout<<"objective function name: "<<objectiveFunctionName<<"\n";
-
-	if(constraintNames.size()>0){
-		std::cout<<"constraint names = \n";
-		for (auto it = constraintNames.begin();it !=constraintNames.end(); it++) {
-
-			std::cout<<*it<<"\n";
+	if (!constraintNames.empty()) {
+		std::cout << "Constraint names: \n";
+		for (const auto& name : constraintNames) {
+			std::cout << name << "\n";
 		}
 	}
 
-	data.print("data = \n");
-
+	// Print data object with header or description
+	data.print("Data = \n");
 }
 
-void OptimizationHistory::calculateCrowdingFactor(void){
 
-	assert(data.n_rows>0);
-	assert(dimension >0);
-	assert(numberOfDoESamples >0);
-
-	mat dataToProcess;
-
-	if(data.n_rows >= numberOfDoESamples){
-
-		dataToProcess = data.submat(data.n_rows-numberOfDoESamples,0,data.n_rows-1,dimension);
+void OptimizationHistory::calculateCrowdingFactor() {
+	// Ensure there is valid data to process
+	if (data.getNRows() <= 0 || dimension <= 0 || numberOfDoESamples <= 0) {
+		throw std::runtime_error("Invalid data, dimension, or DoE sample size.");
 	}
-	else{
 
-		dataToProcess = data.submat(0,0,data.n_rows-1,dimension-1);
+	// Extract the subset of data to process based on the number of samples
+	mat dataToProcess;
+	if (data.getNRows() >= numberOfDoESamples) {
+		dataToProcess = data.submat(data.getNRows() - numberOfDoESamples, data.getNRows() - 1, 0, dimension - 1);
+	} else {
+		dataToProcess = data.submat(0, 0, data.getNRows() - 1, dimension - 1);
 	}
 
 	double sum = 0.0;
-	unsigned int count = 0;
-	for(unsigned int i = 0; i<dataToProcess.n_rows; i++){
+	unsigned int numRows = dataToProcess.getNRows();
 
-		rowvec x1 = dataToProcess.row(i);
+	// Calculate the pairwise L1 norm differences between rows
+	for (unsigned int i = 0; i < numRows; ++i) {
+		vec x1 = dataToProcess.getRow(i);
 
-		for(unsigned int j = 0; j<dataToProcess.n_rows; j++){
-			rowvec x2 = dataToProcess.row(j);
-			rowvec d = x1-x2;
-
-			double normDiff = norm(d,1);
-			sum+= normDiff;
-
-			count++;
+		for (unsigned int j = i + 1; j < numRows; ++j) {  // Skip i == j (self-pairs)
+			vec x2 = dataToProcess.getRow(j);
+			vec d = x1 - x2;
+			double normDiff = d.norm(L1);
+			sum += normDiff * 2;  // Since d(x1, x2) == d(x2, x1), we can double the contribution
 		}
-
 	}
 
-	crowdingFactor =  sum/count;
+	// Number of unique pairs is numRows * (numRows - 1) / 2
+	unsigned int numPairs = numRows * (numRows - 1) / 2;
+
+	// Calculate the average crowding factor
+	if (numPairs > 0) {
+		crowdingFactor = sum / (numPairs * 2);  // Dividing by 2 because we doubled the sum
+	} else {
+		crowdingFactor = 0.0;  // In case there are no valid pairs
+	}
 }
 
 
+} /* Namespace Rodop */

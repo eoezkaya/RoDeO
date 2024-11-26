@@ -1,7 +1,7 @@
 /*
  * RoDeO, a Robust Design Optimization Package
  *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
  * Homepage: http://www.scicomp.uni-kl.de
  * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
  *
@@ -29,37 +29,50 @@
  *
  */
 
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+#include <stdexcept>
+#include "./Driver/INCLUDE/driver_xml.hpp"
 
 
-#include<stdio.h>
-#include<iostream>
-
-#include "./Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "./Driver/INCLUDE/drivers.hpp"
-#include "./Output/INCLUDE/output.hpp"
-
-
-
-int main(int argc, char* argv[]){
-
-
-
-	printIntro();
-
-	/* initialize random seed*/
-	srand (time(NULL));
-
-	if(argc == 1){
-		abortWithErrorMessage("File name for the configuration file (*.cfg) is missing!");
-	}
-
-	std::string fileNameConfig = argv[1];
-
-	RoDeODriver driverToRun;
-	driverToRun.setConfigFilename(fileNameConfig);
-	driverToRun.readConfigFile();
-	driverToRun.run();
-
-	return EXIT_SUCCESS;
-
+bool isXMLFile(const std::string& fileName) {
+    // Check if the file name ends with ".xml" ignoring case
+    return fileName.length() >= 4 &&
+           std::equal(fileName.end() - 4, fileName.end(), ".xml", [](char a, char b) {
+               return std::tolower(a) == std::tolower(b);
+           });
 }
+
+int main(int argc, char* argv[]) {
+    // Seed the random number generator
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
+
+    // Check if configuration file is provided
+    if (argc == 1) {
+        std::cerr << "Error: File name for the configuration file (*.xml) is missing!" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    std::string fileNameConfig = argv[1];
+
+    try {
+        if (isXMLFile(fileNameConfig)) {
+            // Initialize the XML driver
+            Rodop::Driver driverXML;
+            driverXML.setConfigFileName(fileNameConfig);
+            driverXML.readConfigurationFile();
+            driverXML.run();
+        } else {
+            throw std::runtime_error("Wrong format for the configuration file!");
+        }
+    } catch (const std::exception& e) {
+        // Catch and report errors
+        std::cerr << "Error: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // Indicate success
+    return EXIT_SUCCESS;
+}
+

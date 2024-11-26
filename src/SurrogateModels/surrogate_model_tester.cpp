@@ -1,39 +1,10 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
 
 #include "./INCLUDE/surrogate_model_tester.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
+#include "./INCLUDE/model_logger.hpp"
 #include <cassert>
 
+
+namespace Rodop{
 
 
 SurrogateModelTester::SurrogateModelTester(){}
@@ -44,7 +15,7 @@ void SurrogateModelTester::setDimension(unsigned int value){
 }
 
 void SurrogateModelTester::setName(string nameInput){
-	assert(isNotEmpty(nameInput));
+	assert(!nameInput.empty());
 
 	name = nameInput;
 }
@@ -71,37 +42,50 @@ void SurrogateModelTester::setSurrogateModelLowFi(SURROGATE_MODEL modelType){
 
 }
 
+void SurrogateModelTester::setRatioValidationSamples(double value){
+
+	if(value<0 && value > 1.0){
+		ModelLogger::getInstance().log(ERROR, "Model Tester: Validation samples ration is not valid.");
+		throw std::invalid_argument("Model Tester: Validation samples ration is not valid.");
+	}
+	surrogateModel->setRatioValidationSamples(value);
+}
+
+void SurrogateModelTester::checkIfSurrogateModelIsSpecified() {
+	if (!ifSurrogateModelSpecified) {
+		ModelLogger::getInstance().log(ERROR,
+				"Model Tester: Surrogate model must be set first.");
+		throw std::runtime_error(
+				"Model Tester: Surrogate model must be set first.");
+	}
+}
+
 void SurrogateModelTester::bindSurrogateModels(void){
 
-	assert(ifSurrogateModelSpecified);
+	checkIfSurrogateModelIsSpecified();
 
 	if(!ifMultiLevel){
 
-		outputToScreen.printMessage("Multi-Fidelity feature is not active...");
-
 		if(surrogateModelType == LINEAR_REGRESSION ){
+			ModelLogger::getInstance().log(INFO, "Model Tester: Linear model...");
 			surrogateModel = &linearModel;
 		}
 		if(surrogateModelType == ORDINARY_KRIGING){
+			ModelLogger::getInstance().log(INFO, "Model Tester: Ordinary Kriging...");
 			surrogateModel = &krigingModel;
 		}
 		if(surrogateModelType == UNIVERSAL_KRIGING){
+			ModelLogger::getInstance().log(INFO, "Model Tester: Universal Kriging...");
 			krigingModel.setLinearRegressionOn();
 			surrogateModel = &krigingModel;
 		}
-		if(surrogateModelType == TANGENT_ENHANCED){
-			generalizedGradientEnhancedModel.setDirectionalDerivativesOn();
-			surrogateModel = &generalizedGradientEnhancedModel;
-		}
-		if(surrogateModelType == GRADIENT_ENHANCED){
-			surrogateModel = &generalizedGradientEnhancedModel;
-		}
+
 
 	}
 
 	else{
+		ModelLogger::getInstance().log(INFO, "Model Tester: Multi-Fidelity feature is active...");
 
-		outputToScreen.printMessage("Multi-Fidelity feature is active...");
 		assert(ifSurrogateModelLowFiSpecified);
 		multilevelModel.setIDHiFiModel(surrogateModelType);
 		multilevelModel.setIDLowFiModel(surrogateModelTypeLowFi);
@@ -117,21 +101,31 @@ void SurrogateModelTester::bindSurrogateModels(void){
 }
 
 void SurrogateModelTester::setBoxConstraints(Bounds boxConstraintsInput){
-
-	assert(boxConstraintsInput.areBoundsSet());
 	boxConstraints = boxConstraintsInput;
+	checkBoxConstraints();
 }
 
-
+void SurrogateModelTester::checkBoxConstraints() {
+	if (!boxConstraints.areBoundsSet()) {
+		ModelLogger::getInstance().log(ERROR,
+				"Model Tester: Box constraints must be set first.");
+		throw std::runtime_error(
+				"Model Tester: Box constraints must be set first.");
+	}
+}
 
 void SurrogateModelTester::performSurrogateModelTest(void){
 
-	assert(boxConstraints.areBoundsSet());
+	checkBoxConstraints();
+
 	assert(ifbindSurrogateModelisDone);
-	assert(isNotEmpty(name));
+	assert(!name.empty());
 	assert(dimension>0);
-	assert(isNotEmpty(fileNameTraingData));
-	assert(isNotEmpty(fileNameTestData));
+	checkFilename(fileNameTraingData);
+	checkFilename(fileNameTestData);
+
+	ModelLogger::getInstance().log(INFO, "#################################.");
+	ModelLogger::getInstance().log(INFO, "Model Tester: Perform model test.");
 
 
 	surrogateModel->setDimension(dimension);
@@ -139,64 +133,73 @@ void SurrogateModelTester::performSurrogateModelTest(void){
 	surrogateModel->setNameOfInputFile(fileNameTraingData);
 	surrogateModel->setNameOfInputFileTest(fileNameTestData);
 
-	outputToScreen.printMessage("Performing surrogate model test...");
 	surrogateModel->setBoxConstraints(boxConstraints);
 
-	outputToScreen.printMessage("Reading training data...");
+	ModelLogger::getInstance().log(INFO, "Model Tester: Reading training data.");
 	surrogateModel->readData();
-	outputToScreen.printMessage("Reading test data...");
+	ModelLogger::getInstance().log(INFO, "Model Tester: Reading test data.");
 	surrogateModel->readDataTest();
 
 	surrogateModel->setBoxConstraints(boxConstraints);
-	outputToScreen.printMessage("Data normalization...");
+	//	outputToScreen.printMessage("Data normalization...");
 	surrogateModel->normalizeData();
 	surrogateModel->normalizeDataTest();
-	outputToScreen.printMessage("Surrogate model initialization...");
+	ModelLogger::getInstance().log(INFO, "Model Tester: Initializing surrogate model.");
 	surrogateModel->initializeSurrogateModel();
 	surrogateModel->setNumberOfTrainingIterations(numberOfTrainingIterations);
-	outputToScreen.printMessage("Surrogate model training...");
 
 	if(ifReadWarmStart){
-
 		surrogateModel->setReadWarmStartFileFlag(true);
 	}
-
+	ModelLogger::getInstance().log(INFO, "Model Tester: Training surrogate model.");
 	surrogateModel->train();
 
-	if(outputToScreen.ifScreenDisplay){
+	if(ifVariancesShouldBeComputedInTest){
+		ModelLogger::getInstance().log(INFO, "Model Tester: Evaluation of test data estimates with variances.");
+		surrogateModel->tryOnTestData("with_variances");
+		surrogateModel->saveTestResultsWithVariance();
+	}
+	else{
+		ModelLogger::getInstance().log(INFO, "Model Tester: Evaluation of test data estimates.");
+		surrogateModel->tryOnTestData();
+		surrogateModel->saveTestResults();
 
-		surrogateModel->setDisplayOn();
 	}
 
-	surrogateModel->tryOnTestData();
-	surrogateModel->saveTestResults();
 
 	surrogateModel->printGeneralizationError();
 
+	double inSampleError = surrogateModel->calculateInSampleError();
+	ModelLogger::getInstance().log(INFO,"Training error (MSE): " + std::to_string(inSampleError ));
+
+
 }
 
-void SurrogateModelTester::setDisplayOn(void){
+void SurrogateModelTester::checkFilename(const std::string& filename) {
+    if (filename.empty()) {
+        ModelLogger::getInstance().log(ERROR, "Model Tester: Empty filename.");
+        throw std::invalid_argument("Model Tester: Empty filename.");
+    }
 
-	if(ifbindSurrogateModelisDone){
+    // Check for invalid characters
+    if (filename.find_first_of("\\/:*?\"<>|") != std::string::npos) {
+        ModelLogger::getInstance().log(ERROR, "Model Tester: Filename contains invalid characters.");
+        throw std::invalid_argument("Model Tester: Filename contains invalid characters.");
+    }
 
-		surrogateModel->setDisplayOn();
-	}
+    // Check for CSV extension
+    std::string extension = ".csv";
+    if (filename.size() < extension.size() ||
+        filename.substr(filename.size() - extension.size()) != extension) {
+        ModelLogger::getInstance().log(ERROR, "Model Tester: Filename must end with .csv extension.");
+        throw std::invalid_argument("Model Tester: Filename must end with .csv extension.");
+    }
+
 }
-
-void SurrogateModelTester::setDisplayOff(void){
-
-	if(ifSurrogateModelSpecified){
-
-		surrogateModel->setDisplayOff();
-
-	}
-}
-
-
 
 void SurrogateModelTester::setFileNameTrainingData(string filename){
 
-	assert(isNotEmpty(filename));
+	checkFilename(filename);
 	fileNameTraingData = filename;
 
 }
@@ -204,29 +207,20 @@ void SurrogateModelTester::setFileNameTrainingData(string filename){
 
 void SurrogateModelTester::setFileNameTrainingDataLowFidelity(string filename){
 
-	assert(isNotEmpty(filename));
+	checkFilename(filename);
 	fileNameTraingDataLowFidelity = filename;
 
 }
 
-
-
-
 void SurrogateModelTester::setFileNameTestData(string filename){
 
-	assert(isNotEmpty(filename));
+	checkFilename(filename);
 	fileNameTestData = filename;
 
 }
 
-void SurrogateModelTester::print(void) const{
+void SurrogateModelTester::print(void) const{}
 
-	outputToScreen.printMessage("\n\nSurrogate model test information...");
-	outputToScreen.printMessage("Dimension = ", dimension);
-	outputToScreen.printMessage("Training data file name = ", fileNameTraingData);
-	outputToScreen.printMessage("Test data file name = ", fileNameTestData);
-	outputToScreen.printMessage("Surrogate model ID = ", surrogateModelType);
+} /* Namespace Rodop */
 
 
-
-}

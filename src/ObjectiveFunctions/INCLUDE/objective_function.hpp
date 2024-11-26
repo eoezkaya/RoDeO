@@ -1,17 +1,53 @@
+/*
+ * RoDeO, a Robust Design Optimization Package
+ *
+ * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
+ * Homepage: http://www.scicomp.uni-kl.de
+ * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
+ *
+ * Lead developer: Emre Özkaya (SciComp, RPTU)
+ *
+ * This file is part of RoDeO
+ *
+ * RoDeO is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * RoDeO is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ * See the GNU General Public License for more details.
+ * You should have received a copy of the GNU
+ * General Public License along with RoDeO.
+ * If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors: Emre Özkaya, (SciComp, RPTU)
+ *
+ *
+ *
+ */
+
 #ifndef OBJECTIVE_FUNCTION_HPP
 #define OBJECTIVE_FUNCTION_HPP
 
 #include <fstream>
-#include <armadillo>
+
 #include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
 #include "../../SurrogateModels/INCLUDE/surrogate_model.hpp"
 #include "../../SurrogateModels/INCLUDE/multi_level_method.hpp"
-#include "../../Optimizers/INCLUDE/design.hpp"
-#include "../../Output/INCLUDE/output.hpp"
+#include "../../LinearAlgebra/INCLUDE/vector.hpp"
+#include "../../Design/INCLUDE/design.hpp"
+
 
 #ifdef UNIT_TESTS
 #include<gtest/gtest.h>
 #endif
+
+
+namespace Rodop{
+
 
 typedef double (*ObjectiveFunctionPtr)(const double *);
 
@@ -41,10 +77,11 @@ public:
 	std::string nameLowFidelityTrainingData;
 	std::string nameHighFidelityTrainingData;
 
+	/* These are required only for multi-level option */
+
 	bool ifMultiLevel = false;
 	bool ifDefined = false;
-
-	bool doesUseUDF = false;
+	bool doesUseUDF = false; // User defined Function
 
 
 
@@ -58,49 +95,29 @@ public:
 
 	void printHighFidelityModel() const;
 	void printLowFidelityModel() const;
+
+	std::string toStringLowFidelityModel() const;
+	std::string toString() const;
 	string getNameOfSurrogateModel(SURROGATE_MODEL) const;
 };
 
 
 class ObjectiveFunction{
 
-#ifdef UNIT_TESTS
-	friend class ObjectiveFunctionTest;
-	FRIEND_TEST(ObjectiveFunctionTest, constructor);
-	FRIEND_TEST(ObjectiveFunctionTest, setParametersByDefinition);
-	FRIEND_TEST(ObjectiveFunctionTest, setParameterBounds);
-	FRIEND_TEST(ObjectiveFunctionTest, setDimensionAfterBindSurrogateModelCase1);
-	FRIEND_TEST(ObjectiveFunctionTest, setNameAfterBindSurrogateModelCase1);
-	FRIEND_TEST(ObjectiveFunctionTest, initializeSurrogateKriging);
-	FRIEND_TEST(ObjectiveFunctionTest, initializeSurrogateGradientEnhanced);
-	FRIEND_TEST(ObjectiveFunctionTest, initializeSurrogateTangentEnhanced);
-
-	FRIEND_TEST(ObjectiveFunctionTest, evaluateGradient);
-
-
-#endif
-
 
 private:
 
 	void bindWithOrdinaryKrigingModel();
 	void bindWithUniversalKrigingModel();
-	void bindWithGradientEnhancedModel();
-	void bindWithTangentEnhancedModel();
 	void bindWithMultiFidelityModel();
 
 	bool isHiFiEvaluation(void) const;
 	bool isLowFiEvaluation(void) const;
 	void bindSurrogateModelSingleFidelity();
 
-	void printWaitStatusIfSystemCallFails(int status) const;
-
-
-	void evaluateGradient(void) const;
-
 
 	double (*objectiveFunctionPtr)(const double*) = nullptr;
-
+	void checkEvaluationModeForPrimalExecution() const;
 
 protected:
 
@@ -109,32 +126,16 @@ protected:
 	std::string addDataMode;
 
 	ObjectiveFunctionDefinition definition;
-
-
 	Bounds boxConstraints;
-
-
 	KrigingModel surrogateModel;
-	GeneralizedDerivativeEnhancedModel surrogateModelGradient;
 	MultiLevelModel surrogateModelML;
-
-
 	SurrogateModel *surrogate;
 
-	OutputDevice output;
-
 	unsigned int numberOfIterationsForSurrogateTraining = 10000;
-
-
 	unsigned int dim = 0;
 
 	double sampleMinimum = 0.0;
-
 	double sigmaFactor = 1.0;
-
-
-
-
 
 
 public:
@@ -150,10 +151,11 @@ public:
 
 	bool isMultiFidelityActive(void) const;
 
+	void validateEvaluationMode(const std::string& mode);
+	void validateDataAddMode(const std::string& mode);
 
-
-	void setEvaluationMode(std::string);
-	void setDataAddMode(std::string mode);
+	void setEvaluationMode(const std::string& mode);
+	void setDataAddMode(const std::string& mode);
 
 	void setParametersByDefinition(ObjectiveFunctionDefinition);
 	void bindSurrogateModel(void);
@@ -198,6 +200,7 @@ public:
 	void setFeasibleMinimum(double value);
 
 	void calculateExpectedImprovement(DesignForBayesianOptimization &designCalculated) const;
+	void calculateExpectedImprovementUsingDerivatives(DesignForBayesianOptimization &designCalculated) const;
 	void calculateProbabilityOfImprovement(DesignForBayesianOptimization &designCalculated) const;
 	void calculateSurrogateEstimate(DesignForBayesianOptimization &designCalculated) const;
 	void calculateSurrogateEstimateUsingDerivatives(DesignForBayesianOptimization &designCalculated) const;
@@ -206,12 +209,15 @@ public:
 	void evaluateDesign(Design &d);
 	void evaluateDesignGradient(Design &d);
 
-	void evaluateObjectiveFunction(void);
-	double evaluateObjectiveFunctionDirectly(const rowvec &x);
+	void evaluateGradient(void) const;
+	void evaluateObjectiveFunction(void) const;
+
+
+	double evaluateObjectiveFunctionDirectly(const Rodop::vec &x);
 
 	void writeDesignVariablesToFile(Design &d) const;
 
-	rowvec readOutput(string filename, unsigned int howMany) const;
+	vec readOutput(const std::string &filename, unsigned int howMany) const;
 
 	void readOutputDesign(Design &) const;
 
@@ -222,17 +228,22 @@ public:
 	void addDesignToData(Design &d, string how);
 
 	bool checkIfGradientAvailable(void) const;
-	double interpolate(rowvec x) const;
-	double interpolateUsingDerivatives(rowvec x) const;
-	pair<double, double> interpolateWithVariance(rowvec x) const;
+	double interpolate(Rodop::vec x) const;
+	double interpolateUsingDerivatives(Rodop::vec x) const;
+	pair<double, double> interpolateWithVariance(Rodop::vec x) const;
 
 	void print(void) const;
+	std::string toString() const;
+	void printInfoToLog(const string &msg) const;
+	void printErrorToLog(const string &msg) const;
+	void printWarningToLog(const string &msg) const;
+
 	string generateOutputString(void) const;
 
 	std::string getExecutionCommand(const std::string& exename) const;
 
 	void removeVeryCloseSamples(const Design& globalOptimalDesign);
-	void removeVeryCloseSamples(const Design& globalOptimalDesign, std::vector<rowvec> samples);
+	void removeVeryCloseSamples(const Design& globalOptimalDesign, std::vector<Rodop::vec> samples);
 
 	void setSigmaFactor(double);
 
@@ -241,7 +252,15 @@ public:
 	void setFunctionPtr(ObjectiveFunctionPtr func);
 
 
+	double pdf(double x, double m, double s) const;
+	double cdf(double x0, double mu, double sigma) const;
+
+
+	std::string  generateFormattedString(std::string msg, char c, int totalLength) const;
+
 };
 
 
+
+} /*Namespace Rodop */
 #endif

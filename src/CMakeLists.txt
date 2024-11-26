@@ -56,48 +56,33 @@ install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 target_compile_options(${PROJECT_NAME} PUBLIC -Wall -Wextra -Wpedantic -O2)
 
 
-add_subdirectory(Auxiliary)
+add_subdirectory(Design)
 add_subdirectory(Bounds)
 add_subdirectory(CorrelationFunctions)
 add_subdirectory(Driver)
 add_subdirectory(LinearAlgebra)
-add_subdirectory(Metric)
 add_subdirectory(ObjectiveFunctions)
 add_subdirectory(Optimizers)
-add_subdirectory(Output)
-add_subdirectory(Random)
+add_subdirectory(InternalOptimizers)
 add_subdirectory(SurrogateModels)
-add_subdirectory(TestFunctions)
 add_subdirectory(API)
 
 
-target_link_libraries(${PROJECT_NAME}  auxiliary)
 target_link_libraries(${PROJECT_NAME}  bounds)
 target_link_libraries(${PROJECT_NAME}  correlationFunctions)
 target_link_libraries(${PROJECT_NAME}  driver)
 target_link_libraries(${PROJECT_NAME}  linearAlgebra)
-target_link_libraries(${PROJECT_NAME}  metric)
 target_link_libraries(${PROJECT_NAME}  objectiveFunctions)
 target_link_libraries(${PROJECT_NAME}  optimizers)
-target_link_libraries(${PROJECT_NAME}  output)
-target_link_libraries(${PROJECT_NAME}  random)
+target_link_libraries(${PROJECT_NAME}  internalOptimizers)
 target_link_libraries(${PROJECT_NAME}  surrogateModels)
-target_link_libraries(${PROJECT_NAME}  testFunctions)
 
-
-
-
-find_package(Armadillo REQUIRED)
-include_directories(${ARMADILLO_INCLUDE_DIRS})
-
-target_link_libraries(${PROJECT_NAME} ${ARMADILLO_LIBRARIES})
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)	
 	target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
 	add_definitions(-DOPENMP_SUPPORT)
 endif()
-
 
 
 

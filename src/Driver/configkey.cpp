@@ -1,654 +1,232 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
-
-#include <stdio.h>
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <stdlib.h>
-#include <iostream>
-#include <cassert>
 #include "./INCLUDE/configkey.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
+#include "./INCLUDE/string_functions.hpp"
+#include "./INCLUDE/driver_logger.hpp"
+#include "./INCLUDE/xml_functions.hpp"
+#include "../LinearAlgebra/INCLUDE/vector.hpp"
 
-#include <armadillo>
+namespace Rodop{
 
+void Keyword::returnErrorIfNotSet(void) const{
 
-ConfigKey::ConfigKey(std::string name, std::string type){
+	if(!isValueSet){
 
-	this->name = name;
-	this->type = type;
-
-
-}
-
-
-void ConfigKey::print(void) const{
-
-	std::cout<<name;
-
-
-	if(ifValueSet){
-
-		std::cout<<" : ";
-		if(type == "string"){
-
-			std::cout<<stringValue<<"\n";
-
-		}
-		if(type == "double"){
-
-			std::cout<<doubleValue<<"\n";
-
-		}
-		if(type == "int"){
-
-			std::cout<<intValue<<"\n";
-
-		}
-
-		if(type == "doubleVector"){
-
-			vectorDoubleValue.print();
-
-		}
-		if(type == "stringVector"){
-
-			printVector(vectorStringValue);
-
-		}
-
-	}
-	else{
-
-		std::cout<<"\n";
-	}
-}
-
-void ConfigKey::abortIfNotSet(void) const{
-
-	if(!ifValueSet){
 		std::string msg = name + " is not set! Check the configuration file.";
-		abortWithErrorMessage(msg);
+		throw std::runtime_error("Error:" + msg);
 	}
 }
 
-void ConfigKey::clear(void){
+void Keyword::setName(string input){
 
-	stringValue.clear();
-	intValue = 0;
-	doubleValue = 0.0;
-	vectorStringValue.clear();
-	vectorDoubleValue.reset();
-	ifValueSet = false;
+	if(input.empty()){
+
+		throw std::runtime_error("Error: empty name in Keyword::setName.");
+	}
+
+	name = input;
+
+
 }
 
+string Keyword::getName(void) const {
+	return name;
+}
 
-void ConfigKey::setValue(std::string val){
-
-
-	val = removeSpacesFromString(val);
+string Keyword::getStringValue(void) const{
 
 	if(type == "string"){
-
-		this->stringValue = val;
+		return valueString;
 	}
+	else{
+
+		throw std::invalid_argument("keyword: " + name +  " is not a string");
+	}
+}
+
+
+vector<string> Keyword::getStringValueVector(void) const{
 
 	if(type == "stringVector"){
+		return valueStringVector;
+	}
+	else{
 
-		vectorStringValue = getStringValuesFromString(val,',');
-#if 0
-		printVector(vectorStringValue);
-#endif
+		throw std::invalid_argument("keyword: " + name +  " is not a string vector");
+	}
+}
 
+
+string Keyword::getStringValueVectorAt(unsigned indx) const{
+
+	if(indx >=  valueStringVector.size()){
+
+		throw std::invalid_argument("index is beyond valueStringVector.size()");
 	}
 
-	if(type == "doubleVector"){
+	return valueStringVector[indx];
+}
 
+double Keyword::getDoubleValueVectorAt(unsigned indx) const{
 
-		vectorDoubleValue = getDoubleValuesFromString(val,',');
+	if(indx >=  valueDoubleVector.size()){
 
-
-
+		throw std::invalid_argument("index is beyond valueDoubleVector.size()");
 	}
-	if(type == "int"){
 
-		this->intValue = std::stoi(val);
+	return valueDoubleVector[indx];
+}
 
-
-	}
+double Keyword::getDoubleValue(void) const{
 
 	if(type == "double"){
-
-		this->doubleValue = std::stod(val);
-
-
-	}
-
-
-
-	this->ifValueSet = true;
-
-
-
-}
-
-void ConfigKey::setValue(vec values){
-
-
-	assert(type == "doubleVector");
-	assert(values.size()>0);
-
-
-	vectorDoubleValue = values;
-
-
-	this->ifValueSet = true;
-
-
-}
-
-void ConfigKey::setValue(int value){
-
-	assert(type == "int");
-
-	this->intValue = value;
-	this->ifValueSet = true;
-
-
-}
-
-void ConfigKey::setValue(double value){
-
-	assert(type == "double");
-
-	this->doubleValue = value;
-	this->ifValueSet = true;
-
-
-}
-
-
-bool ConfigKeyList::ifKeyIsAlreadyIntheList(ConfigKey keyToAdd) const{
-
-	std::string keyword = keyToAdd.name;
-
-	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
-
-		if(it->name == keyword){
-
-			return true;
-
-		}
-
-	}
-
-	return false;
-}
-
-void ConfigKeyList::add(ConfigKey keyToAdd){
-
-	assert(ifKeyIsAlreadyIntheList(keyToAdd) == false);
-
-	keywordList.push_back(keyToAdd);
-	numberOfKeys++;
-
-}
-
-unsigned int ConfigKeyList::countNumberOfElements(void) const{
-
-	return numberOfKeys;
-
-}
-
-
-
-void ConfigKeyList::assignKeywordValue(std::pair <std::string,std::string> input) {
-
-
-	std::string key   = input.first;
-	std::string value = input.second;
-
-	assert(!key.empty());
-	assert(!value.empty());
-
-
-	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
-
-		if(it->name == key){
-
-
-			it->setValue(value);
-
-		}
-
-	}
-
-}
-
-
-void ConfigKeyList::assignKeywordValue(std::string key, std::string value) {
-
-	assert(!key.empty());
-	assert(!value.empty());
-
-
-	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
-
-		if(it->name == key){
-
-
-			it->setValue(value);
-
-		}
-
-	}
-
-}
-
-void ConfigKeyList::assignKeywordValue(std::string key, int value) {
-
-	assert(!key.empty());
-
-
-
-	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
-
-		if(it->name == key){
-
-
-			it->setValue(value);
-
-		}
-
-	}
-
-}
-
-
-
-void ConfigKeyList::assignKeywordValue(std::string key, vec values) {
-
-
-	assert(!key.empty());
-	assert(values.size() > 0);
-
-	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
-
-		if(it->name == key){
-
-			it->setValue(values);
-
-		}
-
-	}
-
-}
-
-
-void ConfigKeyList::assignKeywordValueWithIndex(std::string s, int indxKeyword){
-
-	assert(!s.empty());
-	assert(indxKeyword >= 0);
-
-	ConfigKey &keyWordToBeSet = keywordList.at(indxKeyword);
-
-	keyWordToBeSet.setValue(s);
-
-
-}
-
-
-
-ConfigKey ConfigKeyList::getConfigKey(unsigned int indx) const{
-
-	assert(indx<numberOfKeys);
-	return this->keywordList.at(indx);
-
-}
-
-
-ConfigKey ConfigKeyList::getConfigKey(std::string key) const{
-
-	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
-
-		if(it->name == key){
-
-			return(*it);
-
-		}
-
-	}
-
-	std::cout<<"ERROR: Invalid ConfigKey "<<key<<" \n";
-	abort();
-
-
-}
-
-std::string ConfigKeyList::getConfigKeyStringValue(std::string key) const{
-
-	std::string emptyString;
-
-	assert(!key.empty());
-	ConfigKey keyFound = getConfigKey(key);
-
-	assert(keyFound.type == "string");
-
-	if(keyFound.ifValueSet){
-
-		return keyFound.stringValue;
+		return valueDouble;
 	}
 	else{
-
-		return emptyString;
+		throw std::invalid_argument("keyword is not a double");
 	}
-
-
 }
 
-int ConfigKeyList::getConfigKeyIntValue(std::string key) const{
+vector<double> Keyword::getDoubleValueVector(void) const{
 
-	assert(!key.empty());
-	ConfigKey keyFound = getConfigKey(key);
-
-	assert(keyFound.type == "int");
-
-	if(keyFound.ifValueSet){
-
-		return keyFound.intValue;
+	if(type == "doubleVector"){
+		return valueDoubleVector;
 	}
 	else{
-
-		return 0;
+		throw std::invalid_argument("keyword is not a double vector");
 	}
-
-
 }
 
-double ConfigKeyList::getConfigKeyDoubleValue(std::string key) const{
+int Keyword::getIntValue(void) const{
 
-	assert(!key.empty());
-	ConfigKey keyFound = getConfigKey(key);
-
-	assert(keyFound.type == "double");
-
-	if(keyFound.ifValueSet){
-
-		return keyFound.doubleValue;
+	if(type == "int"){
+		return valueInt;
 	}
 	else{
-
-		return 0.0;
+		throw std::invalid_argument("keyword is not an integer");
 	}
-
 
 }
 
-std::vector<std::string> ConfigKeyList::getConfigKeyVectorStringValue(std::string key) const{
+void Keyword::setType(string whichType){
 
-	std::vector<std::string> emptyVector;
+	if(!(whichType == "string" || whichType == "int" || whichType == "double" || whichType == "intVector"
+			|| whichType == "doubleVector" || whichType == "stringVector")){
 
-	assert(!key.empty());
-	ConfigKey keyFound = getConfigKey(key);
-
-	assert(keyFound.type == "stringVector");
-
-	if(keyFound.ifValueSet){
-
-		return keyFound.vectorStringValue;
+		std::string msg = whichType + " is not a valid type.";
+		throw std::runtime_error("Error:" + msg);
 	}
 	else{
-
-		return emptyVector;
-	}
-
-
-
-
-}
-
-vec ConfigKeyList::getConfigKeyVectorDoubleValue(std::string key) const{
-
-	vec emptyVector;
-
-	assert(!key.empty());
-	ConfigKey keyFound = getConfigKey(key);
-
-	assert(keyFound.type == "doubleVector");
-
-	if(keyFound.ifValueSet){
-
-		return keyFound.vectorDoubleValue;
-	}
-	else{
-
-		return emptyVector;
-	}
-
-
-
-
-}
-
-
-std::string ConfigKeyList::getConfigKeyStringVectorValueAtIndex(std::string key, unsigned int indx) const{
-
-
-	assert(!key.empty());
-
-	std::string emptyString;
-
-	ConfigKey keyFound = getConfigKey(key);
-	assert(keyFound.type == "stringVector");
-
-	if(indx>=keyFound.vectorStringValue.size()){
-
-		return emptyString;
-
-	}
-
-
-	if(keyFound.ifValueSet){
-
-		return keyFound.vectorStringValue[indx];
-	}
-	else{
-
-		return emptyString;
-	}
-
-
-}
-
-
-void ConfigKeyList::printKeywords(void) const{
-
-	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
-
-		it->print();
-
-	}
-
-}
-
-
-void ConfigKeyList::clearKeywords(void){
-
-	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
-
-		it->clear();
-
+		type = whichType;
 	}
 }
 
+void Keyword::getValueFromXMLString(const std::string& input) {
+    if (name.empty()) {
+        throw std::runtime_error("Error: Keyword name is empty.");
+    }
 
-void ConfigKeyList::abortifConfigKeyIsNotSet(std::string key) const{
+    // Set flag for whether the value was successfully extracted
+    isValueSet = false;
 
-	ConfigKey keyword = getConfigKey(key);
+    // Use a helper lambda for setting values and checking for success
+    auto setValue = [&](auto& destination, const auto& source) {
+        if (!source.empty()) {
+            destination = source;
+            isValueSet = true;
+        }
+    };
 
-	keyword.abortIfNotSet();
-
-
+    // Determine type and extract the corresponding value
+    if (type == "string") {
+        setValue(valueString, getStringValueFromXML(input, name));
+    }
+    else if (type == "stringVector") {
+        setValue(valueStringVector, getStringVectorValuesFromXML(input, name));
+    }
+    else if (type == "double") {
+        double value = getDoubleValueFromXML(input, name);
+        if (std::fabs(value) > std::numeric_limits<double>::epsilon()) {
+            valueDouble = value;
+            isValueSet = true;
+        }
+    }
+    else if (type == "doubleVector") {
+        setValue(valueDoubleVector, getDoubleVectorValuesFromXML(input, name));
+    }
+    else if (type == "int") {
+        int value = getIntegerValueFromXML(input, name);
+        if (value != -10000000) {  // Assuming -10000000 is an error code
+            valueInt = value;
+            isValueSet = true;
+        }
+    }
+    else {
+        throw std::invalid_argument("Error: Unsupported keyword type for " + name);
+    }
 }
 
-bool ConfigKeyList::ifConfigKeyIsSet(std::string key) const{
+void Keyword::print(void) const {
+    std::cout << name;
 
-	ConfigKey keyword = getConfigKey(key);
-
-
-	return keyword.ifValueSet;
-
-
-}
-
-int ConfigKeyList::searchKeywordInString(std::string s) const{
-
-	s = removeSpacesFromString(s);
-
-#if 0
-	std::cout<<"Searching in string = "<<s<<"\n";
-#endif
-
-	int indx = 0;
-	for(auto it = std::begin(keywordList); it != std::end(keywordList); ++it) {
-
-		std::string keyToFound = it->name;
-
-#if 0
-		std::cout<<"keyToFound = "<<keyToFound<<"\n";
-#endif
-
-		std::size_t found = s.find(keyToFound);
-
-		if (found!=std::string::npos){
-
-			if(found == 0){
-
-#if 0
-				std::cout<<"key Found\n";
-#endif
-
-
-				if(s.length() > found+keyToFound.length()){
-
-					if ( s.at(found+keyToFound.length()) == '=' ||  s.at(found+keyToFound.length()) == ':'  ){
-
-						return indx;
-
-					}
-
-				}
-
-			}
-
-
-		}
-
-		indx++;
-	}
-
-#if 0
-	std::cout<<"searchKeywordInString is done...\n";
-#endif
-
-
-	return -1;
-
-}
-
-bool ConfigKeyList::ifFeatureIsOn(std::string feature) const{
-
-	assert(!feature.empty());
-
-	std::string value = this->getConfigKeyStringValue(feature);
-
-	return checkIfOn(value);
-
-
-}
-
-bool ConfigKeyList::ifFeatureIsOff(std::string feature) const{
-
-	assert(!feature.empty());
-	std::string value = this->getConfigKeyStringValue(feature);
-
-	return checkIfOff(value);
-
-
-}
-
-void ConfigKeyList::parseString(std::string inputString){
-
-	assert(inputString.empty()== false);
-
-	std::stringstream iss(inputString);
-
-	while(iss.good())
-	{
-		std::string singleLine;
-		getline(iss,singleLine,'\n');
-
-		singleLine = removeSpacesFromString(singleLine);
-		int indxKeyword = searchKeywordInString(singleLine);
-
-
-		if(indxKeyword != -1){
-
-			ConfigKey temp = getConfigKey(indxKeyword);
-
-			std::string keyword = temp.name;
-			std::string cleanString;
-			cleanString = removeKeywordFromString(singleLine, keyword);
-
-			assignKeywordValueWithIndex(cleanString,indxKeyword);
-
-
-		}
-		else if(!singleLine.empty()){
-
-			std::cout<<"ERROR: Cannot parse definition, something wrong with the input:\n";
-			std::cout<<singleLine<<"\n";
-			abort();
-		}
-
-
-	}
-#if 0
-	this->printKeywords();
-#endif
-
+    if (isValueSet) {
+        std::cout << " : ";
+        if (type == "string") {
+            std::cout << valueString << "\n";
+        } else if (type == "double") {
+            std::cout << valueDouble << "\n";
+        } else if (type == "int") {
+            std::cout << valueInt << "\n";
+        } else if (type == "doubleVector") {
+            for (const auto& element : valueDoubleVector) {
+                std::cout << element << std::endl;
+            }
+        } else if (type == "stringVector") {
+            for (const auto& element : valueStringVector) {
+                std::cout << element << std::endl;
+            }
+        }
+    } else {
+        std::cout << "\n";
+    }
 }
 
 
+void Keyword::printToLog() const {
+    std::ostringstream logStream;
+    logStream << name;
+
+    if (isValueSet) {
+        logStream << " : ";
+        if (type == "string") {
+            logStream << valueString;
+        } else if (type == "double") {
+            logStream << valueDouble;
+        } else if (type == "int") {
+            logStream << valueInt;
+        } else if (type == "doubleVector") {
+            logStream << "Double Vector: [";
+            for (size_t i = 0; i < valueDoubleVector.size(); ++i) {
+                logStream << valueDoubleVector[i];
+                if (i < valueDoubleVector.size() - 1) logStream << ", ";
+            }
+            logStream << "]";
+        } else if (type == "stringVector") {
+            logStream << "String Vector: [";
+            for (size_t i = 0; i < valueStringVector.size(); ++i) {
+                logStream << valueStringVector[i];
+                if (i < valueStringVector.size() - 1) logStream << ", ";
+            }
+            logStream << "]";
+        }
+    } else {
+        logStream << " (Value not set)";
+    }
+
+    // Log the final message
+    DriverLogger::getInstance().log(INFO, logStream.str());
+}
+
+} /* Namespace Rodop */
 

@@ -31,15 +31,25 @@
 
 #ifndef SURROAGE_MODEL_HPP
 #define SURROAGE_MODEL_HPP
-#include <armadillo>
-#include "../../INCLUDE/Rodeo_macros.hpp"
+
+
 #include "../../Bounds/INCLUDE/bounds.hpp"
-#include "../../Optimizers/INCLUDE/design.hpp"
+#include "../../LinearAlgebra/INCLUDE/vector.hpp"
+#include "../../LinearAlgebra/INCLUDE/matrix.hpp"
 #include "./surrogate_model_data.hpp"
+#include<vector>
 
-using namespace arma;
-using std::string;
 
+namespace Rodop{
+
+
+enum SURROGATE_MODEL {
+	NONE,
+	LINEAR_REGRESSION,
+	ORDINARY_KRIGING,
+	UNIVERSAL_KRIGING,
+	TANGENT_ENHANCED,
+    GRADIENT_ENHANCED};
 
 
 
@@ -64,7 +74,6 @@ protected:
 	unsigned int numberOfTrainingIterations  = 10000;
 
 	SurrogateModelData data;
-	OutputDevice output;
 
 	bool ifHasGradientData = false;
 
@@ -74,25 +83,17 @@ protected:
 
 	unsigned int numberOfThreads = 1;
 
-	unsigned int minimumNumberOfSamplesForTrainingDataShrinkage = 30;
-
 	Bounds boxConstraints;
 
 
 	double standardDeviationOfGeneralizationError = 0.0;
 
-
-	vec sampleWeights;
-	double targetForSampleWeights = 0.0;
-
-	Design globalOptimalDesign;
-
-
-
+	std::vector < std::string > testResultsFileHeader;
 
 
 public:
 
+	bool ifDisplay = false;
 	bool ifInitialized = false;
 	bool ifDataIsRead = false;
 	bool ifTestDataIsRead = false;
@@ -100,11 +101,7 @@ public:
 	bool ifModelTrainingIsDone = false;
 	bool ifHasTestData = false;
 	bool ifNormalizedTestData = false;
-
-
-	bool ifVaryingSampleWeights = false;
-	bool ifTargetForSampleWeightsIsSet = false;
-
+	bool ifHasValidationSamples = false;
 
 	virtual void setDimension(unsigned int);
 
@@ -130,17 +127,14 @@ public:
 
 	void setNumberOfThreads(unsigned int);
 
+	void setRatioValidationSamples(double);
+
 	virtual void setWriteWarmStartFileFlag(bool);
 	virtual void setReadWarmStartFileFlag(bool);
 
 	void setGradientsOn(void);
 	void setGradientsOff(void);
 	bool areGradientsOn(void) const;
-
-	void setGlobalOptimalDesign(Design d);
-
-	virtual void setDisplayOn(void);
-	virtual void setDisplayOff(void);
 
 	string getNameOfHyperParametersFile(void) const;
 	string getNameOfInputFile(void) const;
@@ -170,29 +164,35 @@ public:
 	virtual void loadHyperParameters(void) = 0;
 	virtual void updateAuxilliaryFields(void);
 	virtual void train(void) = 0;
-	virtual double interpolate(rowvec x) const = 0;
-	virtual double interpolateUsingDerivatives(rowvec x) const = 0;
-	virtual void interpolateWithVariance(rowvec xp,double *f_tilde,double *ssqr) const = 0;
+	virtual double interpolate(vec x) const = 0;
+	virtual double interpolateUsingDerivatives(vec x) const = 0;
+	virtual void interpolateWithVariance(vec xp,double *f_tilde,double *ssqr) const = 0;
 
-	virtual void addNewSampleToData(rowvec newsample) = 0;
-	virtual void addNewLowFidelitySampleToData(rowvec newsample) = 0;
+	virtual void addNewSampleToData(vec newsample) = 0;
+	virtual void addNewLowFidelitySampleToData(vec newsample) = 0;
 
 	virtual void updateModelWithNewData(void) = 0;
 
 
 	vec interpolateVector(mat X) const;
 
-	void tryOnTestData(void);
+	void tryOnTestData(string mode = "function_values");
 
-	double calculateInSampleError(void) const;
+
+	double calculateInSampleError(string mode = "function_values") const;
 	double calculateOutSampleError(void);
 
-	void saveTestResults(void) const;
+	double calculateValidationError(void);
+
+	void saveTestResults(void);
+	void saveTestResultsWithVariance(void);
+
+	SurrogateModelData getData() const;
 
 	mat getX(void) const;
 	vec gety(void) const;
-	rowvec getRowX(unsigned int index) const;
-	rowvec getRowXRaw(unsigned int index) const;
+	vec getRowX(unsigned int index) const;
+	vec getRowXRaw(unsigned int index) const;
 
     unsigned int countHowManySamplesAreWithinBounds(vec lb, vec ub);
 	void reduceTrainingData(vec lb, vec ub) const;
@@ -203,10 +203,11 @@ public:
 	void generateSampleWeightsAccordingToGlobalOptimum(void);
 	void printSampleWeights(void) const;
 
-	void removeVeryCloseSamples(const Design& globalOptimalDesign);
-	void removeVeryCloseSamples(const Design& globalOptimalDesign , std::vector<rowvec> samples);
-
+private:
+	void writeFileHeaderForTestResults();
 };
 
+
+} /* Namespace Rodop */
 
 #endif

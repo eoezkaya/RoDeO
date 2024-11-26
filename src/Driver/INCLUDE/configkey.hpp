@@ -1,126 +1,81 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
 #ifndef CONFIGKEY_HPP
 #define CONFIGKEY_HPP
 
-
-#include<armadillo>
 #include<vector>
 #include "../../ObjectiveFunctions/INCLUDE/objective_function.hpp"
 #include "../../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
 #include "../../Optimizers/INCLUDE/optimization.hpp"
-using namespace arma;
+#include "../../INCLUDE/globals.hpp"
+namespace Rodop{
+
+class Keyword{
+
+#ifdef UNIT_TESTS
+
+	friend class KeywordTest;
+	friend class DriverXMLTest;
+	FRIEND_TEST(KeywordTest, constructor);
+	FRIEND_TEST(KeywordTest, getValueFromXMLStringDouble);
+	FRIEND_TEST(KeywordTest, getValueFromXMLStringString);
+	FRIEND_TEST(KeywordTest, getValueFromXMLStringInt);
 
 
+	FRIEND_TEST(DriverXMLTest,setSomeKeywords);
 
 
-
-class ConfigKey{
+#endif
 
 public:
-	std::string name;
-	std::string type;
 
-	double doubleValue = 0.0;
-	int intValue = 0;
-	std::string stringValue;
-	vec vectorDoubleValue;
-	std::vector<std::string> vectorStringValue;
-	bool ifValueSet = false;
+    Keyword() {}
+	Keyword(const std::string& n, const std::string& t, double v) : name(n), type(t), valueDouble(v) {}
+	Keyword(const std::string& n, const std::string& t, int v) : name(n), type(t), valueInt(v) {}
+	Keyword(const std::string& n, const std::string& t, const std::string& v) : name(n), type(t), valueString(v) {}
+	Keyword(const std::string& n, const std::string& t, const vector<std::string>& v) : name(n), type(t), valueStringVector(v) {}
 
-	ConfigKey(std::string, std::string);
+
+
+
+	void returnErrorIfNotSet(void) const;
+	void setType(string whichType);
+	void setName(string name);
+	string getName(void) const;
+
+	void getValueFromXMLString(const string &input);
 	void print(void) const;
-	void abortIfNotSet(void) const;
+	void printToLog() const;
 
-	void setValue(std::string);
-	void setValue(vec);
-	void setValue(int);
-	void setValue(double);
-	void clear(void);
+	string getStringValue(void) const;
+	vector<string> getStringValueVector(void) const;
 
+	double getDoubleValue(void) const;
+	int getIntValue(void) const;
 
-};
+	vector<double> getDoubleValueVector(void) const;
 
-class ConfigKeyList{
+	string getStringValueVectorAt(unsigned indx) const;
+	double getDoubleValueVectorAt(unsigned indx) const;
 
 private:
 
-	std::vector<ConfigKey> keywordList;
-	unsigned int numberOfKeys = 0;
 
-public:
+	string name = "";
+	string type = "";
+	double valueDouble = EPSILON;
+	string valueString = "";
+	vector<string> valueStringVector;
+	vector<double> valueDoubleVector;
+	int valueInt = NONEXISTINGINTKEYWORD;
+	vector<int> valueIntVector;
 
-	void add(ConfigKey);
-	bool ifKeyIsAlreadyIntheList(ConfigKey keyToAdd) const;
+	bool isValueSet = false;
 
-	unsigned int countNumberOfElements(void) const;
-
-
-	void printKeywords(void) const;
-	void clearKeywords(void);
-
-	void assignKeywordValue(std::pair <std::string,std::string> input);
-	void assignKeywordValue(std::string key, std::string value);
-	void assignKeywordValue(std::string key, int value);
-	void assignKeywordValue(std::string key, vec values);
-
-	void assignKeywordValueWithIndex(std::string s, int indxKeyword);
-
-
-
-
-	ConfigKey getConfigKey(unsigned int) const;
-	ConfigKey getConfigKey(std::string key) const;
-
-
-	std::string getConfigKeyStringValue(std::string) const;
-	int getConfigKeyIntValue(std::string) const;
-	double getConfigKeyDoubleValue(std::string) const;
-	std::vector<std::string> getConfigKeyVectorStringValue(std::string) const;
-	vec getConfigKeyVectorDoubleValue(std::string) const;
-	std::string getConfigKeyStringVectorValueAtIndex(std::string, unsigned int) const;
-
-
-
-	void abortifConfigKeyIsNotSet(std::string key) const;
-	bool ifConfigKeyIsSet(std::string key) const;
-
-	int searchKeywordInString(std::string s) const;
-
-	bool ifFeatureIsOn(std::string feature) const;
-	bool ifFeatureIsOff(std::string feature) const;
-
-	void parseString(std::string);
 
 };
 
+
+
+
+} /* Namespace Rodop */
 
 #endif

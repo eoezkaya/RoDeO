@@ -1,12 +1,30 @@
 #include "./INCLUDE/rodeo.h"
+#include "../Optimizers/INCLUDE/optimization.hpp"
+#include "../LinearAlgebra/INCLUDE/matrix.hpp"
 #include "../ObjectiveFunctions/INCLUDE/objective_function.hpp"
 #include "../ObjectiveFunctions/INCLUDE/constraint_functions.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
-#include "../Auxiliary/INCLUDE/print.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
 #include "../Bounds/INCLUDE/bounds.hpp"
-#include <cassert>
 #include <filesystem>
+#include <algorithm>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <direct.h>
+#define CHANGE_DIR _chdir
+#else
+#include <unistd.h>
+#define CHANGE_DIR chdir
+#endif
+
+bool changeDirectory(const std::string& directory) {
+	if (CHANGE_DIR(directory.c_str()) != 0) {
+		std::cerr << "Error: Could not change directory to " << directory << std::endl;
+		return false;
+	}
+	return true;
+}
+
+
+namespace Rodop{
 
 RobustDesignOptimizer::RobustDesignOptimizer(){
 	optimizer.setAPIUseOn();
@@ -23,9 +41,13 @@ void RobustDesignOptimizer::print(void){
 }
 
 
-void RobustDesignOptimizer::setName(const string nameInput){
+void RobustDesignOptimizer::setName(const std::string& nameInput) {
+	// Check if the input name is empty and throw an exception if it is
+	if (nameInput.empty()) {
+		throw std::invalid_argument("Name cannot be empty.");
+	}
 
-	assert(!nameInput.empty());
+	// Set the name for the optimizer and the internal name
 	name = nameInput;
 	optimizer.setName(name);
 
@@ -58,6 +80,9 @@ void RobustDesignOptimizer::setDoEStrategy(const std::string& input) {
 }
 
 
+
+
+
 void RobustDesignOptimizer::setBoxConstraints(double *lb, double *ub){
 	if(dimension == 0){
 		throw std::invalid_argument("Problem dimension is not specified");
@@ -75,7 +100,7 @@ void RobustDesignOptimizer::setBoxConstraints(double *lb, double *ub){
 
 	Bounds boxConstraints;
 	boxConstraints.setDimension(dimension);
-	boxConstraints.setBounds(lb,ub);
+	boxConstraints.setBounds(lowerBounds,upperBounds);
 
 	optimizer.setBoxConstraints(boxConstraints);
 	areBoxConstraintsSpecified = true;
@@ -83,9 +108,11 @@ void RobustDesignOptimizer::setBoxConstraints(double *lb, double *ub){
 
 }
 
-void RobustDesignOptimizer::setNameOfTrainingDataFile(std::string name){
+void RobustDesignOptimizer::setNameOfTrainingDataFile(std::string filename){
 
-	assert(!name.empty());
+	if(filename.empty()){
+		throw std::invalid_argument("Empty file name for the training data");
+	}
 	objectiveFunctionTrainingFilename = name;
 }
 
@@ -96,13 +123,13 @@ void RobustDesignOptimizer::setDimension(unsigned int dim){
 	isDimensionSpecified = true;
 }
 
-void RobustDesignOptimizer::setObjectiveFunction(ObjectiveFunctionPtr function, std::string name, std::string filename){
+void RobustDesignOptimizer::setObjectiveFunction(ObjectiveFunctionPtr function, std::string functionName, std::string filename){
 
 	if(filename.empty()){
 
 		throw std::invalid_argument("Empty file name for the training data");
 	}
-	if(name.empty()){
+	if(functionName.empty()){
 
 		throw std::invalid_argument("Name of the objective function is empty");
 	}
@@ -122,7 +149,7 @@ void RobustDesignOptimizer::setObjectiveFunction(ObjectiveFunctionPtr function, 
 	ObjectiveFunctionDefinition objectiveFunctionDefinition;
 	objectiveFunctionTrainingFilename = filename;
 	objectiveFunctionDefinition.nameHighFidelityTrainingData = filename;
-	objectiveFunctionDefinition.name = name;
+	objectiveFunctionDefinition.name = functionName;
 
 
 	objectiveFunctionToAdd.setParametersByDefinition(objectiveFunctionDefinition);
@@ -133,78 +160,107 @@ void RobustDesignOptimizer::setObjectiveFunction(ObjectiveFunctionPtr function, 
 
 }
 
+// Helper function to trim whitespace from a string
+std::string trim(const std::string& str) {
+	size_t start = str.find_first_not_of(" \t\n\r");
+	size_t end = str.find_last_not_of(" \t\n\r");
+	return (start == std::string::npos || end == std::string::npos) ? "" : str.substr(start, end + 1);
+}
+
 ParsedConstraintExpression parseExpression(const std::string& input) {
-	std::istringstream stream(input);
+	// Trim the input to remove leading/trailing whitespace
+	std::string trimmedInput = trim(input);
+	std::istringstream stream(trimmedInput);
 	ParsedConstraintExpression result;
 
 	// Read the name part
 	if (!(stream >> result.name)) {
-		throw std::invalid_argument("Failed to parse the name part.");
+		throw std::invalid_argument("Failed to parse the name part from expression: '" + input + "'");
 	}
 
 	// Read the inequality part
 	if (!(stream >> result.inequality)) {
-		throw std::invalid_argument("Failed to parse the inequality part.");
+		throw std::invalid_argument("Failed to parse the inequality part from expression: '" + input + "'");
 	}
 
 	// Validate the inequality part
 	if (result.inequality != "<" && result.inequality != ">") {
-		throw std::invalid_argument("Invalid inequality operator.");
+		throw std::invalid_argument("Invalid inequality operator in expression: '" + input + "'");
 	}
 
 	// Read the floating point number part
 	if (!(stream >> result.value)) {
-		throw std::invalid_argument("Failed to parse the floating point number.");
+		throw std::invalid_argument("Failed to parse the floating point number from expression: '" + input + "'");
 	}
 
 	return result;
 }
 
 
-void RobustDesignOptimizer::addConstraint(ObjectiveFunctionPtr function, std::string expression, std::string filename){
-	if(filename.empty()){
-
-		throw std::invalid_argument("Empty file name for the training data");
-	}
-	if(name.empty()){
-
-		throw std::invalid_argument("Name of the objective function is empty");
+void RobustDesignOptimizer::addConstraint(ObjectiveFunctionPtr function, std::string expression, std::string filename) {
+	// Check for a valid filename
+	if (filename.empty()) {
+		throw std::invalid_argument("Empty file name for the training data.");
 	}
 
-	if(function == nullptr){
-		throw std::invalid_argument("Null function pointer");
+	// Check if the function name (constraint) is empty
+	if (expression.empty()) {
+		throw std::invalid_argument("Expression for the constraint is empty.");
 	}
 
+	// Check if a valid function pointer is passed
+	if (function == nullptr) {
+		throw std::invalid_argument("Null function pointer provided.");
+	}
+
+	// Parse the constraint expression
+	ParsedConstraintExpression exp = parseExpression(expression);
+
+	// Ensure the parsed expression has a valid constraint name
+	if (exp.name.empty()) {
+		throw std::invalid_argument("Constraint name parsed from expression is empty.");
+	}
+
+	// Ensure the inequality is valid
+	if (exp.inequality != "<" && exp.inequality != ">") {
+		throw std::invalid_argument("Invalid inequality in constraint expression.");
+	}
+
+	// Add the function pointer and filename to the appropriate vectors
 	constraintFunctionPtr.push_back(function);
 	constraintsTrainingDataFilename.push_back(filename);
 
+	// Create a new constraint function object
 	ConstraintFunction constraint;
-	ObjectiveFunctionDefinition definition;
-	definition.nameHighFidelityTrainingData = filename;
-	ConstraintDefinition constraintExpression;
-
 	constraint.setFunctionPtr(function);
 
-	ParsedConstraintExpression exp = parseExpression(expression);
+	// Set up the objective function definition
+	ObjectiveFunctionDefinition definition;
+	definition.nameHighFidelityTrainingData = filename;
+	definition.name = exp.name;
 
-	constraintExpression.constraintName = exp.name;
-	definition.name = constraintExpression.constraintName;
-
+	// Assign the definition to the constraint
 	constraint.setParametersByDefinition(definition);
 
-	constraintExpression.value = exp.value;
+	// Define the constraint's inequality and value
+	ConstraintDefinition constraintExpression;
+	constraintExpression.constraintName = exp.name;
 	constraintExpression.inequalityType = exp.inequality;
+	constraintExpression.value = exp.value;
 	constraintExpression.ID = numberOfConstraints;
 	numberOfConstraints++;
-	constraint.setConstraintDefinition(constraintExpression);
 
+	// Set the constraint's definition and dimension
+	constraint.setConstraintDefinition(constraintExpression);
 	constraint.setDimension(dimension);
 
-	//	constraint.print();
-
+	// Add the constraint to the optimizer
 	optimizer.addConstraint(constraint);
 
+	// Optionally, add logging here to record the success of adding the constraint
+	// DriverLogger::getInstance().log(INFO, "Constraint '" + exp.name + "' added successfully.");
 }
+
 
 
 void RobustDesignOptimizer::setDoEOn(unsigned int nSamples){
@@ -219,72 +275,109 @@ void RobustDesignOptimizer::setMaxNumberOfFunctionEvaluations(unsigned int nSamp
 	optimizer.setMaximumNumberOfIterations(numberOfFunctionEvaluations);
 }
 
-void RobustDesignOptimizer::performDoEForConstraints(void) {
-    // Loop over all constraints
+void RobustDesignOptimizer::performDoEForConstraints(void){
+
+    // Validate if constraint function pointers are properly set
+    if (constraintFunctionPtr.empty()) {
+        throw std::runtime_error("Constraint function pointers are not set.");
+    }
+
     for (unsigned int iConstraint = 0; iConstraint < numberOfConstraints; iConstraint++) {
 
-        vec constraintValues(numberOfSamplesForDoE);
+        mat trainingDataForConstraint;
 
-        // Loop over all samples
+        // Loop through each sample and evaluate the constraints
         for (unsigned int i = 0; i < numberOfSamplesForDoE; i++) {
-            rowvec x = samplesInput.row(i);
+            vec x = samplesInput.getRow(i);
 
             try {
-                // Try to evaluate the constraint function
-                double f = constraintFunctionPtr[iConstraint](x.memptr());
+                // Evaluate the constraint function
+                double f = constraintFunctionPtr[iConstraint](x.getPointer());
 
-                // Add the constraint result to the sample and append to CSV
-                addOneElement(x, f);
-                appendRowVectorToCSVData(x, constraintsTrainingDataFilename[iConstraint]);
+                // Add the constraint result to the sample data
+                vec sample = x;
+                sample.push_back(f);
+
+                // Add the sample to the training data for this constraint
+                trainingDataForConstraint.addRow(sample);
 
             } catch (const std::exception& e) {
-
-                throw std::runtime_error("Error evaluating constraint function.");
+                std::cerr << "Error evaluating constraint " << iConstraint
+                          << " for sample " << i << ": " << e.what() << std::endl;
+                throw;
             }
+        }
+
+        try {
+            // Save all training data for this constraint at once, after collecting all rows
+            trainingDataForConstraint.saveAsCSV(constraintsTrainingDataFilename[iConstraint]);
+        } catch (const std::exception& e) {
+            std::cerr << "Error saving training data for constraint " << iConstraint
+                      << " to file: " << e.what() << std::endl;
+            throw;
         }
     }
 }
 
 
+void RobustDesignOptimizer::generateDoESamplesInput() {
+	// Check if DoE type is valid and perform appropriate sampling
+	if (DoEType == "random") {
+		samplesInput.resize(numberOfSamplesForDoE, dimension);
+		samplesInput.fillRandom(lowerBounds, upperBounds);
+	} else if (DoEType == "lhs") {
+		samplesInput.resize(numberOfSamplesForDoE, dimension);
+		samplesInput.fillRandomLHS(lowerBounds, upperBounds);
+	} else {
+		throw std::invalid_argument("Invalid DoE type: " + DoEType);
+	}
+}
 
 void RobustDesignOptimizer::performDoE(void) {
 
-    // Perform DoE based on the type
-    if (DoEType == "random") {
-        samplesInput = generateRandomMatrix(numberOfSamplesForDoE, dimension,
-                                            lowerBounds.data(), upperBounds.data());
-    } else if (DoEType == "lhs") {
-        samplesInput = generateLatinHypercubeMatrix(numberOfSamplesForDoE, dimension, lowerBounds, upperBounds);
-    } else {
-        throw std::invalid_argument("Invalid DoE type.");
-    }
+	generateDoESamplesInput();
 
-    // Vector to store function values
-    vec functionValues(numberOfSamplesForDoE);
+	// Check if the objective function pointer is set
+	if (objectiveFunctionPtr == nullptr) {
+		throw std::runtime_error("Objective function pointer is null.");
+	}
 
-    // Loop over all samples
-    for (unsigned int i = 0; i < numberOfSamplesForDoE; i++) {
-        rowvec x = samplesInput.row(i);
+	if(numberOfSamplesForDoE == 0){
+		throw std::runtime_error("Number of samples must be specified for the DoE.");
+	}
 
-        try {
-            // Try to evaluate the objective function
-            double f = objectiveFunctionPtr(x.memptr());
+	vec functionValues(numberOfSamplesForDoE);
+	mat trainingData;
+	for (unsigned int i = 0; i < numberOfSamplesForDoE; ++i) {
+		vec x = samplesInput.getRow(i);
+		try {
+			// Try to evaluate the objective function
+			functionValues(i) = objectiveFunctionPtr(x.getPointer());
+		} catch (const std::exception& e) {
+			// Handle the exception, possibly logging the error and rethrowing it
+			std::cerr << "Error evaluating the objective function at sample " << i << ": " << e.what() << std::endl;
+			throw std::runtime_error("DoE process will be killed.");
+		}
 
-            // Add the result to the sample and append to CSV
-            addOneElement(x, f);
-            appendRowVectorToCSVData(x, objectiveFunctionTrainingFilename);
+		// Add the evaluated function value to the sample
+		vec sampleToAdd = x;
+		sampleToAdd.push_back(functionValues(i));
+		trainingData.addRow(sampleToAdd);
 
-        } catch (const std::exception& e) {
+		try {
+			// Save the training data
+			trainingData.saveAsCSV(objectiveFunctionTrainingFilename);
+		} catch (const std::exception &e) {
+			throw std::runtime_error("DoE process will be killed.");
+		}
+	}
 
-            throw std::runtime_error("Error evaluating objective function.");
-        }
-    }
-
-    // Handle constraints if they exist
-    if (numberOfConstraints > 0) {
-        performDoEForConstraints();
-    }
+	// If constraints exist, perform DoE for them
+	if (numberOfConstraints > 0) {
+		performDoEForConstraints();
+	}
 }
+
 
 
 void RobustDesignOptimizer::checkOptimizationSettings() {
@@ -298,7 +391,7 @@ void RobustDesignOptimizer::checkOptimizationSettings() {
 	if (!areBoxConstraintsSpecified) {
 		throw std::invalid_argument("Box constraints are not specified");
 	}
-	if (!this->isObjectiveFunctionSpecified) {
+	if (!isObjectiveFunctionSpecified) {
 		throw std::invalid_argument("Objective function is not specified");
 	}
 }
@@ -320,8 +413,10 @@ void RobustDesignOptimizer::run(void){
 		performDoE();
 	}
 
-
 	//	std::cout<<"Running optimization...\n";
 	optimizer.performEfficientGlobalOptimization();
 
 }
+
+
+} /* Namespace Rodop */

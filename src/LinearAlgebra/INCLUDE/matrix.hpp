@@ -28,95 +28,189 @@
  *
  *
  */
-
-
-#ifndef MAT_H
-#define MAT_H
-
+#ifndef MAT_H_
+#define MAT_H_
 #include "vector.hpp"
-
-namespace rodeo{
-
-
+#include <vector>
+namespace Rodop {
 
 class mat {
 private:
-	int nrows;
-	int ncols;
-	double** matrix;
+	unsigned int nrows;
+	unsigned int ncols;
+	double* matrix;
 
-	void deallocateMemory(void);
-	void allocateMemory();
+
+
 
 public:
-	// Constructor
-	mat(int defaultRows = 0, int defaultCols = 0);
-	mat(int r, int c, double val);
+	// Constructors
+	mat();
+	mat(unsigned int nRows, unsigned int nCols);
+
+	mat(unsigned int r, unsigned int c, double val);
 
 	// Copy constructor
 	mat(const mat& other);
 
+	// Copy assignment operator
+	mat& operator=(const mat& other);
+
+	// Move constructor
+	mat(mat&& other) noexcept;
+
+	// Move assignment operator
+	mat& operator=(mat&& other) noexcept;
+
 	// Destructor
 	~mat();
 
-	int getNRows(void) const;
-	int getNCols(void) const;
-	int getSize(void) const;
+	double * getPointer() const;
+	void reset();
+	void resize(unsigned int newRows, unsigned int newCols);
 
-
-	// Matrix addition
+	unsigned int getNRows() const { return nrows; }
+	unsigned int getNCols() const { return ncols; }
+	unsigned int getSize() const { return nrows * ncols; }
+//
+//	// Matrix addition
 	mat operator+(const mat& other) const;
-
-	// Matrix subtraction
+//
+//	// Matrix subtraction
 	mat operator-(const mat& other) const;
-
-	// Matrix multiplication
+//
+//	// Matrix multiplication
 	mat operator*(const mat& other) const;
-	mat operator*(const double scalar) const;
+	mat operator*(double scalar) const;
 
-	double& operator()(int i, int j);
-
-	// Const version of the access operator for read-only access
-	const double& operator()(int i, int j) const;
+	double& operator()(unsigned int i, unsigned int j);
+	const double& operator()(unsigned int i, unsigned int j) const;
 
 	// Display matrix
-	void print(void) const;
-	void display(void) const{
-		print();
+	void print(std::string msg = "", int precision = 4) const;
+	void display() const { print(); }
+	static	void printPivot(const std::vector<int>& pivot);
+
+	void saveAsCSV(const std::string& filename, int precision = 6, const std::vector<std::string>& header = {}) const;
+	void readFromCSV(const std::string& filename, bool hasHeader = false);
+
+	mat submat(unsigned int startRow, unsigned int startCol, unsigned int numRows, unsigned int numCols) const;
+
+	bool isSymmetric(double tolerance = 1e-9) const;
+	bool isEmpty()const{
+		if(nrows == 0 || ncols == 0) return true;
+		else return false;
 	}
+    bool isEqual(const mat& other, double tolerance = 1e-9) const;
 
 	void fill(double value);
-	void fillRandom(void);
+	void fillRandom();
+	void fillRandom(double a, double b);
+	void fillRandom(const vec& lb, const vec& ub);
+	void fillRandom(const std::vector<double>& lb, const std::vector<double>& ub);
+	void fillRandomLHS(const vec& lb, const vec& ub);
+	void fillRandomLHS(const std::vector<double>& lb, const std::vector<double>& ub);
 
-	static mat eye(int size) {
-		mat identity(size, size);
+	void eye();
 
-		for (int i = 0; i < size; ++i) {
-			for (int j = 0; j < size; ++j) {
-				if (i == j) {
-					identity(i, j) = 1.0;
-				} else {
-					identity(i, j) = 0.0;
-				}
-			}
-		}
+	void generateRandomPositiveDefinite();
+	void generateRandomSymmetric();
 
-		return identity;
-	}
+	mat computeCorrelationMatrixExponential(const vec &theta, const vec &gamma) const;
+	mat computeCorrelationMatrixExponentialNaive(const vec &theta, const vec &gamma) const;
+#ifdef OPENBLAS
+	mat computeCorrelationMatrixExponentialOpenBlas(const vec &theta, const vec &gamma) const;
+#endif
 
-	void resize(int newRows, int newCols);
-	mat submat(int startRow, int startCol, int subRows, int subCols) const;
-	void addColumns(int numColumnsToAdd, double defaultValue = 0.0);
-	void addRows(int numRowsToAdd, double defaultValue = 0.0);
+	mat computeCorrelationMatrixGaussian(const vec &theta) const;
+	mat computeCorrelationMatrixGaussianNaive(const vec &theta) const;
+#ifdef OPENBLAS
+	mat computeCorrelationMatrixGaussianOpenBlas(const vec &theta) const;
+#endif
+
+
+	void generateRandomCorrelationMatrix();
+
+	/* Row and column operations */
+	void deleteRow(int rowIndex);
+	void deleteRows(const std::vector<int>& rowIndices);
+	void addRow(const vec& rowVec, int position = -1);
+	void addColumn(const vec& colVec, int position = -1);
+	vec getCol(int colIndex) const;
+	vec getRow(int rowIndex) const;
+	void setRow(const vec& rowVec, unsigned int rowIndex);
+	void setCol(const vec& colVec, unsigned int colIndex);
+	void shuffleRows();
+	bool isRowInMatrix(const vec& v, double tolerance = 10E-9) const;
+	int findRowIndex(const vec& v, double tolerance = 10E-9) const;
+
+	vec diag() const;
+
+	mat transpose() const;
+	mat transposeNaive() const;
+
+	vec matVecProduct(const vec& v) const;
+	vec matVecProductNaive(const vec& v) const;
+	vec matVecProductOpenBlas(const vec& v) const;
+
+	mat matMatProduct(const mat& other) const;
+	mat matMatProductOpenBlas(const mat& other) const;
+	mat matMatProductNaive(const mat& other) const;
+
+
+	mat invert() const;
+	mat invertNaive() const;
+#ifdef OPENBLAS
+	mat invertOpenBlas() const;
+#endif
+
+	mat cholesky(int &) const;
+	mat choleskyOpenBlas(int &) const;
+	mat choleskyNaive(int &) const;
+
+	vec solveCholesky(const vec& b) const;
+	vec solveCholeskyOpenBlas(const vec& b) const;
+	vec solveCholeskyNaive(const vec& b) const;
+
+	void addEpsilonToDiagonal(double epsilon);
+
+	mat lu(int* pivot, int &) const;
+	mat luOpenBlas(int* pivot,int &) const;
+	mat luNaive(int *pivot,int &) const;
+
+	vec solveLU(int *pivot, const vec& b) const;
+	vec solveLUOpenBlas(int *pivot, const vec& b) const;
+	vec solveLUNaive(int*p, const vec& b) const;
+
+
+	vec solve(const vec& b) const;
+
+
+
+
+	static void print_matrix(const double *a, int n);
+	static double* lu_decomposition(double *a, int n, int *p, int *ret);
+	static void print_permutation(int *p, int n);
+	static void lu_solve(double *LU, int *p, double *b, double *x, int n);
+	static void forward_substitution(int n, double *LU, int *p, double *b, double *y);
+	static void backward_substitution(int n, double *LU, double *y, double *x);
+	static double* matvecmul(double *a, double *b, int n);
+	static void matmatmul(double *A, double *B, double *C, int n);
+
+
+	mat normalizeMatrix(vec xmin, vec xmax) const;
+	mat normalizeMatrix(double xmin, double xmax) const;
 
 	mat concatenateRowWise(const mat& other) const;
 	mat concatenateColumnWise(const mat& other) const;
 
-//	vec getRow(int n) const;
-
 };
 
-}
 
-#endif // MAT_H
 
+
+
+
+} /* namespace Rodop */
+
+#endif /* MAT_H_ */

@@ -1,0 +1,16 @@
+#ifndef GLOBALS_HPP
+#define GLOBALS_HPP
+
+
+const double SQRT2PI = 2.506628274631000;
+const double INVSQRT2PI = 0.3989422804014327;
+const double LARGE = 10E14;
+const double EPSILON = 10E-14;
+const double GOLDENRATIO = 1.618033988749;
+const double SQRT2 = 1.4142135623730950488;
+const int NONEXISTINGINTKEYWORD = -10000000;
+const double PI = 3.141592654;
+
+
+
+#endif

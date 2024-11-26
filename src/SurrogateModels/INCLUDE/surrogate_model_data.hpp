@@ -32,45 +32,41 @@
 #ifndef SURROGATE_MODEL_DATA_HPP
 #define SURROGATE_MODEL_DATA_HPP
 
-#include "../../Output/INCLUDE/output.hpp"
 #include "../../Bounds/INCLUDE/bounds.hpp"
+#include "../../LinearAlgebra/INCLUDE/vector.hpp"
+#include "../../LinearAlgebra/INCLUDE/matrix.hpp"
 #include<string>
+#include<vector>
 
-#define ARMA_DONT_PRINT_ERRORS
-#include <armadillo>
-
-using namespace arma;
 using std::string;
 
-#ifdef UNIT_TESTS
-#include<gtest/gtest.h>
-#endif
+
+
+namespace Rodop{
 
 class SurrogateModelData{
-
-#ifdef UNIT_TESTS
-	friend class SurrogateModelDataTest;
-	FRIEND_TEST(SurrogateModelDataTest, removeVeryCloseSamples);
-	FRIEND_TEST(SurrogateModelDataTest, removeVeryCloseSamplesLineSearch);
-#endif
-
 
 
 protected:
 
 	unsigned int numberOfSamples = 0;
 	unsigned int numberOfTestSamples = 0;
+	unsigned int numberOfValidationSamples = 0;
 	unsigned int dimension = 0;
 
-	std::string filenameFromWhichTrainingDataIsRead;
+	string filenameFromWhichTrainingDataIsRead;
 
 	mat rawData;
+	mat rawDataWork;
+	mat rawDataValidation;
 	mat X;
 	mat Xraw;
+
 	mat gradient;
 	mat gradientRaw;
 	vec y;
 
+	/* for tangent enhanced models only */
 	vec directionalDerivatives;
 	mat differentiationDirections;
 
@@ -78,12 +74,14 @@ protected:
 	mat XTest;
 	vec yTest;
 
-	OutputDevice output;
+	mat XrawValidation;
+	mat XValidation;
+	vec yValidation;
+
 	Bounds boxConstraints;
 
-	double toleranceFactorForTraininingDataReduction = 0.001;
-	double toleranceFactorForSearchingGlobalDesign = 0.000001;
-
+	double ratioValidationData = 0.0;
+	std::vector<int>indicesForValidationData;
 
 public:
 
@@ -93,20 +91,19 @@ public:
 	bool ifDataIsNormalized = false;
 	bool ifDataIsRead = false;
 	bool ifTestDataIsRead = false;
+	bool ifDisplay = false;
 
 	SurrogateModelData();
 
 	void reset(void);
 
 
-	void setDisplayOn(void);
-	void setDisplayOff(void);
 	void setGradientsOn(void);
 	void setGradientsOff(void);
 	void setDirectionalDerivativesOn(void);
 	void setDirectionalDerivativesOff(void);
 
-
+	void setValidationRatio(double val);
 
 	void setBoxConstraints(Bounds);
 	Bounds getBoxConstraints(void) const;
@@ -128,8 +125,10 @@ public:
 	bool isDataNormalized(void) const;
 	bool isDataRead(void) const;
 
+	void revertBackToFullData();
 
 	unsigned int getNumberOfSamples(void) const;
+	unsigned int getNumberOfSamplesValidation(void) const;
 	unsigned int getNumberOfSamplesTest(void) const;
 
 	unsigned int getDimension(void) const;
@@ -137,45 +136,53 @@ public:
 
 	mat getRawData(void) const;
 
-	rowvec getRowX(unsigned int index) const;
-	rowvec getRowXTest(unsigned int index) const;
-	rowvec getRowRawData(unsigned int index) const;
+	vec getRowX(unsigned int index) const;
+	vec getRowXTest(unsigned int index) const;
+	vec getRowXValidation(unsigned int index) const;
 
-	rowvec getRowGradient(unsigned int index) const;
-	rowvec getRowGradientRaw(unsigned int index) const;
 
-	rowvec getRowDifferentiationDirection(unsigned int index) const;
+	vec getRowRawData(unsigned int index) const;
+
+	vec getRowGradient(unsigned int index) const;
+	vec getRowGradientRaw(unsigned int index) const;
+
+	vec getRowDifferentiationDirection(unsigned int index) const;
 
 	mat getInputMatrix(void) const;
 	mat getInputMatrixTest(void) const;
+	mat getInputMatrixValidation(void) const;
 
-	rowvec getRowXRaw(unsigned int index) const;
-	rowvec getRowXRawTest(unsigned int index) const;
+	vec getRowXRaw(unsigned int index) const;
+	vec getRowXRawTest(unsigned int index) const;
 
 	vec getOutputVector(void) const;
 	void setOutputVector(vec);
+
 	vec getOutputVectorTest(void) const;
+	vec getOutputVectorValidation(void) const;
+
 	double getMinimumOutputVector(void) const;
 	double getMaximumOutputVector(void) const;
 
 	mat getGradientMatrix(void) const;
 	vec getDirectionalDerivativesVector(void) const;
 
-	double getScalingFactorForOutput(void) const;
-
 	void readData(string);
 	void readDataTest(string);
 
+	std::vector<int> generateRandomIndicesForValidationData(int N, double ratio) const;
+
+
 
 	void print(void) const;
+	void printValidationSampleIndices(void) const;
+	void printMessage(string);
+	void printHere(const std::string& file = __FILE__, int line = __LINE__);
 
-	void removeVeryCloseSamples(const Design&);
-	void removeVeryCloseSamples(const Design&,const std::vector<rowvec> history);
-
-
-
+private:
+	void checkDimensionAndNumberOfSamples();
 };
 
-
+}
 
 #endif

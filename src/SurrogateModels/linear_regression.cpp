@@ -1,47 +1,12 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2024 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
-
 #include "./INCLUDE/linear_regression.hpp"
 #include "./INCLUDE/surrogate_model.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 #include "../Bounds/INCLUDE/bounds.hpp"
-#include "../INCLUDE/Rodeo_macros.hpp"
 
+#include <cassert>
+#include <stdexcept>
+#include <iostream>
 
-#include <armadillo>
-
-using namespace arma;
-
-
+namespace Rodop{
 
 //LinearModel::LinearModel():SurrogateModel(){}
 
@@ -56,7 +21,7 @@ void LinearModel::setBoxConstraints(Bounds boxConstraintsInput){
 
 void LinearModel::readData(void){
 
-	assert(isNotEmpty(filenameDataInput));
+	assert(!filenameDataInput.empty());
 	data.readData(filenameDataInput);
 	numberOfSamples = data.getNumberOfSamples();
 
@@ -73,34 +38,42 @@ void LinearModel::normalizeData(void){
 }
 
 
-void LinearModel::initializeSurrogateModel(void){
+void LinearModel::initializeSurrogateModel(void) {
+	// Replace assertions with exception handling
+	if (!ifDataIsRead) {
+		throw std::runtime_error("Data must be read before initializing the surrogate model.");
+	}
 
-	assert(ifDataIsRead);
-	assert(dimension >0);
+	if (dimension <= 0) {
+		throw std::invalid_argument("Dimension must be greater than zero to initialize the surrogate model.");
+	}
 
-	output.printMessage("Initializing the linear model...");
+	// Initialization message (could be replaced by a proper logging mechanism)
 
-	numberOfHyperParameters = dimension+1;
-	weights = zeros<vec>(numberOfHyperParameters);
-	regularizationParameter  = 10E-6;
+	if(ifDisplay){
+		std::cout << "Initializing the linear model...\n";
+	}
 
-	train();
+	numberOfHyperParameters = dimension + 1;  // Set the number of hyperparameters
+	weights.resize(numberOfHyperParameters);  // Resize weights vector
+	regularizationParameter = 1e-8;           // Set regularization parameter
 
-	ifInitialized = true;
+	train();  // Train the model
 
+	ifInitialized = true;  // Mark the model as initialized
 }
 
 void LinearModel::saveHyperParameters(void) const  {
 
-	assert(isNotEmpty(filenameHyperparameters));
-	weights.save(filenameHyperparameters, csv_ascii);
+	assert(!filenameHyperparameters.empty());
+	weights.saveToCSV(filenameHyperparameters);
 
 }
 
 void LinearModel::loadHyperParameters(void){
 
-	assert(isNotEmpty(filenameHyperparameters));
-	weights.load(filenameHyperparameters, csv_ascii);
+	assert(!filenameHyperparameters.empty());
+	weights.readFromCSV(filenameHyperparameters);
 
 }
 
@@ -128,12 +101,23 @@ void LinearModel::setWeights(vec w){
 
 void LinearModel::train(void){
 
-	assert(ifNormalized);
-	assert(ifDataIsRead);
-	assert(dimension>0);
-	assert(numberOfSamples>0);
+	if (!ifNormalized) {
+		throw std::runtime_error("LinearModel::train: Data must be normalized before this operation.");
+	}
 
-	output.printMessage("Finding the weights of the linear model...");
+	if (!ifDataIsRead) {
+		throw std::runtime_error("LinearModel::train: Data must be read before this operation.");
+	}
+
+	if (dimension == 0) {
+		throw std::invalid_argument("LinearModel::train: Dimension must be set before this operation.");
+	}
+
+	if (numberOfSamples == 0) {
+		throw std::invalid_argument("LinearModel::train: Number of samples must be greater than zero.");
+	}
+
+	//	output.printMessage("Finding the weights of the linear model...");
 
 
 	mat X = data.getInputMatrix();
@@ -156,19 +140,28 @@ void LinearModel::train(void){
 		}
 	}
 
-	mat XT = trans(augmentedX);
+	mat XT = augmentedX.transpose();
 	mat XTX = XT *augmentedX;
-	XTX = XTX + regularizationParameter * eye(dimension+1,dimension+1);
-	weights = inv(XTX)*XT*y;
+	XTX.addEpsilonToDiagonal(regularizationParameter);
+	mat invXTX = XTX.invert();
+	vec XTy = XT.matVecProduct(y);
+	weights = invXTX.matVecProduct(XTy);
 
-	output.printMessage("Linear regression weights", weights);
+
+	/*
+	vec res = XTy - XTX.matVecProduct(weights);
+	res.print("res", 12);
+	 */
+	if(ifDisplay){
+		weights.print("Linear regression weights");
+	}
 
 	ifModelTrainingIsDone = true;
 
 
 }
 
-double LinearModel::interpolate(rowvec x ) const{
+double LinearModel::interpolate(vec x ) const{
 
 	double fRegression = weights(0);
 
@@ -181,31 +174,34 @@ double LinearModel::interpolate(rowvec x ) const{
 
 }
 
-double LinearModel::interpolateUsingDerivatives(rowvec x ) const{
 
-	abortWithErrorMessage("Linear model cannot interpolate using derivatives!");
-}
+void LinearModel::interpolateWithVariance(vec xp,double *fTilde,double *ssqr) const{
 
-
-void LinearModel::interpolateWithVariance(rowvec xp,double *fTilde,double *ssqr) const{
-
-	assert(false);
+	throw std::logic_error("interpolateWithVariance is not valid for the linear model.");
 	xp.print();
 	*fTilde = 0.0;
 	*ssqr = 0.0;
 
 }
 
+double LinearModel::interpolateUsingDerivatives(vec x) const{
+	x.print();
+	throw std::logic_error("interpolateUsingDerivatives should not be called for SpecificDerivedModel.");
+
+}
+
 vec LinearModel::interpolateAll(mat X) const{
 
-	assert(X.n_cols == dimension);
+	if (X.getNCols() != dimension) {
+		throw std::invalid_argument("LinearModel::interpolateAll: Dimension of the matrix does not match with problem dimension.");
+	}
 
-	unsigned int N = X.n_rows;
+	unsigned int N = X.getNRows();
 
-	vec result(N,fill::zeros);
+	vec result(N);
 
 	for(unsigned int i=0; i<N; i++){
-		result(i) = interpolate(X.row(i));
+		result(i) = interpolate(X.getRow(i));
 	}
 
 	return result;
@@ -215,27 +211,26 @@ vec LinearModel::interpolateAll(mat X) const{
 void LinearModel::printSurrogateModel(void) const{
 
 	data.print();
-	cout<<"Regression weights:\n";
-	trans(weights).print();
+	weights.print("regression weights");
 
 }
 
 
-void LinearModel::addNewSampleToData(rowvec newsample){
+void LinearModel::addNewSampleToData(vec newsample){
+	throw std::logic_error("No need to use this function within the Linear model!");
+	newsample.print();
 
-	cout<<newsample.size();
-	assert(false);
 }
 
-void LinearModel::addNewLowFidelitySampleToData(rowvec newsample){
-	cout<<newsample.size();
-	assert(false);
+void LinearModel::addNewLowFidelitySampleToData(vec newsample){
+	throw std::logic_error("No need to use this function within the Linear model!");
+	newsample.print();
 }
 
 
 void LinearModel::setNameOfInputFile(std::string filename){
 
-	assert(isNotEmpty(filename));
+	assert(!filename.empty());
 	filenameDataInput = filename;
 
 }
@@ -249,7 +244,7 @@ void LinearModel::setNumberOfTrainingIterations(unsigned int nIters){
 
 void LinearModel::setNameOfHyperParametersFile(std::string filename){
 
-	assert(isNotEmpty(filename));
+	assert(!filename.empty());
 	filenameHyperparameters = filename;
 
 }
@@ -260,3 +255,5 @@ void LinearModel::updateModelWithNewData(void){
 
 }
 
+
+} /* Namespace Rodop */

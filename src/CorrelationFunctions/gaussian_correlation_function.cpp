@@ -1,60 +1,30 @@
-/*
- * RoDeO, a Robust Design Optimization Package
- *
- * Copyright (C) 2015-2023 Chair for Scientific Computing (SciComp), RPTU
- * Homepage: http://www.scicomp.uni-kl.de
- * Contact:  Prof. Nicolas R. Gauger (nicolas.gauger@scicomp.uni-kl.de) or Dr. Emre Özkaya (emre.oezkaya@scicomp.uni-kl.de)
- *
- * Lead developer: Emre Özkaya (SciComp, RPTU)
- *
- * This file is part of RoDeO
- *
- * RoDeO is free software: you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * RoDeO is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty
- * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- *
- * See the GNU General Public License for more details.
- * You should have received a copy of the GNU
- * General Public License along with RoDeO.
- * If not, see <http://www.gnu.org/licenses/>.
- *
- * Authors: Emre Özkaya, (SciComp, RPTU)
- *
- *
- *
- */
-
 #include "./INCLUDE/gaussian_correlation_function.hpp"
-#include "../LinearAlgebra/INCLUDE/vector_operations.hpp"
-#include "../Auxiliary/INCLUDE/auxiliary_functions.hpp"
 
 
 #include <cassert>
+#include <iostream>
 
-#define ARMA_DONT_PRINT_ERRORS
-#include <armadillo>
 
-using namespace arma;
-
+namespace Rodop{
 
 void GaussianCorrelationFunction::initialize(void){
 
-	assert(dim>0);
+	if (dim == 0) {
+		throw std::logic_error("Dimension must be set before initialization.");
+	}
 	vec thetaInit(dim); thetaInit.fill(1.0);
 	theta = thetaInit;
 
 }
 
-void GaussianCorrelationFunction::setHyperParameters(vec input){
+void GaussianCorrelationFunction::setHyperParameters(const vec &input){
 
-	assert(input.empty() == false);
-	assert(input.size() == dim);
-
+	if (input.isEmpty()) {
+		throw std::invalid_argument("Input hyperparameters vector is empty.");
+	}
+	if (input.getSize() != dim) {
+		throw std::invalid_argument("Input hyperparameters vector size does not match the dimension.");
+	}
 	theta = input ;
 }
 
@@ -64,66 +34,31 @@ vec GaussianCorrelationFunction::getHyperParameters(void) const{
 }
 
 
-double GaussianCorrelationFunction::computeCorrelation(const rowvec &xi, const rowvec &xj) const {
+double GaussianCorrelationFunction::computeCorrelation(const vec &xi, const vec &xj) const {
 
-
-	double sum = 0.0;
-	for (unsigned int k = 0; k < dim; k++) {
-		double r = (xi(k) - xj(k))*(xi(k) - xj(k));
-		double prod = theta(k)*r;
-		sum += prod;
-	}
-	return exp(-sum);
+	return vec::computeGaussianCorrelation(xi.getPointer(), xj.getPointer(),theta.getPointer(),xi.getSize());
 }
 
 
 
-double GaussianCorrelationFunction::computeCorrelationDot(const rowvec &xi, const rowvec &xj, const rowvec &diffDirection) const {
+double GaussianCorrelationFunction::computeCorrelationDot(const vec &xi, const vec &xj, const vec &diffDirection) const {
 
-	double sumd = 0.0;
-	double sum  = 0.0;
-
-	for (unsigned int k = 0; k < dim; k++) {
-
-		sumd += -2.0*theta(k) * (xi(k) - xj(k))*diffDirection(k);
-		sum  += theta(k) * pow(fabs(xi(k) - xj(k)), 2.0);
-	}
-
-	double correlation = exp(-sum);
-
-	double derivative = -1.0*sumd*correlation;
-
-	assert(!isinf(derivative));
-
-
-	return derivative;
-
+	return vec::computeGaussianCorrelationDot(xi.getPointer(), xj.getPointer(), diffDirection.getPointer(), theta.getPointer(),xi.getSize());
 }
 
 
 
 
-double GaussianCorrelationFunction::computeCorrelationDotDot(const rowvec &xi, const rowvec &xj, const rowvec &firstDiffDirection, const rowvec &secondDiffDirection) const{
+double GaussianCorrelationFunction::computeCorrelationDotDot(const vec &xi, const vec &xj, const vec &firstDiffDirection, const vec &secondDiffDirection) const{
 
-	double td = 0.0;
-	double t = 0.0;
-	double td0 = 0.0;
-	double tdd = 0.0;
-	double temp;
-	for (unsigned int i = 0; i < dim; i++) {
-		temp = 2.0*theta(i)*firstDiffDirection(i);
-		tdd = tdd + temp*secondDiffDirection(i);
-		td = td - temp*(xi(i)-xj(i));
-		td0 = td0 - theta(i)*2.0*(xi(i)-xj(i))*secondDiffDirection(i);
-		t += theta(i)*(xi(i)-xj(i))*(xi(i)-xj(i));
 
-	}
-	temp = exp(-t);
-	double resultdd = -(temp*tdd-td*exp(-t)*td0);
+	return vec::computeGaussianCorrelationDotDot(xi.getPointer(),
+			xj.getPointer(),
+			firstDiffDirection.getPointer(),
+			secondDiffDirection.getPointer(),
+			theta.getPointer(),
+			xi.getSize());
 
-	assert(!isinf(resultdd));
-
-	return resultdd;
 
 }
 
@@ -131,5 +66,34 @@ void GaussianCorrelationFunction::print(void) const{
 
 	std::cout<<"Theta = \n";
 	theta.print();
+
+}
+
+void GaussianCorrelationFunction::computeCorrelationMatrix(void){
+	if (!ifInputSampleMatrixIsSet) {
+		throw std::logic_error("Input sample matrix is not set.");
+	}
+
+	correlationMatrix = X.computeCorrelationMatrixGaussian(theta);
+	correlationMatrix.addEpsilonToDiagonal(epsilon);
+}
+vec GaussianCorrelationFunction::computeCorrelationVector(const vec &x) const{
+
+	if (!ifInputSampleMatrixIsSet) {
+		throw std::logic_error("Input sample matrix is not set.");
+	}
+
+	vec r(N);
+	unsigned int dim = X.getNCols();
+
+	for(unsigned int i=0;i<N;i++){
+		vec y = X.getRow(i);
+		r(i) = vec::computeGaussianCorrelation(x.getPointer(), y.getPointer(), theta.getPointer(), dim);
+	}
+
+	return r;
+
+}
+
 
 }
