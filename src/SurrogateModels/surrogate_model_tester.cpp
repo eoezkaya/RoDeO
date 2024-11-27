@@ -35,12 +35,6 @@ void SurrogateModelTester::setSurrogateModel(SURROGATE_MODEL modelType){
 
 }
 
-void SurrogateModelTester::setSurrogateModelLowFi(SURROGATE_MODEL modelType){
-
-	surrogateModelTypeLowFi = modelType;
-	ifSurrogateModelLowFiSpecified = true;
-
-}
 
 void SurrogateModelTester::setRatioValidationSamples(double value){
 
@@ -84,16 +78,8 @@ void SurrogateModelTester::bindSurrogateModels(void){
 	}
 
 	else{
-		ModelLogger::getInstance().log(INFO, "Model Tester: Multi-Fidelity feature is active...");
 
-		assert(ifSurrogateModelLowFiSpecified);
-		multilevelModel.setIDHiFiModel(surrogateModelType);
-		multilevelModel.setIDLowFiModel(surrogateModelTypeLowFi);
-		multilevelModel.setinputFileNameHighFidelityData(fileNameTraingData);
-		multilevelModel.setinputFileNameLowFidelityData(fileNameTraingDataLowFidelity);
-		multilevelModel.bindModels();
-
-		surrogateModel = &multilevelModel;
+		throw std::runtime_error("Multi level feature is not available.");
 	}
 
 	ifbindSurrogateModelisDone = true;
@@ -205,12 +191,6 @@ void SurrogateModelTester::setFileNameTrainingData(string filename){
 }
 
 
-void SurrogateModelTester::setFileNameTrainingDataLowFidelity(string filename){
-
-	checkFilename(filename);
-	fileNameTraingDataLowFidelity = filename;
-
-}
 
 void SurrogateModelTester::setFileNameTestData(string filename){
 

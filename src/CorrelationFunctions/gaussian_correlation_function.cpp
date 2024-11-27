@@ -1,7 +1,4 @@
 #include "./INCLUDE/gaussian_correlation_function.hpp"
-
-
-#include <cassert>
 #include <iostream>
 
 

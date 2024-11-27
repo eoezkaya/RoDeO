@@ -5,18 +5,12 @@
 #include "ea_individual.hpp"
 #include <limits>
 
-#ifdef UNIT_TESTS
-#include "gtest/gtest.h"
-#endif
+
 
 namespace Rodop{
 
 class EAPopulation{
-#ifdef UNIT_TESTS
-	friend class EAPopulationTest;
-	FRIEND_TEST(EAPopulationTest, UpdateFitnessValuesLinear);
-	FRIEND_TEST(EAPopulationTest, UpdateFitnessValuesQuadratic);
-#endif
+
 
 private:
 

@@ -22,6 +22,3 @@ message("-- Target compiler flags for driver are: ${MAIN_CFLAGS}")
 add_custom_command(TARGET driver POST_BUILD
 COMMAND echo built with the flags: ${MAIN_CFLAGS})
 
-if(UNIT_TESTS)
-add_subdirectory(./UnitTests)
-endif(UNIT_TESTS)

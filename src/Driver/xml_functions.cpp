@@ -8,13 +8,13 @@ namespace Rodop{
 
 template <typename T>
 std::string generateXml(const std::string& elementName, const T& value) {
-    std::ostringstream xml;
+	std::ostringstream xml;
 
-    // Apply the std::fixed manipulator before inserting values
-    xml << std::fixed;
-    xml << "<" << elementName << ">" << value << "</" << elementName << ">";
+	// Apply the std::fixed manipulator before inserting values
+	xml << std::fixed;
+	xml << "<" << elementName << ">" << value << "</" << elementName << ">";
 
-    return xml.str();
+	return xml.str();
 }
 
 
@@ -37,7 +37,10 @@ template string generateXml(const std::string& elementName, const string& value)
 template <typename T>
 std::string generateXmlVector(const std::string& name, const T& data) {
 
-	assert(data.getSize() > 0);
+	// Throw an exception if the container is empty
+	if (data.getSize() == 0) {
+		throw std::invalid_argument("The data container is empty.");
+	}
 	std::ostringstream xml;
 
 	xml << "<" << name << ">\n";

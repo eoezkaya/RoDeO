@@ -4,7 +4,6 @@
 #include "./INCLUDE/string_functions.hpp"
 #include "../INCLUDE/globals.hpp"
 
-#include<cassert>
 #include <map>
 using namespace std;
 
@@ -15,12 +14,12 @@ Driver::Driver(){}
 
 
 void Driver::setConfigFileName(const std::string &filename) {
-    if (filename.empty()) {
-        throw std::invalid_argument("The configuration file name cannot be empty.");
-    }
+	if (filename.empty()) {
+		throw std::invalid_argument("The configuration file name cannot be empty.");
+	}
 
-    configFilename = filename;
-    isConfigFileSet = true;
+	configFilename = filename;
+	isConfigFileSet = true;
 }
 
 void Driver::initializeKeywords(void){
@@ -208,99 +207,6 @@ void Driver::setObjectiveFunctionDefinition(
 
 }
 
-void Driver::setObjectiveFunctionDefinitionMultiFidelity(
-		ObjectiveFunctionDefinition &definition) {
-	definition.ifMultiLevel = true;
-	string name = getConfigKeyValueString(keywordsObjectiveFunction, "name");
-	string designVectorFilename = getConfigKeyValueString(
-			keywordsObjectiveFunction, "design_vector_filename");
-	if (designVectorFilename.empty()) {
-		throw std::invalid_argument(
-				"design vector filename is missing. Check configuration file");
-	}
-	definition.name = name;
-	definition.designVectorFilename = designVectorFilename;
-	vector<string> executableName = getConfigKeyValueStringVector(
-			keywordsObjectiveFunction, "executable_filename");
-	if (executableName.size() < 2) {
-		throw std::invalid_argument(
-				"executable names are missing. Check configuration file");
-	}
-	definition.executableName = executableName[0];
-	definition.executableNameLowFi = executableName[1];
-	vector<string> outputDataFilenames = getConfigKeyValueStringVector(
-			keywordsObjectiveFunction, "output_filename");
-	if (outputDataFilenames.size() < 2) {
-		throw std::invalid_argument(
-				"output filenames are missing. Check configuration file");
-	}
-	definition.outputFilename = outputDataFilenames[0];
-	definition.outputFilenameLowFi = outputDataFilenames[1];
-	vector<string> trainingDataFilename = getConfigKeyValueStringVector(
-			keywordsObjectiveFunction, "training_data_filename");
-	if (trainingDataFilename.size() < 2) {
-		throw std::invalid_argument(
-				"training data filenames are missing. Check configuration file");
-	}
-	definition.nameHighFidelityTrainingData = trainingDataFilename[0];
-	definition.nameLowFidelityTrainingData = trainingDataFilename[1];
-	vector<string> surrogateModelTypes = getConfigKeyValueStringVector(
-			keywordsObjectiveFunction, "surrogate_model_type");
-	if (surrogateModelTypes.size() < 2) {
-		throw std::invalid_argument(
-				"surrogate model types are missing. Check configuration file");
-	}
-	definition.modelHiFi = getSurrogateModelID(surrogateModelTypes[0]);
-	definition.modelLowFi = getSurrogateModelID(surrogateModelTypes[1]);
-	if (definition.modelHiFi == GRADIENT_ENHANCED
-			&& definition.modelLowFi == GRADIENT_ENHANCED) {
-		vector<string> executableNamesGradient = getConfigKeyValueStringVector(
-				keywordsObjectiveFunction, "executable_filename_gradient");
-		if (executableNamesGradient.size() < 2) {
-			throw std::invalid_argument(
-					"executable names for the gradient evaluation are missing or incomplete. Check configuration file");
-		}
-		definition.executableNameGradient = executableNamesGradient[0];
-		definition.executableNameLowFiGradient = executableNamesGradient[1];
-		vector<string> outputDataFilenamesGradient =
-				getConfigKeyValueStringVector(keywordsObjectiveFunction,
-						"output_filename_gradient");
-		if (outputDataFilenamesGradient.size() < 2) {
-			throw std::invalid_argument(
-					"output file names for the gradient evaluation are missing or incomplete. Check configuration file");
-		}
-		definition.outputGradientFilename = outputDataFilenamesGradient[0];
-		definition.outputFilenameLowFiGradient = outputDataFilenamesGradient[1];
-	}
-	if (definition.modelHiFi == GRADIENT_ENHANCED
-			&& !(definition.modelLowFi == GRADIENT_ENHANCED)) {
-		vector<string> executableNamesGradient = getConfigKeyValueStringVector(
-				keywordsObjectiveFunction, "executable_filename_gradient");
-		if (executableNamesGradient.size() < 1) {
-			throw std::invalid_argument(
-					"executable name for the gradient evaluation is missing. Check configuration file");
-		}
-		definition.executableNameGradient = executableNamesGradient[0];
-		vector<string> outputDataFilenamesGradient =
-				getConfigKeyValueStringVector(keywordsObjectiveFunction,
-						"output_filename_gradient");
-		definition.outputGradientFilename = outputDataFilenamesGradient[0];
-	}
-	if (!(definition.modelHiFi == GRADIENT_ENHANCED)
-			&& definition.modelLowFi == GRADIENT_ENHANCED) {
-		vector<string> executableNamesGradient = getConfigKeyValueStringVector(
-				keywordsObjectiveFunction, "executable_filename_gradient");
-		if (executableNamesGradient.size() < 1) {
-			throw std::invalid_argument(
-					"executable name for the gradient evaluation is missing. Check configuration file");
-		}
-		definition.executableNameLowFiGradient = executableNamesGradient[1];
-		vector<string> outputDataFilenamesGradient =
-				getConfigKeyValueStringVector(keywordsObjectiveFunction,
-						"output_filename_gradient");
-		definition.outputFilenameLowFiGradient = outputDataFilenamesGradient[1];
-	}
-}
 
 void Driver::setObjectiveFunctionNumberOfTrainingIterations() {
 	int numberOfTrainingIterations = getConfigKeyValueInt(
@@ -321,30 +227,22 @@ void Driver::readObjectiveFunction() {
 	readObjectiveFunctionKeywords();
 	ObjectiveFunctionDefinition definition;
 
-
-	string isMultiFidelityActive = getConfigKeyValueString(
-			keywordsObjectiveFunction, "multi_fidelity");
-
-	bool isMultiFidelity = checkIfOn(isMultiFidelityActive);
-
-
-	definition.ifMultiLevel = isMultiFidelity;
 	int dimension = getConfigKeyValueInt(keywordsGeneral, "dimension");
 	objectiveFunction.setDimension(dimension);
 
 
 	setObjectiveFunctionNumberOfTrainingIterations();
+	setObjectiveFunctionDefinition(definition);
 
-	if (!isMultiFidelity) {
-		setObjectiveFunctionDefinition(definition);
 
-	} else {
-
-		setObjectiveFunctionDefinitionMultiFidelity(definition);
-	}
 	objectiveFunction.setParametersByDefinition(definition);
 
-	assert(boxConstraints.areBoundsSet());
+	if (!boxConstraints.areBoundsSet()) {
+		throw std::runtime_error(
+				"readObjectiveFunction:Bounds are not set.");
+	}
+
+
 	objectiveFunction.setParameterBounds(boxConstraints);
 
 	DriverLogger::getInstance().log(INFO, objectiveFunction.toString());
@@ -472,101 +370,6 @@ void Driver::setConstraintSurrogateModelType(
 	definition.modelHiFi = getSurrogateModelID(surrogateModelType);
 }
 
-void Driver::setConstraintFunctionGradientExecutableName(
-		ObjectiveFunctionDefinition &definition) {
-	string executableNameGradient = getConfigKeyValueString(
-			keywordsConstraintFunction, "executable_filename_gradient");
-	if (executableNameGradient.empty()) {
-		throw std::invalid_argument(
-				"executable name for the constraint gradient evaluation is missing. Check configuration file");
-	}
-	definition.executableNameGradient = executableNameGradient;
-}
-
-void Driver::setConstraintFunctionGradientOutputFilename(
-		ObjectiveFunctionDefinition &definition) {
-	string outputDataFilenameGradient = getConfigKeyValueString(
-			keywordsConstraintFunction, "output_filename_gradient");
-	if (outputDataFilenameGradient.empty()) {
-		throw std::invalid_argument(
-				"output filename for the gradient evaluation is missing. Check configuration file");
-	}
-	if (isEqual(outputDataFilenameGradient, definition.outputFilename)) {
-		throw std::invalid_argument(
-				"output filename for the constraint gradient evaluation is same as the function evaluation. Check configuration file");
-	}
-	definition.outputGradientFilename = outputDataFilenameGradient;
-}
-
-void Driver::setConstraintFunctionExecutableFilenamesMF(
-		ObjectiveFunctionDefinition &definition) {
-	vector<string> executableNames = getConfigKeyValueStringVector(
-			keywordsConstraintFunction, "executable_filename");
-	if (executableNames.size() < 2) {
-		throw std::invalid_argument(
-				"executable names for the multi-fidelity constraint function are missing or incomplete. Check configuration file");
-	}
-
-	if(isEqual(executableNames[0],executableNames[1])){
-		throw std::invalid_argument(
-				"executable names for the multi-fidelity constraint function are same for both models. Check configuration file");
-
-	}
-
-	definition.executableName = executableNames[0];
-	definition.executableNameLowFi = executableNames[1];
-
-}
-
-void Driver::setConstraintFunctionTrainingDataFilenamesMF(
-		ObjectiveFunctionDefinition &definition) {
-	vector<string> trainingDataFilenames = getConfigKeyValueStringVector(
-			keywordsConstraintFunction, "training_data_filename");
-	if (trainingDataFilenames.size() < 2) {
-		throw std::invalid_argument(
-				"training data filenames for the multi-fidelity constraint function are missing or incomplete. Check configuration file");
-	}
-
-	if(isEqual(trainingDataFilenames[0],trainingDataFilenames[1])){
-		throw std::invalid_argument(
-				"training data filenames for the multi-fidelity constraint function are same for both models. Check configuration file");
-
-	}
-
-	definition.nameHighFidelityTrainingData = trainingDataFilenames[0];
-	definition.nameLowFidelityTrainingData  = trainingDataFilenames[1];
-
-}
-
-void Driver::setConstraintFunctionOutputFilenamesMF(
-		ObjectiveFunctionDefinition &definition) {
-	vector<string> outputFilenames = getConfigKeyValueStringVector(
-			keywordsConstraintFunction, "output_filename");
-	if (outputFilenames.size() < 2) {
-		throw std::invalid_argument(
-				"output filenames for the multi-fidelity constraint function are missing or incomplete. Check configuration file");
-	}
-
-	if(isEqual(outputFilenames[0],outputFilenames[1])){
-		throw std::invalid_argument(
-				"output filenames for the multi-fidelity constraint function are same for both models. Check configuration file");
-
-	}
-
-	definition.outputFilename = outputFilenames[0];
-	definition.outputFilenameLowFi  = outputFilenames[1];
-
-}
-
-void Driver::setConstraintFunctionSurrogateTypesMF(
-		ObjectiveFunctionDefinition &definition) {
-	vector<string> surrogateModelTypes = getConfigKeyValueStringVector(
-			keywordsConstraintFunction, "surrogate_model_type");
-
-	definition.modelHiFi = getSurrogateModelID(surrogateModelTypes[0]);
-	definition.modelLowFi = getSurrogateModelID(surrogateModelTypes[1]);
-
-}
 
 void Driver::setConstrantFunctionTrainingDataFilename(
 		ObjectiveFunctionDefinition &definition) {
@@ -586,19 +389,9 @@ void Driver::readConstraintFunctionsSingleFidelity(
 	setConstraintOutputFilename(definition);
 	setConstrantFunctionTrainingDataFilename(definition);
 	setConstraintSurrogateModelType(definition);
-	if (definition.modelHiFi == GRADIENT_ENHANCED) {
-		setConstraintFunctionGradientExecutableName(definition);
-		setConstraintFunctionGradientOutputFilename(definition);
-	}
+
 }
 
-void Driver::readConstraintFunctionsMultiFidelity(
-		ObjectiveFunctionDefinition &definition) {
-	setConstraintFunctionExecutableFilenamesMF(definition);
-	setConstraintFunctionTrainingDataFilenamesMF(definition);
-	setConstraintFunctionOutputFilenamesMF(definition);
-	setConstraintFunctionSurrogateTypesMF(definition);
-}
 
 void Driver::readConstraintFunctions(void) {
 
@@ -644,93 +437,24 @@ void Driver::readConstraintFunctions(void) {
 		setConstraintValue(constraintDefinition);
 		setConstraintUDF(constraint);
 
-		if(!isMultiFidelity){
+		/* if the constraint is not a user defined function, it will require more information like name of the training data etc */
+		if(!constraint.isUserDefinedFunction()){
 
-			/* if the constraint is not a user defined function, it will require more information like name of the training data etc */
-			if(!constraint.isUserDefinedFunction()){
-
-				readConstraintFunctionsSingleFidelity(definition);
-			}
-
-		}
-		else{
-
-			readConstraintFunctionsMultiFidelity(definition);
-
-			if (definition.modelHiFi == GRADIENT_ENHANCED
-					&& definition.modelLowFi == GRADIENT_ENHANCED) {
-				vector<string> executableNamesGradient = getConfigKeyValueStringVector(
-						keywordsConstraintFunction, "executable_filename_gradient");
-				if (executableNamesGradient.size() < 2) {
-					throw std::invalid_argument(
-							"executable names for the gradient evaluation are missing or incomplete. Check configuration file");
-				}
-				definition.executableNameGradient = executableNamesGradient[0];
-				definition.executableNameLowFiGradient = executableNamesGradient[1];
-
-
-				vector<string> outputDataFilenamesGradient =
-						getConfigKeyValueStringVector(keywordsConstraintFunction,
-								"output_filename_gradient");
-				if (outputDataFilenamesGradient.size() < 2) {
-					throw std::invalid_argument(
-							"output file names for the gradient evaluation are missing or incomplete. Check configuration file");
-				}
-				definition.outputGradientFilename = outputDataFilenamesGradient[0];
-				definition.outputFilenameLowFiGradient = outputDataFilenamesGradient[1];
-			}
-
-			if (!(definition.modelHiFi == GRADIENT_ENHANCED)
-					&& definition.modelLowFi == GRADIENT_ENHANCED) {
-				vector<string> executableNamesGradient = getConfigKeyValueStringVector(
-						keywordsConstraintFunction, "executable_filename_gradient");
-				if (executableNamesGradient.size() < 1) {
-					throw std::invalid_argument(
-							"executable names for the gradient evaluation are missing or incomplete. Check configuration file");
-				}
-
-				definition.executableNameLowFiGradient = executableNamesGradient[0];
-				vector<string> outputDataFilenamesGradient =
-						getConfigKeyValueStringVector(keywordsConstraintFunction,
-								"output_filename_gradient");
-				if (outputDataFilenamesGradient.size() < 1) {
-					throw std::invalid_argument(
-							"output file names for the gradient evaluation are missing or incomplete. Check configuration file");
-				}
-				definition.outputFilenameLowFiGradient = outputDataFilenamesGradient[0];
-			}
-
-
-			if (definition.modelHiFi == GRADIENT_ENHANCED
-					&& !(definition.modelLowFi == GRADIENT_ENHANCED)) {
-				vector<string> executableNamesGradient = getConfigKeyValueStringVector(
-						keywordsConstraintFunction, "executable_filename_gradient");
-				if (executableNamesGradient.size() < 1) {
-					throw std::invalid_argument(
-							"executable names for the gradient evaluation are missing or incomplete. Check configuration file");
-				}
-
-				definition.executableNameGradient = executableNamesGradient[0];
-				vector<string> outputDataFilenamesGradient =
-						getConfigKeyValueStringVector(keywordsConstraintFunction,
-								"output_filename_gradient");
-				if (outputDataFilenamesGradient.size() < 1) {
-					throw std::invalid_argument(
-							"output file names for the gradient evaluation are missing or incomplete. Check configuration file");
-				}
-				definition.outputFilename = outputDataFilenamesGradient[0];
-			}
-
+			readConstraintFunctionsSingleFidelity(definition);
 		}
 
 
 		constraint.setParametersByDefinition(definition);
 		constraint.setConstraintDefinition(constraintDefinition);
 
-		assert(boxConstraints.areBoundsSet());
+		if (!boxConstraints.areBoundsSet()) {
+			throw std::runtime_error(
+					"readConstraintFunctions:Bounds are not set.");
+		}
+
 		constraint.setParameterBounds(boxConstraints);
 
-//		constraint.print();
+		//		constraint.print();
 
 		optimizationStudy.addConstraint(constraint);
 
@@ -821,8 +545,9 @@ void Driver::readOptimizationParameters() {
 
 void Driver::readConfigurationFile(void){
 
-
-	assert(isConfigFileSet);
+	if (!isConfigFileSet) {
+		throw std::runtime_error("Driver::readConfigurationFile: configuration file is not set.");
+	}
 
 	initializeKeywords();
 
@@ -942,7 +667,11 @@ void Driver::setDiscreteParametersOptimizationStudy() {
 
 void Driver::setBoxConstraints() {
 	// Ensure that keywordsGeneral is not empty before proceeding.
-	assert(!keywordsGeneral.empty());
+
+	if(keywordsGeneral.empty()){
+		throw std::runtime_error("keywordsGeneral is empty.");
+	}
+
 
 	// Get the 'dimension' from configuration and check against the size of designParameters.
 	int dimension = getConfigKeyValueInt(keywordsGeneral, "dimension");
@@ -1039,44 +768,6 @@ void Driver::addConfigKeysConstraintFunction() {
 }
 
 
-void Driver::addConfigKeysConstraintFunctionMultiFidelity(void) {
-	keywordsConstraintFunction.clear();
-
-	// List of single value keys with their associated types
-	std::vector<std::pair<std::string, std::string>> singleValueKeys = {
-			{"multi_fidelity", "string"},
-			{"name", "string"},
-			{"constraint_value", "string"},
-			{"constraint_type", "string"},
-			{"user_defined_function", "string"},
-			{"design_vector_filename", "string"},
-			{"warm_start", "string"},
-			{"number_of_training_iterations", "int"}
-	};
-
-	// List of vector value keys with their associated types
-	std::vector<std::pair<std::string, std::string>> vectorValueKeys = {
-			{"output_filename", "stringVector"},
-			{"output_filename_gradient", "stringVector"},
-			{"executable_filename", "stringVector"},
-			{"executable_filename_gradient", "stringVector"},
-			{"executable_filename_tangent", "stringVector"},
-			{"surrogate_model_type", "stringVector"},
-			{"training_data_filename", "stringVector"}
-	};
-
-	// Add single value keys
-	for (const auto& keyType : singleValueKeys) {
-		addConfigKey(keywordsConstraintFunction, keyType.first, keyType.second);
-	}
-
-	// Add vector value keys
-	for (const auto& keyType : vectorValueKeys) {
-		addConfigKey(keywordsConstraintFunction, keyType.first, keyType.second);
-	}
-}
-
-
 void Driver::addConfigKeysObjectiveFunction(void) {
 
 	keywordsObjectiveFunction.clear();
@@ -1100,31 +791,6 @@ void Driver::addConfigKeysObjectiveFunction(void) {
 
 
 }
-
-void Driver::addConfigKeysObjectiveFunctionMultiFidelity(void) {
-
-	keywordsObjectiveFunction.clear();
-
-
-
-	addConfigKey(keywordsObjectiveFunction, "multi_fidelity", "string");
-	addConfigKey(keywordsObjectiveFunction, "name", "string");
-	addConfigKey(keywordsObjectiveFunction, "design_vector_filename", "string");
-	addConfigKey(keywordsObjectiveFunction, "warm_start", "string");
-
-	addConfigKey(keywordsObjectiveFunction, "output_filename", "stringVector");
-	addConfigKey(keywordsObjectiveFunction, "output_filename_gradient", "stringVector");
-
-	addConfigKey(keywordsObjectiveFunction, "executable_filename", "stringVector");
-	addConfigKey(keywordsObjectiveFunction, "executable_filename_gradient", "stringVector");
-	addConfigKey(keywordsObjectiveFunction, "executable_filename_tangent", "stringVector");
-	addConfigKey(keywordsObjectiveFunction, "surrogate_model_type", "stringVector");
-	addConfigKey(keywordsObjectiveFunction, "training_data_filename", "stringVector");
-	addConfigKey(keywordsObjectiveFunction, "number_of_training_iterations", "int");
-
-
-}
-
 
 int Driver::getConfigKeyValueInt(vector<Keyword>& list, const string& key) {
 	if (list.empty()) {
@@ -1189,28 +855,28 @@ vector<double> Driver::getConfigKeyValueDoubleVector(vector<Keyword>& list, cons
 
 
 string Driver::getConfigKeyValueString(vector<Keyword> &list, const string &key) {
-    if (list.empty()) {
-        DriverLogger::getInstance().log(ERROR, "Keyword list is empty.");
-        throw std::invalid_argument("Keyword list is empty.");
-    }
-    if (key.empty()) {
-        DriverLogger::getInstance().log(ERROR, "Provided key is empty.");
-        throw std::invalid_argument("Key is empty.");
-    }
+	if (list.empty()) {
+		DriverLogger::getInstance().log(ERROR, "Keyword list is empty.");
+		throw std::invalid_argument("Keyword list is empty.");
+	}
+	if (key.empty()) {
+		DriverLogger::getInstance().log(ERROR, "Provided key is empty.");
+		throw std::invalid_argument("Key is empty.");
+	}
 
-    // Log that we're searching for the key
-    DriverLogger::getInstance().log(INFO, "Searching for key: " + key);
+	// Log that we're searching for the key
+	DriverLogger::getInstance().log(INFO, "Searching for key: " + key);
 
-    for (const auto& keyword : list) {
-        if (keyword.getName() == key) {
-            DriverLogger::getInstance().log(INFO, "Found key: " + key + ", returning value.");
-            return keyword.getStringValue();
-        }
-    }
+	for (const auto& keyword : list) {
+		if (keyword.getName() == key) {
+			DriverLogger::getInstance().log(INFO, "Found key: " + key + ", returning value.");
+			return keyword.getStringValue();
+		}
+	}
 
-    // If key was not found, log and return an empty string
-    DriverLogger::getInstance().log(WARNING, "Key '" + key + "' not found in the keyword list.");
-    return "";
+	// If key was not found, log and return an empty string
+	DriverLogger::getInstance().log(WARNING, "Key '" + key + "' not found in the keyword list.");
+	return "";
 }
 
 
@@ -1237,103 +903,88 @@ vector<string> Driver::getConfigKeyValueStringVector(vector<Keyword>& list, cons
 
 std::string Driver::getConfigKeyValueString(vector<Keyword> &list, const std::string &xml_input, const std::string &key) {
 
-    // Check for an empty list and log an error if applicable
-    if (list.empty()) {
-        DriverLogger::getInstance().log(ERROR, "Keyword list is empty.");
-        throw std::invalid_argument("List is empty.");
-    }
+	// Check for an empty list and log an error if applicable
+	if (list.empty()) {
+		DriverLogger::getInstance().log(ERROR, "Keyword list is empty.");
+		throw std::invalid_argument("List is empty.");
+	}
 
-    // Check for an empty XML input and log an error if applicable
-    if (xml_input.empty()) {
-        DriverLogger::getInstance().log(ERROR, "XML input is empty.");
-        throw std::invalid_argument("XML input is empty.");
-    }
+	// Check for an empty XML input and log an error if applicable
+	if (xml_input.empty()) {
+		DriverLogger::getInstance().log(ERROR, "XML input is empty.");
+		throw std::invalid_argument("XML input is empty.");
+	}
 
-    // Check for an empty key and log an error if applicable
-    if (key.empty()) {
-        DriverLogger::getInstance().log(ERROR, "Key is empty.");
-        throw std::invalid_argument("Key is empty.");
-    }
+	// Check for an empty key and log an error if applicable
+	if (key.empty()) {
+		DriverLogger::getInstance().log(ERROR, "Key is empty.");
+		throw std::invalid_argument("Key is empty.");
+	}
 
-    // Log that we're starting to search for the key
-    DriverLogger::getInstance().log(INFO, "Searching for key: " + key);
+	// Log that we're starting to search for the key
+	DriverLogger::getInstance().log(INFO, "Searching for key: " + key);
 
-    std::string returnString;
-    for (auto &keyword : list) {
-        if (keyword.getName() == key) {
-            // Log that the key was found
-            DriverLogger::getInstance().log(INFO, "Key '" + key + "' found, extracting value from XML.");
+	std::string returnString;
+	for (auto &keyword : list) {
+		if (keyword.getName() == key) {
+			// Log that the key was found
+			DriverLogger::getInstance().log(INFO, "Key '" + key + "' found, extracting value from XML.");
 
-            // Extract the value from the XML input
-            keyword.getValueFromXMLString(xml_input);
-            returnString = keyword.getStringValue();
-            break;
-        }
-    }
+			// Extract the value from the XML input
+			keyword.getValueFromXMLString(xml_input);
+			returnString = keyword.getStringValue();
+			break;
+		}
+	}
 
-    // If the key was not found in the list, log a warning
-    if (returnString.empty()) {
-        DriverLogger::getInstance().log(WARNING, "Key '" + key + "' not found in the keyword list.");
-    }
+	// If the key was not found in the list, log a warning
+	if (returnString.empty()) {
+		DriverLogger::getInstance().log(WARNING, "Key '" + key + "' not found in the keyword list.");
+	}
 
-    return returnString;
+	return returnString;
 }
 
 void Driver::readObjectiveFunctionKeywords() {
-    // Check if configuration keys are initialized, if not, throw an exception
-    if (!areConfigKeysInitialized) {
-        DriverLogger::getInstance().log(ERROR, "Configuration keys are not initialized.");
-        throw std::runtime_error("Configuration keys are not initialized.");
-    }
+	// Check if configuration keys are initialized, if not, throw an exception
+	if (!areConfigKeysInitialized) {
+		DriverLogger::getInstance().log(ERROR, "Configuration keys are not initialized.");
+		throw std::runtime_error("Configuration keys are not initialized.");
+	}
 
-    // Check if the configuration file is set, if not, throw an exception
-    if (!isConfigFileSet) {
-        DriverLogger::getInstance().log(ERROR, "Configuration file is not set.");
-        throw std::runtime_error("Configuration file is not set.");
-    }
+	// Check if the configuration file is set, if not, throw an exception
+	if (!isConfigFileSet) {
+		DriverLogger::getInstance().log(ERROR, "Configuration file is not set.");
+		throw std::runtime_error("Configuration file is not set.");
+	}
 
-    // Log that we're starting to read the objective function keywords
-    DriverLogger::getInstance().log(INFO, "Starting to read objective function keywords from the XML file.");
+	// Log that we're starting to read the objective function keywords
+	DriverLogger::getInstance().log(INFO, "Starting to read objective function keywords from the XML file.");
 
-    // Read the objective function segment from the XML file
-    std::string objectiveFunctionText = readASegmentFromXMLFile("objective_function");
-    DriverLogger::getInstance().log(INFO, "Objective function segment read successfully from XML.");
+	// Read the objective function segment from the XML file
+	std::string objectiveFunctionText = readASegmentFromXMLFile("objective_function");
+	DriverLogger::getInstance().log(INFO, "Objective function segment read successfully from XML.");
 
-    // Check if the multi-fidelity model is active
-    std::string isMultiFidelityActive = getConfigKeyValueString(keywordsObjectiveFunction, objectiveFunctionText, "multi_fidelity");
-    bool isMultiFidelity = checkIfOn(isMultiFidelityActive);
+	// Loop through the objective function keywords and extract values from the XML string
+	for (auto &keyword : keywordsObjectiveFunction) {
+		// Log the keyword being processed
+		DriverLogger::getInstance().log(INFO, "Processing keyword: " + keyword.getName());
 
-    if (isMultiFidelity) {
-        // Log that multi-fidelity is active
-        DriverLogger::getInstance().log(INFO, "Multi-fidelity model is active. Adding multi-fidelity configuration keys.");
+		// Extract the keyword value from the XML string
+		try {
+			keyword.getValueFromXMLString(objectiveFunctionText);
+			DriverLogger::getInstance().log(INFO, "Successfully extracted value for keyword: " + keyword.getName());
+		} catch (const std::exception &e) {
+			// Log any errors encountered while extracting the value
+			DriverLogger::getInstance().log(ERROR, "Error extracting value for keyword: " + keyword.getName() + " - " + e.what());
+			throw;
+		}
 
-        // Add multi-fidelity configuration keys
-        addConfigKeysObjectiveFunctionMultiFidelity();
-    } else {
-        // Log that multi-fidelity is inactive
-        DriverLogger::getInstance().log(INFO, "Multi-fidelity model is not active.");
-    }
+		keyword.printToLog();
+	}
 
-    // Loop through the objective function keywords and extract values from the XML string
-    for (auto &keyword : keywordsObjectiveFunction) {
-        // Log the keyword being processed
-        DriverLogger::getInstance().log(INFO, "Processing keyword: " + keyword.getName());
-
-        // Extract the keyword value from the XML string
-        try {
-            keyword.getValueFromXMLString(objectiveFunctionText);
-            DriverLogger::getInstance().log(INFO, "Successfully extracted value for keyword: " + keyword.getName());
-        } catch (const std::exception &e) {
-            // Log any errors encountered while extracting the value
-            DriverLogger::getInstance().log(ERROR, "Error extracting value for keyword: " + keyword.getName() + " - " + e.what());
-            throw;
-        }
-
-        keyword.printToLog();
-    }
-
-    // Log completion of reading the objective function keywords
-    DriverLogger::getInstance().log(INFO, "Completed reading objective function keywords.");
+	// Log completion of reading the objective function keywords
+	DriverLogger::getInstance().log(INFO, "Completed reading objective function keywords.");
 }
 
 
@@ -1341,18 +992,12 @@ void Driver::readObjectiveFunctionKeywords() {
 
 void Driver::readConstraintFunctionKeywords(string inputText) {
 
-	assert(!inputText.empty());
-
-	string isMultiFidelityActive = getConfigKeyValueString(keywordsConstraintFunction, inputText ,"multi_fidelity" );
-
-	bool isMultiFidelity = checkIfOn(isMultiFidelityActive);
-
-	if(isMultiFidelity){
-		addConfigKeysConstraintFunctionMultiFidelity();
+	if(inputText.empty()){
+		throw std::runtime_error("Driver::readConstraintFunctionKeywords: input text is empty.");
 	}
-	else{
-		addConfigKeysConstraintFunction();
-	}
+
+	addConfigKeysConstraintFunction();
+
 
 	for (std::vector<Keyword>::iterator i = keywordsConstraintFunction.begin(); i != keywordsConstraintFunction.end(); ++i){
 		i->getValueFromXMLString(inputText);
@@ -1366,8 +1011,13 @@ void Driver::readConstraintFunctionKeywords(string inputText) {
 
 std::string Driver::readASegmentFromXMLFile(string keyword) const {
 
-	assert(!keyword.empty());
-	assert(!configFilename.empty());
+	if(keyword.empty()){
+		throw std::runtime_error("Driver::readASegmentFromXMLFile: keyword is empty.");
+	}
+
+	if(configFilename.empty()){
+		throw std::runtime_error("Driver::readASegmentFromXMLFile: configuration file is empty.");
+	}
 
 	std::ifstream file(configFilename);
 	if (!file.is_open()) {
@@ -1429,32 +1079,32 @@ std::vector<std::string> Driver::readConstraintFunctionsFromXML(void) const {
 
 void Driver::runOptimization(void) {
 
-    if (!isOptimization) {
-        throw std::runtime_error("Optimization flag is not set. Cannot run optimization.");
-    }
+	if (!isOptimization) {
+		throw std::runtime_error("Optimization flag is not set. Cannot run optimization.");
+	}
 
-    if (!isConfigurationFileRead) {
-        throw std::runtime_error("Configuration file has not been read. Cannot run optimization.");
-    }
+	if (!isConfigurationFileRead) {
+		throw std::runtime_error("Configuration file has not been read. Cannot run optimization.");
+	}
 
-    // Perform the optimization study
-    optimizationStudy.performEfficientGlobalOptimization();
+	// Perform the optimization study
+	optimizationStudy.performEfficientGlobalOptimization();
 }
 
 void Driver::run(void) {
 
-    // Check if optimization flag is set
-    if (!isOptimization) {
-        throw std::runtime_error("Cannot run: Optimization flag is not set.");
-    }
+	// Check if optimization flag is set
+	if (!isOptimization) {
+		throw std::runtime_error("Cannot run: Optimization flag is not set.");
+	}
 
-    // Check if the configuration file has been read
-    if (!isConfigurationFileRead) {
-        throw std::runtime_error("Cannot run: Configuration file has not been read.");
-    }
+	// Check if the configuration file has been read
+	if (!isConfigurationFileRead) {
+		throw std::runtime_error("Cannot run: Configuration file has not been read.");
+	}
 
-    // Run the optimization if all checks pass
-    runOptimization();
+	// Run the optimization if all checks pass
+	runOptimization();
 }
 
 

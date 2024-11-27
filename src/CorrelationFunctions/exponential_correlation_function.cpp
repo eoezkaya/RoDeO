@@ -1,4 +1,3 @@
-#include <cassert>
 #include <iostream>
 
 #include "./INCLUDE/exponential_correlation_function.hpp"

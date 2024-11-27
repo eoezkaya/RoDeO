@@ -515,7 +515,8 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(DesignForBayesianOp
 
 	double maxEI = -LARGE;
 	DesignForBayesianOptimization designWithMaxImprovement(dimension);
-	printInfoToLog("Number of inner iterations = ",  iterMaxAcquisitionFunction);
+	int numberOfInnerIterations = static_cast<int>(iterMaxAcquisitionFunction);
+	printInfoToLog("Number of inner iterations = ",  numberOfInnerIterations);
 	printInfoToLog("Number of threads = ",  numberOfThreads);
 
 
@@ -523,7 +524,8 @@ void Optimizer::findPromisingDesignUnconstrainedGradientStep(DesignForBayesianOp
 	omp_set_num_threads(numberOfThreads);
 #pragma omp parallel for
 #endif
-	for (unsigned int i = 0; i < iterMaxAcquisitionFunction; i++) {
+
+	for (int i = 0; i < numberOfInnerIterations; i++) {
 		/* generate a design around the global optimal design */
 		designToBeTried.generateRandomDesignVector(lb, ub);
 		vec d = designToBeTried.dv - globalOptimalDesign.designParametersNormalized;
@@ -567,7 +569,8 @@ void Optimizer::findPromisingDesignConstrainedGradientStep(DesignForBayesianOpti
 
 	double maxImprovement = -LARGE;
 	DesignForBayesianOptimization designWithMaxImprovement(dimension,numberOfConstraints);
-	printInfoToLog("Number of inner iterations = ",  iterMaxAcquisitionFunction);
+	int numberOfInnerIterations = static_cast<int>(iterMaxAcquisitionFunction);
+	printInfoToLog("Number of inner iterations = ",  numberOfInnerIterations);
 	printInfoToLog("Number of threads = ",  numberOfThreads);
 
 
@@ -575,7 +578,7 @@ void Optimizer::findPromisingDesignConstrainedGradientStep(DesignForBayesianOpti
 	omp_set_num_threads(numberOfThreads);
 #pragma omp parallel for
 #endif
-	for (unsigned int i = 0; i < iterMaxAcquisitionFunction; i++) {
+	for (int i = 0; i < numberOfInnerIterations; i++) {
 		/* generate a design around the global optimal design */
 		designToBeTried.generateRandomDesignVector(lb, ub);
 		vec d = designToBeTried.dv - globalOptimalDesign.designParametersNormalized;
@@ -671,11 +674,13 @@ void Optimizer::searchAroundGlobalOptima(DesignForBayesianOptimization &designWi
 		printInfoToLog("Local search around global design...");
 		printInfoToLog("Global optimal design = " + dvNotNormalized.toString());
 
+		int numberOfInnerIterations = static_cast<int>(iterMaxAcquisitionFunction);
+
 #ifdef OPENMP_SUPPORT
 #pragma omp parallel for
 #endif
 
-		for (unsigned int i = 0; i < iterMaxAcquisitionFunction; i++) {
+		for (int i = 0; i < numberOfInnerIterations; i++) {
 			vec dv0 = globalOptimalDesign.designParametersNormalized;
 			DesignForBayesianOptimization designToBeTried(dimension,
 					numberOfConstraints);
@@ -703,6 +708,7 @@ void Optimizer::searchCompleteDesignSpace(DesignForBayesianOptimization &designW
 
 	vec &lb = lowerBoundsForAcqusitionFunctionMaximization;
 	vec &ub = upperBoundsForAcqusitionFunctionMaximization;
+	int numberOfInnerIterations = static_cast<int>(iterMaxAcquisitionFunction);
 
 	if(lb.getSize() != ub.getSize() || lb.getSize() != dimension){
 
@@ -715,7 +721,7 @@ void Optimizer::searchCompleteDesignSpace(DesignForBayesianOptimization &designW
 #pragma omp parallel for
 #endif
 
-	for (unsigned int i = 0; i < iterMaxAcquisitionFunction; i++) {
+	for (int i = 0; i < numberOfInnerIterations; i++) {
 		DesignForBayesianOptimization designToBeTried(dimension,
 				numberOfConstraints);
 		designToBeTried.generateRandomDesignVector(lb, ub);

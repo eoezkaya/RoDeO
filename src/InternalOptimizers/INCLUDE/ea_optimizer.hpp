@@ -7,11 +7,6 @@
 #include "../../INCLUDE/globals.hpp"
 #include<atomic>
 
-#ifdef UNIT_TESTS
-#include "gtest/gtest.h"
-#endif
-
-
 
 
 
@@ -24,14 +19,6 @@ typedef double (*EAObjectiveFunction)(vec);
 
 class EAOptimizer : public GeneralPurposeOptimizer{
 
-#ifdef UNIT_TESTS
-	friend class EAOptimizerGeneralTest;
-	FRIEND_TEST(EAOptimizerGeneralTest, CallObjectiveFunction);
-	FRIEND_TEST(EAOptimizerGeneralTest, CallObjectiveFunctionForAGroup);
-	FRIEND_TEST(EAOptimizerGeneralTest, CallObjectiveFunctionForAGroupMultiThread);
-	FRIEND_TEST(EAOptimizerGeneralTest, CallObjectiveFunctionForAGroupMultiThreadSpeedTest);
-	FRIEND_TEST(EAOptimizerGeneralTest, GenerateAGroupOfIndividualsForReproduction);
-#endif
 
 
 private:

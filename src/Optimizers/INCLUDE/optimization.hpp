@@ -258,7 +258,7 @@ private:
 	void estimateConstraints(DesignForBayesianOptimization &) const;
 	void estimateConstraintsGradientStep(DesignForBayesianOptimization &design) const;
 
-//	double determineMaxStepSizeForGradientStep(vec x0, vec gradient) const;
+	//	double determineMaxStepSizeForGradientStep(vec x0, vec gradient) const;
 
 	bool checkIfDesignIsWithinBounds(const vec &x0) const;
 
@@ -401,10 +401,13 @@ public:
 	}
 
 	void printInfoToLog(const string &msg, double val) const{
-			OptimizationLogger::getInstance().log(INFO,msg + std::to_string(val));
+		OptimizationLogger::getInstance().log(INFO,msg + std::to_string(val));
 	}
 	void printInfoToLog(const string &msg, unsigned int val) const{
-				OptimizationLogger::getInstance().log(INFO,msg + std::to_string(val));
+		OptimizationLogger::getInstance().log(INFO,msg + std::to_string(val));
+	}
+	void printInfoToLog(const string &msg, int val) const{
+		OptimizationLogger::getInstance().log(INFO,msg + std::to_string(val));
 	}
 
 	void printErrorToLog(const string &msg) const{

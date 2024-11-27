@@ -4,7 +4,6 @@ set(src_files
     ea_individual.cpp 
     ea_population.cpp 
     general_purpose_optimizer.cpp 
-    gradient_optimizer.cpp
 )
 
 # Create a library target named "internalOptimizers"

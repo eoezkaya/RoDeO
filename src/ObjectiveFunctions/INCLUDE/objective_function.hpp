@@ -36,7 +36,6 @@
 
 #include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
 #include "../../SurrogateModels/INCLUDE/surrogate_model.hpp"
-#include "../../SurrogateModels/INCLUDE/multi_level_method.hpp"
 #include "../../LinearAlgebra/INCLUDE/vector.hpp"
 #include "../../Design/INCLUDE/design.hpp"
 
@@ -65,16 +64,7 @@ public:
 	std::string outputFilename;
 	std::string outputGradientFilename;
 
-	/* These are required only for multi-level option */
-	std::string executableNameLowFi;
-	std::string executableNameLowFiGradient;
-	std::string executableNameLowFiDirectionalDerivative;
 
-	std::string pathLowFi;
-	std::string outputFilenameLowFi;
-	std::string outputFilenameLowFiGradient;
-
-	std::string nameLowFidelityTrainingData;
 	std::string nameHighFidelityTrainingData;
 
 	/* These are required only for multi-level option */
@@ -86,7 +76,6 @@ public:
 
 
 	SURROGATE_MODEL modelHiFi  = ORDINARY_KRIGING;
-	SURROGATE_MODEL modelLowFi = ORDINARY_KRIGING;
 
 	ObjectiveFunctionDefinition();
 	bool checkIfDefinitionIsOk(void) const;
@@ -94,9 +83,7 @@ public:
 	void print(void) const;
 
 	void printHighFidelityModel() const;
-	void printLowFidelityModel() const;
 
-	std::string toStringLowFidelityModel() const;
 	std::string toString() const;
 	string getNameOfSurrogateModel(SURROGATE_MODEL) const;
 };
@@ -109,10 +96,8 @@ private:
 
 	void bindWithOrdinaryKrigingModel();
 	void bindWithUniversalKrigingModel();
-	void bindWithMultiFidelityModel();
 
 	bool isHiFiEvaluation(void) const;
-	bool isLowFiEvaluation(void) const;
 	void bindSurrogateModelSingleFidelity();
 
 
@@ -128,7 +113,6 @@ protected:
 	ObjectiveFunctionDefinition definition;
 	Bounds boxConstraints;
 	KrigingModel surrogateModel;
-	MultiLevelModel surrogateModelML;
 	SurrogateModel *surrogate;
 
 	unsigned int numberOfIterationsForSurrogateTraining = 10000;
@@ -166,13 +150,6 @@ public:
 
 
 	SURROGATE_MODEL getSurrogateModelType(void) const;
-	SURROGATE_MODEL getSurrogateModelTypeLowFi(void) const;
-
-	MultiLevelModel  getSurrogateModelML(void) const;
-
-
-	void setDisplayOn(void);
-	void setDisplayOff(void);
 
 	void setParameterBounds(Bounds );
 
@@ -181,7 +158,6 @@ public:
 	void setDimension(unsigned int dimension);
 
 	void setFileNameReadInput(std::string fileName);
-	void setFileNameReadInputLowFidelity(std::string fileName);
 
 	void setFileNameTrainingData(std::string fileName);
 
@@ -207,11 +183,7 @@ public:
 
 
 	void evaluateDesign(Design &d);
-	void evaluateDesignGradient(Design &d);
-
-	void evaluateGradient(void) const;
 	void evaluateObjectiveFunction(void) const;
-
 
 	double evaluateObjectiveFunctionDirectly(const Rodop::vec &x);
 
@@ -223,11 +195,9 @@ public:
 
 
 	void addDesignToData(Design &d);
-	void addLowFidelityDesignToData(Design &d);
 
 	void addDesignToData(Design &d, string how);
 
-	bool checkIfGradientAvailable(void) const;
 	double interpolate(Rodop::vec x) const;
 	double interpolateUsingDerivatives(Rodop::vec x) const;
 	pair<double, double> interpolateWithVariance(Rodop::vec x) const;

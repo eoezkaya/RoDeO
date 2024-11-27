@@ -1,31 +1,26 @@
 #include "./INCLUDE/string_functions.hpp"
 #include <string>
 #include <iostream>
-#include <cassert>
 #include <stdexcept>
 #include <algorithm>
 #include <unordered_set>
 using std::string;
 
 
-bool isEqual(const string& str1, const string& str2) {
+bool isEqual(const std::string& str1, const std::string& str2) {
+    // Handle empty strings gracefully
+    if (str1.empty() || str2.empty()) {
+        return false;
+    }
 
-	assert(!str1.empty());
-	assert(!str2.empty());
-
-    // Check if the strings are of the same length
+    // Check lengths first
     if (str1.length() != str2.length()) {
         return false;
     }
 
-    // Compare characters in a case-insensitive manner
-    for (size_t i = 0; i < str1.length(); ++i) {
-        if (tolower(str1[i]) != tolower(str2[i])) {
-            return false;
-        }
-    }
-
-    return true;
+    // Use std::equal with a custom comparator for case-insensitive comparison
+    return std::equal(str1.begin(), str1.end(), str2.begin(),
+                      [](char a, char b) { return std::tolower(a) == std::tolower(b); });
 }
 
 

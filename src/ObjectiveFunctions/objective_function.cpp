@@ -80,25 +80,6 @@ bool ObjectiveFunctionDefinition::checkIfDefinitionIsOk(void) const {
 		return false;
 	}
 
-	// If multi-level optimization is enabled, check the required fields
-	if (ifMultiLevel) {
-		if (nameLowFidelityTrainingData.empty()) {
-			std::cout << "Error: Low-fidelity training data name is empty!" << std::endl;
-			return false;
-		}
-
-		if (outputFilenameLowFi.empty()) {
-			std::cout << "Error: Low-fidelity output filename is empty!" << std::endl;
-			return false;
-		}
-
-		// Ensure the low-fidelity and high-fidelity training data names are not the same
-		if (nameLowFidelityTrainingData == nameHighFidelityTrainingData) {
-			std::cout << "Error: Low-fidelity and high-fidelity training data names must be different!" << std::endl;
-			return false;
-		}
-	}
-
 	// If all checks pass, return true
 	return true;
 }
@@ -108,12 +89,6 @@ string ObjectiveFunctionDefinition::getNameOfSurrogateModel(SURROGATE_MODEL mode
 	string modelName;
 	if (modelType == ORDINARY_KRIGING)
 		modelName = "Uses only functional values";
-
-	if (modelType == GRADIENT_ENHANCED)
-		modelName = "Uses gradients";
-
-	if (modelType == TANGENT_ENHANCED)
-		modelName = "Uses directional derivatives";
 
 	return modelName;
 }
@@ -125,10 +100,7 @@ void ObjectiveFunctionDefinition::printHighFidelityModel() const {
 
 }
 
-void ObjectiveFunctionDefinition::printLowFidelityModel() const {
-	string modelNameLowFi = getNameOfSurrogateModel(modelLowFi);
-	std::cout << "\tSurrogate model = " << modelNameLowFi << "\n";
-}
+
 
 void ObjectiveFunctionDefinition::print(void) const {
 	// Print basic information
@@ -153,37 +125,9 @@ void ObjectiveFunctionDefinition::print(void) const {
 	// Print high-fidelity model
 	printHighFidelityModel();
 
-	// Multilevel check
-	std::cout << "Multilevel = " << (ifMultiLevel ? "YES" : "NO") << "\n";
 
-	// If multilevel optimization is enabled
-	if (ifMultiLevel) {
-		std::cout << "Low fidelity model:\n";
-		std::cout << "\tTraining data = " << nameLowFidelityTrainingData << "\n";
-		std::cout << "\tOutput filename = " << outputFilenameLowFi << "\n";
-
-		// If gradient output filename is defined for low-fidelity model
-		if (!outputFilenameLowFiGradient.empty()) {
-			std::cout << "\tOutput filename for gradient = " << outputFilenameLowFiGradient << "\n";
-		}
-
-		std::cout << "\tExecutable = " << executableNameLowFi << "\n";
-
-		// If gradient executable is defined for low-fidelity model
-		if (!executableNameLowFiGradient.empty()) {
-			std::cout << "\tExecutable for gradient = " << executableNameLowFiGradient << "\n";
-		}
-
-		// Print low-fidelity model
-		printLowFidelityModel();
-	}
 }
 
-std::string ObjectiveFunctionDefinition::toStringLowFidelityModel() const {
-	std::ostringstream oss;
-	oss << "\tSurrogate model = " << getNameOfSurrogateModel(modelLowFi) << "\n";
-	return oss.str();
-}
 
 
 std::string ObjectiveFunctionDefinition::toString() const {
@@ -213,31 +157,6 @@ std::string ObjectiveFunctionDefinition::toString() const {
 
 	}
 
-	// High-fidelity model
-	// Call to printHighFidelityModel() would be here if it had a string variant
-
-	// Check for multilevel and print related information
-	oss << "Multilevel = " << (ifMultiLevel ? "YES" : "NO") << "\n";
-	if (ifMultiLevel) {
-		oss << "Low fidelity model:\n";
-		oss << "\tTraining data = " << nameLowFidelityTrainingData << "\n";
-		oss << "\tOutput filename = " << outputFilenameLowFi << "\n";
-
-		// Low-fidelity gradient output filename if available
-		if (!outputFilenameLowFiGradient.empty()) {
-			oss << "\tOutput filename for gradient = " << outputFilenameLowFiGradient << "\n";
-		}
-
-		oss << "\tExecutable = " << executableNameLowFi << "\n";
-
-		// Low-fidelity gradient executable if available
-		if (!executableNameLowFiGradient.empty()) {
-			oss << "\tExecutable for gradient = " << executableNameLowFiGradient << "\n";
-		}
-
-		// Low-fidelity model details
-		oss << toStringLowFidelityModel();
-	}
 
 	return oss.str();
 }
@@ -296,9 +215,6 @@ bool ObjectiveFunction::isMultiFidelityActive(void) const{
 SURROGATE_MODEL ObjectiveFunction::getSurrogateModelType(void) const{
 	return definition.modelHiFi;
 }
-SURROGATE_MODEL ObjectiveFunction::getSurrogateModelTypeLowFi(void) const{
-	return definition.modelLowFi;
-}
 
 void ObjectiveFunction::bindWithOrdinaryKrigingModel() {
 
@@ -314,23 +230,6 @@ void ObjectiveFunction::bindWithUniversalKrigingModel() {
 }
 
 
-
-void ObjectiveFunction::bindWithMultiFidelityModel() {
-
-	surrogateModelML.setIDHiFiModel(definition.modelHiFi);
-	surrogateModelML.setIDLowFiModel(definition.modelLowFi);
-
-	surrogateModelML.setinputFileNameHighFidelityData(definition.nameHighFidelityTrainingData);
-	surrogateModelML.setinputFileNameLowFidelityData(definition.nameLowFidelityTrainingData);
-
-
-	/* TODO modify this ugly code */
-	surrogateModelML.bindModels();
-
-	ObjectiveFunctionLogger::getInstance().log(INFO,"Binding the surrogate model with the Multi-fidelity model...");
-	surrogate = &surrogateModelML;
-
-}
 
 void ObjectiveFunction::bindSurrogateModelSingleFidelity() {
 	if (definition.modelHiFi == ORDINARY_KRIGING) {
@@ -348,13 +247,7 @@ void ObjectiveFunction::bindSurrogateModel(void){
 		throw std::runtime_error("Cannot bind with a surrogate model without proper objective function definition.");
 	}
 
-
-	if(definition.ifMultiLevel){
-		bindWithMultiFidelityModel();
-	}
-	else{
-		bindSurrogateModelSingleFidelity();
-	}
+	bindSurrogateModelSingleFidelity();
 
 	ifSurrogateModelIsDefined = true;
 
@@ -378,13 +271,7 @@ void ObjectiveFunction::setFileNameReadInput(std::string fileName){
 
 	definition.outputFilename = fileName;
 }
-void ObjectiveFunction::setFileNameReadInputLowFidelity(std::string fileName){
 
-	if (fileName.empty()) {
-		throw std::invalid_argument("ObjectiveFunction::setFileNameReadInputLowFidelity: File name cannot be empty.");
-	}
-	definition.outputFilenameLowFi = fileName;
-}
 
 void ObjectiveFunction::setFileNameDesignVector(std::string fileName){
 	assert(!fileName.empty());
@@ -450,11 +337,6 @@ void ObjectiveFunction::setParameterBounds(Bounds bounds) {
 	boxConstraints = bounds;
 	ifParameterBoundsAreSet = true;
 }
-
-MultiLevelModel ObjectiveFunction::getSurrogateModelML(void) const{
-	return surrogateModelML;
-}
-
 
 
 void ObjectiveFunction::initializeSurrogate() {
@@ -775,79 +657,6 @@ void ObjectiveFunction::addDesignToData(Design &d, string how){
 		surrogate->addNewSampleToData(newsample);
 
 	}
-	else{
-
-		vec newsampleHiFi;
-		vec newsampleLowFi;
-
-		if(how.compare("primalBoth") == 0 ){
-
-			newsampleHiFi = d.constructSampleObjectiveFunction();
-			newsampleLowFi = d.constructSampleObjectiveFunctionLowFi();
-
-			assert(newsampleLowFi.getSize() >0);
-			assert(newsampleHiFi.getSize()  >0);
-
-			surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
-			surrogate->addNewSampleToData(newsampleHiFi);
-
-		}
-
-		if(how.compare("primalHiFiAdjointLowFi") == 0 ){
-
-			newsampleHiFi  = d.constructSampleObjectiveFunction();
-			newsampleLowFi = d.constructSampleObjectiveFunctionWithGradientLowFi();
-
-			assert(newsampleLowFi.getSize() >0);
-			assert(newsampleHiFi.getSize()  >0);
-
-			surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
-			surrogate->addNewSampleToData(newsampleHiFi);
-
-		}
-
-
-
-
-	}
-
-}
-
-
-
-void ObjectiveFunction::addLowFidelityDesignToData(Design &d){
-
-	assert(!definition.nameLowFidelityTrainingData.empty());
-	assert(ifInitialized);
-	assert(!addDataMode.empty());
-	assert(definition.ifMultiLevel == true);
-
-	vec newsampleLowFi;
-
-	if(addDataMode.compare("primalLowFidelity") == 0 ){
-		newsampleLowFi = d.constructSampleObjectiveFunctionLowFi();
-		assert(newsampleLowFi.getSize()>0);
-		surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
-
-	}
-
-	if(addDataMode.compare("adjointLowFidelity") == 0 ){
-
-		newsampleLowFi = d.constructSampleObjectiveFunctionWithGradientLowFi();
-		assert(newsampleLowFi.getSize()>0);
-		surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
-	}
-
-	if(addDataMode.compare("tangentLowFidelity") == 0 ){
-
-		newsampleLowFi = d.constructSampleObjectiveFunctionWithTangentLowFi();
-		assert(newsampleLowFi.getSize()>0);
-		surrogate->addNewLowFidelitySampleToData(newsampleLowFi);
-	}
-
-
-
-
 
 }
 
@@ -963,120 +772,12 @@ void ObjectiveFunction::evaluateDesign(Design &d) {
 	}
 }
 
-void ObjectiveFunction::evaluateDesignGradient(Design &d) {
-	// Ensure the dimension is valid
-	if (dim <= 0) {
-		throw std::runtime_error("The dimension of the problem must be greater than zero.");
-	}
-
-	// Ensure the design parameters match the problem dimension
-	if (d.designParameters.getSize() != dim) {
-		throw std::invalid_argument("Design parameter size does not match the problem dimension.");
-	}
-
-	// Set evaluation mode to "adjoint" for gradient calculation
-	setEvaluationMode("adjoint");
-
-	// Write design variables to a file
-	writeDesignVariablesToFile(d);
-
-	// Log the gradient evaluation process
-	ObjectiveFunctionLogger::getInstance().log(INFO, "Evaluating the gradient of the objective function.");
-
-	// Evaluate the gradient using an external process
-	evaluateGradient();
-
-	// Read the gradient result from the output file
-	vec result = readOutput(definition.outputGradientFilename, dim);
-
-	// Ensure the result is valid and matches the problem dimension
-	if (result.getSize() != dim) {
-		throw std::runtime_error("The size of the gradient result does not match the problem dimension.");
-	}
-
-	ObjectiveFunctionLogger::getInstance().log(INFO, "Gradient = " + result.toString() );
-
-
-	// Assign the result to the design's gradient
-	d.gradient = result;
-
-	// Log success
-	ObjectiveFunctionLogger::getInstance().log(INFO, "Gradient evaluation completed successfully.");
-}
-
-
-
 
 bool ObjectiveFunction::isHiFiEvaluation(void) const{
 
 	if(evaluationMode.compare("primal") == 0 ) return true;
-	if(evaluationMode.compare("adjoint") == 0 ) return true;
-	if(evaluationMode.compare("tangent") == 0 ) return true;
 	return false;
 }
-
-bool ObjectiveFunction::isLowFiEvaluation(void) const{
-
-	if(evaluationMode.compare("primalLowFi") == 0 ) return true;
-	if(evaluationMode.compare("adjointLowFi") == 0 ) return true;
-	if(evaluationMode.compare("tangentLowFi") == 0 ) return true;
-	return false;
-}
-
-void ObjectiveFunction::evaluateGradient() const {
-	using namespace boost::process;
-
-	if (evaluationMode.empty()) {
-		string msg =
-				"ObjectiveFunction::evaluateGradient: evaluation mode is not set";
-		printErrorToLog(msg);
-		throw std::runtime_error(msg);
-	}
-	if (evaluationMode != "adjoint" && evaluationMode != "adjointLowFi") {
-		string msg =
-				"ObjectiveFunction::evaluateGradient: evaluation mode is invalid for this method";
-		printErrorToLog(msg);
-		throw std::runtime_error(msg);
-	}
-
-	std::string runCommand;
-	// Determine if it's a HiFi or LowFi evaluation and construct the appropriate command
-	if (isHiFiEvaluation()) {
-		if (definition.executableNameGradient.empty()) {
-			throw std::runtime_error("High-fidelity gradient executable name is not set.");
-		}
-		runCommand = getExecutionCommand(definition.executableNameGradient);
-	} else if (isLowFiEvaluation()) {
-		if (definition.executableNameLowFiGradient.empty()) {
-			throw std::runtime_error("Low-fidelity gradient executable name is not set.");
-		}
-		runCommand = getExecutionCommand(definition.executableNameLowFiGradient);
-	}
-
-	if (!runCommand.empty()) {
-		try {
-
-			printInfoToLog("Executing command = " + runCommand);
-			// Execute the command and wait for completion
-			child c(runCommand);
-			c.wait(); // Wait for the process to finish
-
-			if (c.exit_code() != 0) {
-				printErrorToLog("ObjectiveFunction::evaluateGradient: exit_code = " + std::to_string(c.exit_code()));
-				throw std::runtime_error("Gradient vector evaluation failed with exit code: " + std::to_string(c.exit_code()));
-			}
-		} catch (const std::exception& e) {
-			std::string msg = std::string("Error during gradient vector evaluation: ") + e.what();
-			throw std::runtime_error(msg);
-		}
-	} else {
-		printErrorToLog("No valid command found to evaluate the gradient vector.");
-		printErrorToLog("Executable = " + definition.executableNameGradient);
-		printErrorToLog("Executable Low Fi= " + definition.executableNameLowFiGradient);
-		throw std::runtime_error("No valid command found to evaluate the gradient.");
-	}
-}
-
 
 
 void ObjectiveFunction::printInfoToLog(const string &msg) const{
@@ -1124,10 +825,8 @@ void ObjectiveFunction::evaluateObjectiveFunction() const {
 	checkEvaluationModeForPrimalExecution();
 
 	std::string runCommand;
-	if (isHiFiEvaluation() && !definition.executableName.empty()) {
+	if (!definition.executableName.empty()) {
 		runCommand = getExecutionCommand(definition.executableName);
-	} else if (isLowFiEvaluation() && !definition.executableNameLowFi.empty()) {
-		runCommand = getExecutionCommand(definition.executableNameLowFi);
 	}
 
 	if (!runCommand.empty()) {
@@ -1148,7 +847,6 @@ void ObjectiveFunction::evaluateObjectiveFunction() const {
 		printWarningToLog("No valid command found to execute the objective function.");
 	}
 }
-
 
 
 double ObjectiveFunction::interpolate(vec x) const{

@@ -7,10 +7,6 @@
 
 #include "./linear_regression.hpp"
 #include "./kriging_training.hpp"
-#include "./multi_level_method.hpp"
-
-
-
 
 
 namespace Rodop{
@@ -29,13 +25,11 @@ private:
 
 	LinearModel linearModel;
 	KrigingModel krigingModel;
-	MultiLevelModel multilevelModel;
 
 
 	SurrogateModel *surrogateModel;
 
 	SURROGATE_MODEL surrogateModelType;
-	SURROGATE_MODEL surrogateModelTypeLowFi;
 
 	unsigned int numberOfTrainingIterations = 10000;
 
@@ -59,7 +53,6 @@ public:
 	void setRatioValidationSamples(double value);
 
 	void setSurrogateModel(SURROGATE_MODEL);
-	void setSurrogateModelLowFi(SURROGATE_MODEL);
 	void bindSurrogateModels(void);
 
 	void setBoxConstraints(Bounds);
@@ -67,7 +60,6 @@ public:
 	void performSurrogateModelTest(void);
 
 	void setFileNameTrainingData(std::string);
-	void setFileNameTrainingDataLowFidelity(std::string);
 
 
 	void setFileNameTestData(std::string);
