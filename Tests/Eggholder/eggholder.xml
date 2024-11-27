@@ -1,0 +1,40 @@
+<optimization_study>
+<general_settings>
+<name>Test</name>
+<type> Optimization </type>
+<dimension> 2 </dimension>
+<number_of_function_evaluations> 50 </number_of_function_evaluations> 
+<display> ON </display> 
+<max_number_of_inner_iterations> 200000 </max_number_of_inner_iterations>
+<number_of_threads> 4 </number_of_threads> 
+</general_settings>
+
+<optimization_parameters>
+<parameter>
+<name> x1 </name>
+<type> REAL </type>
+<lower_bound> -512.0 </lower_bound>
+<upper_bound>  512.0 </upper_bound>
+</parameter>
+<parameter>
+<name> x2 </name>
+<type> REAL </type>
+<lower_bound> -512.0 </lower_bound>
+<upper_bound>  512.0 </upper_bound>
+</parameter>
+<parameter>
+
+</optimization_parameters>
+
+<objective_function>
+<name>himmelblauFuncion</name>
+<executable_filename> calculateObjectiveFunction.py </executable_filename> 
+<output_filename> objective.dat </output_filename>
+<training_data_filename> eggholder.csv </training_data_filename> 
+<design_vector_filename> dv.dat </design_vector_filename>
+</objective_function>
+
+</optimization_study>
+
+
+

@@ -1,0 +1,38 @@
+<optimization_study>
+<general_settings>
+<name>Test</name>
+<type> Optimization </type>
+<dimension> 2 </dimension>
+<number_of_function_evaluations> 50 </number_of_function_evaluations> 
+</general_settings>
+
+<optimization_parameters>
+<parameter>
+<name> x1 </name>
+<type> REAL </type>
+<lower_bound> -10.0 </lower_bound>
+<upper_bound>  10.0 </upper_bound>
+</parameter>
+<parameter>
+<name> x2 </name>
+<type> REAL </type>
+<lower_bound> -10.0 </lower_bound>
+<upper_bound>  10.0 </upper_bound>
+</parameter>
+<parameter>
+
+
+</optimization_parameters>
+
+<objective_function>
+<name>Mishra03</name>
+<executable_filename> calculateObjectiveFunction.py </executable_filename> 
+<output_filename> objectiveFunction.dat </output_filename>
+<training_data_filename> mishra03.csv </training_data_filename> 
+<design_vector_filename> dv.dat </design_vector_filename>
+</objective_function>
+
+</optimization_study>
+
+
+

@@ -1,0 +1,77 @@
+<optimization_study>
+<general_settings>
+<name>Hartmann6D</name>
+<type> Optimization </type>
+<dimension> 6 </dimension>
+<number_of_function_evaluations> 100 </number_of_function_evaluations> 
+</general_settings>
+       
+<optimization_parameters>
+    <parameter>
+        <name> x1 </name>
+        <type> REAL </type>
+        <lower_bound> 0.0 </lower_bound>
+        <upper_bound> 1.0 </upper_bound>
+    </parameter>
+    
+    <parameter>
+        <name> x2 </name>
+        <type> REAL </type>
+        <lower_bound> 0.0 </lower_bound>
+        <upper_bound> 1.0 </upper_bound>
+    </parameter>
+    
+    <parameter>
+        <name> x3 </name>
+        <type> REAL </type>
+        <lower_bound> 0.0 </lower_bound>
+        <upper_bound> 1.0 </upper_bound>
+    </parameter>
+    
+    <parameter>
+        <name> x4 </name>
+        <type> REAL </type>
+        <lower_bound> 0.0 </lower_bound>
+        <upper_bound> 1.0 </upper_bound>
+    </parameter>
+    
+    <parameter>
+        <name> x5 </name>
+        <type> REAL </type>
+        <lower_bound> 0.0 </lower_bound>
+        <upper_bound> 1.0 </upper_bound>
+    </parameter>
+    
+    <parameter>
+        <name> x6 </name>
+        <type> REAL </type>
+        <lower_bound> 0.0 </lower_bound>
+        <upper_bound> 1.0 </upper_bound>
+    </parameter>
+    
+</optimization_parameters>
+
+<objective_function>
+<name>Xor</name>
+<executable_filename> hartmann6D </executable_filename> 
+<output_filename> objective.dat </output_filename>
+<training_data_filename> hartmann6D.csv </training_data_filename> 
+<design_vector_filename> dv.dat </design_vector_filename>
+</objective_function>
+
+</optimization_study>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
