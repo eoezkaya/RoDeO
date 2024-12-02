@@ -6,14 +6,10 @@ for scientific/engineering applications, in which the objective function and con
 - Surrogate model based Efficient Global Optimization (EGO) strategy
 - Full data-driven approach
 - Easy and efficient treatment of inequality constraints
-- Gradient and tangent enhaced surrogate modeling 
- 
+
  
 ## External Libraries
- - RoDeO uses the linear algebra library Armadillo. Therefore, before compiling RoDeO sources, Armadillo must be installed in the system. To download Armadillo and
- see the documentation please refer to https://arma.sourceforge.net/ 
- - To build and run unit tests (optional), you will require the testing and mocking library GoogleTest installed in your system. For details, please refer to 
- https://github.com/google/googletest
+ 
  
 ## Build Support
 
@@ -21,11 +17,6 @@ for scientific/engineering applications, in which the objective function and con
 - First change directory to **src** and call **cmake**:
 ```
 cmake -B ../build
-```
-   
-- (Optional) To build with unit tests use the option **UNIT_TESTS=ON**: 
-```
-cmake -DUNIT_TESTS=ON -B ../build
 ```
 
 - Then go to the **build** directory and call make for compilation: 
@@ -36,7 +27,7 @@ make
 ## Quick Start
 
 - The hello world example for this package can be found in the folder:  
-**Tests/Optimization/Himmelblau/Unconstrained**
+**Tests/Rosenbrock_Constrained**
 - Change directory to this folder and run the python script **runOptimization.py**: 
 ```
 python runOptimization.py 
