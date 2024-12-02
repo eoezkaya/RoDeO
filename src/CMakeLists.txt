@@ -5,15 +5,10 @@ execute_process(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../externalFunctions
 )
 
-
-
 execute_process(
     COMMAND make
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/../externalFunctions
 )
-
-option(UNIT_TESTS "UNITS_TESTS" OFF)
-option(ASSERTS "ASSERTS" OFF)
 
 # Add externalFunctions library
 add_subdirectory(../externalFunctions externalFunctions)
@@ -22,34 +17,7 @@ add_subdirectory(../externalFunctions externalFunctions)
 target_link_libraries(${PROJECT_NAME} externalFunctions)
 
 
-if(UNIT_TESTS)
-	set(ASSERTS ON)	
-	message("-- Building with Unit Tests")
-	add_definitions(-DUNIT_TESTS)
-    
-	include(FetchContent)
-	FetchContent_Declare(
-  	googletest
-# Specify the commit you depend on and update it regularly.
- 	 URL https://github.com/google/googletest/archive/5376968f6948923e2411081fd9372e71a59d8e77.zip
-	)
-# For Windows: Prevent overriding the parent project's compiler/linker settings
-	set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-	FetchContent_MakeAvailable(googletest)
-	
-else()
-    message("-- Building without Unit Tests")
-endif(UNIT_TESTS)
-
-if(ASSERTS)
-    message("-- Asserts are on")
-else()
-    message("-- Asserts are off")
-    add_definitions(-DNDEBUG)
-endif(ASSERTS)
-
-
-project(rodeo VERSION 1.0)
+project(rodeo VERSION 1.3)
 add_executable(${PROJECT_NAME}  Rodeo.cpp)
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 

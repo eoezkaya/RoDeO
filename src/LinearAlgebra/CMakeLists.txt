@@ -8,11 +8,6 @@ add_library(linearAlgebra ${src_files})
 
 target_compile_options(linearAlgebra PUBLIC -Wall -Wextra -Wpedantic -O2 -fPIC)
 
-if(ASSERTS)
-    message(STATUS "Assertions are enabled")
-else()
-    add_definitions(-DNDEBUG)
-endif(ASSERTS)
 
 get_target_property(MAIN_CFLAGS linearAlgebra COMPILE_OPTIONS)
 message("-- Target compiler flags for linearAlgebra are: ${MAIN_CFLAGS}")
