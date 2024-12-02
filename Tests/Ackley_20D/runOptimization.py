@@ -23,7 +23,7 @@ lb = 20 * [-30.768]
 
 # Number of samples for Design of Experiment
 NTrainingSamples = 50
-RODEO_HOME = "/home/eoezkaya/RoDOP"
+RODEO_HOME = "../../"
 BIN_RODEO = os.path.join(RODEO_HOME, "build/rodeo")
 configFilename = "ackley.xml"
 

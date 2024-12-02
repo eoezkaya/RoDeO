@@ -50,7 +50,7 @@ dim = 6
 ub = [1] * dim
 lb = [0] * dim
 NTrainingSamples = 100
-RODEO_HOME = "/home/eoezkaya/RoDOP"
+RODEO_HOME = "../../"
 BIN_RODEO = os.path.join(RODEO_HOME, "build/rodeo")
 configFilename = "hartmann6D.xml"
 

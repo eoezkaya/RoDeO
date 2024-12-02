@@ -20,7 +20,7 @@ ub = [10.0, 10.0]
 lb = [-10.0, -10.0]
 func = Mishra03Optimization()
 NTrainingSamples = 50
-RODEO_HOME = "/home/eoezkaya/RoDOP"
+RODEO_HOME = "../../"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
 configFilename = "mishra03.xml"
 

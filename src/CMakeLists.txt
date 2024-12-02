@@ -85,10 +85,6 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 
-
-
-
-
 get_target_property(MAIN_CFLAGS ${PROJECT_NAME} COMPILE_OPTIONS)
 
 

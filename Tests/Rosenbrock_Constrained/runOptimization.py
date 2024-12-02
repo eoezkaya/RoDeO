@@ -6,7 +6,7 @@ from rosenbrock_optimization import RosenbrockOptimization
     
 rosenbrockOpt = RosenbrockOptimization()
 
-RODEO_HOME = "/home/eoezkaya/RoDOP"
+RODEO_HOME = "../../"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
 configFilename = "rosenbrock.xml"
 

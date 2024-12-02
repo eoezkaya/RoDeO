@@ -13,7 +13,7 @@ for log_file in glob.glob("*.log"):
     
 function = EggholderOptimization()
 
-RODEO_HOME = "/home/eoezkaya/RoDOP"
+RODEO_HOME = "../../"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
 configFilename = "eggholder.xml"
 

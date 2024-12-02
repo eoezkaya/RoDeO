@@ -8,7 +8,7 @@ project(cppAPI VERSION 1.0)
 include_directories(${CMAKE_SOURCE_DIR}/INCLUDE)
 
 # Set the source files for the shared library
-file(GLOB_RECURSE SOURCES cppAPI.cpp)
+file(GLOB_RECURSE SOURCES cppAPI.cpp rodeo_api.cpp)
 
 # Create the shared library
 add_library(cppAPI SHARED ${SOURCES})

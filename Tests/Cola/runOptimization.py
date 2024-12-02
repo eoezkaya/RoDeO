@@ -52,7 +52,7 @@ def call_cola_and_read_result(x):
 ub = [4] * 17
 lb = [0] * 17
 NTrainingSamples = 200
-RODEO_HOME = "/home/eoezkaya/RoDOP"
+RODEO_HOME = "../../"
 BIN_RODEO = os.path.join(RODEO_HOME, "build/rodeo")
 configFilename = "cola.xml"
 

@@ -19,7 +19,7 @@ lb = 15*[-7.12]
 
 func = RastriginOptimization()
 NTrainingSamples = 200
-RODEO_HOME = "/home/eoezkaya/RoDOP"
+RODEO_HOME = "../../"
 BIN_RODEO = RODEO_HOME + "/build/rodeo"
 configFilename = "rastrigin.xml"
 
