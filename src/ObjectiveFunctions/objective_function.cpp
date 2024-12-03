@@ -488,7 +488,8 @@ void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimizati
 	}
 
 
-	designCalculated.valueAcquisitionFunction = log(expectedImprovementValue+1e-14);
+//	designCalculated.valueAcquisitionFunction = log(expectedImprovementValue+1e-14);
+	designCalculated.valueAcquisitionFunction = expectedImprovementValue;
 	designCalculated.objectiveFunctionValue = ftilde;
 
 }
