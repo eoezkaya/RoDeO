@@ -1211,6 +1211,8 @@ void Optimizer::findTheMostPromisingDesignToBeSimulated() {
 }
 
 void Optimizer::initializeCurrentBestDesign(void) {
+
+
 	currentBestDesign.tag = "Current Iterate";
 	currentBestDesign.setNumberOfConstraints(numberOfConstraints);
 
@@ -1218,6 +1220,8 @@ void Optimizer::initializeCurrentBestDesign(void) {
 		currentBestDesign.saveDesignVector(designVectorFileName);
 	}
 	currentBestDesign.isDesignFeasible = true;
+
+
 }
 
 void Optimizer::abortIfCurrentDesignHasANaN() {
