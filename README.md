@@ -23,13 +23,5 @@ cmake -B ../build
 make 
 ```
 
-## Quick Start
-
-- The hello world example for this package can be found in the folder:  
-**Tests/Rosenbrock_Constrained**
-- Change directory to this folder and run the python script **runOptimization.py**: 
-```
-python runOptimization.py 
-```
 
 
