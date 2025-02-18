@@ -183,7 +183,7 @@ public:
 
 
 	void evaluateDesign(Design &d);
-	void evaluateObjectiveFunction(void) const;
+//	void evaluateObjectiveFunction(void) const;
 
 	double evaluateObjectiveFunctionDirectly(const Rodop::vec &x);
 

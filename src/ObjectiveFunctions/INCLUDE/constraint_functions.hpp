@@ -5,7 +5,6 @@
 #include "./objective_function.hpp"
 #include "../../SurrogateModels/INCLUDE/kriging_training.hpp"
 #include "../../Design/INCLUDE/design.hpp"
-#include "../../../externalFunctions/INCLUDE/externalFunctions.hpp"
 
 
 namespace Rodop{
@@ -47,13 +46,6 @@ private:
 	bool ifFunctionExplictlyDefined = false;
 	double (*functionPtr)(double*) = NULL;
 
-
-	std::vector<FunctionPtr> functionVector = { constraintFunction0,
-			constraintFunction1,
-			constraintFunction2,
-			constraintFunction3};
-
-
 public:
 
 	ConstraintFunction();
@@ -81,7 +73,6 @@ public:
 	void evaluateDesign(Design &d);
 	void evaluateExplicitFunction(Design &d);
 	void validateDesignParameters(const Design &d) const;
-	void evaluateObjectiveUsingExternalExecutable(Design &d);
 	void evaluateObjectiveDirectly(Design &d);
 	void validateConstraintID(const Design &d) const;
 

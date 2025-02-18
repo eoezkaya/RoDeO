@@ -38,7 +38,7 @@
 #include <algorithm>  // Include this for std::find
 #include <stdexcept>  // For std::invalid_argument
 #include <vector>
-#include <boost/process.hpp>
+//#include <boost/process.hpp>
 
 #include "./INCLUDE/objective_function.hpp"
 #include "./INCLUDE/objective_function_logger.hpp"
@@ -488,7 +488,7 @@ void ObjectiveFunction::calculateExpectedImprovement(DesignForBayesianOptimizati
 	}
 
 
-//	designCalculated.valueAcquisitionFunction = log(expectedImprovementValue+1e-14);
+	//	designCalculated.valueAcquisitionFunction = log(expectedImprovementValue+1e-14);
 	designCalculated.valueAcquisitionFunction = expectedImprovementValue;
 	designCalculated.objectiveFunctionValue = ftilde;
 
@@ -732,45 +732,22 @@ void ObjectiveFunction::evaluateDesign(Design &d) {
 	// Set evaluation mode to "primal"
 	setEvaluationMode("primal");
 
-	// If the objective function pointer does not exist, perform file-based evaluation
 	if (!doesObjectiveFunctionPtrExist) {
-		// Write design variables to a file
-		writeDesignVariablesToFile(d);
 
-		// Log the evaluation process
-
-		printInfoToLog("Evaluating objective function via external execution.");
-
-		// Evaluate the objective function externally
-		evaluateObjectiveFunction();
-
-		// Read the result from the output file
-		vec result = readOutput(definition.outputFilename, 1);
-
-		// Ensure the result is valid (for example, at least one value)
-		if (result.getSize() == 0) {
-			throw std::runtime_error("Failed to read output from the external objective function evaluation.");
-		}
-
-		double objectiveFunction = result(0);
-
-		ObjectiveFunctionLogger::getInstance().log(INFO, "Objective function value = " + std::to_string(objectiveFunction));
-
-		// Set the true value of the design based on the result
-		d.trueValue = result(0);
+		throw std::runtime_error("Objective function pointer is missing");
 	}
-	// If the objective function pointer exists, evaluate directly
-	else {
-		// Log direct evaluation
-		ObjectiveFunctionLogger::getInstance().log(INFO, "Evaluating objective function directly.");
-		// Evaluate the objective function directly using the design parameters
-		double objectiveFunction = evaluateObjectiveFunctionDirectly(d.designParameters);
 
-		ObjectiveFunctionLogger::getInstance().log(INFO, "Objective function value = " + std::to_string(objectiveFunction));
 
-		// Set the true value of the design based on the result
-		d.trueValue = objectiveFunction;
-	}
+	// Log direct evaluation
+	ObjectiveFunctionLogger::getInstance().log(INFO, "Evaluating objective function directly.");
+	// Evaluate the objective function directly using the design parameters
+	double objectiveFunction = evaluateObjectiveFunctionDirectly(d.designParameters);
+
+	ObjectiveFunctionLogger::getInstance().log(INFO, "Objective function value = " + std::to_string(objectiveFunction));
+
+	// Set the true value of the design based on the result
+	d.trueValue = objectiveFunction;
+
 }
 
 
@@ -817,35 +794,6 @@ void ObjectiveFunction::checkEvaluationModeForPrimalExecution() const {
 				"ObjectiveFunction::evaluateObjectiveFunction: evaluation mode is invalid for this method";
 		printErrorToLog(msg);
 		throw std::runtime_error(msg);
-	}
-}
-
-void ObjectiveFunction::evaluateObjectiveFunction() const {
-	using namespace boost::process;
-
-	checkEvaluationModeForPrimalExecution();
-
-	std::string runCommand;
-	if (!definition.executableName.empty()) {
-		runCommand = getExecutionCommand(definition.executableName);
-	}
-
-	if (!runCommand.empty()) {
-		try {
-			// Execute the command and wait for completion
-			child c(runCommand);
-			c.wait(); // Wait for the process to finish
-
-			if (c.exit_code() != 0) {
-				printErrorToLog("ObjectiveFunction::evaluateObjectiveFunction: exit_code = " + std::to_string(c.exit_code()));
-				throw std::runtime_error("Objective function execution failed with exit code: " + std::to_string(c.exit_code()));
-			}
-		} catch (const std::exception& e) {
-			std::string msg = std::string("Error during objective function execution: ") + e.what();
-			throw std::runtime_error(msg);
-		}
-	} else {
-		printWarningToLog("No valid command found to execute the objective function.");
 	}
 }
 
