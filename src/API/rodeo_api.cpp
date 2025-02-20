@@ -38,8 +38,8 @@ void RobustDesignOptimizerAPI::setObjectiveFunction(objectiveFunctionPtrType fun
 	impl->setObjectiveFunction(function, name, filename);
 }
 
-void RobustDesignOptimizerAPI::addConstraint(objectiveFunctionPtrType function, std::string expression, std::string filename) {
-	impl->addConstraint(function, expression, filename);
+void RobustDesignOptimizerAPI::addConstraint(objectiveFunctionPtrType function, std::string expression, std::string filename, std::string modeltype) {
+	impl->addConstraint(function, expression, filename, modeltype);
 }
 
 void RobustDesignOptimizerAPI::setDoEOn(unsigned int nSamples) {

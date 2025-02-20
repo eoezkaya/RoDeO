@@ -23,7 +23,7 @@ public:
 	void setDoEStrategy(const std::string& input);
 	void setBoxConstraints(double *lb, double *ub);
 	void setObjectiveFunction(objectiveFunctionPtrType, std::string name, std::string filename);
-	void addConstraint(objectiveFunctionPtrType, std::string, std::string);
+	void addConstraint(objectiveFunctionPtrType, std::string definition, std::string filenam, std::string modeltype = "Kriging");
 	void setNameOfTrainingDataFile(std::string name);
 	void setDoEOn(unsigned int nSamples);
 	void setMaxNumberOfFunctionEvaluations(unsigned int nSamples);

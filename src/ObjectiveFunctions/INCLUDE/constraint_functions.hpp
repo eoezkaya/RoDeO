@@ -76,8 +76,6 @@ public:
 	void evaluateObjectiveDirectly(Design &d);
 	void validateConstraintID(const Design &d) const;
 
-
-
 	void addDesignToData(Design &d);
 
 	double callUserDefinedFunction(Rodop::vec &x) const;

@@ -71,7 +71,7 @@ public:
 	void setName(const std::string& nameInput);
 	void setBoxConstraints(double *lb, double *ub);
 	void setObjectiveFunction(ObjectiveFunctionPtr, std::string name, std::string filename);
-	void addConstraint(ObjectiveFunctionPtr, std::string, std::string);
+	void addConstraint(ObjectiveFunctionPtr, std::string, std::string, std::string);
 	void setNameOfTrainingDataFile(std::string name);
 	void setDoEOn(unsigned int nSamples);
 	void setMaxNumberOfFunctionEvaluations(unsigned int nSamples);

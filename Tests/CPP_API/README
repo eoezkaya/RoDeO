@@ -1,8 +1,0 @@
-To compile the test use:
-
-g++ testAPI.cpp -o testAPI  -L/home/eoezkaya/RoDeO/build/API  -lcppAPI 
-
-
-To run the test case use:
-
-LD_LIBRARY_PATH=~/RoDeO/build/API/ ./testAPI

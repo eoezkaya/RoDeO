@@ -55,9 +55,6 @@ void RobustDesignOptimizer::setName(const std::string& nameInput) {
 
 
 void RobustDesignOptimizer::setCurrentWorkingDirectory(string directory){
-	if (directory.empty() || !std::filesystem::is_directory(directory)) {
-		throw std::invalid_argument("Current working directory is not valid");
-	}
 
 	cwd = directory;
 
@@ -197,7 +194,8 @@ ParsedConstraintExpression parseExpression(const std::string& input) {
 }
 
 
-void RobustDesignOptimizer::addConstraint(ObjectiveFunctionPtr function, std::string expression, std::string filename) {
+void RobustDesignOptimizer::addConstraint(ObjectiveFunctionPtr function,
+		std::string expression, std::string filename, std::string modeltype = "Kriging") {
 	// Check for a valid filename
 	if (filename.empty()) {
 		throw std::invalid_argument("Empty file name for the training data.");
@@ -238,6 +236,15 @@ void RobustDesignOptimizer::addConstraint(ObjectiveFunctionPtr function, std::st
 	ObjectiveFunctionDefinition definition;
 	definition.nameHighFidelityTrainingData = filename;
 	definition.name = exp.name;
+
+	if(modeltype == "Kriging"){
+		definition.modelHiFi = ORDINARY_KRIGING;
+	}
+
+	if(modeltype == "None"){
+		constraint.setUseExplicitFunctionOn();
+		definition.modelHiFi = NONE;
+	}
 
 	// Assign the definition to the constraint
 	constraint.setParametersByDefinition(definition);

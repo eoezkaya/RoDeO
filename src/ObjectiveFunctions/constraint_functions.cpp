@@ -268,11 +268,7 @@ pair<double, double> ConstraintFunction::interpolateWithVariance(vec x) const{
 
 void ConstraintFunction::setUseExplicitFunctionOn(void){
 
-	int ID = definitionConstraint.ID;
-	assert(ID >=0 && ID<20);
-
 	ifFunctionExplictlyDefined = true;
-
 }
 
 
